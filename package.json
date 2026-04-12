@@ -1,0 +1,40 @@
+{
+  "name": "opencad",
+  "version": "0.0.1",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:browser": "turbo run dev --filter=@opencad/app",
+    "dev:desktop": "turbo run dev --filter=@opencad/desktop",
+    "build": "turbo run build",
+    "build:browser": "turbo run build --filter=@opencad/app",
+    "build:desktop": "turbo run build --filter=@opencad/desktop",
+    "test": "turbo run test",
+    "test:unit": "turbo run test:unit",
+    "test:integration": "turbo run test:integration",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:coverage": "turbo run test:coverage",
+    "lint": "turbo run lint",
+    "lint:fix": "turbo run lint:fix",
+    "typecheck": "turbo run typecheck",
+    "clean": "turbo run clean",
+    "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,md,json,yaml,yml}\""
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.0",
+    "prettier": "^3.2.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "packageManagerArgs": [
+    "--strict-peer-dependencies"
+  ]
+}

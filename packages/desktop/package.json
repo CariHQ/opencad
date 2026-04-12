@@ -1,0 +1,19 @@
+{
+  "name": "@opencad/desktop",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf src-tauri/target"
+  },
+  "dependencies": {
+    "@opencad/shared": "workspace:*",
+    "@opencad/document": "workspace:*"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.0.0"
+  }
+}
