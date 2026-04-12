@@ -59,7 +59,6 @@ export function deleteVersion(versionList: VersionList, versionNumber: number): 
 
 export function pruneOldVersions(versionList: VersionList, keepCount: number): VersionList {
   const sorted = listVersions(versionList);
-  const toKeep = sorted.slice(-keepCount);
   const toRemove = sorted.slice(0, -keepCount);
 
   return {

@@ -9,17 +9,12 @@ import {
   LayerSchema,
   LevelSchema,
   ElementSchema,
-  MaterialSchema,
-  VectorClock,
+  ElementType,
+  PropertyValue,
+  ElementGeometry,
   SyncOperation,
   SyncResult,
   SaveEventData,
-  ElementType,
-  Transform,
-  Point3D,
-  BoundingBox3D,
-  PropertyValue,
-  ElementGeometry,
 } from './types';
 import { createDefaultMaterials } from './material';
 import { parseIFC, serializeIFC } from './ifc';

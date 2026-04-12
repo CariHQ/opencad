@@ -5,6 +5,15 @@
 
 import { DocumentSchema, ElementSchema, ElementType } from './types';
 
+interface ParsedIFCEntity {
+  id: string;
+  type: string;
+  name: string;
+  elementType: ElementType;
+  attributes: Record<string, string>;
+  guid?: string;
+}
+
 const IFC_ENTITY_MAP: Record<string, ElementType> = {
   IFCWALL: 'wall',
   IFCWALLSTANDARDCASE: 'wall',
@@ -50,6 +59,7 @@ export class IFCParser {
           type: upperType,
           name: name || upperType,
           elementType: IFC_ENTITY_MAP[upperType],
+          attributes: {},
         });
       }
     }

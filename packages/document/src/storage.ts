@@ -3,7 +3,7 @@
  * IndexedDB storage for browser persistence
  */
 
-import { DocumentSchema, SaveEventData } from './types';
+import { DocumentSchema } from './types';
 
 const DB_NAME = 'opencad';
 const DB_VERSION = 1;
@@ -61,7 +61,6 @@ export async function saveProject(project: DocumentSchema): Promise<void> {
     const store = transaction.objectStore(PROJECTS_STORE);
 
     const data = {
-      id: project.id,
       ...project,
       savedAt: Date.now(),
     };

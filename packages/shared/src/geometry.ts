@@ -171,7 +171,7 @@ export function createPoint2D(x: number, y: number): Point2D {
 }
 
 export function createPoint3D(x: number, y: number, z: number): Point3D {
-  return { x, y, z };
+  return { _type: 'Point3D', x, y, z };
 }
 
 export function createLine2D(start: Point2D, end: Point2D): Line2D {

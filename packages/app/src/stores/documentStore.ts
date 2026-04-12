@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DocumentModel, createProject, type DocumentSchema } from '@opencad/document';
+import { DocumentModel, type DocumentSchema, type PropertyValue } from '@opencad/document';
 
 interface DocumentState {
   document: DocumentSchema | null;
@@ -102,7 +102,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     const elementId = model.addElement({
       type: params.type as 'wall' | 'door' | 'window' | 'slab',
       layerId: params.layerId,
-      properties: params.properties as Record<string, { type: string; value: unknown }>,
+      properties: params.properties as Record<string, PropertyValue>,
     });
 
     set({

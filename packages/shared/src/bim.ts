@@ -23,7 +23,8 @@ export type IFCEntityType =
   | 'IfcMember'
   | 'IfcCovering'
   | 'IfcFurnishingElement'
-  | 'IfcDistributionFlowElement';
+  | 'IfcDistributionFlowElement'
+  | 'IfcAnnotation';
 
 export interface IFCProperty {
   name: string;
