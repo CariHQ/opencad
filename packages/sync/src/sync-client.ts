@@ -8,7 +8,6 @@ import {
   CRDTOperation,
   VectorClock,
   createVectorClock,
-  incrementClock,
   mergeClocks,
   applyOperation,
   createOperation,

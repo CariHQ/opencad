@@ -16,6 +16,9 @@
     "report": "playwright show-report",
     "clean": "rm -rf playwright-report playwright-results"
   },
+  "dependencies": {
+    "@opencad/document": "workspace:*"
+  },
   "devDependencies": {
     "@playwright/test": "^1.42.0",
     "@types/node": "^20.12.0",

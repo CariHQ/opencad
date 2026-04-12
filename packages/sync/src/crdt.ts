@@ -12,7 +12,7 @@ export interface CRDTOperation<T = unknown> {
   value?: T;
   timestamp: number;
   clientId: string;
-  vectorClock: Record<string, number>;
+  vectorClock: VectorClock;
 }
 
 export interface VectorClock {

@@ -30,7 +30,7 @@ export interface Edge {
 }
 
 export function createSolid(vertices: Point3D[], faces: Face[]): Solid {
-  const edges = extractEdges(vertices, faces);
+  const edges = extractEdges(faces);
   const boundingBox = computeBoundingBox(vertices);
 
   return {
@@ -42,7 +42,7 @@ export function createSolid(vertices: Point3D[], faces: Face[]): Solid {
   };
 }
 
-function extractEdges(vertices: Point3D[], faces: Face[]): Edge[] {
+function extractEdges(faces: Face[]): Edge[] {
   const edgeMap = new Map<string, Edge>();
   const tolerance = 1e-6;
 
@@ -111,7 +111,6 @@ export function solidVolume(solid: Solid): number {
 
   let topArea = 0;
   let topZ = 0;
-  let bottomArea = 0;
   let bottomZ = 0;
 
   for (const face of solid.faces) {
@@ -127,7 +126,6 @@ export function solidVolume(solid: Solid): number {
       }
     } else if (isHorizontal && face.normal.z < 0) {
       // Bottom face
-      bottomArea = face.area;
       if (face.vertices.length > 0) {
         bottomZ = face.vertices[0].z;
       }
@@ -148,23 +146,6 @@ export function solidVolume(solid: Solid): number {
   const dy = bb.max.y - bb.min.y;
   const dz = bb.max.z - bb.min.z;
   return dx * dy * dz;
-}
-
-function computeFaceCentroid(face: Face): Point3D {
-  let x = 0,
-    y = 0,
-    z = 0;
-  for (const v of face.vertices) {
-    x += v.x;
-    y += v.y;
-    z += v.z;
-  }
-  const n = face.vertices.length;
-  return createPoint3D(x / n, y / n, z / n);
-}
-
-function dotProduct3D(a: Point3D, b: { x: number; y: number; z: number }): number {
-  return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
 export function isManifold(solid: Solid): boolean {
@@ -199,7 +180,6 @@ export function isManifold(solid: Solid): boolean {
 
   // Each edge is shared by 2 faces, so edge count * 2 should equal edge occurrences
   // But we also need to check that edges are properly shared
-  const uniqueEdges = solid.edges.length;
 
   // For a manifold solid, V - E + F should be 2 (Euler characteristic)
   const chi = eulerCharacteristic(solid);

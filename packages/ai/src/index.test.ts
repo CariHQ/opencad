@@ -3,8 +3,8 @@
  * Tests for T-AI-001 through T-AI-024
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { CodeComplianceEngine, codeComplianceEngine } from './code-compliance';
+import { describe, it, expect } from 'vitest';
+import { CodeComplianceEngine } from './code-compliance';
 
 describe('AI Code Compliance Tests', () => {
   describe('T-AI-020: Code check → verify all violations identified', () => {

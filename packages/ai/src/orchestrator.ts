@@ -72,6 +72,7 @@ export class AIOrchestrator {
       messages,
       temperature: request.temperature ?? 0.7,
       maxTokens: request.maxTokens ?? 2048,
+      provider,
     });
 
     return response;
@@ -98,6 +99,7 @@ export class AIOrchestrator {
         messages,
         temperature: request.temperature ?? 0.7,
         maxTokens: request.maxTokens ?? 2048,
+        provider,
       },
       onChunk
     );

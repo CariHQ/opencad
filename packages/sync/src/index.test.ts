@@ -3,7 +3,7 @@
  * Tests for T-COL-001 through T-COL-005
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import {
   createVectorClock,
   incrementClock,
@@ -13,7 +13,6 @@ import {
   applyOperation,
   mergeOperations,
   type CRDTDocument,
-  type CRDTOperation,
 } from './crdt';
 
 describe('CRDT Tests', () => {

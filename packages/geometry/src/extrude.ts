@@ -157,7 +157,7 @@ function computeSideNormal(
   };
 }
 
-function computeQuadArea(v0: Point3D, v1: Point3D, v2: Point3D, v3: Point3D): number {
+function computeQuadArea(v0: Point3D, v1: Point3D, _v2: Point3D, v3: Point3D): number {
   const a = { x: v1.x - v0.x, y: v1.y - v0.y, z: v1.z - v0.z };
   const b = { x: v3.x - v0.x, y: v3.y - v0.y, z: v3.z - v0.z };
   const cross = {

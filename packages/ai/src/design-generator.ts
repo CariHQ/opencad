@@ -142,7 +142,7 @@ Return the floor plan as JSON with the following structure:
 }`;
   }
 
-  private parseGeneratedLayout(content: string, prompt: string): GeneratedLayout {
+  private parseGeneratedLayout(content: string, _prompt: string): GeneratedLayout {
     let data: { rooms?: unknown[]; circulation?: unknown[] };
 
     try {
@@ -172,7 +172,7 @@ Return the floor plan as JSON with the following structure:
       };
     });
 
-    const circulation = (data.circulation || []).map((c: unknown, index: number) => {
+    const circulation = (data.circulation || []).map((c: unknown, _index: number) => {
       const path = c as Record<string, unknown>;
       return {
         from: path.from as string,
