@@ -1,121 +1,88 @@
-import React from 'react';
-import { DocumentModel, createProject } from '@opencad/document';
+import React, { useEffect } from 'react';
+import { Toolbar, LayerPanel, PropertiesPanel, Viewport, StatusBar } from './components';
+import { useDocumentStore } from './stores/documentStore';
+import './styles/app.css';
 
 function App() {
-  const [projectName, setProjectName] = React.useState('My First Project');
-  const [model] = React.useState(() => new DocumentModel('test', 'user'));
-  const [, forceUpdate] = React.useState({});
+  const { document: doc, initProject, addLayer, addElement } = useDocumentStore();
 
-  const layers = Object.values(model.document.layers);
-  const elements = Object.values(model.document.elements);
-  const levels = Object.values(model.document.levels);
-
-  const handleCreateProject = () => {
-    model.document.name = projectName;
-    forceUpdate({});
-  };
+  useEffect(() => {
+    initProject('project-1', 'user-1');
+  }, [initProject]);
 
   const handleAddLayer = () => {
-    const color =
-      '#' +
-      Math.floor(Math.random() * 16777215)
-        .toString(16)
-        .padStart(6, '0');
-    model.addLayer({ name: `Layer ${layers.length + 1}`, color });
-    forceUpdate({});
+    const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c'];
+    const name = `Layer ${Object.keys(doc?.layers || {}).length + 1}`;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    addLayer({ name, color });
   };
 
-  const handleAddElement = () => {
-    if (layers.length === 0) return;
-    model.addElement({
+  const handleAddWall = () => {
+    if (!doc) return;
+    const layerId = Object.keys(doc.layers)[0];
+    if (!layerId) return;
+
+    addElement({
       type: 'wall',
-      layerId: layers[0].id,
+      layerId,
       properties: {
-        Name: { type: 'string', value: `Wall ${elements.length + 1}` },
-        Length: { type: 'number', value: 5000, unit: 'mm' },
-        Height: { type: 'number', value: 3000, unit: 'mm' },
+        Name: { type: 'string', value: `Wall ${Object.keys(doc.elements).length + 1}` },
+        Length: { type: 'number', value: 3000, unit: 'mm' },
+        Height: { type: 'number', value: 2700, unit: 'mm' },
+        Thickness: { type: 'number', value: 150, unit: 'mm' },
       },
     });
-    forceUpdate({});
   };
 
   return (
-    <div className="app">
-      <header className="header">
-        <h1>OpenCAD</h1>
-        <p>Browser-native, AI-powered BIM platform</p>
+    <div className="app-layout">
+      <header className="app-header">
+        <div className="header-left">
+          <h1 className="app-logo">OpenCAD</h1>
+          <span className="app-tagline">Browser-native BIM</span>
+        </div>
+        <div className="header-center">
+          <span className="project-name">{doc?.name || 'Untitled'}</span>
+        </div>
+        <div className="header-right">
+          <button className="header-btn">File</button>
+          <button className="header-btn">Edit</button>
+          <button className="header-btn">View</button>
+          <button className="header-btn primary">Export</button>
+        </div>
       </header>
 
-      <main className="main">
-        <section className="project-section">
-          <h2>Project</h2>
-          <div className="input-group">
-            <input
-              type="text"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="Project name"
-            />
-            <button onClick={handleCreateProject}>Set Name</button>
+      <div className="app-body">
+        <aside className="app-sidebar left">
+          <div className="sidebar-section">
+            <div className="section-header">
+              <h3>Quick Actions</h3>
+            </div>
+            <div className="quick-actions">
+              <button className="action-btn" onClick={handleAddWall}>
+                <span className="action-icon">▮</span>
+                <span>Add Wall</span>
+              </button>
+              <button className="action-btn" onClick={handleAddLayer}>
+                <span className="action-icon">+</span>
+                <span>Add Layer</span>
+              </button>
+            </div>
           </div>
-          <div className="project-info">
-            <p>
-              <strong>Name:</strong> {model.document.name}
-            </p>
-            <p>
-              <strong>ID:</strong> {model.id}
-            </p>
-            <p>
-              <strong>Schema:</strong> {model.document.metadata.schemaVersion}
-            </p>
-          </div>
-        </section>
+          <LayerPanel />
+        </aside>
 
-        <section className="layers-section">
-          <h2>Layers ({layers.length})</h2>
-          <button onClick={handleAddLayer} className="add-btn">
-            + Add Layer
-          </button>
-          <ul className="item-list">
-            {layers.map((layer) => (
-              <li key={layer.id} className="item">
-                <span className="color-dot" style={{ backgroundColor: layer.color }} />
-                {layer.name}
-                {layer.visible ? ' 👁' : ' 🔒'}
-              </li>
-            ))}
-          </ul>
-        </section>
+        <main className="app-main">
+          <Toolbar />
+          <Viewport />
+        </main>
 
-        <section className="levels-section">
-          <h2>Levels ({levels.length})</h2>
-          <ul className="item-list">
-            {levels.map((level) => (
-              <li key={level.id} className="item">
-                {level.name} (Elevation: {level.elevation}mm, Height: {level.height}mm)
-              </li>
-            ))}
-          </ul>
-        </section>
+        <aside className="app-sidebar right">
+          <PropertiesPanel />
+        </aside>
+      </div>
 
-        <section className="elements-section">
-          <h2>Elements ({elements.length})</h2>
-          <button onClick={handleAddElement} className="add-btn">
-            + Add Wall
-          </button>
-          <ul className="item-list">
-            {elements.map((element) => (
-              <li key={element.id} className="item">
-                {element.type}: {(element.properties.Name?.value as string) || 'Unnamed'}
-              </li>
-            ))}
-          </ul>
-        </section>
-      </main>
-
-      <footer className="footer">
-        <p>Built with TDD - Test-Driven Development</p>
-      </footer>
+      <StatusBar />
     </div>
   );
 }
