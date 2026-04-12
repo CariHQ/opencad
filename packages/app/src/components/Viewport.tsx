@@ -1,7 +1,10 @@
-import React from 'react';
 import { useViewport } from '../hooks/useViewport';
 
-export function Viewport() {
+interface ViewportProps {
+  viewType?: 'floor-plan' | '3d' | 'section';
+}
+
+export function Viewport({ viewType = '3d' }: ViewportProps) {
   const { canvasRef, containerRef, handleCanvasClick } = useViewport();
 
   return (
@@ -9,12 +12,15 @@ export function Viewport() {
       <canvas ref={canvasRef} className="viewport-canvas" onClick={handleCanvasClick} />
       <div className="viewport-overlay">
         <div className="viewport-corner top-left">
-          <span>Front</span>
+          <span>
+            {viewType === 'floor-plan'
+              ? 'Floor Plan'
+              : viewType === 'section'
+                ? 'Section'
+                : '3D View'}
+          </span>
         </div>
         <div className="viewport-corner top-right">
-          <span>3D</span>
-        </div>
-        <div className="viewport-corner bottom-left">
           <span>1:100</span>
         </div>
       </div>

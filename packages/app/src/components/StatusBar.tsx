@@ -1,4 +1,3 @@
-import React from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 
 export function StatusBar() {
@@ -11,32 +10,36 @@ export function StatusBar() {
   };
 
   return (
-    <div className="status-bar">
-      <div className="status-section">
-        <span className={`status-indicator ${isOnline ? 'online' : 'offline'}`}>
-          {isOnline ? 'Online' : 'Offline'}
-        </span>
-        {isSaving && <span className="status-saving">Saving...</span>}
+    <footer className="app-status-bar">
+      <div className="status-left">
+        <div className="status-item">
+          <span className={`status-indicator ${isOnline ? '' : 'offline'}`} />
+          <span>{isOnline ? 'Online' : 'Offline'}</span>
+        </div>
+        {isSaving && (
+          <div className="status-item">
+            <span>Saving...</span>
+          </div>
+        )}
         {!isSaving && lastSaved && (
-          <span className="status-saved">Saved {formatTime(lastSaved)}</span>
+          <div className="status-item">
+            <span>Saved {formatTime(lastSaved)}</span>
+          </div>
         )}
       </div>
 
-      <div className="status-section center">
+      <div className="status-right">
         {selectedIds.length > 0 && (
-          <span>
-            {selectedIds.length} element{selectedIds.length > 1 ? 's' : ''} selected
-          </span>
+          <div className="status-item">
+            <span>{selectedIds.length} selected</span>
+          </div>
         )}
-      </div>
-
-      <div className="status-section right">
         {doc && (
-          <span>
-            {Object.keys(doc.elements).length} elements | {Object.keys(doc.layers).length} layers
-          </span>
+          <div className="status-item">
+            <span>{Object.keys(doc.elements).length} elements</span>
+          </div>
         )}
       </div>
-    </div>
+    </footer>
   );
 }

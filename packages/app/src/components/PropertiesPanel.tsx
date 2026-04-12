@@ -1,17 +1,20 @@
-import React from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 
 export function PropertiesPanel() {
   const { document: doc, selectedIds } = useDocumentStore();
 
-  if (!doc || selectedIds.length === 0) {
+  if (!doc) return null;
+
+  if (selectedIds.length === 0) {
     return (
-      <div className="panel properties-panel">
+      <div className="properties-panel">
         <div className="panel-header">
-          <h3>Properties</h3>
+          <span className="panel-title">Properties</span>
         </div>
-        <div className="panel-content empty">
-          <p>Select an element to view properties</p>
+        <div className="properties-content empty">
+          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px' }}>
+            Select an element to view properties
+          </p>
         </div>
       </div>
     );
@@ -21,49 +24,72 @@ export function PropertiesPanel() {
   if (!selectedElement) return null;
 
   return (
-    <div className="panel properties-panel">
+    <div className="properties-panel">
       <div className="panel-header">
-        <h3>Properties</h3>
-        <span className="count">{selectedIds.length} selected</span>
+        <span className="panel-title">Properties</span>
+        <div className="panel-actions">
+          <button className="panel-action-btn" title="More">
+            ⋮
+          </button>
+        </div>
       </div>
-      <div className="panel-content">
+      <div className="properties-content">
         <div className="property-group">
-          <h4>General</h4>
+          <div className="property-group-title">General</div>
           <div className="property-row">
-            <label>Type</label>
-            <span className="value">{selectedElement.type}</span>
-          </div>
-          <div className="property-row">
-            <label>ID</label>
-            <span className="value id">{selectedElement.id.slice(0, 8)}</span>
+            <span className="property-label">Type</span>
+            <div className="property-value">
+              <input type="text" className="property-input" value={selectedElement.type} disabled />
+            </div>
           </div>
         </div>
 
         <div className="property-group">
-          <h4>Transform</h4>
+          <div className="property-group-title">Location</div>
           <div className="property-row">
-            <label>X</label>
-            <span className="value">{selectedElement.transform.translation.x.toFixed(1)}</span>
+            <span className="property-label">X</span>
+            <div className="property-value">
+              <input
+                type="number"
+                className="property-input"
+                value={selectedElement.transform.translation.x.toFixed(1)}
+              />
+            </div>
           </div>
           <div className="property-row">
-            <label>Y</label>
-            <span className="value">{selectedElement.transform.translation.y.toFixed(1)}</span>
+            <span className="property-label">Y</span>
+            <div className="property-value">
+              <input
+                type="number"
+                className="property-input"
+                value={selectedElement.transform.translation.y.toFixed(1)}
+              />
+            </div>
           </div>
           <div className="property-row">
-            <label>Z</label>
-            <span className="value">{selectedElement.transform.translation.z.toFixed(1)}</span>
+            <span className="property-label">Z</span>
+            <div className="property-value">
+              <input
+                type="number"
+                className="property-input"
+                value={selectedElement.transform.translation.z.toFixed(1)}
+              />
+            </div>
           </div>
         </div>
 
         <div className="property-group">
-          <h4>Properties</h4>
+          <div className="property-group-title">Dimensions</div>
           {Object.entries(selectedElement.properties).map(([key, prop]) => (
             <div key={key} className="property-row">
-              <label>{key}</label>
-              <span className="value">
-                {String(prop.value)}
-                {prop.unit && <span className="unit"> {prop.unit}</span>}
-              </span>
+              <span className="property-label">{key}</span>
+              <div className="property-value">
+                <input
+                  type="text"
+                  className="property-input"
+                  value={`${prop.value}${prop.unit ? ' ' + prop.unit : ''}`}
+                />
+              </div>
             </div>
           ))}
         </div>
