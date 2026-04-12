@@ -1,6 +1,12 @@
 import { create } from 'zustand';
 import { DocumentModel, type DocumentSchema, type PropertyValue } from '@opencad/document';
 
+interface HistoryEntry {
+  document: DocumentSchema;
+  timestamp: number;
+  description: string;
+}
+
 interface DocumentState {
   document: DocumentSchema | null;
   model: DocumentModel | null;
@@ -9,6 +15,11 @@ interface DocumentState {
   isOnline: boolean;
   isSaving: boolean;
   lastSaved: number | null;
+
+  history: HistoryEntry[];
+  historyIndex: number;
+  canUndo: boolean;
+  canRedo: boolean;
 
   initProject: (projectId: string, userId: string) => void;
   loadProject: (projectId: string, userId: string) => void;
@@ -28,6 +39,10 @@ interface DocumentState {
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
 
+  undo: () => void;
+  redo: () => void;
+  pushHistory: (description: string) => void;
+
   createVersion: (message?: string) => void;
   restoreVersion: (versionNumber: number) => void;
 }
@@ -41,18 +56,39 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   isSaving: false,
   lastSaved: null,
 
+  history: [],
+  historyIndex: -1,
+  canUndo: false,
+  canRedo: false,
+
   initProject: (projectId, userId) => {
     const model = new DocumentModel(projectId, userId);
     const document = model.documentData;
 
-    set({ document, model, lastSaved: Date.now() });
+    set({
+      document,
+      model,
+      lastSaved: Date.now(),
+      history: [],
+      historyIndex: -1,
+      canUndo: false,
+      canRedo: false,
+    });
   },
 
   loadProject: (projectId, userId) => {
     const model = new DocumentModel(projectId, userId);
     const document = model.documentData;
 
-    set({ document, model, lastSaved: Date.now() });
+    set({
+      document,
+      model,
+      lastSaved: Date.now(),
+      history: [],
+      historyIndex: -1,
+      canUndo: false,
+      canRedo: false,
+    });
   },
 
   setSelectedIds: (ids) => set({ selectedIds: ids }),
@@ -68,7 +104,7 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   },
 
   addLayer: (params) => {
-    const { model, document } = get();
+    const { model } = get();
     if (!model) throw new Error('No document loaded');
 
     const layerId = model.addLayer(params);
@@ -131,6 +167,55 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
     set({
       document: { ...document },
       lastSaved: Date.now(),
+    });
+  },
+
+  pushHistory: (description) => {
+    const { document, history, historyIndex } = get();
+    if (!document) return;
+
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push({
+      document: JSON.parse(JSON.stringify(document)),
+      timestamp: Date.now(),
+      description,
+    });
+
+    if (newHistory.length > 50) {
+      newHistory.shift();
+    }
+
+    set({
+      history: newHistory,
+      historyIndex: newHistory.length - 1,
+      canUndo: newHistory.length > 1,
+      canRedo: false,
+    });
+  },
+
+  undo: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex <= 0) return;
+
+    const newIndex = historyIndex - 1;
+    set({
+      document: JSON.parse(JSON.stringify(history[newIndex].document)),
+      historyIndex: newIndex,
+      canUndo: newIndex > 0,
+      canRedo: true,
+    });
+  },
+
+  redo: () => {
+    const { history, historyIndex } = get();
+    if (historyIndex >= history.length - 1) return;
+
+    const newIndex = historyIndex + 1;
+    set({
+      document: JSON.parse(JSON.stringify(history[newIndex].document)),
+      historyIndex: newIndex,
+      canUndo: true,
+      canRedo: newIndex < history.length - 1,
     });
   },
 

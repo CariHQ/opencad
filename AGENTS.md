@@ -23,6 +23,18 @@ Tests are named with prefixes matching PRD sections:
 4. **Implement to pass** - Write code until tests pass
 5. **Create PR** - Branch → commit → PR with test results
 
+## PR Requirements
+
+**IMPORTANT**: Always create a pull request after completing work on issues!
+
+1. **Create branch**: `git checkout -b feat/<issue-id>-<description>`
+2. **Commit changes**: `git add . && git commit -m "feat: implement <issue-id>"`
+3. **Push branch**: `git push -u origin feat/<branch-name>`
+4. **Create PR**: Use `gh pr create` with the PR template
+5. **Link issue**: Add "Closes #<issue-number>" to PR description
+
+**Never skip PR creation** - All completed work must go through PR review, even for small changes!
+
 ## GitHub Issues Workflow
 
 ### Before Creating Issues

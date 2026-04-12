@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { Bot, User, Send, X } from 'lucide-react';
 
 interface Message {
   id: string;
@@ -76,14 +77,16 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       <div className="chat-header">
         <span className="chat-title">AI Assistant</span>
         <button className="chat-close" onClick={onClose}>
-          ×
+          <X size={18} />
         </button>
       </div>
 
       <div className="chat-messages">
         {messages.map((msg) => (
           <div key={msg.id} className={`message ${msg.role}`}>
-            <div className="message-avatar">{msg.role === 'assistant' ? '🤖' : '👤'}</div>
+            <div className="message-avatar">
+              {msg.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
+            </div>
             <div className="message-content">
               {msg.content.split('\n').map((line, i) => (
                 <p key={i}>{line}</p>
@@ -93,7 +96,9 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
         ))}
         {isLoading && (
           <div className="message assistant">
-            <div className="message-avatar">🤖</div>
+            <div className="message-avatar">
+              <Bot size={16} />
+            </div>
             <div className="message-content typing">
               <span className="typing-dot"></span>
               <span className="typing-dot"></span>

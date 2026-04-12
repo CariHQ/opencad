@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FolderOpen, Send, Bot, FolderDown, FileDown } from 'lucide-react';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 import { LayersPanel } from './components/LayerPanel';
@@ -60,13 +61,13 @@ export function AppLayout() {
 
         <div className="toolbar-actions">
           <button className="toolbar-btn" title="Import IFC">
-            <span className="icon">📁</span>
+            <FolderOpen size={18} />
           </button>
           <button className="toolbar-btn" title="Export IFC">
-            <span className="icon">📤</span>
+            <FileDown size={18} />
           </button>
           <button className="toolbar-btn" title="AI Assistant" onClick={toggleAIChat}>
-            <span className="icon">🤖</span>
+            <Bot size={18} />
           </button>
         </div>
       </header>

@@ -402,4 +402,135 @@ describe('Document Model - TDD Tests', () => {
       expect(() => model.restoreVersion(999)).toThrow('Version 999 does not exist');
     });
   });
+
+  describe('T-IO: Import/Export Tests', () => {
+    describe('T-IO-001: Large File Import Performance', () => {
+      it('should track import progress', async () => {
+        const mockRead = vi.fn().mockResolvedValue('test data');
+        const mockParse = vi.fn().mockReturnValue({ parsed: true });
+        const progress: Array<{ phase: string }> = [];
+
+        const { importWithProgress } = await import('./io');
+        await importWithProgress(mockRead, mockParse, {
+          onProgress: (p) => progress.push(p),
+        });
+
+        expect(progress.length).toBeGreaterThan(0);
+      });
+
+      it('should reject files exceeding size limit', async () => {
+        const mockRead = vi.fn().mockResolvedValue('x'.repeat(1500));
+        const mockParse = vi.fn().mockImplementation(() => {
+          throw new Error('too large');
+        });
+
+        const { importWithProgress } = await import('./io');
+        const result = await importWithProgress(mockRead, mockParse, {
+          maxFileSize: 1000,
+        });
+
+        expect(result.success).toBe(false);
+        expect(result.errors.some((e) => e.type === 'size')).toBe(true);
+      });
+    });
+
+    describe('T-IO-002: Corrupted File Error', () => {
+      it('should handle parse errors', async () => {
+        const mockRead = vi.fn().mockResolvedValue('invalid');
+        const mockParse = vi.fn().mockImplementation(() => {
+          throw new Error('Parse error');
+        });
+
+        const { importWithProgress } = await import('./io');
+        const result = await importWithProgress(mockRead, mockParse);
+
+        expect(result.success).toBe(false);
+      });
+    });
+
+    describe('T-IO-003: Unsupported Format Error', () => {
+      it('should detect supported formats', async () => {
+        const { isFormatSupported, SUPPORTED_IMPORT_FORMATS } = await import('./io');
+
+        expect(isFormatSupported('ifc', SUPPORTED_IMPORT_FORMATS)).toBe(true);
+        expect(isFormatSupported('opencad', SUPPORTED_IMPORT_FORMATS)).toBe(true);
+        expect(isFormatSupported('xyz', SUPPORTED_IMPORT_FORMATS)).toBe(false);
+      });
+
+      it('should get file extension', async () => {
+        const { getFileExtension } = await import('./io');
+
+        expect(getFileExtension('file.ifc')).toBe('ifc');
+        expect(getFileExtension('file.opencad')).toBe('opencad');
+      });
+    });
+
+    describe('T-IO-004: Batch Import', () => {
+      it('should import multiple files', async () => {
+        const { batchImportFiles } = await import('./io');
+
+        const files = [
+          { name: 'project1.opencad', content: '{"id": "1"}' },
+          { name: 'project2.opencad', content: '{"id": "2"}' },
+        ];
+
+        const result = await batchImportFiles(files, (content) => JSON.parse(content));
+
+        expect(result.total).toBe(2);
+        expect(result.successful).toBe(2);
+      });
+
+      it('should track failed files', async () => {
+        const { batchImportFiles } = await import('./io');
+
+        const files = [{ name: 'unsupported.xxx', content: 'data' }];
+
+        const result = await batchImportFiles(files, (content) => JSON.parse(content));
+
+        expect(result.failed).toBe(1);
+      });
+    });
+
+    describe('T-IO-005: Offline Export', () => {
+      it('should export to opencad format', async () => {
+        const { exportDocument } = await import('./io');
+
+        const doc = { id: 'test', name: 'Test' };
+        const result = await exportDocument(doc, { format: 'opencad' });
+
+        expect(result.extension).toBe('opencad');
+      });
+
+      it('should throw for unsupported format', async () => {
+        const { exportDocument } = await import('./io');
+
+        await expect(exportDocument({}, { format: 'xyz' as never })).rejects.toThrow();
+      });
+    });
+
+    describe('T-IO-006: Import Privacy', () => {
+      it('should validate document structure', async () => {
+        const { validateDocumentStructure } = await import('./io');
+
+        const validDoc = {
+          id: 'test-1',
+          metadata: { createdAt: Date.now(), createdBy: 'user', schemaVersion: '1.0.0' },
+          elements: {},
+          layers: {},
+        };
+
+        const warnings = validateDocumentStructure(validDoc);
+
+        expect(warnings).toHaveLength(0);
+      });
+
+      it('should warn on missing fields', async () => {
+        const { validateDocumentStructure } = await import('./io');
+
+        const warnings = validateDocumentStructure({ id: 'test' });
+
+        expect(warnings.length).toBeGreaterThan(0);
+      });
+    });
+  });
 });

@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      lucide-react:
+        specifier: ^1.8.0
+        version: 1.8.0(react@19.2.5)
     devDependencies:
       '@types/node':
         specifier: ^20.12.0
@@ -51,7 +55,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@14.12.3)(jsdom@25.0.1)
 
   packages/app:
     dependencies:
@@ -106,7 +110,7 @@ importers:
         version: 6.4.2(@types/node@20.19.39)
       vitest:
         specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@14.12.3)(jsdom@25.0.1)
 
   packages/desktop:
     dependencies:
@@ -116,6 +120,15 @@ importers:
       '@opencad/shared':
         specifier: workspace:*
         version: link:../shared
+      '@tauri-apps/api':
+        specifier: ^2.0.0
+        version: 2.10.1
+      '@tauri-apps/plugin-dialog':
+        specifier: ^2.0.0
+        version: 2.7.0
+      '@tauri-apps/plugin-fs':
+        specifier: ^2.0.0
+        version: 2.5.0
     devDependencies:
       '@tauri-apps/cli':
         specifier: ^2.0.0
@@ -128,7 +141,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@14.12.3)(jsdom@25.0.1)
 
   packages/document:
     dependencies:
@@ -144,7 +157,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@14.12.3)(jsdom@25.0.1)
 
   packages/geometry:
     dependencies:
@@ -160,7 +173,7 @@ importers:
         version: 5.9.3
       vitest:
         specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@14.12.3)(jsdom@25.0.1)
 
   packages/shared:
     dependencies:
@@ -187,12 +200,15 @@ importers:
       '@types/node':
         specifier: ^20.12.0
         version: 20.19.39
+      happy-dom:
+        specifier: ^14.0.0
+        version: 14.12.3
       typescript:
         specifier: ^5.4.0
         version: 5.9.3
       vitest:
         specifier: ^1.4.0
-        version: 1.6.1(@types/node@20.19.39)(jsdom@25.0.1)
+        version: 1.6.1(@types/node@20.19.39)(happy-dom@14.12.3)(jsdom@25.0.1)
 
 packages:
 
@@ -760,6 +776,9 @@ packages:
   '@sinclair/typebox@0.27.10':
     resolution: {integrity: sha512-MTBk/3jGLNB2tVxv6uLlFh1iu64iYOQ2PbdOSK3NW8JZsmlaOh2q6sdtKowBhfw8QFLmYNzTW4/oK4uATIi6ZA==}
 
+  '@tauri-apps/api@2.10.1':
+    resolution: {integrity: sha512-hKL/jWf293UDSUN09rR69hrToyIXBb8CjGaWC7gfinvnQrBVvnLr08FeFi38gxtugAVyVcTa5/FD/Xnkb1siBw==}
+
   '@tauri-apps/cli-darwin-arm64@2.10.1':
     resolution: {integrity: sha512-Z2OjCXiZ+fbYZy7PmP3WRnOpM9+Fy+oonKDEmUE6MwN4IGaYqgceTjwHucc/kEEYZos5GICve35f7ZiizgqEnQ==}
     engines: {node: '>= 10'}
@@ -830,6 +849,12 @@ packages:
     resolution: {integrity: sha512-jQNGF/5quwORdZSSLtTluyKQ+o6SMa/AUICfhf4egCGFdMHqWssApVgYSbg+jmrZoc8e1DscNvjTnXtlHLS11g==}
     engines: {node: '>= 10'}
     hasBin: true
+
+  '@tauri-apps/plugin-dialog@2.7.0':
+    resolution: {integrity: sha512-4nS/hfGMGCXiAS3LtVjH9AgsSAPJeG/7R+q8agTFqytjnMa4Zq95Bq8WzVDkckpanX+yyRHXnRtrKXkANKDHvw==}
+
+  '@tauri-apps/plugin-fs@2.5.0':
+    resolution: {integrity: sha512-c83kbz61AK+rKjhS+je9+stIO27nXj7p9cqeg36TwkIUtxpCFTttlHHtqon6h6FN54cXjyAjlMPOJcW3mwE5XQ==}
 
   '@turbo/darwin-64@2.9.6':
     resolution: {integrity: sha512-X/56SnVXIQZBLKwniGTwEQTGmtE5brSACnKMBWpY3YafuxVYefrC2acamfjgxP7BG5w3I+6jf0UrLoSzgPcSJg==}
@@ -1037,6 +1062,10 @@ packages:
   electron-to-chromium@1.5.335:
     resolution: {integrity: sha512-q9n5T4BR4Xwa2cwbrwcsDJtHD/enpQ5S1xF1IAtdqf5AAgqDFmR/aakqH3ChFdqd/QXJhS3rnnXFtexU7rax6Q==}
 
+  entities@4.5.0:
+    resolution: {integrity: sha512-V0hjH4dGPh9Ao5p0MoRY6BVqtwCjhz6vI5LT8AJ55H+4g9/4vbHx1I54fS0XuclLhDHArPQCiMjDxjaL8fPxhw==}
+    engines: {node: '>=0.12'}
+
   entities@6.0.1:
     resolution: {integrity: sha512-aN97NXWF6AWBTahfVOIrB/NShkzi5H7F9r1s9mD3cDj4Ko5f2qhhVoYMibXF7GlLveb/D2ioWay8lxI97Ven3g==}
     engines: {node: '>=0.12'}
@@ -1130,6 +1159,10 @@ packages:
     resolution: {integrity: sha512-ZUKRh6/kUFoAiTAtTYPZJ3hw9wNxx+BIBOijnlG9PnrJsCcSjs1wyyD6vJpaYtgnzDrKYRSqf3OO6Rfa93xsRg==}
     engines: {node: '>= 0.4'}
 
+  happy-dom@14.12.3:
+    resolution: {integrity: sha512-vsYlEs3E9gLwA1Hp+w3qzu+RUDFf4VTT8cyKqVICoZ2k7WM++Qyd2LwzyTi5bqMJFiIC/vNpTDYuxdreENRK/g==}
+    engines: {node: '>=16.0.0'}
+
   has-symbols@1.1.0:
     resolution: {integrity: sha512-1cDNdwJ2Jaohmb3sg4OmKaMBwuC48sYni5HUw2DvsC8LjGTLK9h+eb1X6RyuOHe4hT0ULCW68iomhjUoKUqlPQ==}
     engines: {node: '>= 0.4'}
@@ -1209,6 +1242,11 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lucide-react@1.8.0:
+    resolution: {integrity: sha512-WuvlsjngSk7TnTBJ1hsCy3ql9V9VOdcPkd3PKcSmM34vJD8KG6molxz7m7zbYFgICwsanQWmJ13JlYs4Zp7Arw==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   magic-string@0.30.21:
     resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
@@ -1592,6 +1630,10 @@ packages:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
     deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+
+  whatwg-mimetype@3.0.0:
+    resolution: {integrity: sha512-nt+N2dzIutVRxARx1nghPKGv1xHikU7HKdfafKkLNLindmPU/ch3U31NOCGGA/dmPcmb1VlofO0vnKAcsm0o/Q==}
+    engines: {node: '>=12'}
 
   whatwg-mimetype@4.0.0:
     resolution: {integrity: sha512-QaKxh0eNIi2mE9p2vEdzfagOKHCcj1pJ56EEHGQOVxp8r9/iszLUUV7v89x9O1p/T+NlTM5W7jW6+cz4Fq1YVg==}
@@ -2050,6 +2092,8 @@ snapshots:
 
   '@sinclair/typebox@0.27.10': {}
 
+  '@tauri-apps/api@2.10.1': {}
+
   '@tauri-apps/cli-darwin-arm64@2.10.1':
     optional: true
 
@@ -2096,6 +2140,14 @@ snapshots:
       '@tauri-apps/cli-win32-arm64-msvc': 2.10.1
       '@tauri-apps/cli-win32-ia32-msvc': 2.10.1
       '@tauri-apps/cli-win32-x64-msvc': 2.10.1
+
+  '@tauri-apps/plugin-dialog@2.7.0':
+    dependencies:
+      '@tauri-apps/api': 2.10.1
+
+  '@tauri-apps/plugin-fs@2.5.0':
+    dependencies:
+      '@tauri-apps/api': 2.10.1
 
   '@turbo/darwin-64@2.9.6':
     optional: true
@@ -2307,6 +2359,8 @@ snapshots:
 
   electron-to-chromium@1.5.335: {}
 
+  entities@4.5.0: {}
+
   entities@6.0.1: {}
 
   es-define-property@1.0.1: {}
@@ -2445,6 +2499,12 @@ snapshots:
 
   gopd@1.2.0: {}
 
+  happy-dom@14.12.3:
+    dependencies:
+      entities: 4.5.0
+      webidl-conversions: 7.0.0
+      whatwg-mimetype: 3.0.0
+
   has-symbols@1.1.0: {}
 
   has-tostringtag@1.0.2:
@@ -2535,6 +2595,10 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lucide-react@1.8.0(react@19.2.5):
+    dependencies:
+      react: 19.2.5
 
   magic-string@0.30.21:
     dependencies:
@@ -2816,7 +2880,7 @@ snapshots:
       '@types/node': 20.19.39
       fsevents: 2.3.3
 
-  vitest@1.6.1(@types/node@20.19.39)(jsdom@25.0.1):
+  vitest@1.6.1(@types/node@20.19.39)(happy-dom@14.12.3)(jsdom@25.0.1):
     dependencies:
       '@vitest/expect': 1.6.1
       '@vitest/runner': 1.6.1
@@ -2840,6 +2904,7 @@ snapshots:
       why-is-node-running: 2.3.0
     optionalDependencies:
       '@types/node': 20.19.39
+      happy-dom: 14.12.3
       jsdom: 25.0.1
     transitivePeerDependencies:
       - less
@@ -2860,6 +2925,8 @@ snapshots:
   whatwg-encoding@3.1.1:
     dependencies:
       iconv-lite: 0.6.3
+
+  whatwg-mimetype@3.0.0: {}
 
   whatwg-mimetype@4.0.0: {}
 

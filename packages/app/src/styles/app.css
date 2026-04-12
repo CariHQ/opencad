@@ -907,3 +907,80 @@ body {
   border-color: var(--accent-primary);
   color: white;
 }
+
+.active-tool-indicator {
+  color: var(--accent-primary);
+  margin-left: 4px;
+}
+
+.viewport-info {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.viewport-canvas {
+  cursor: crosshair;
+  display: block;
+}
+
+.viewport-canvas.is-select {
+  cursor: default;
+}
+
+.tool-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolshelf .tool-btn.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.toolshelf .category-btn.active {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.viewport-corner.bottom-left {
+  bottom: 12px;
+  left: 12px;
+  display: flex;
+  gap: 12px;
+}
+
+.viewport-corner.bottom-right {
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+
+.viewport-controls {
+  display: flex;
+  gap: 4px;
+}
+
+.viewport-control-btn {
+  padding: 4px 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.viewport-control-btn:hover {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}
+
+.viewport-control-btn.active {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: white;
+}

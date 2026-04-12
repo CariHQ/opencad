@@ -36,5 +36,8 @@
   },
   "packageManagerArgs": [
     "--strict-peer-dependencies"
-  ]
+  ],
+  "dependencies": {
+    "lucide-react": "^1.8.0"
+  }
 }

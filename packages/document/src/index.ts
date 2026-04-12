@@ -15,3 +15,4 @@ export * from './element';
 export * from './storage';
 export * from './ifc';
 export * from './versioning';
+export * from './io';
