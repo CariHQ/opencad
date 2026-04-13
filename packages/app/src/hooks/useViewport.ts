@@ -333,6 +333,10 @@ export function useViewport() {
   }, [doc, selectedIds, drawingState, activeTool, currentSnap, snapEnabled]);
 
   useEffect(() => {
+    draw();
+  }, [doc]);
+
+  useEffect(() => {
     const canvas = canvasRef.current;
     const container = containerRef.current;
     if (!canvas || !container) return;
