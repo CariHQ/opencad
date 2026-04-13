@@ -112,7 +112,7 @@ body {
   height: 36px;
   border: none;
   background: transparent;
-  color: #8888aa;
+  color: #aabbcc;
   border-radius: 6px;
   cursor: pointer;
   display: flex;
@@ -312,7 +312,7 @@ body {
   height: 40px;
   border: none;
   background: transparent;
-  color: #8888aa;
+  color: #aabbcc;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
@@ -327,7 +327,7 @@ body {
   height: 40px;
   border: none;
   background: transparent;
-  color: #8888aa;
+  color: #aabbcc;
   border-radius: 8px;
   cursor: pointer;
   display: flex;
@@ -1050,7 +1050,7 @@ body {
 .modal-close {
   background: none;
   border: none;
-  color: #8888aa;
+  color: #aabbcc;
   cursor: pointer;
   padding: 4px;
   display: flex;
@@ -1082,7 +1082,7 @@ body {
 }
 
 .import-icon {
-  color: #8888aa;
+  color: #aabbcc;
   margin-bottom: 12px;
 }
 
@@ -1094,7 +1094,7 @@ body {
 
 .import-formats {
   font-size: 12px;
-  color: #666688;
+  color: #ddeeff;
 }
 
 .import-status {
@@ -1144,14 +1144,14 @@ body {
 
 .export-desc {
   font-size: 12px;
-  color: #666688;
+  color: #ddeeff;
   margin-left: auto;
 }
 
 /* Project Templates */
 .templates-title {
   font-size: 14px;
-  color: #8888aa;
+  color: #aabbcc;
   margin-bottom: 16px;
 }
 
@@ -1187,5 +1187,5 @@ body {
 
 .template-desc {
   font-size: 12px;
-  color: #666688;
+  color: #ddeeff;
 }

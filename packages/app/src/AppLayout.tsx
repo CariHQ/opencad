@@ -41,7 +41,9 @@ export function AppLayout() {
             onClick={() => setShowModal('projects')}
             title="New Project"
           >
-            <Plus size={18} />
+            <span className="tool-icon">
+              <Plus size={18} />
+            </span>
           </button>
           <span className="brand-logo">OC</span>
           <span className="brand-name">OpenCAD</span>
@@ -70,13 +72,19 @@ export function AppLayout() {
 
         <div className="toolbar-actions">
           <button className="toolbar-btn" onClick={() => setShowModal('import')} title="Import IFC">
-            <FolderOpen size={18} />
+            <span className="tool-icon">
+              <FolderOpen size={18} />
+            </span>
           </button>
           <button className="toolbar-btn" onClick={() => setShowModal('export')} title="Export IFC">
-            <FileDown size={18} />
+            <span className="tool-icon">
+              <FileDown size={18} />
+            </span>
           </button>
           <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant">
-            <Bot size={18} />
+            <span className="tool-icon">
+              <Bot size={18} />
+            </span>
           </button>
         </div>
       </header>
