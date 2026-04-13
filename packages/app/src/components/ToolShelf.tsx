@@ -80,7 +80,9 @@ export function ToolShelf() {
               onClick={() => setActiveCategory(cat.id)}
               title={cat.name}
             >
-              <Icon size={20} />
+              <span className="tool-icon">
+                <Icon size={18} />
+              </span>
             </button>
           );
         })}
@@ -96,7 +98,9 @@ export function ToolShelf() {
               onClick={() => setActiveTool(tool.id)}
               title={`${tool.name} (${tool.shortcut})`}
             >
-              <Icon size={20} />
+              <span className="tool-icon">
+                <Icon size={18} />
+              </span>
             </button>
           );
         })}
