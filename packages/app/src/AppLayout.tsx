@@ -10,13 +10,20 @@ import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
 import { ImportExportModal } from './components/ImportExportModal';
 import { useDocumentStore } from './stores/documentStore';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import './styles/app.css';
 
 export function AppLayout() {
-  const { document: doc, initProject } = useDocumentStore();
-  const [showAIChat, setShowAIChat] = useState(false);
-  const [activeView, setActiveView] = useState<'floor-plan' | '3d' | 'section'>('3d');
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const { document: doc, initProject, activeTool } = useDocumentStore();
+  const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
+  const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>(
+    'opencad-activeView',
+    '3d'
+  );
+  const [selectedLevel, setSelectedLevel] = useLocalStorage<string | null>(
+    'opencad-selectedLevel',
+    null
+  );
   const [showModal, setShowModal] = useState<'import' | 'export' | 'projects' | null>(null);
 
   useEffect(() => {

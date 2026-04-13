@@ -8,7 +8,9 @@ interface ViewportProps {
 }
 
 export function Viewport({ viewType = '3d' }: ViewportProps) {
-  const [show3D, setShow3D] = useState(viewType === '3d');
+  const show3D = viewType === '3d';
+  const toggleView = () => {}; // TODO: wire up to parent state
+
   const {
     canvasRef,
     containerRef,
@@ -27,8 +29,6 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     sectionBox,
     setSectionBox,
   } = useThreeViewport();
-
-  const toggleView = () => setShow3D(!show3D);
 
   const handleViewChange = (preset: ViewPreset) => {
     if (show3D) {
