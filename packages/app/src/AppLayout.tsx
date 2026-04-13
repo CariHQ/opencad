@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FolderOpen, Send, Bot, FolderDown, FileDown } from 'lucide-react';
+import { FolderOpen, FileDown, Bot, Plus } from 'lucide-react';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 import { LayersPanel } from './components/LayerPanel';
@@ -8,6 +8,7 @@ import { StatusBar } from './components/StatusBar';
 import { Viewport } from './components/Viewport';
 import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
+import { ImportExportModal } from './components/ImportExportModal';
 import { useDocumentStore } from './stores/documentStore';
 import './styles/app.css';
 
@@ -16,6 +17,7 @@ export function AppLayout() {
   const [showAIChat, setShowAIChat] = useState(false);
   const [activeView, setActiveView] = useState<'floor-plan' | '3d' | 'section'>('3d');
   const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const [showModal, setShowModal] = useState<'import' | 'export' | 'projects' | null>(null);
 
   useEffect(() => {
     initProject('project-1', 'user-1');
@@ -34,6 +36,13 @@ export function AppLayout() {
     <div className="app-container">
       <header className="app-toolbar">
         <div className="toolbar-brand">
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowModal('projects')}
+            title="New Project"
+          >
+            <Plus size={18} />
+          </button>
           <span className="brand-logo">OC</span>
           <span className="brand-name">OpenCAD</span>
         </div>
@@ -60,13 +69,13 @@ export function AppLayout() {
         </div>
 
         <div className="toolbar-actions">
-          <button className="toolbar-btn" title="Import IFC">
+          <button className="toolbar-btn" onClick={() => setShowModal('import')} title="Import IFC">
             <FolderOpen size={18} />
           </button>
-          <button className="toolbar-btn" title="Export IFC">
+          <button className="toolbar-btn" onClick={() => setShowModal('export')} title="Export IFC">
             <FileDown size={18} />
           </button>
-          <button className="toolbar-btn" title="AI Assistant" onClick={toggleAIChat}>
+          <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant">
             <Bot size={18} />
           </button>
         </div>
@@ -105,6 +114,8 @@ export function AppLayout() {
       </div>
 
       <StatusBar />
+
+      {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
     </div>
   );
 }
