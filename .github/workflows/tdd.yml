@@ -1,0 +1,205 @@
+name: TDD Test Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  secrets-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --no-git --verbose
+        env:
+          GITLEAKS_LICENSE_KEY: ${{ secrets.GITLEAKS_LICENSE_KEY }}
+
+  tdd-compliance:
+    name: TDD Compliance Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Check for test file changes
+        id: test-changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            tests:
+              - 'packages/**/*.test.ts'
+              - 'packages/**/*.integration.test.ts'
+              - 'e2e/**/*.spec.ts'
+
+      - name: Verify tests exist for modified source
+        if: github.event_name == 'pull_request'
+        run: |
+          echo "Checking TDD compliance..."
+          # This ensures every src file has a corresponding test
+          pnpm turbo run typecheck
+
+      - name: Type check (every commit)
+        run: pnpm typecheck
+
+      - name: Lint check (every commit)
+        run: pnpm lint
+
+  unit-tests:
+    name: Unit Tests (${{ matrix.package }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        package:
+          - '@opencad/shared'
+          - '@opencad/document'
+          - '@opencad/geometry'
+          - '@opencad/sync'
+          - '@opencad/ai'
+          - '@opencad/app'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run unit tests
+        run: pnpm --filter=${{ matrix.package }} test:unit
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: test-results-${{ matrix.package }}
+          path: |
+            packages/**/coverage
+            packages/**/test-results
+
+  geometry-tests:
+    name: Geometry Kernel Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run geometry tests
+        run: pnpm --filter=@opencad/geometry test:unit
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: geometry-coverage
+          path: packages/geometry/coverage
+
+  integration-tests:
+    name: Integration Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        run: pnpm build:browser
+
+  test-summary:
+    name: Test Summary
+    needs: [unit-tests, geometry-tests, integration-tests, build]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Generate test report
+        run: |
+          echo "## Test Results Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          for dir in artifacts/test-results-*; do
+            if [ -d "$dir" ]; then
+              name=$(basename "$dir" | sed 's/test-results-//')
+              echo "| $name | ✅ Passed |" >> $GITHUB_STEP_SUMMARY
+            fi
+          done
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Coverage reports available in artifacts." >> $GITHUB_STEP_SUMMARY

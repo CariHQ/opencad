@@ -7,11 +7,16 @@
     "dev": "tauri dev",
     "build": "tauri build",
     "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf src-tauri/target"
   },
   "dependencies": {
     "@opencad/shared": "workspace:*",
-    "@opencad/document": "workspace:*"
+    "@opencad/document": "workspace:*",
+    "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.0.0",
+    "@tauri-apps/plugin-fs": "^2.0.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "^2.0.0",

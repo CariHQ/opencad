@@ -1,37 +1,69 @@
 import React from 'react';
+import {
+  MousePointer2,
+  Square,
+  GitCommit,
+  Home,
+  ArrowUpDown,
+  DoorOpen,
+  Fence,
+  Ruler,
+  Type,
+  Settings,
+  Boxes,
+  FileText,
+  Circle,
+  MinusSquare,
+  PlusSquare,
+  Hexagon,
+  Minus,
+  Plus,
+  RectangleHorizontal,
+  Maximize2,
+  Minimize2,
+  Pentagon,
+  Triangle,
+} from 'lucide-react';
+import { useDocumentStore } from '../stores/documentStore';
 
 interface Tool {
   id: string;
   name: string;
-  icon: string;
+  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   shortcut: string;
-  category: 'structure' | 'opening' | '楼层' | 'annotation' | 'modify';
+  category: 'structure' | 'opening' | 'annotation' | 'modify' | 'draw';
 }
 
 const tools: Tool[] = [
-  { id: 'select', name: 'Select', icon: '↖', shortcut: 'V', category: 'modify' },
-  { id: 'wall', name: 'Wall', icon: '▮', shortcut: 'W', category: 'structure' },
-  { id: 'column', name: 'Column', icon: '⬡', shortcut: 'C', category: 'structure' },
-  { id: 'beam', name: 'Beam', icon: '═', shortcut: 'B', category: 'structure' },
-  { id: 'slab', name: 'Slab', icon: '▬', shortcut: 'S', category: 'structure' },
-  { id: 'roof', name: 'Roof', icon: '⌒', shortcut: 'R', category: 'structure' },
-  { id: 'stair', name: 'Stair', icon: '⇉', shortcut: 'T', category: 'structure' },
-  { id: 'door', name: 'Door', icon: '⊟', shortcut: 'D', category: 'opening' },
-  { id: 'window', name: 'Window', icon: '▭', shortcut: 'N', category: 'opening' },
-  { id: ' railing', name: 'Railing', icon: '⊓', shortcut: 'G', category: 'opening' },
-  { id: 'dimension', name: 'Dimension', icon: '↔', shortcut: 'M', category: 'annotation' },
-  { id: 'text', name: 'Text', icon: 'T', shortcut: 'X', category: 'annotation' },
+  { id: 'select', name: 'Select', icon: MousePointer2, shortcut: 'V', category: 'modify' },
+  { id: 'line', name: 'Line', icon: Minus, shortcut: 'L', category: 'draw' },
+  { id: 'rectangle', name: 'Rectangle', icon: Square, shortcut: 'R', category: 'draw' },
+  { id: 'circle', name: 'Circle', icon: Circle, shortcut: 'C', category: 'draw' },
+  { id: 'arc', name: 'Arc', icon: Maximize2, shortcut: 'A', category: 'draw' },
+  { id: 'polygon', name: 'Polygon', icon: Pentagon, shortcut: 'P', category: 'draw' },
+  { id: 'wall', name: 'Wall', icon: Square, shortcut: 'W', category: 'structure' },
+  { id: 'column', name: 'Column', icon: Hexagon, shortcut: 'K', category: 'structure' },
+  { id: 'beam', name: 'Beam', icon: GitCommit, shortcut: 'B', category: 'structure' },
+  { id: 'slab', name: 'Slab', icon: RectangleHorizontal, shortcut: 'S', category: 'structure' },
+  { id: 'roof', name: 'Roof', icon: Home, shortcut: 'O', category: 'structure' },
+  { id: 'stair', name: 'Stair', icon: ArrowUpDown, shortcut: 'T', category: 'structure' },
+  { id: 'door', name: 'Door', icon: DoorOpen, shortcut: 'D', category: 'opening' },
+  { id: 'window', name: 'Window', icon: Square, shortcut: 'N', category: 'opening' },
+  { id: 'railing', name: 'Railing', icon: Fence, shortcut: 'G', category: 'opening' },
+  { id: 'dimension', name: 'Dimension', icon: Ruler, shortcut: 'M', category: 'annotation' },
+  { id: 'text', name: 'Text', icon: Type, shortcut: 'X', category: 'annotation' },
 ];
 
 const categories = [
-  { id: 'modify', name: 'Modify', icon: '⚙' },
-  { id: 'structure', name: 'Structure', icon: '🏗' },
-  { id: 'opening', name: 'Openings', icon: '🚪' },
-  { id: 'annotation', name: 'Annotate', icon: '📐' },
+  { id: 'modify', name: 'Modify', icon: Settings },
+  { id: 'draw', name: 'Draw', icon: Square },
+  { id: 'structure', name: 'Structure', icon: Boxes },
+  { id: 'opening', name: 'Openings', icon: DoorOpen },
+  { id: 'annotation', name: 'Annotate', icon: FileText },
 ];
 
 export function ToolShelf() {
-  const [activeTool, setActiveTool] = React.useState('select');
+  const { activeTool, setActiveTool } = useDocumentStore();
   const [activeCategory, setActiveCategory] = React.useState('modify');
 
   const filteredTools = tools.filter((t) => t.category === activeCategory);
@@ -39,29 +71,39 @@ export function ToolShelf() {
   return (
     <div className="toolshelf">
       <div className="toolshelf-categories">
-        {categories.map((cat) => (
-          <button
-            key={cat.id}
-            className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
-            onClick={() => setActiveCategory(cat.id)}
-            title={cat.name}
-          >
-            <span className="category-icon">{cat.icon}</span>
-          </button>
-        ))}
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
+              onClick={() => setActiveCategory(cat.id)}
+              title={cat.name}
+            >
+              <span className="tool-icon">
+                <Icon size={18} />
+              </span>
+            </button>
+          );
+        })}
       </div>
       <div className="toolshelf-divider" />
       <div className="toolshelf-tools">
-        {filteredTools.map((tool) => (
-          <button
-            key={tool.id}
-            className={`tool-btn ${activeTool === tool.id ? 'active' : ''}`}
-            onClick={() => setActiveTool(tool.id)}
-            title={`${tool.name} (${tool.shortcut})`}
-          >
-            <span className="tool-icon">{tool.icon}</span>
-          </button>
-        ))}
+        {filteredTools.map((tool) => {
+          const Icon = tool.icon;
+          return (
+            <button
+              key={tool.id}
+              className={`tool-btn ${activeTool === tool.id ? 'active' : ''}`}
+              onClick={() => setActiveTool(tool.id)}
+              title={`${tool.name} (${tool.shortcut})`}
+            >
+              <span className="tool-icon">
+                <Icon size={18} />
+              </span>
+            </button>
+          );
+        })}
       </div>
       <div className="toolshelf-divider" />
       <div className="toolshelf-info">

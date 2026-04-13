@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { FolderOpen, FileDown, Bot, Plus } from 'lucide-react';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 import { LayersPanel } from './components/LayerPanel';
@@ -7,14 +8,23 @@ import { StatusBar } from './components/StatusBar';
 import { Viewport } from './components/Viewport';
 import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
+import { ImportExportModal } from './components/ImportExportModal';
 import { useDocumentStore } from './stores/documentStore';
+import { useLocalStorage } from './hooks/useLocalStorage';
 import './styles/app.css';
 
 export function AppLayout() {
-  const { document: doc, initProject } = useDocumentStore();
-  const [showAIChat, setShowAIChat] = useState(false);
-  const [activeView, setActiveView] = useState<'floor-plan' | '3d' | 'section'>('3d');
-  const [selectedLevel, setSelectedLevel] = useState<string | null>(null);
+  const { document: doc, initProject, activeTool } = useDocumentStore();
+  const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
+  const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>(
+    'opencad-activeView',
+    '3d'
+  );
+  const [selectedLevel, setSelectedLevel] = useLocalStorage<string | null>(
+    'opencad-selectedLevel',
+    null
+  );
+  const [showModal, setShowModal] = useState<'import' | 'export' | 'projects' | null>(null);
 
   useEffect(() => {
     initProject('project-1', 'user-1');
@@ -33,6 +43,15 @@ export function AppLayout() {
     <div className="app-container">
       <header className="app-toolbar">
         <div className="toolbar-brand">
+          <button
+            className="toolbar-btn"
+            onClick={() => setShowModal('projects')}
+            title="New Project"
+          >
+            <span className="tool-icon">
+              <Plus size={18} />
+            </span>
+          </button>
           <span className="brand-logo">OC</span>
           <span className="brand-name">OpenCAD</span>
         </div>
@@ -59,14 +78,20 @@ export function AppLayout() {
         </div>
 
         <div className="toolbar-actions">
-          <button className="toolbar-btn" title="Import IFC">
-            <span className="icon">📁</span>
+          <button className="toolbar-btn" onClick={() => setShowModal('import')} title="Import IFC">
+            <span className="tool-icon">
+              <FolderOpen size={18} />
+            </span>
           </button>
-          <button className="toolbar-btn" title="Export IFC">
-            <span className="icon">📤</span>
+          <button className="toolbar-btn" onClick={() => setShowModal('export')} title="Export IFC">
+            <span className="tool-icon">
+              <FileDown size={18} />
+            </span>
           </button>
-          <button className="toolbar-btn" title="AI Assistant" onClick={toggleAIChat}>
-            <span className="icon">🤖</span>
+          <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant">
+            <span className="tool-icon">
+              <Bot size={18} />
+            </span>
           </button>
         </div>
       </header>
@@ -104,6 +129,8 @@ export function AppLayout() {
       </div>
 
       <StatusBar />
+
+      {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
     </div>
   );
 }

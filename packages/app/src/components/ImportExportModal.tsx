@@ -1,0 +1,144 @@
+import React, { useState, useRef } from 'react';
+import { Upload, FileDown, X, FileText } from 'lucide-react';
+import { useDocumentStore } from '../stores/documentStore';
+import { parseIFC, serializeIFC } from '@opencad/document';
+
+interface ImportExportModalProps {
+  mode: 'import' | 'export' | 'projects';
+  onClose: () => void;
+}
+
+export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
+  const { document: doc, initProject, loadProject } = useDocumentStore();
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setImporting(true);
+    setError(null);
+
+    try {
+      const content = await file.text();
+
+      if (file.name.toLowerCase().endsWith('.ifc')) {
+        const parsed = parseIFC(content);
+        console.log('Imported IFC entities:', parsed);
+        initProject(file.name, 'user-1');
+      } else {
+        setError('Unsupported file format. Please use .ifc files.');
+      }
+    } catch (err) {
+      setError('Failed to import file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setImporting(false);
+      onClose();
+    }
+  };
+
+  const handleExport = () => {
+    if (!doc) return;
+
+    const content = serializeIFC(doc);
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${doc.name || 'export'}.ifc`;
+    a.click();
+    URL.revokeObjectURL(url);
+    onClose();
+  };
+
+  const templates = [
+    { id: 'residential', name: 'Residential', description: 'Single-family house template' },
+    { id: 'commercial', name: 'Commercial', description: 'Office building template' },
+    { id: 'interior', name: 'Interior', description: 'Interior design template' },
+    { id: 'blank', name: 'Blank', description: 'Start from scratch' },
+  ];
+
+  const handleCreateProject = (templateId: string) => {
+    initProject(templateId, 'user-1');
+    onClose();
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">
+            {mode === 'import' ? 'Import File' : mode === 'export' ? 'Export File' : 'New Project'}
+          </span>
+          <button className="modal-close" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="modal-body">
+          {mode === 'import' && (
+            <div className="import-area" onClick={() => fileInputRef.current?.click()}>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".ifc,.dxf,.dwg"
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
+              <Upload size={48} className="import-icon" />
+              <p className="import-text">Click to select a file</p>
+              <p className="import-formats">Supported: IFC, DXF, DWG</p>
+              {importing && <p className="import-status">Importing...</p>}
+              {error && <p className="import-error">{error}</p>}
+            </div>
+          )}
+
+          {mode === 'export' && (
+            <div className="export-options">
+              <button className="export-btn" onClick={handleExport}>
+                <FileText size={24} />
+                <span>IFC (.ifc)</span>
+                <span className="export-desc">Industry Foundation Classes</span>
+              </button>
+              <button className="export-btn" disabled>
+                <FileText size={24} />
+                <span>DXF (.dxf)</span>
+                <span className="export-desc">Drawing Exchange Format</span>
+              </button>
+              <button className="export-btn" disabled>
+                <FileText size={24} />
+                <span>DWG (.dwg)</span>
+                <span className="export-desc">AutoCAD Drawing</span>
+              </button>
+              <button className="export-btn" disabled>
+                <FileText size={24} />
+                <span>PDF (.pdf)</span>
+                <span className="export-desc">Portable Document Format</span>
+              </button>
+            </div>
+          )}
+
+          {mode === 'projects' && (
+            <div className="project-templates">
+              <p className="templates-title">Choose a template to start:</p>
+              <div className="templates-grid">
+                {templates.map((template) => (
+                  <button
+                    key={template.id}
+                    className="template-card"
+                    onClick={() => handleCreateProject(template.id)}
+                  >
+                    <span className="template-name">{template.name}</span>
+                    <span className="template-desc">{template.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}

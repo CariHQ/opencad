@@ -19,6 +19,8 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 tokio = { version = "1", features = ["full"] }
 log = "0.4"
 env_logger = "0.11"
+dirs = "5"
+chrono = "0.4"
 
 [features]
 default = ["custom-protocol"]

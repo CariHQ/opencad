@@ -22,6 +22,7 @@
    6.3 [Key Architectural Decisions](#63-key-architectural-decisions)
    6.4 [Shared Codebase Strategy](#64-shared-codebase-strategy)
    6.5 [Desktop Application](#65-desktop-application)
+   6.6 [Hosted Cloud Storage & Subscription Model](#66-hosted-cloud-storage--subscription-model)
 7. [Core Feature Specifications](#7-core-feature-specifications)
 8. [AI Feature Specifications](#8-ai-feature-specifications)
 9. [Offline-First Architecture](#9-offline-first-architecture)
@@ -588,6 +589,323 @@ The desktop app is not a separate product — it's the same OpenCAD codebase run
 | Working on Chromebook/tablet       | Browser     | Desktop not supported                     |
 | Batch processing (export 20 files) | Desktop     | Multi-threaded, no browser limits         |
 | Firm with IT security policies     | Desktop     | Local data, no cloud required             |
+
+---
+
+## 6.6 Hosted Cloud Storage & Subscription Model
+
+### 6.6.1 Core Principle: Cloud is the Single Source of Truth
+
+> **"Every edit, from every client, flows to our hosted service. Nothing is ever lost."**
+
+OpenCAD is fundamentally a **cloud-first product**. Both the browser app and the desktop app save to our hosted cloud service. The cloud is not a sync target — it is the authoritative document store. Local storage (IndexedDB in browser, SQLite on desktop) is a **cache and offline buffer**, never the primary store.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Unified Cloud-First Architecture                  │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Browser App                          Desktop App                    │
+│  ┌──────────────────────┐            ┌──────────────────────┐       │
+│  │  React UI (shared)   │            │  React UI (shared)   │       │
+│  │  WASM Kernel (shared)│            │  WASM Kernel (shared)│       │
+│  │  IndexedDB (cache)   │            │  SQLite (cache)      │       │
+│  │  Service Worker      │            │  Tauri Rust Backend  │       │
+│  └──────────┬───────────┘            └──────────┬───────────┘       │
+│             │                                    │                   │
+│             │  WebSocket (real-time)             │  WebSocket        │
+│             │  HTTP POST (batch offline)         │  HTTP POST        │
+│             └────────────────┬───────────────────┘                   │
+│                              │                                       │
+│                     ┌────────▼────────┐                              │
+│                     │  API Gateway     │                              │
+│                     └────────┬────────┘                              │
+│                              │                                       │
+│                     ┌────────▼────────┐                              │
+│                     │  Sync Service    │                              │
+│                     │  (per-doc proc)  │                              │
+│                     └────────┬────────┘                              │
+│                              │                                       │
+│              ┌───────────────┼───────────────┐                       │
+│              │               │               │                       │
+│     ┌────────▼──────┐ ┌─────▼──────┐ ┌──────▼──────┐                │
+│     │  CRDT Store   │ │  Version   │ │  File Store │                │
+│     │  (Redis)      │ │  History   │ │  (S3)       │                │
+│     │               │ │  (Postgres)│ │             │                │
+│     └───────────────┘ └────────────┘ └─────────────┘                │
+│                                                                      │
+│  KEY GUARANTEE: Every edit from every client is persisted to        │
+│  the cloud. Local storage is a cache, never the source of truth.    │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.6.2 Zero Data Loss Guarantee
+
+#### The Problem
+
+Figma's auto-save blog post reveals the essential complexity: **multiplayer editing creates branching history**, and merging offline branches back is fundamentally a distributed systems problem. Stale local changes can overwrite newer cloud changes. Missing local changes mean data loss.
+
+#### Our Solution: Three-Layer Safety Net
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Zero Data Loss: Three-Layer Safety Net            │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Layer 1: Real-Time Sync (Online)                                   │
+│  ─────────────────────────────────────                              │
+│  - Every property change sent to server within 100ms                │
+│  - Server acknowledges before client considers it "saved"           │
+│  - Delta-based: only changed properties transmitted                 │
+│  - Client prevented from closing tab while pending ack exists       │
+│                                                                      │
+│  Layer 2: Offline Buffer + Replay (Disconnected)                    │
+│  ──────────────────────────────────────────────                     │
+│  - Changes stored in local pending buffer (memory)                  │
+│  - Buffer committed to disk every 2s (browser: IndexedDB,           │
+│    desktop: SQLite)                                                 │
+│  - Critical invariant: disk = memory (exactly)                      │
+│  - On reconnect: download fresh cloud state → replay local edits    │
+│    on top → upload → wait for ack → clear disk                      │
+│  - Conservative re-serialization: after reconnect, erase disk       │
+│    and re-write from memory in single transaction (prevents         │
+│    stale-change bugs from observer short-circuits)                  │
+│                                                                      │
+│  Layer 3: Version History Checkpoints (Disaster Recovery)           │
+│  ─────────────────────────────────────────────────────────          │
+│  - Automatic checkpoint BEFORE applying offline replay              │
+│  - Automatic checkpoint AFTER applying offline replay               │
+│  - Checkpoints stored immutably in S3 (never deleted)              │
+│  - User can restore any checkpoint via UI                           │
+│  - Checkpoints also created on every explicit "Save Version"        │
+│  - Retention: unlimited for paid, 30-day for free tier              │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Data Loss Prevention Invariants
+
+| Invariant | Enforcement |
+|-----------|-------------|
+| **Disk = Memory** | Local pending changes on disk must exactly match in-memory buffer. Verified on every commit. |
+| **No Close During Sync** | Tab/app cannot close while changes await server acknowledgment. |
+| **Stale Change Erasure** | After reconnect, disk is erased and re-serialized from memory before any changes are sent. |
+| **Server is Authority** | The cloud defines event order. No timestamps needed — server receive order is the truth. |
+| **Checkpoint Before Merge** | A version checkpoint is always created before replaying offline edits. |
+| **Ack Before Clear** | Local disk changes are only cleared after explicit server acknowledgment. |
+
+### 6.6.3 Subscription Model
+
+#### Pricing Tiers
+
+| Tier | Price | Storage | Version History | AI Credits | Collaboration | Desktop Access |
+|------|-------|---------|-----------------|------------|---------------|----------------|
+| **Free** | $0 | 3 projects, 100MB each | 7 days | 10 prompts/mo (cloud) | View-only | ❌ |
+| **Starter** | $29/mo | 25 projects, 500MB each | 30 days | 200 prompts/mo | 3 editors | ✅ |
+| **Professional** | $59/mo | Unlimited projects, 5GB each | 1 year | 1,000 prompts/mo | 10 editors | ✅ |
+| **Team** | $99/user/mo | Unlimited, 20GB each | Unlimited | 5,000 prompts/user/mo | Unlimited editors | ✅ |
+| **Enterprise** | Custom | Unlimited, custom limits | Unlimited + audit log | Unlimited + fine-tuned | Unlimited + SSO | ✅ + MDM |
+
+#### Desktop Subscription Enforcement
+
+The desktop app **requires an active subscription** to function. However, we never block the user from their work:
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Desktop Subscription Flow                         │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Normal Operation (Subscription Active):                            │
+│    1. Desktop app launches                                           │
+│    2. Checks subscription status with cloud (async, non-blocking)   │
+│    3. If active → full access                                        │
+│    4. Syncs all projects to/from cloud                               │
+│                                                                      │
+│  Subscription Expired:                                               │
+│    1. Desktop app launches                                           │
+│    2. Subscription check fails                                       │
+│    3. Grace period begins (14 days)                                  │
+│    4. Full access during grace period + prominent renewal prompt    │
+│    5. After grace period:                                            │
+│       a. User CAN still open all projects (read-only)               │
+│       b. User CAN export all data (IFC, DWG, PDF, etc.)             │
+│       c. User CANNOT edit until subscription renewed                │
+│       d. User CANNOT create new projects                            │
+│       e. All data remains safely in cloud (never held hostage)      │
+│                                                                      │
+│  Offline During Grace Period:                                        │
+│    1. Desktop cannot verify subscription                             │
+│    2. Full access continues (offline grace: 30 days)                │
+│    3. On reconnect: subscription re-verified                         │
+│                                                                      │
+│  Subscription Cancelled (User Choice):                               │
+│    1. User cancels subscription                                      │
+│    2. Current billing period continues                               │
+│    3. After period ends: 14-day grace period                         │
+│    4. After grace: read-only + export access                         │
+│    5. All data preserved in cloud for 90 days                        │
+│    6. After 90 days: data available for export for additional 90    │
+│       days, then permanently deleted (with email warnings)           │
+│                                                                      │
+│  NEVER:                                                              │
+│    ❌ Delete user data without warning                               │
+│    ❌ Block access to existing projects                              │
+│    ❌ Block data export                                              │
+│    ❌ Hold data hostage for payment                                  │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+#### Subscription Verification
+
+| Check | Frequency | Method | Offline Behavior |
+|-------|-----------|--------|------------------|
+| **Heartbeat** | Every 5 minutes (online) | REST API call to billing service | Skipped when offline |
+| **Launch Check** | Every app launch | REST API call | Falls back to cached token |
+| **Cached Token** | Stored locally | Signed JWT with expiry | Valid for 30 days offline |
+| **Grace Period** | 14 days after expiry | Server-tracked | Locally tracked with server reconciliation |
+| **Offline Grace** | 30 days | Locally tracked | Full access, reconciles on reconnect |
+
+### 6.6.4 Browser vs Desktop: Same Cloud, Same Data
+
+| Aspect | Browser App | Desktop App |
+|--------|-------------|-------------|
+| **Cloud Sync** | ✅ Same sync service | ✅ Same sync service |
+| **Document Model** | ✅ Identical CRDT | ✅ Identical CRDT |
+| **Version History** | ✅ Same checkpoints | ✅ Same checkpoints |
+| **Collaboration** | ✅ Real-time with all clients | ✅ Real-time with all clients |
+| **Offline Edits** | Buffered in IndexedDB → cloud on reconnect | Buffered in SQLite → cloud on reconnect |
+| **Subscription Required** | Free tier available | Requires active subscription |
+| **Local Storage** | Cache only (browser quota limits) | Cache only (no quota limits) |
+| **Data Portability** | Export from cloud | Export from cloud + local |
+
+**Key guarantee:** A project edited in the browser and the same project edited on desktop are the **exact same document** in the cloud. There is no "browser version" vs "desktop version" — there is one document, accessible from any client.
+
+### 6.6.5 Sync Flow: Detailed
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Detailed Sync Flow                                │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  ONLINE — Real-Time Sync:                                           │
+│  ─────────────────────────────                                      │
+│  1. User makes edit (draws wall, moves door, changes property)      │
+│  2. Edit applied to local document model immediately (optimistic)   │
+│  3. Edit added to in-memory pending changes buffer                  │
+│  4. Pending change sent to server via WebSocket (< 100ms)           │
+│  5. Server receives change, applies to authoritative document state │
+│  6. Server broadcasts change to all other connected clients         │
+│  7. Server sends acknowledgment to originating client               │
+│  8. Client removes change from pending buffer                       │
+│  9. Client writes acknowledgment to disk (for crash safety)         │
+│                                                                      │
+│  OFFLINE — Local Editing:                                           │
+│  ─────────────────────────────                                      │
+│  1. User makes edit                                                  │
+│  2. Edit applied to local document model immediately                │
+│  3. Edit added to in-memory pending changes buffer                  │
+│  4. Buffer committed to disk every 2s (atomic transaction)          │
+│  5. Invariant verified: disk changes == memory changes              │
+│  6. Repeat steps 1-5 for each edit                                  │
+│                                                                      │
+│  RECONNECT — Offline Replay:                                        │
+│  ─────────────────────────────                                      │
+│  1. Connectivity detected                                            │
+│  2. Client downloads fresh document state from cloud                │
+│  3. Server creates version checkpoint (PRE-REPLAY)                  │
+│  4. Client replays local pending changes on top of fresh state      │
+│  5. Client sends replayed changes to server                         │
+│  6. Server applies changes (CRDT merge — automatic for most cases)  │
+│  7. Server creates version checkpoint (POST-REPLAY)                 │
+│  8. Server sends acknowledgment                                     │
+│  9. Client erases disk changes (conservative clear)                 │
+│  10. Client re-serializes any remaining pending changes             │
+│      (single IndexedDB/SQLite transaction)                          │
+│  11. Real-time WebSocket sync resumes                               │
+│                                                                      │
+│  CONFLICT — Large Offline Branch:                                   │
+│  ──────────────────────────────────                                 │
+│  1. CRDT auto-merges all non-conflicting changes                    │
+│  2. If semantic conflict detected (e.g., same wall moved            │
+│     differently in browser and desktop):                            │
+│     a. Server keeps its version (authority)                         │
+│     b. Client's version stored as alternative in version history    │
+│     c. User notified: "Some offline edits created conflicts"        │
+│     d. User can review and restore from POST-REPLAY checkpoint      │
+│  3. No data is ever silently discarded                              │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.6.6 Cloud Storage Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    Cloud Storage Layers                              │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  Hot Storage (Active Documents):                                    │
+│  ──────────────────────────────────                                 │
+│  - Redis: CRDT document state (in-memory, per-document process)     │
+│  - Purpose: real-time sync, sub-100ms latency                       │
+│  - Persistence: AOF (Append Only File) for crash recovery           │
+│  - Eviction: never (active documents stay in memory)                │
+│                                                                      │
+│  Warm Storage (Document Snapshots):                                 │
+│  ─────────────────────────────────────                              │
+│  - PostgreSQL: Document metadata, version history index,            │
+│    user data, permissions, billing                                  │
+│  - Purpose: project listing, search, access control                 │
+│  - Retention: lifetime of account                                   │
+│                                                                      │
+│  Cold Storage (Immutable Archives):                                 │
+│  ─────────────────────────────────────                              │
+│  - S3: Full document snapshots, version checkpoints,                │
+│    exported files, imported originals                               │
+│  - Purpose: disaster recovery, version restore, audit               │
+│  - Retention: unlimited (paid), 30-day (free)                       │
+│  - Durability: 99.999999999% (11 nines, S3 standard)               │
+│  - Versioning: S3 versioning enabled (protects against deletion)    │
+│                                                                      │
+│  Backup:                                                             │
+│  ─────────                                                            │
+│  - Cross-region replication (primary + DR region)                   │
+│  - Daily encrypted backups to separate storage account              │
+│  - Point-in-time recovery for PostgreSQL (WAL archiving)            │
+│  - RPO: 1 hour (maximum data loss in disaster)                      │
+│  - RTO: 4 hours (time to restore service)                           │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### 6.6.7 Subscription + Sync Test Requirements
+
+| ID | Test | Priority |
+|----|------|----------|
+| T-SUB-001 | Browser edit → verify persisted to cloud within 2s | P0 |
+| T-SUB-002 | Desktop edit → verify persisted to cloud within 2s | P0 |
+| T-SUB-003 | Browser edit → open in desktop → verify same state | P0 |
+| T-SUB-004 | Desktop edit → open in browser → verify same state | P0 |
+| T-SUB-005 | Offline browser edit → reconnect → verify sync to cloud | P0 |
+| T-SUB-006 | Offline desktop edit → reconnect → verify sync to cloud | P0 |
+| T-SUB-007 | Simultaneous browser + desktop edit → verify CRDT merge | P0 |
+| T-SUB-008 | Force crash during sync → restart → verify no data loss | P0 |
+| T-SUB-009 | Subscription expires → verify 14-day grace period | P0 |
+| T-SUB-010 | Grace period ends → verify read-only + export access | P0 |
+| T-SUB-011 | Offline during grace → verify 30-day offline grace | P0 |
+| T-SUB-012 | Subscription renewed → verify full access restored | P0 |
+| T-SUB-013 | Cancel subscription → verify data preserved 90 days | P0 |
+| T-SUB-014 | Large offline branch (1000 edits) → verify replay succeeds | P0 |
+| T-SUB-015 | Replay creates conflict → verify checkpoint before + after | P0 |
+| T-SUB-016 | Stale local changes → verify conservative erase prevents overwrite | P0 |
+| T-SUB-017 | Tab close during pending sync → verify prevented | P0 |
+| T-SUB-018 | Desktop close during pending sync → verify prevented | P0 |
+| T-SUB-019 | 10 clients editing same doc → verify all changes persisted | P0 |
+| T-SUB-020 | Server crash during sync → verify no partial state corruption | P0 |
+| T-SUB-021 | Free tier project limit → verify enforced at cloud level | P1 |
+| T-SUB-022 | Expired subscription → verify user can still export all data | P0 |
 
 ---
 

@@ -14,6 +14,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: true,
+    minify: false,
   },
   server: {
     port: 5173,
