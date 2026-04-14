@@ -15,6 +15,7 @@ import {
   SyncOperation,
   SyncResult,
   SaveEventData,
+  Point3D,
 } from './types';
 import { createDefaultMaterials } from './material';
 import { parseIFC, serializeIFC } from './ifc';
@@ -70,6 +71,62 @@ export function createProject(
   };
 }
 
+export interface AddElementParams {
+  type: ElementType;
+  layerId: string;
+  levelId: string;
+  properties?: Record<string, PropertyValue>;
+  geometry?: ElementGeometry;
+  points?: Point3D[];
+  transform?: {
+    translation: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+    scale: { x: number; y: number; z: number };
+  };
+}
+
+export function addElement(document: DocumentSchema, params: AddElementParams): string {
+  const elementId = crypto.randomUUID();
+  const now = Date.now();
+
+  const element: ElementSchema = {
+    id: elementId,
+    type: params.type,
+    properties: params.properties || {},
+    propertySets: [],
+    geometry: params.geometry || { type: 'brep', data: null },
+    layerId: params.layerId,
+    levelId: params.levelId || null,
+    transform: params.transform || {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    },
+    boundingBox: {
+      min: { x: 0, y: 0, z: 0, _type: 'Point3D' },
+      max: { x: 0, y: 0, z: 0, _type: 'Point3D' },
+    },
+    metadata: {
+      id: elementId,
+      createdBy: 'import',
+      createdAt: now,
+      updatedAt: now,
+      version: { clock: {} },
+    },
+    visible: true,
+    locked: false,
+  };
+
+  if (params.points) {
+    (element as { points?: Point3D[] }).points = params.points;
+  }
+
+  document.elements[elementId] = element;
+  document.metadata.updatedAt = now;
+
+  return elementId;
+}
+
 type SaveHandler = (data: SaveEventData) => void;
 type SyncCompleteHandler = (result: SyncResult) => void;
 type VersionHandler = (version: VersionSnapshot) => void;
@@ -109,6 +166,10 @@ export class DocumentModel {
 
   get documentData(): DocumentSchema {
     return this.document;
+  }
+
+  loadDocument(saved: DocumentSchema): void {
+    this.document = saved;
   }
 
   get elements(): Record<string, ElementSchema> {

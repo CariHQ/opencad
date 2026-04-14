@@ -12,7 +12,7 @@ export default defineConfig({
     ['list'],
   ],
   use: {
-    baseURL: 'http://localhost:3000',
+    baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
@@ -41,7 +41,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'pnpm dev:browser',
-    url: 'http://localhost:3000',
+    url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
   },

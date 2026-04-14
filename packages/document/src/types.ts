@@ -87,7 +87,19 @@ export type ElementType =
   | 'space'
   | 'annotation'
   | 'dimension'
-  | 'grid';
+  | 'grid'
+  | 'line'
+  | 'circle'
+  | 'arc'
+  | 'polyline'
+  | 'surface'
+  | 'solid'
+  | 'point'
+  | 'text'
+  | 'block_ref'
+  | 'ellipse'
+  | 'component'
+  | 'group';
 
 export interface LayerSchema {
   id: string;
@@ -147,11 +159,23 @@ export interface SpaceSchema {
 }
 
 export interface AnnotationSchema {
-  id: string;
-  type: 'text' | 'leader' | 'callout' | 'cloud';
+  type: 'text' | 'leader' | 'callout' | 'cloud' | 'link' | 'highlight' | 'underline';
   content: string;
   position: Point3D;
   anchorElementId?: string;
+}
+
+export interface FamilySchema {
+  id: string;
+  name: string;
+  category: string;
+  properties: Record<string, PropertyValue>;
+}
+
+export interface PhaseSchema {
+  id: string;
+  name: string;
+  status: 'existing' | 'new' | 'demolished' | 'incomplete';
 }
 
 export interface DocumentSchema {
@@ -166,6 +190,9 @@ export interface DocumentSchema {
   spaces: Record<string, SpaceSchema>;
   annotations: Record<string, AnnotationSchema>;
   metadata: DocumentMetadata;
+  blocks?: Record<string, ElementSchema>;
+  families?: Record<string, FamilySchema>;
+  phases?: Record<string, PhaseSchema>;
 }
 
 export interface SyncOperation {

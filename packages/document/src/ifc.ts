@@ -145,6 +145,18 @@ function getIFCType(elementType: ElementType): string {
     annotation: 'IFCANNOTATION',
     dimension: 'IFCANNOTATION',
     grid: 'IFCANNOTATION',
+    line: 'IFCANNOTATION',
+    circle: 'IFCANNOTATION',
+    arc: 'IFCANNOTATION',
+    polyline: 'IFCANNOTATION',
+    surface: 'IFCANNOTATION',
+    solid: 'IFCSOLID',
+    point: 'IFCANNOTATION',
+    text: 'IFCTEXT',
+    block_ref: 'IFCBLOCK',
+    ellipse: 'IFCANNOTATION',
+    component: 'IFCGROUP',
+    group: 'IFCGROUP',
   };
 
   return map[elementType] || 'IFCANNOTATION';

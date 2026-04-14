@@ -532,5 +532,476 @@ describe('Document Model - TDD Tests', () => {
         expect(warnings.length).toBeGreaterThan(0);
       });
     });
+
+    describe('T-DWG: DWG/DXF Import/Export Tests', () => {
+      it('T-DWG-001: should parse DXF LINE entities', async () => {
+        const { parseDXF } = await import('./dwg');
+
+        const dxfContent = `0
+SECTION
+2
+ENTITIES
+0
+LINE
+5
+$12A
+330
+0
+100
+AcDbEntity
+8
+0
+100
+AcDbLine
+10
+0.0
+20
+0.0
+30
+0.0
+11
+100.0
+21
+100.0
+31
+0.0
+0
+ENDSEC
+0
+EOF`;
+
+        const doc = parseDXF(dxfContent);
+        const lineEntities = Object.values(doc.elements).filter((e) => e.type === 'line');
+        expect(lineEntities.length).toBe(1);
+      });
+
+      it('T-DWG-001: should parse DXF CIRCLE entities', async () => {
+        const { parseDXF } = await import('./dwg');
+
+        const dxfContent = `0
+SECTION
+2
+ENTITIES
+0
+CIRCLE
+5
+$12B
+330
+0
+100
+AcDbEntity
+8
+0
+100
+AcDbCircle
+10
+50.0
+20
+50.0
+30
+0.0
+40
+25.0
+0
+ENDSEC
+0
+EOF`;
+
+        const doc = parseDXF(dxfContent);
+        const circleEntities = Object.values(doc.elements).filter((e) => e.type === 'circle');
+        expect(circleEntities.length).toBe(1);
+      });
+
+      it('T-DWG-002: should parse 3D entities', async () => {
+        const { parseDXF } = await import('./dwg');
+
+        const dxfContent = `0
+SECTION
+2
+ENTITIES
+0
+3DFACE
+5
+$12C
+330
+0
+100
+AcDbEntity
+8
+0
+100
+AcDbFace
+10
+0.0
+20
+0.0
+30
+0.0
+11
+100.0
+21
+0.0
+31
+0.0
+12
+100.0
+22
+100.0
+32
+0.0
+13
+0.0
+23
+100.0
+33
+0.0
+0
+ENDSEC
+0
+EOF`;
+
+        const doc = parseDXF(dxfContent);
+        const faceEntities = Object.values(doc.elements).filter((e) => e.type === 'surface');
+        expect(faceEntities.length).toBe(1);
+      });
+
+      it('T-DWG-003: should map layers from DXF', async () => {
+        const { parseDXF } = await import('./dwg');
+
+        const dxfContent = `0
+SECTION
+2
+ENTITIES
+0
+LINE
+5
+$12A
+330
+0
+100
+AcDbEntity
+8
+WALLS
+100
+AcDbLine
+10
+0.0
+20
+0.0
+30
+0.0
+11
+100.0
+21
+100.0
+31
+0.0
+0
+ENDSEC
+0
+EOF`;
+
+        const doc = parseDXF(dxfContent);
+        const layerNames = Object.values(doc.layers).map((l) => l.name);
+        expect(layerNames).toContain('WALLS');
+      });
+
+      it('T-DWG-004: should parse BLOCK definitions', async () => {
+        const { parseDXF } = await import('./dwg');
+
+        const dxfContent = `0
+SECTION
+2
+BLOCKS
+0
+BLOCK
+5
+$10A
+330
+0
+100
+AcDbEntity
+2
+DOOR_BLOCK
+70
+0
+10
+0.0
+20
+0.0
+30
+0.0
+3
+DOOR_BLOCK
+0
+ENDBLK
+5
+$10B
+330
+0
+100
+AcDbEntity
+70
+0
+0
+BLOCKS
+0
+ENDSEC
+0
+ENDSEC
+0
+EOF`;
+
+        const doc = parseDXF(dxfContent);
+        expect(doc.blocks).toBeDefined();
+      });
+
+      it('T-DWG-005: should serialize document to DXF', async () => {
+        const { serializeDXF } = await import('./dwg');
+        const { createProject } = await import('./document');
+
+        const doc = createProject('test', 'user');
+        const elementId = Object.keys(doc.elements)[0];
+
+        const dxf = serializeDXF(doc);
+        expect(dxf).toContain('SECTION');
+        expect(dxf).toContain('ENTITIES');
+        expect(dxf).toContain('ENDSEC');
+      });
+
+      it('T-DWG-006: should parse DXF polyline entities', async () => {
+        const { parseDXF } = await import('./dwg');
+
+        const dxfContent = `0
+SECTION
+2
+ENTITIES
+0
+LWPOLYLINE
+5
+$12D
+330
+0
+100
+AcDbEntity
+8
+0
+100
+AcDbPolyline
+90
+4
+70
+0
+10
+0.0
+20
+0.0
+10
+10.0
+20
+0.0
+10
+10.0
+20
+10.0
+10
+0.0
+20
+10.0
+0
+ENDSEC
+0
+EOF`;
+
+        const doc = parseDXF(dxfContent);
+        const polylineEntities = Object.values(doc.elements).filter((e) => e.type === 'polyline');
+        expect(polylineEntities.length).toBe(1);
+      });
+
+      it('T-DWG-007: should export polyline to DXF', async () => {
+        const { serializeDXF } = await import('./dwg');
+        const { createProject, addElement } = await import('./document');
+
+        const doc = createProject('test', 'user');
+        const elementId = addElement(doc, {
+          type: 'polyline',
+          points: [
+            { x: 0, y: 0, z: 0 },
+            { x: 10, y: 0, z: 0 },
+            { x: 10, y: 10, z: 0 },
+          ],
+          layerId: Object.keys(doc.layers)[0],
+          levelId: Object.keys(doc.levels)[0],
+        });
+
+        const dxf = serializeDXF(doc);
+        expect(dxf).toContain('LWPOLYLINE');
+      });
+    });
+
+    describe('T-RVT: Revit Import Tests', () => {
+      it('T-RVT-001: should parse Revit categories', async () => {
+        const { parseRVT } = await import('./revit');
+
+        const rvtContent = `<?xml version="1.0"?>
+<RevitXML>
+  <Elements>
+    <Element Id="123" Category="Walls" Family="Basic Wall" Type="Generic - 200mm"/>
+    <Element Id="124" Category="Doors" Family="Single Flush" Type="0915 x 2134mm"/>
+  </Elements>
+</RevitXML>`;
+
+        const doc = parseRVT(rvtContent);
+        const wallElements = Object.values(doc.elements).filter((e) => e.type === 'wall');
+        expect(wallElements.length).toBe(1);
+      });
+
+      it('T-RVT-002: should map Revit categories to element types', async () => {
+        const { parseRVT } = await import('./revit');
+
+        const rvtContent = `<?xml version="1.0"?>
+<RevitXML>
+  <Elements>
+    <Element Id="123" Category="Walls"/>
+    <Element Id="124" Category="Doors"/>
+    <Element Id="125" Category="Windows"/>
+    <Element Id="126" Category="Columns"/>
+  </Elements>
+</RevitXML>`;
+
+        const doc = parseRVT(rvtContent);
+        const elementTypes = [...new Set(Object.values(doc.elements).map((e) => e.type))];
+        expect(elementTypes).toContain('wall');
+        expect(elementTypes).toContain('door');
+        expect(elementTypes).toContain('window');
+        expect(elementTypes).toContain('column');
+      });
+
+      it('T-RVT-003: should parse element parameters', async () => {
+        const { parseRVT } = await import('./revit');
+
+        const rvtContent = `<?xml version="1.0"?>
+<RevitXML>
+  <Elements>
+    <Element Id="123" Category="Walls" Width="200" Height="3000"/>
+  </Elements>
+</RevitXML>`;
+
+        const doc = parseRVT(rvtContent);
+        const element = Object.values(doc.elements)[0];
+        expect(element.properties.Width).toBeDefined();
+      });
+
+      it('T-RVT-004: should parse Revit levels', async () => {
+        const { parseRVT } = await import('./revit');
+
+        const rvtContent = `<?xml version="1.0"?>
+<RevitXML>
+  <Levels>
+    <Level Id="L1" Name="Level 1" Elevation="0"/>
+    <Level Id="L2" Name="Level 2" Elevation="3000"/>
+  </Levels>
+</RevitXML>`;
+
+        const doc = parseRVT(rvtContent);
+        expect(Object.keys(doc.levels).length).toBe(2);
+        expect(doc.levels[Object.keys(doc.levels)[0]].elevation).toBeDefined();
+      });
+
+      it('T-RVT-005: should parse family definitions', async () => {
+        const { parseRVT } = await import('./revit');
+
+        const rvtContent = `<?xml version="1.0"?>
+<RevitXML>
+  <Families>
+    <Family Id="F1" Name="Basic Wall" Category="Walls"/>
+    <Family Id="F2" Name="Single Flush" Category="Doors"/>
+  </Families>
+</RevitXML>`;
+
+        const doc = parseRVT(rvtContent);
+        expect(doc.families).toBeDefined();
+      });
+
+      it('T-RVT-006: should generate import report', async () => {
+        const { parseRVT } = await import('./revit');
+
+        const rvtContent = `<?xml version="1.0"?>
+<RevitXML>
+  <Elements>
+    <Element Id="123" Category="Walls"/>
+    <Element Id="124" Category="Doors" Status="Error"/>
+  </Elements>
+</RevitXML>`;
+
+        const doc = parseRVT(rvtContent);
+        const metadata = doc.metadata as { importReport?: { elements: number; warnings: number } };
+        expect(metadata.importReport).toBeDefined();
+      });
+
+      it('T-RVT-007: should handle phases', async () => {
+        const { parseRVT } = await import('./revit');
+
+        const rvtContent = `<?xml version="1.0"?>
+<RevitXML>
+  <Phases>
+    <Phase Id="P1" Name="New Construction"/>
+    <Phase Id="P2" Name="Existing"/>
+  </Phases>
+  <Elements>
+    <Element Id="123" Category="Walls" Phase="P1"/>
+  </Elements>
+</RevitXML>`;
+
+        const doc = parseRVT(rvtContent);
+        expect(doc.phases).toBeDefined();
+      });
+    });
+
+    describe('T-DWG: DWG/DXF Import/Export Tests', () => {
+      it('T-DWG-001: should parse DXF LINE entities', async () => {
+        const { parseDXF, serializeDXF } = await import('./dwg');
+
+        const dxfContent = `0
+SECTION
+2
+ENTITIES
+0
+LINE
+5
+$12A
+330
+0
+100
+AcDbEntity
+8
+0
+100
+AcDbLine
+10
+0.0
+20
+0.0
+30
+0.0
+11
+100.0
+21
+100.0
+31
+0.0
+0
+ENDSEC
+0
+EOF`;
+
+        const doc = parseDXF(dxfContent);
+        const reExported = serializeDXF(doc);
+
+        expect(reExported).toContain('LINE');
+        expect(reExported).toContain('10');
+        expect(reExported).toContain('0.0');
+      });
+    });
   });
 });

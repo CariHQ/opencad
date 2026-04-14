@@ -76,7 +76,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     <div className="ai-chat-panel">
       <div className="chat-header">
         <span className="chat-title">AI Assistant</span>
-        <button className="chat-close" onClick={onClose}>
+        <button className="chat-close" onClick={onClose} aria-label="Close AI chat">
           <X size={18} />
         </button>
       </div>

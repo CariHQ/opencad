@@ -12,7 +12,7 @@
       "dependsOn": ["^build"]
     },
     "test": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
       "outputs": ["coverage/**", "test-results/**"],
       "inputs": [
         "src/**/*.ts",
@@ -22,12 +22,12 @@
       ]
     },
     "test:unit": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
       "inputs": ["src/**/*.test.ts", "src/**/*.test.tsx"]
     },
     "test:integration": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
       "outputs": ["coverage/**", "test-results/**"],
       "inputs": [
         "src/**/*.integration.test.ts",
@@ -35,7 +35,7 @@
       ]
     },
     "test:coverage": {
-      "dependsOn": ["build"],
+      "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
       "inputs": ["src/**"]
     },
