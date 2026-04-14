@@ -316,6 +316,8 @@ export class IFCSerializer {
       text: 'IFCTEXT',
       block_ref: 'IFCBLOCK',
       ellipse: 'IFCANNOTATION',
+      rectangle: 'IFCANNOTATION',
+      polygon: 'IFCANNOTATION',
       component: 'IFCGROUP',
       group: 'IFCGROUP',
     };

@@ -98,6 +98,8 @@ export type ElementType =
   | 'text'
   | 'block_ref'
   | 'ellipse'
+  | 'rectangle'
+  | 'polygon'
   | 'component'
   | 'group';
 

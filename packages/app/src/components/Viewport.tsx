@@ -17,6 +17,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     handleCanvasMouseDown,
     handleCanvasMouseMove,
     handleCanvasMouseUp,
+    handleCanvasDoubleClick,
     activeTool,
     drawingState,
   } = useViewport();
@@ -52,6 +53,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
+          onDoubleClick={handleCanvasDoubleClick}
         />
       )}
       <div className="viewport-overlay">
