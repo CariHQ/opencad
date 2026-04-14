@@ -474,7 +474,7 @@ Before creating a new ADR, discuss in a GitHub Issue first.
 | [GitHub Discussions](https://github.com/CariHQ/opencad/discussions) | Questions, ideas, showcase |
 | [GitHub Issues](https://github.com/CariHQ/opencad/issues) | Bugs, feature requests |
 | [Discord](https://discord.gg/opencad) | Real-time chat |
-| [Community Calls](https://calendar.opencad.org) | Monthly video meetup |
+| [Community Calls](https://calendar.opencad.archi) | Monthly video meetup |
 
 ### Governance
 
