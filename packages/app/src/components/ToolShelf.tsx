@@ -64,7 +64,23 @@ const categories = [
 
 export function ToolShelf() {
   const { activeTool, setActiveTool } = useDocumentStore();
-  const [activeCategory, setActiveCategory] = React.useState('modify');
+  const [activeCategory, setActiveCategory] = React.useState<string>(() => {
+    try { return localStorage.getItem('opencad-activeCategory') ?? 'modify'; } catch { return 'modify'; }
+  });
+
+  // When activeTool changes (e.g. via keyboard shortcut), sync the category panel
+  React.useEffect(() => {
+    const toolDef = tools.find((t) => t.id === activeTool);
+    if (toolDef) {
+      setActiveCategory(toolDef.category);
+      try { localStorage.setItem('opencad-activeCategory', toolDef.category); } catch { /* ignore */ }
+    }
+  }, [activeTool]);
+
+  const handleSetCategory = (catId: string) => {
+    setActiveCategory(catId);
+    try { localStorage.setItem('opencad-activeCategory', catId); } catch { /* ignore */ }
+  };
 
   const filteredTools = tools.filter((t) => t.category === activeCategory);
 
@@ -77,7 +93,7 @@ export function ToolShelf() {
             <button
               key={cat.id}
               className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat.id)}
+              onClick={() => handleSetCategory(cat.id)}
               title={cat.name}
             >
               <span className="tool-icon">
