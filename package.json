@@ -2,6 +2,16 @@
   "name": "opencad",
   "version": "0.0.1",
   "private": true,
+  "description": "Browser-native, AI-powered, open-source BIM platform",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/CariHQ/opencad.git"
+  },
+  "homepage": "https://opencad.org",
+  "bugs": {
+    "url": "https://github.com/CariHQ/opencad/issues"
+  },
   "packageManager": "pnpm@9.0.0",
   "type": "module",
   "scripts": {

@@ -679,7 +679,7 @@ Figma's auto-save blog post reveals the essential complexity: **multiplayer edit
 │  - Checkpoints stored immutably in S3 (never deleted)              │
 │  - User can restore any checkpoint via UI                           │
 │  - Checkpoints also created on every explicit "Save Version"        │
-│  - Retention: unlimited for paid, 30-day for free tier              │
+│  - Retention: unlimited for paid, 30-day for trial                  │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -701,11 +701,26 @@ Figma's auto-save blog post reveals the essential complexity: **multiplayer edit
 
 | Tier | Price | Storage | Version History | AI Credits | Collaboration | Desktop Access |
 |------|-------|---------|-----------------|------------|---------------|----------------|
-| **Free** | $0 | 3 projects, 100MB each | 7 days | 10 prompts/mo (cloud) | View-only | ❌ |
+| **Trial** | 14 days free | Unlimited projects, 500MB each | 30 days | 50 prompts | 3 editors | ✅ |
 | **Starter** | $29/mo | 25 projects, 500MB each | 30 days | 200 prompts/mo | 3 editors | ✅ |
 | **Professional** | $59/mo | Unlimited projects, 5GB each | 1 year | 1,000 prompts/mo | 10 editors | ✅ |
 | **Team** | $99/user/mo | Unlimited, 20GB each | Unlimited | 5,000 prompts/user/mo | Unlimited editors | ✅ |
 | **Enterprise** | Custom | Unlimited, custom limits | Unlimited + audit log | Unlimited + fine-tuned | Unlimited + SSO | ✅ + MDM |
+
+#### Trial Period
+
+The 14-day trial gives full access to the platform — no credit card required to start.
+
+| Aspect | Behavior |
+|--------|----------|
+| **Sign-up** | Email + password, no payment method required |
+| **Duration** | 14 days from account creation |
+| **Access** | Full Professional-tier features (unlimited projects, desktop app, AI, collaboration) |
+| **Project Size Limit** | 500MB per project during trial |
+| **Expiry Warning** | Day 10: in-app banner. Day 13: in-app + email. Day 14: in-app + email + desktop notification |
+| **After Trial Expires** | Same as subscription expiry: 14-day grace period → read-only + export access |
+| **Conversion** | User selects a paid tier at any point during trial; billing starts immediately, trial ends |
+| **Re-trial** | Not permitted per email domain or payment method |
 
 #### Desktop Subscription Enforcement
 
@@ -776,7 +791,7 @@ The desktop app **requires an active subscription** to function. However, we nev
 | **Version History** | ✅ Same checkpoints | ✅ Same checkpoints |
 | **Collaboration** | ✅ Real-time with all clients | ✅ Real-time with all clients |
 | **Offline Edits** | Buffered in IndexedDB → cloud on reconnect | Buffered in SQLite → cloud on reconnect |
-| **Subscription Required** | Free tier available | Requires active subscription |
+| **Subscription Required** | Trial then paid | Requires active subscription |
 | **Local Storage** | Cache only (browser quota limits) | Cache only (no quota limits) |
 | **Data Portability** | Export from cloud | Export from cloud + local |
 
@@ -904,7 +919,7 @@ The desktop app **requires an active subscription** to function. However, we nev
 | T-SUB-018 | Desktop close during pending sync → verify prevented | P0 |
 | T-SUB-019 | 10 clients editing same doc → verify all changes persisted | P0 |
 | T-SUB-020 | Server crash during sync → verify no partial state corruption | P0 |
-| T-SUB-021 | Free tier project limit → verify enforced at cloud level | P1 |
+| T-SUB-021 | Trial expiry → verify project limit enforced at cloud level | P1 |
 | T-SUB-022 | Expired subscription → verify user can still export all data | P0 |
 
 ---

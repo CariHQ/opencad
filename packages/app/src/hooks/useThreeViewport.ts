@@ -2,6 +2,26 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import { useDocumentStore } from '../stores/documentStore';
 
+const LIGHT_THEME = {
+  sceneBackground: 0xf1f5f9,
+  gridColor: 0xcbd5e1,
+  gridColor2: 0xe2e8f0,
+  selectionEmissive: 0x4f46e5,
+};
+
+const DARK_THEME = {
+  sceneBackground: 0x1a1a2e,
+  gridColor: 0x444466,
+  gridColor2: 0x333355,
+  selectionEmissive: 0x1a1a2e,
+};
+
+const getTheme = () => {
+  if (typeof window === 'undefined') return DARK_THEME;
+  const theme = localStorage.getItem('opencad-theme');
+  return theme === 'light' ? LIGHT_THEME : DARK_THEME;
+};
+
 interface ViewportState {
   camera: THREE.PerspectiveCamera | null;
   renderer: THREE.WebGLRenderer | null;
@@ -177,13 +197,15 @@ export function useThreeViewport() {
     const { scene } = stateRef.current;
     if (!scene) return;
 
+    const theme = getTheme();
+
     elementMeshesRef.current.forEach((mesh, id) => {
       const isSelected = selectedIds.includes(id);
       const material = mesh.material as THREE.MeshStandardMaterial;
       if (isSelected) {
         material.color.setHex(0x4f46e5);
         material.opacity = 1;
-        material.emissive.setHex(0x1a1a2e);
+        material.emissive.setHex(theme.selectionEmissive);
         material.emissiveIntensity = 0.3;
       } else {
         material.color.setHex(0x8888aa);
@@ -339,8 +361,10 @@ export function useThreeViewport() {
     const container = containerRef.current;
     if (!container) return;
 
+    const theme = getTheme();
+
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x1a1a2e);
+    scene.background = new THREE.Color(theme.sceneBackground);
 
     const camera = new THREE.PerspectiveCamera(
       50,
@@ -357,7 +381,7 @@ export function useThreeViewport() {
 
     stateRef.current = { camera, renderer, scene };
 
-    const gridHelper = new THREE.GridHelper(20000, 40, 0x444466, 0x333355);
+    const gridHelper = new THREE.GridHelper(20000, 40, theme.gridColor, theme.gridColor2);
     scene.add(gridHelper);
 
     const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
@@ -433,6 +457,24 @@ export function useThreeViewport() {
   useEffect(() => {
     updateSelection();
   }, [updateSelection]);
+
+  useEffect(() => {
+    const handleThemeChange = () => {
+      const theme = getTheme();
+      const { scene } = stateRef.current;
+      if (scene) {
+        scene.background = new THREE.Color(theme.sceneBackground);
+      }
+    };
+
+    window.addEventListener('storage', handleThemeChange);
+    window.addEventListener('theme-change', handleThemeChange);
+
+    return () => {
+      window.removeEventListener('storage', handleThemeChange);
+      window.removeEventListener('theme-change', handleThemeChange);
+    };
+  }, []);
 
   return {
     containerRef,

@@ -1,0 +1,51 @@
+# EditorConfig helps maintain consistent coding styles
+# https://editorconfig.org
+
+root = true
+
+# Default settings
+[*]
+indent_style = space
+indent_size = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Markdown
+[*.md]
+trim_trailing_whitespace = false
+
+# YAML
+[*.{yml,yaml}]
+indent_size = 2
+
+# JSON
+[*.json]
+indent_size = 2
+
+# Rust
+[*.rs]
+indent_size = 4
+
+# Makefile
+[Makefile]
+indent_style = tab
+
+# Shell scripts
+[*.sh]
+indent_style = space
+indent_size = 2
+
+# License files
+[LICENSE*]
+trim_trailing_whitespace = false
+
+# Lock files
+[pnpm-lock.yaml]
+trim_trailing_whitespace = false
+
+# WASM files
+[*.wasm]
+trim_trailing_whitespace = false
+insert_final_newline = false

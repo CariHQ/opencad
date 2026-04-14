@@ -1,15 +1,107 @@
-node_modules
-.turbo
-dist
-.next
-coverage
-*.log
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build outputs
+dist/
+build/
+out/
+*.tsbuildinfo
+
+# WASM outputs
+*.wasm
+*.wat
+packages/geometry/pkg/
+
+# Rust
+**/target/
+**/*.rs.bk
+*.pdb
+Cargo.lock
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+apps/desktop/src-tauri/capabilities/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+.classpath
+
+# OS
 .DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini
+
+# Environment
 .env
 .env.local
 .env.*.local
-build
-release
-.vscode
-.idea
-*.tsbuildinfo
+*.pem
+*.key
+
+# Secrets
+secrets/
+credentials/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+
+# Benchmarks
+benchmark-results/
+
+# Temporary
+tmp/
+temp/
+*.tmp
+*.bak
+*.cache
+
+# Package manager lockfiles (keep only pnpm)
+yarn.lock
+package-lock.json
+
+# Documentation build
+docs/.vitepress/cache/
+docs/.vitepress/dist/
+
+# Self-hosted deployment
+deploy/terraform.tfstate
+deploy/terraform.tfstate.backup
+deploy/.terraform/
+
+# Generated
+*.generated.ts
+*.generated.rs
+
+# Large test fixtures
+test/fixtures/large-*.ifc
+test/fixtures/large-*.dwg
+test/fixtures/large-*.rvt
+
+# Local overrides
+*.local.json
+pnpm-workspace.yaml.local

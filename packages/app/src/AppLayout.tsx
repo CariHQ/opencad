@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { FolderOpen, FileDown, Bot, Plus } from 'lucide-react';
+import { FolderOpen, FileDown, Bot, Plus, Sun, Moon } from 'lucide-react';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 import { LayersPanel } from './components/LayerPanel';
@@ -24,7 +24,19 @@ export function AppLayout() {
     'opencad-selectedLevel',
     null
   );
+  const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('opencad-theme', 'light');
   const [showModal, setShowModal] = useState<'import' | 'export' | 'projects' | null>(null);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+    if (metaThemeColor) {
+      metaThemeColor.setAttribute('content', theme === 'light' ? '#ffffff' : '#1a1a2e');
+    }
+    window.dispatchEvent(new Event('theme-change'));
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   useEffect(() => {
     initProject('project-1', 'user-1');
@@ -78,6 +90,11 @@ export function AppLayout() {
         </div>
 
         <div className="toolbar-actions">
+          <button className="toolbar-btn" onClick={toggleTheme} title="Toggle Theme">
+            <span className="tool-icon">
+              {theme === 'light' ? <Moon size={18} /> : <Sun size={18} />}
+            </span>
+          </button>
           <button className="toolbar-btn" onClick={() => setShowModal('import')} title="Import IFC">
             <span className="tool-icon">
               <FolderOpen size={18} />

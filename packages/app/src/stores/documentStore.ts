@@ -62,7 +62,19 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   canRedo: false,
 
   initProject: (projectId, userId) => {
-    const model = new DocumentModel(projectId, userId);
+    let model: DocumentModel;
+    try {
+      const saved = localStorage.getItem('opencad-document');
+      if (saved) {
+        const docData = JSON.parse(saved);
+        model = new DocumentModel(projectId, userId);
+        model.loadDocument(docData);
+      } else {
+        model = new DocumentModel(projectId, userId);
+      }
+    } catch {
+      model = new DocumentModel(projectId, userId);
+    }
     const document = model.documentData;
 
     set({
@@ -141,10 +153,14 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
       properties: params.properties as Record<string, PropertyValue>,
     });
 
+    const newDoc = { ...model.documentData };
     set({
-      document: { ...model.documentData },
+      document: newDoc,
       lastSaved: Date.now(),
     });
+    try {
+      localStorage.setItem('opencad-document', JSON.stringify(newDoc));
+    } catch {}
     return elementId;
   },
 

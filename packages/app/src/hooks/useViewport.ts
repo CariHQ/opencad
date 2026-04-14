@@ -1,6 +1,38 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 
+const LIGHT_THEME = {
+  background: '#f1f5f9',
+  grid: '#cbd5e1',
+  gridMajor: '#e2e8f0',
+  axis: '#94a3b8',
+  element: '#64748b',
+  elementFill: 'rgba(100, 116, 139, 0.1)',
+  selected: '#4f46e5',
+  selectedFill: 'rgba(79, 70, 229, 0.2)',
+  accent: '#4f46e5',
+  snap: '#4f46e5',
+};
+
+const DARK_THEME = {
+  background: '#1a1a2e',
+  grid: '#2a2a3e',
+  gridMajor: '#3a3a4e',
+  axis: '#4a4a5e',
+  element: '#8888aa',
+  elementFill: 'rgba(136, 136, 170, 0.1)',
+  selected: '#4f46e5',
+  selectedFill: 'rgba(79, 70, 229, 0.2)',
+  accent: '#4f46e5',
+  snap: '#4f46e5',
+};
+
+const getTheme = () => {
+  if (typeof window === 'undefined') return DARK_THEME;
+  const theme = localStorage.getItem('opencad-theme');
+  return theme === 'light' ? LIGHT_THEME : DARK_THEME;
+};
+
 const getStoreActions = () => useDocumentStore.getState();
 
 interface Point {
@@ -157,13 +189,14 @@ export function useViewport() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const theme = getTheme();
     const { width, height } = canvas;
     ctx.clearRect(0, 0, width, height);
 
-    ctx.fillStyle = '#1a1a2e';
+    ctx.fillStyle = theme.background;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.strokeStyle = '#2a2a3e';
+    ctx.strokeStyle = theme.grid;
     ctx.lineWidth = 1;
     const gridSize = 50;
     for (let x = 0; x <= width; x += gridSize) {
@@ -179,7 +212,7 @@ export function useViewport() {
       ctx.stroke();
     }
 
-    ctx.strokeStyle = '#3a3a4e';
+    ctx.strokeStyle = theme.gridMajor;
     ctx.lineWidth = 1;
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
@@ -195,10 +228,11 @@ export function useViewport() {
     const elements = Object.values(doc.elements);
     for (const element of elements) {
       const isSelected = selectedIds.includes(element.id);
-      const color = isSelected ? '#4f46e5' : '#8888aa';
+      const color = isSelected ? theme.selected : theme.element;
+      const fillColor = isSelected ? theme.selectedFill : theme.elementFill;
 
       ctx.strokeStyle = color;
-      ctx.fillStyle = isSelected ? 'rgba(79, 70, 229, 0.2)' : 'rgba(136, 136, 170, 0.1)';
+      ctx.fillStyle = fillColor;
       ctx.lineWidth = isSelected ? 2 : 1;
 
       const bb = element.boundingBox;
@@ -218,9 +252,25 @@ export function useViewport() {
         const name = (element.properties.Name?.value as string) || 'Wall';
         ctx.fillText(name, x + 4, y + 12);
       }
+
+      if (element.type === 'annotation' && element.properties.StartX && element.properties.EndX) {
+        const startX = element.properties.StartX.value as number;
+        const startY = element.properties.StartY.value as number;
+        const endX = element.properties.EndX.value as number;
+        const endY = element.properties.EndY.value as number;
+        const p1 = worldToScreen(startX, startY, width, height);
+        const p2 = worldToScreen(endX, endY, width, height);
+        ctx.strokeStyle = color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(p1.x, p1.y);
+        ctx.lineTo(p2.x, p2.y);
+        ctx.stroke();
+      }
     }
 
     if (drawingState.isDrawing && drawingState.startPoint) {
+      const theme = getTheme();
       const startScreen = worldToScreen(
         drawingState.startPoint.x,
         drawingState.startPoint.y,
@@ -230,7 +280,7 @@ export function useViewport() {
 
       if (activeTool === 'select') return;
 
-      ctx.strokeStyle = '#4f46e5';
+      ctx.strokeStyle = theme.accent;
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
 
@@ -282,7 +332,8 @@ export function useViewport() {
     }
 
     if (drawingState.points.length > 0) {
-      ctx.strokeStyle = '#4f46e5';
+      const theme = getTheme();
+      ctx.strokeStyle = theme.accent;
       ctx.lineWidth = 2;
       ctx.setLineDash([5, 5]);
 
@@ -323,9 +374,34 @@ export function useViewport() {
       ctx.setLineDash([]);
     }
 
+    if (activeTool === 'line' && drawingState.startPoint && drawingState.currentPoint) {
+      const theme = getTheme();
+      const startScreen = worldToScreen(
+        drawingState.startPoint.x,
+        drawingState.startPoint.y,
+        width,
+        height
+      );
+      const endScreen = worldToScreen(
+        drawingState.currentPoint.x,
+        drawingState.currentPoint.y,
+        width,
+        height
+      );
+      ctx.strokeStyle = theme.accent;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([5, 5]);
+      ctx.beginPath();
+      ctx.moveTo(startScreen.x, startScreen.y);
+      ctx.lineTo(endScreen.x, endScreen.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     if (currentSnap) {
+      const theme = getTheme();
       const snapScreen = worldToScreen(currentSnap.point.x, currentSnap.point.y, width, height);
-      ctx.fillStyle = '#4f46e5';
+      ctx.fillStyle = theme.snap;
       ctx.beginPath();
       ctx.arc(snapScreen.x, snapScreen.y, 5, 0, Math.PI * 2);
       ctx.fill();
@@ -335,6 +411,12 @@ export function useViewport() {
   useEffect(() => {
     draw();
   }, [doc]);
+
+  useEffect(() => {
+    const handleThemeChange = () => draw();
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, [draw]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -356,6 +438,8 @@ export function useViewport() {
     return () => resizeObserver.disconnect();
   }, [draw]);
 
+  const [isDragging, setIsDragging] = useState(false);
+
   const handleCanvasMouseDown = useCallback(
     (event: React.MouseEvent<HTMLCanvasElement>) => {
       const canvas = canvasRef.current;
@@ -368,7 +452,15 @@ export function useViewport() {
       let worldPoint = screenToWorld(screenX, screenY, canvas.width, canvas.height);
       worldPoint = applySnapping(worldPoint);
 
-      if (activeTool === 'select') {
+      if (activeTool === 'line') {
+        setIsDragging(true);
+        setDrawingState({
+          isDrawing: true,
+          startPoint: worldPoint,
+          currentPoint: worldPoint,
+          points: [],
+        });
+      } else if (activeTool === 'select') {
         if (!doc) return;
         const elements = Object.values(doc.elements);
         const clicked = elements.filter((element) => {
@@ -403,12 +495,14 @@ export function useViewport() {
       }
 
       if (activeTool === 'line') {
-        setDrawingState((prev) => ({
-          ...prev,
-          isDrawing: true,
-          points: [...prev.points, worldPoint],
-          currentPoint: worldPoint,
-        }));
+        setDrawingState((prev) => {
+          return {
+            ...prev,
+            isDrawing: true,
+            points: [...prev.points, worldPoint],
+            currentPoint: worldPoint,
+          };
+        });
       }
     },
     [doc, selectedIds, setSelectedIds, activeTool, applySnapping]
@@ -433,7 +527,7 @@ export function useViewport() {
         }));
       }
 
-      if (activeTool === 'line') {
+      if (activeTool === 'line' && isDragging) {
         setDrawingState((prev) => ({
           ...prev,
           currentPoint: worldPoint,
@@ -498,17 +592,31 @@ export function useViewport() {
         }
       }
 
-      if (activeTool === 'line' && drawingState.points.length >= 1) {
-        const layerId = Object.keys(doc?.layers || {})[0] || 'default';
-        addElement({
-          type: 'annotation',
-          layerId,
-          properties: {
-            Name: { type: 'string', value: 'Line' },
-            Points: { type: 'string', value: JSON.stringify(drawingState.points) },
-          },
-        });
-        getStoreActions().pushHistory('Add line');
+      if (activeTool === 'line' && drawingState.startPoint && drawingState.currentPoint) {
+        const layerKeys = Object.keys(doc?.layers || {});
+        console.log('Saving line, layers:', layerKeys, doc?.layers);
+        const layerId = layerKeys[0] || 'default';
+        const dx = drawingState.currentPoint.x - drawingState.startPoint.x;
+        const dy = drawingState.currentPoint.y - drawingState.startPoint.y;
+        if (Math.abs(dx) > 50 || Math.abs(dy) > 50) {
+          console.log('Adding line element', {
+            layerId,
+            startPoint: drawingState.startPoint,
+            currentPoint: drawingState.currentPoint,
+          });
+          addElement({
+            type: 'annotation',
+            layerId,
+            properties: {
+              Name: { type: 'string', value: 'Line' },
+              StartX: { type: 'number', value: drawingState.startPoint.x },
+              StartY: { type: 'number', value: drawingState.startPoint.y },
+              EndX: { type: 'number', value: drawingState.currentPoint.x },
+              EndY: { type: 'number', value: drawingState.currentPoint.y },
+            },
+          });
+          getStoreActions().pushHistory('Add line');
+        }
       }
 
       if (activeTool === 'dimension' && drawingState.startPoint) {
@@ -536,6 +644,7 @@ export function useViewport() {
         currentPoint: null,
         points: [],
       });
+      setIsDragging(false);
     },
     [doc, drawingState, activeTool, addElement, applySnapping]
   );
@@ -621,6 +730,16 @@ export function useViewport() {
       window.removeEventListener('keyup', handleKeyUp);
     };
   }, [handleKeyDown, handleKeyUp]);
+
+  useEffect(() => {
+    let animationId: number;
+    const render = () => {
+      draw();
+      animationId = requestAnimationFrame(render);
+    };
+    render();
+    return () => cancelAnimationFrame(animationId);
+  }, [draw, activeTool]);
 
   return {
     canvasRef,
