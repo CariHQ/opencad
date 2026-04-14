@@ -51,7 +51,9 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
   document: null,
   model: null,
   selectedIds: [],
-  activeTool: 'select',
+  activeTool: (() => {
+    try { return localStorage.getItem('opencad-activeTool') ?? 'select'; } catch { return 'select'; }
+  })(),
   isOnline: true,
   isSaving: false,
   lastSaved: null,
@@ -105,7 +107,10 @@ export const useDocumentStore = create<DocumentState>((set, get) => ({
 
   setSelectedIds: (ids) => set({ selectedIds: ids }),
 
-  setActiveTool: (tool) => set({ activeTool: tool }),
+  setActiveTool: (tool) => {
+    try { localStorage.setItem('opencad-activeTool', tool); } catch { /* ignore */ }
+    set({ activeTool: tool });
+  },
 
   setOnlineStatus: (online) => {
     const { model } = get();
