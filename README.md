@@ -37,7 +37,7 @@ OpenCAD combines the accessibility of Figma (browser-native, WASM, real-time col
 
 ### Browser (No Install)
 
-Visit [app.opencad.org](https://app.opencad.org) — works immediately in Chrome, Firefox, Safari, or Edge.
+Visit [opencad.archi](https://opencad.archi) — works immediately in Chrome, Firefox, Safari, or Edge.
 
 ### Desktop
 
@@ -81,8 +81,8 @@ See [Self-Hosting Guide](docs/guides/self-hosting.md) for detailed setup.
 
 | Resource | Link |
 |----------|------|
-| **User Guide** | [docs.opencad.org](https://docs.opencad.org) |
-| **API Reference** | [api.opencad.org](https://api.opencad.org) |
+| **User Guide** | [docs.opencad.archi](https://docs.opencad.archi) |
+| **API Reference** | [api.opencad.archi](https://api.opencad.archi) |
 | **Contributing Guide** | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | **Product Requirements** | [PRD.md](PRD.md) |
 | **Architecture Docs** | [docs/architecture/](docs/architecture/) |
@@ -171,7 +171,7 @@ OpenCAD follows a [meritocratic governance model](GOVERNANCE.md). Decisions are 
 |---------|---------|
 | [GitHub Discussions](https://github.com/CariHQ/opencad/discussions) | Questions, ideas, showcase |
 | [Discord](https://discord.gg/opencad) | Real-time chat |
-| [Community Calls](https://calendar.opencad.org) | Monthly video meetup |
+| [Community Calls](https://calendar.opencad.archi) | Monthly video meetup |
 
 ## 🙏 Acknowledgments
 

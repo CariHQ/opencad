@@ -10,10 +10,10 @@ This document describes how to get help with OpenCAD.
 
 | Resource | Best For | Link |
 |----------|----------|------|
-| **Documentation** | How-to guides, feature reference | [docs.opencad.org](https://docs.opencad.org) |
+| **Documentation** | How-to guides, feature reference | [docs.opencad.archi](https://docs.opencad.archi) |
 | **GitHub Discussions** | Questions, discussions, showcase | [Discussions](https://github.com/CariHQ/opencad/discussions) |
 | **Discord** | Real-time chat, quick questions | [discord.gg/opencad](https://discord.gg/opencad) |
-| **Community Calls** | Monthly video meetup, demos | [calendar.opencad.org](https://calendar.opencad.org) |
+| **Community Calls** | Monthly video meetup, demos | [calendar.opencad.archi](https://calendar.opencad.archi) |
 
 ### For Contributors
 
@@ -21,7 +21,7 @@ This document describes how to get help with OpenCAD.
 |----------|----------|------|
 | **Contributing Guide** | How to contribute | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | **Architecture Docs** | Technical design decisions | [docs/architecture/](docs/architecture/) |
-| **API Documentation** | Code-level reference | [api.opencad.org](https://api.opencad.org) |
+| **API Documentation** | Code-level reference | [api.opencad.archi](https://api.opencad.archi) |
 | **Good First Issues** | Beginner-friendly tasks | [GitHub Issues](https://github.com/CariHQ/opencad/labels/good%20first%20issue) |
 
 ---
@@ -124,7 +124,7 @@ For organizations needing dedicated support:
 - **Training** — On-site or remote training sessions
 - **Consulting** — Architecture review, migration assistance
 
-Contact: **support@opencad.org**
+Contact: **support@opencad.archi**
 
 ---
 

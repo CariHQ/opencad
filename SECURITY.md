@@ -26,7 +26,7 @@ Instead, report them via one of these methods:
 
 ### Alternative: Email
 
-Send details to **security@opencad.org** with:
+Send details to **security@opencad.archi** with:
 
 - **Subject:** `[SECURITY] Brief description of the vulnerability`
 - **Body:** Detailed description including:
@@ -120,8 +120,8 @@ We do not currently offer a monetary bug bounty program. However, we do provide:
 
 ## Security Contact
 
-- **Email:** security@opencad.org
-- **PGP Key:** Available at https://opencad.org/.well-known/security.txt
+- **Email:** security@opencad.archi
+- **PGP Key:** Available at https://opencad.archi/.well-known/security.txt
 - **OpenPGP Fingerprint:** `XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX XXXX`
 
 ---

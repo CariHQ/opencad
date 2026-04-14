@@ -276,8 +276,8 @@ OpenCAD was founded in April 2026 with the mission to make professional architec
 ## Contact
 
 - **Governance questions:** Open a [GitHub Discussion](https://github.com/CariHQ/opencad/discussions) with the `governance` label
-- **Private matters:** Contact the Lead Maintainer at [lead@opencad.org](mailto:lead@opencad.org)
-- **Code of Conduct:** [conduct@opencad.org](mailto:conduct@opencad.org)
+- **Private matters:** Contact the Lead Maintainer at [lead@opencad.archi](mailto:lead@opencad.archi)
+- **Code of Conduct:** [conduct@opencad.archi](mailto:conduct@opencad.archi)
 
 ---
 

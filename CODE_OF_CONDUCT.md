@@ -40,7 +40,7 @@ This Code of Conduct applies within all community spaces, and also applies when 
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be reported to the community leaders responsible for enforcement at:
 
-- **Email:** conduct@opencad.org
+- **Email:** conduct@opencad.archi
 - **Discord:** Report to any @Moderator or @Maintainer
 - **GitHub:** Contact any maintainer directly via GitHub DMs
 
