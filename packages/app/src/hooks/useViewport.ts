@@ -58,9 +58,9 @@ const SCALE = 20;
 const OFFSET = 5000;
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
-const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam']);
-// Tools that use click-to-add-vertex (polygon, polyline, slab, roof)
-const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof']);
+const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
+// Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing)
+const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing']);
 
 function screenToWorld(sx: number, sy: number, cw: number, ch: number): Point {
   return { x: (sx - cw / 2) * SCALE - OFFSET, y: (sy - ch / 2) * SCALE - OFFSET };
@@ -325,6 +325,42 @@ export function useViewport() {
         },
       });
       getStoreActions().pushHistory('Add beam');
+    }
+
+    if (tool === 'stair') {
+      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
+      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
+      if (maxX - minX < 200 && maxY - minY < 200) return;
+      const sp = (toolParams?.['stair'] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: 'stair', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Stair' },
+          X: { type: 'number', value: minX }, Y: { type: 'number', value: minY },
+          Width2D: { type: 'number', value: maxX - minX },
+          Length: { type: 'number', value: maxY - minY },
+          TotalRise: { type: 'number', value: (sp['totalRise'] as number | undefined) ?? 3000 },
+          TreadDepth: { type: 'number', value: (sp['treadDepth'] as number | undefined) ?? 250 },
+          Width: { type: 'number', value: (sp['width'] as number | undefined) ?? 1200 },
+          Material: { type: 'string', value: (sp['material'] as string | undefined) ?? 'Concrete' },
+        },
+      });
+      getStoreActions().pushHistory('Add stair');
+    }
+
+    if (tool === 'railing' && extraPoints && extraPoints.length >= 2) {
+      const rp = (toolParams?.['railing'] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: 'railing', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Railing' },
+          Points: { type: 'string', value: JSON.stringify(extraPoints) },
+          Height: { type: 'number', value: (rp['height'] as number | undefined) ?? 1000 },
+          Material: { type: 'string', value: (rp['material'] as string | undefined) ?? 'Steel' },
+          BalusterSpacing: { type: 'number', value: (rp['balusterSpacing'] as number | undefined) ?? 150 },
+        },
+      });
+      getStoreActions().pushHistory('Add railing');
     }
   }, [doc, addElement, toolParams]);
 

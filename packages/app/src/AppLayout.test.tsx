@@ -2,7 +2,7 @@
  * T-UI-006: AppLayout integration tests
  *
  * Verifies: the full layout renders without crash, toolbar tabs switch views,
- * theme toggle works, AI panel toggle works.
+ * theme toggle works, AI panel toggle works, panel collapse/focus mode.
  */
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -10,8 +10,21 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { AppLayout } from './AppLayout';
 import { useDocumentStore } from './stores/documentStore';
 
-// jsdom doesn't implement scrollIntoView; AIChatPanel uses it on message scroll
+// jsdom doesn't implement scrollIntoView or matchMedia
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn(),
+  })),
+});
 
 vi.mock('./hooks/useThreeViewport', () => ({
   useThreeViewport: () => ({
@@ -51,7 +64,6 @@ describe('T-UI-006: AppLayout', () => {
 
   it('renders view tabs', () => {
     render(<AppLayout />);
-    // Use role=button to target the toolbar tabs specifically
     expect(screen.getByRole('button', { name: 'Floor Plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '3D View' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Section' })).toBeInTheDocument();
@@ -64,7 +76,6 @@ describe('T-UI-006: AppLayout', () => {
 
   it('renders Layers panel', () => {
     render(<AppLayout />);
-    // 'Layers' appears in both the Navigator tree and the LayersPanel — use panel-title class
     const layerPanelTitle = document.querySelector('.panel-title');
     expect(layerPanelTitle).not.toBeNull();
     const layersTitles = screen.getAllByText('Layers');
@@ -102,5 +113,56 @@ describe('T-UI-006: AppLayout', () => {
     render(<AppLayout />);
     fireEvent.click(screen.getByTitle('Import IFC'));
     expect(screen.getByText(/Import/)).toBeInTheDocument();
+  });
+
+  // Panel collapse
+  it('renders left and right panel toggle buttons', () => {
+    render(<AppLayout />);
+    expect(screen.getByTitle('Toggle navigator (⌘[)')).toBeInTheDocument();
+    expect(screen.getByTitle('Toggle properties (⌘])')).toBeInTheDocument();
+  });
+
+  it('collapses left panel when toggle button is clicked', () => {
+    render(<AppLayout />);
+    fireEvent.click(screen.getByTitle('Toggle navigator (⌘[)'));
+    expect(document.querySelector('.app-left-panel')).toHaveClass('panel-collapsed');
+  });
+
+  it('collapses right panel when toggle button is clicked', () => {
+    render(<AppLayout />);
+    fireEvent.click(screen.getByTitle('Toggle properties (⌘])'));
+    expect(document.querySelector('.app-right-panel')).toHaveClass('panel-collapsed');
+  });
+
+  it('re-expands left panel on second toggle click', () => {
+    render(<AppLayout />);
+    const btn = screen.getByTitle('Toggle navigator (⌘[)');
+    fireEvent.click(btn);
+    fireEvent.click(btn);
+    expect(document.querySelector('.app-left-panel')).not.toHaveClass('panel-collapsed');
+  });
+
+  // Focus mode
+  it('enters focus mode on \\ keypress and hides toolbar', () => {
+    render(<AppLayout />);
+    fireEvent.keyDown(window, { key: '\\' });
+    expect(document.querySelector('.app-toolbar')).toBeNull();
+    expect(screen.getByText(/exit focus mode/i)).toBeInTheDocument();
+  });
+
+  it('exits focus mode on second \\ keypress', () => {
+    render(<AppLayout />);
+    fireEvent.keyDown(window, { key: '\\' });
+    fireEvent.keyDown(window, { key: '\\' });
+    expect(document.querySelector('.app-toolbar')).not.toBeNull();
+  });
+
+  // Floating level selector
+  it('renders level selector inside viewport-wrapper', () => {
+    render(<AppLayout />);
+    const floatingSelector = document.querySelector('.floating-level-selector');
+    expect(floatingSelector).not.toBeNull();
+    const wrapper = document.querySelector('.viewport-wrapper');
+    expect(wrapper).toContainElement(floatingSelector as HTMLElement);
   });
 });
