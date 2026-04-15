@@ -7,6 +7,7 @@
 import React from 'react';
 import { useThreeViewport, type ViewPreset } from '../hooks/useThreeViewport';
 import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
+import { SectionBoxPanel } from './SectionBoxPanel';
 
 interface ThreeViewportInnerProps {
   onViewChange?: (preset: ViewPreset) => void;
@@ -21,6 +22,11 @@ export function ThreeViewportInner({ onViewChange }: ThreeViewportInnerProps) {
     zoomToFit,
     sectionBox,
     setSectionBox,
+    sectionPosition,
+    setSectionPosition,
+    sectionDirection,
+    setSectionDirection,
+    saveSectionView,
   } = useThreeViewport();
 
   const handleViewChange = (preset: ViewPreset) => {
@@ -63,6 +69,19 @@ export function ThreeViewportInner({ onViewChange }: ThreeViewportInnerProps) {
           <Box size={14} />
         </button>
       </div>
+      {sectionBox && (
+        <div className="section-box-overlay">
+          <SectionBoxPanel
+            enabled={sectionBox}
+            position={sectionPosition}
+            direction={sectionDirection}
+            onToggle={() => setSectionBox(!sectionBox)}
+            onPositionChange={setSectionPosition}
+            onDirectionChange={setSectionDirection}
+            onSaveView={saveSectionView}
+          />
+        </div>
+      )}
     </>
   );
 }
