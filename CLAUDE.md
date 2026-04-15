@@ -35,6 +35,9 @@ pnpm lint:fix            # ESLint with auto-fix
 pnpm format              # Prettier format
 pnpm format:check        # Prettier check
 
+# ⚡ Run this BEFORE pushing to catch CI failures locally:
+pnpm ci:local            # typecheck + lint + all unit tests (same as CI)
+
 # Per-package operations
 pnpm --filter=@opencad/<package> build
 pnpm --filter=@opencad/<package> test:watch  # Watch mode for TDD
@@ -94,13 +97,30 @@ Test IDs follow PRD section conventions:
 
 **Every PR must include failing tests that the implementation makes pass.** No production code without tests.
 
+## Branch Strategy
+
+```
+main                          Protected. Only merged via PR with passing CI.
+feat/<T-XXX>-<description>    New features tied to a GitHub issue (e.g. feat/T-BIM-001-wall-tool)
+fix/<T-XXX>-<description>     Bug fixes tied to a GitHub issue (e.g. fix/T-DOC-003-crdt-merge)
+fix/<description>             Infra/CI fixes with no issue ID (e.g. fix/ci-pipeline-failures)
+chore/<description>           Non-functional changes (deps, config, docs)
+```
+
+Rules:
+- **Never commit directly to `main`** — always open a PR
+- **One concern per branch** — don't bundle unrelated fixes
+- **Always run `pnpm ci:local` before pushing** — catches typecheck, lint, and unit test failures
+- **Keep branches short-lived** — merge or close within a few days
+
 ## PR Workflow
 
 Always create a PR after completing work:
 ```bash
-git checkout -b feat/<issue-id>-<description>
+git checkout -b feat/<T-XXX>-<description>
 # ... implement with TDD ...
-git push -u origin feat/<branch-name>
+pnpm ci:local                # must pass before pushing
+git push -u origin <branch-name>
 gh pr create  # Use .github/PULL_REQUEST_TEMPLATE.md
 ```
 

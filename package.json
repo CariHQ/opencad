@@ -33,6 +33,7 @@
     "clean": "turbo run clean",
     "format": "prettier --write \"**/*.{ts,tsx,md,json,yaml,yml}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,md,json,yaml,yml}\"",
+    "ci:local": "turbo run typecheck lint && turbo run test:unit --filter='!@opencad/desktop'",
     "prepare": "husky"
   },
   "devDependencies": {
