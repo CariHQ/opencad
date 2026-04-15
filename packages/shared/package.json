@@ -22,7 +22,7 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
-    "uuid": "^9.0.1"
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.12.0",
