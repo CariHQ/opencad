@@ -255,8 +255,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build all packages
-        run: pnpm build
+      - name: Build all packages (excluding desktop)
+        # Desktop build requires Tauri system deps; handled in desktop-smoke job
+        run: pnpm exec turbo run build --filter='!@opencad/desktop'
 
   # ──────────────────────────────────────────────────────────────
   # 8. Dependency Audit
