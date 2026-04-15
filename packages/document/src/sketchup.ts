@@ -36,7 +36,8 @@ export function parseSKP(content: string): DocumentSchema {
   const parser = new SKPParser(content);
   const { name, entities, materials, components } = parser.parse();
 
-  const doc = createProject(name || 'Imported SketchUp', 'sketchup-import');
+  const doc = createProject('sketchup-import', 'sketchup-import');
+  doc.name = name || 'Imported SketchUp';
   doc.elements = {};
   doc.materials = {};
 
@@ -125,8 +126,11 @@ export function serializeSKP(doc: DocumentSchema): string {
 
   lines.push('  <Entities>');
   for (const elem of Object.values(doc.elements)) {
-    const type = elem.type.toUpperCase();
-    lines.push(`    <Entity Type="${type}" Name="${elem.properties.Name?.value || type}"/>`);
+    // Use proper element type tags so the parser can round-trip
+    const tag = elem.type.charAt(0).toUpperCase() + elem.type.slice(1);
+    const nameVal = (elem.properties.Name as { value?: string } | undefined)?.value || tag;
+    const lockedVal = elem.locked ? 'True' : 'False';
+    lines.push(`    <${tag} Id="${elem.id}" Name="${nameVal}" Locked="${lockedVal}"/>`);
   }
   lines.push('  </Entities>');
 
