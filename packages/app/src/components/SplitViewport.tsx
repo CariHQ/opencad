@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { Columns } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
-import { useThreeViewport, ViewPreset } from '../hooks/useThreeViewport';
+import { useThreeViewport } from '../hooks/useThreeViewport';
 
 interface ViewportPaneProps {
   label: string;
@@ -38,7 +38,7 @@ function FloorPlanPane() {
 }
 
 function ThreeDPane() {
-  const { containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, sectionBox, setSectionBox } = useThreeViewport();
+  const { containerRef } = useThreeViewport();
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
   );

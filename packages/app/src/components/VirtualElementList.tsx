@@ -45,7 +45,7 @@ export function VirtualElementList({
         className="virtual-list-content"
         style={{ position: 'relative', transform: `translateY(${startIndex * itemHeight}px)` }}
       >
-        {visibleItems.map((item, i) => (
+        {visibleItems.map((item) => (
           <div
             key={item.id}
             className="virtual-list-item"

@@ -162,7 +162,6 @@ describe('T-PDF-004: Export PDF → verify layers preserved as PDF layers', () =
   it('annotations are imported from PDF', () => {
     const doc = parsePDF(SAMPLE_PDF);
     // The sample PDF has a Text annotation
-    const annotations = Object.values(doc.presentation.annotations ?? {});
     // Check that annotations were imported (if any exist in the sample)
     expect(doc.presentation.annotations).toBeDefined();
   });

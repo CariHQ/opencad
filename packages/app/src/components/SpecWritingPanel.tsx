@@ -48,7 +48,7 @@ export function SpecWritingPanel({ sheets, onGenerate, onExport }: SpecWritingPa
 
       {sheets.length === 0 ? (
         <div className="spec-empty">
-          No room data sheets. Click "Generate from Model" to create them from spaces in the model.
+          No room data sheets. Click &quot;Generate from Model&quot; to create them from spaces in the model.
         </div>
       ) : (
         <div className="sheets-list">

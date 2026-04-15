@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 import { CommandPalette } from './CommandPalette';
 
-const noop = () => {};
+const _noop = () => {};
 
 describe('T-UI-002: CommandPalette', () => {
   const defaultProps = {
