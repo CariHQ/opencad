@@ -24,6 +24,8 @@ interface DocumentState {
 
   selectedLevelId: string | null;
 
+  toolParams: Record<string, Record<string, unknown>>;
+
   initProject: (projectId: string, userId: string) => void;
   loadProject: (projectId: string, userId: string) => void;
   setSelectedIds: (ids: string[]) => void;
@@ -41,6 +43,8 @@ interface DocumentState {
   }) => string;
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
+
+  setToolParam: (tool: string, key: string, value: unknown) => void;
 
   undo: () => void;
   redo: () => void;
@@ -73,6 +77,12 @@ export const useDocumentStore = create<DocumentState>()(
       canRedo: false,
 
       selectedLevelId: null,
+
+      toolParams: {
+        wall: { height: 3000, thickness: 200, material: 'Concrete', wallType: 'interior' },
+        door: { height: 2100, width: 900, swing: 90 },
+        window: { height: 1200, width: 1200, sillHeight: 900 },
+      },
 
       initProject: (projectId, userId) => {
         let model: DocumentModel;
@@ -199,6 +209,11 @@ export const useDocumentStore = create<DocumentState>()(
         });
       },
 
+      setToolParam: (tool, key, value) => {
+        const { toolParams } = get();
+        set({ toolParams: { ...toolParams, [tool]: { ...(toolParams[tool] ?? {}), [key]: value } } });
+      },
+
       pushHistory: (description) => {
         const { document, history, historyIndex } = get();
         if (!document) return;
@@ -209,6 +224,10 @@ export const useDocumentStore = create<DocumentState>()(
           timestamp: Date.now(),
           description,
         });
+
+        if (newHistory.length > 50) {
+          newHistory.shift();
+        }
 
         set({
           history: newHistory,

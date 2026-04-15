@@ -102,7 +102,7 @@ function findSnapPoints(elements: unknown[], currentPoint: Point, tolerance: num
 export function useViewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool } = useDocumentStore();
+  const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams } = useDocumentStore();
 
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false, startPoint: null, currentPoint: null, points: [],
@@ -154,13 +154,17 @@ export function useViewport() {
       const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
       const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
       if (maxX - minX < 100 && maxY - minY < 100) return;
+      const wp = (toolParams?.['wall'] ?? {}) as Record<string, unknown>;
       addElement({
         type: 'wall', layerId,
         properties: {
           Name: { type: 'string', value: 'Wall' },
           StartX: { type: 'number', value: minX }, StartY: { type: 'number', value: minY },
           EndX: { type: 'number', value: maxX }, EndY: { type: 'number', value: maxY },
-          Height: { type: 'number', value: 3000 }, Width: { type: 'number', value: 200 },
+          Height: { type: 'number', value: wp['height'] ?? 3000 },
+          Width: { type: 'number', value: wp['thickness'] ?? 200 },
+          Material: { type: 'string', value: wp['material'] ?? 'Concrete' },
+          WallType: { type: 'string', value: wp['wallType'] ?? 'interior' },
         },
       });
       getStoreActions().pushHistory('Add wall');
