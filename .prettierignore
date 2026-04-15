@@ -1,0 +1,24 @@
+# Auto-generated files
+pnpm-lock.yaml
+**/pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Build outputs
+dist/
+.next/
+target/
+release/
+coverage/
+
+# Turbo cache (should not be committed)
+.turbo/
+
+# Test artifacts
+playwright-report/
+playwright-results.json
+test-results/
+
+# IDE
+.vscode/
+.idea/

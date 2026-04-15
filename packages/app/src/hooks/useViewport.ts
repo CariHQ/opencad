@@ -1,5 +1,9 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { useDocumentStore } from '../stores/documentStore';
+import { useDocumentStore } from '@/stores/documentStore';
+import { createWallElement } from '@/utils/wallUtils';
+import { createSlabElement } from '@/utils/slabUtils';
+import { createDoorElement, createWindowElement } from '@/utils/doorWindowUtils';
+import { createColumnElement, createBeamElement } from '@/utils/columnBeamUtils';
 
 const LIGHT_THEME = {
   background: '#f1f5f9',
@@ -57,10 +61,12 @@ const SNAP_TOLERANCE = 15;
 const SCALE = 20;
 const OFFSET = 5000;
 
-// Tools that use drag-to-draw (mousedown → mousemove → mouseup)
-const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension']);
-// Tools that use click-to-add-vertex (polygon, polyline)
-const MULTICLICK_TOOLS = new Set(['polygon', 'polyline']);
+// Tools that use drag-to-draw (mousedown → mousemove → mouseup).
+// 'column' is click-to-place; it is included so mousedown starts the drawing
+// state and mouseup commits via commitShape (which only uses start for columns).
+const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'door', 'window', 'column', 'beam']);
+// Tools that use click-to-add-vertex (polygon, polyline, slab)
+const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab']);
 
 function screenToWorld(sx: number, sy: number, cw: number, ch: number): Point {
   return { x: (sx - cw / 2) * SCALE - OFFSET, y: (sy - ch / 2) * SCALE - OFFSET };
@@ -151,18 +157,10 @@ export function useViewport() {
     }
 
     if (tool === 'wall') {
-      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
-      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
-      if (maxX - minX < 100 && maxY - minY < 100) return;
-      addElement({
-        type: 'wall', layerId,
-        properties: {
-          Name: { type: 'string', value: 'Wall' },
-          StartX: { type: 'number', value: minX }, StartY: { type: 'number', value: minY },
-          EndX: { type: 'number', value: maxX }, EndY: { type: 'number', value: maxY },
-          Height: { type: 'number', value: 3000 }, Width: { type: 'number', value: 200 },
-        },
-      });
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 100) return;
+      addElement({ ...createWallElement(start, end, { layerId }), layerId });
       getStoreActions().pushHistory('Add wall');
     }
 
@@ -236,6 +234,34 @@ export function useViewport() {
       });
       getStoreActions().pushHistory(`Add ${tool}`);
     }
+
+    if (tool === 'slab' && extraPoints && extraPoints.length >= 3) {
+      addElement({ ...createSlabElement(extraPoints, { layerId }), layerId });
+      getStoreActions().pushHistory('Add slab');
+    }
+
+    if (tool === 'door') {
+      addElement({ ...createDoorElement(start, { layerId }), layerId });
+      getStoreActions().pushHistory('Add door');
+    }
+
+    if (tool === 'window') {
+      addElement({ ...createWindowElement(start, { layerId }), layerId });
+      getStoreActions().pushHistory('Add window');
+    }
+
+    if (tool === 'column') {
+      addElement({ ...createColumnElement(start, { layerId }), layerId });
+      getStoreActions().pushHistory('Add column');
+    }
+
+    if (tool === 'beam') {
+      const dx = end.x - start.x;
+      const dy = end.y - start.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 100) return;
+      addElement({ ...createBeamElement(start, end, { layerId }), layerId });
+      getStoreActions().pushHistory('Add beam');
+    }
   }, [doc, addElement]);
 
   // ─── Canvas draw loop ─────────────────────────────────────────────────────
@@ -285,12 +311,22 @@ export function useViewport() {
           if (type === 'annotation') {
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
           } else if (type === 'wall') {
+            // Draw wall as double parallel lines (architectural 2D convention)
+            const thickness = (props['Thickness']?.value as number ?? 200) / SCALE;
+            const half = thickness / 2;
+            const wdx = p2.x - p1.x;
+            const wdy = p2.y - p1.y;
+            const len = Math.sqrt(wdx * wdx + wdy * wdy) || 1;
+            const nx = (-wdy / len) * half; // perpendicular offset x
+            const ny = (wdx / len) * half;  // perpendicular offset y
             ctx.fillStyle = fillColor;
             ctx.beginPath();
-            ctx.rect(Math.min(p1.x, p2.x), Math.min(p1.y, p2.y), Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y));
+            ctx.moveTo(p1.x + nx, p1.y + ny);
+            ctx.lineTo(p2.x + nx, p2.y + ny);
+            ctx.lineTo(p2.x - nx, p2.y - ny);
+            ctx.lineTo(p1.x - nx, p1.y - ny);
+            ctx.closePath();
             ctx.fill(); ctx.stroke();
-            ctx.fillStyle = color; ctx.font = '10px sans-serif';
-            ctx.fillText('Wall', Math.min(p1.x, p2.x) + 4, Math.min(p1.y, p2.y) + 12);
           } else if (type === 'dimension') {
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
             const d = props['Value']?.value as number ?? 0;
@@ -333,6 +369,91 @@ export function useViewport() {
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
           ctx.stroke();
         }
+      } else if (type === 'slab') {
+        if (props['Points']) {
+          const pts = JSON.parse(props['Points'].value as string) as Point[];
+          if (pts.length < 3) continue;
+          ctx.fillStyle = isSelected ? theme.selectedFill : 'rgba(154, 179, 196, 0.25)';
+          ctx.strokeStyle = color;
+          ctx.beginPath();
+          const p0 = worldToScreen(pts[0]!.x, pts[0]!.y, width, height);
+          ctx.moveTo(p0.x, p0.y);
+          for (let i = 1; i < pts.length; i++) {
+            const p = worldToScreen(pts[i]!.x, pts[i]!.y, width, height);
+            ctx.lineTo(p.x, p.y);
+          }
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+        }
+      } else if (type === 'door') {
+        if (props['X']) {
+          const cx = props['X'].value as number;
+          const cy = props['Y']!.value as number;
+          const w = (props['Width']?.value as number ?? 900) / SCALE;
+          const h = (props['Height']?.value as number ?? 2100) / SCALE;
+          const p = worldToScreen(cx, cy, width, height);
+          // Draw door footprint rectangle
+          ctx.beginPath();
+          ctx.rect(p.x, p.y - h / 4, w, h / 4);
+          ctx.fill();
+          ctx.stroke();
+          // Draw swing arc
+          ctx.beginPath();
+          ctx.arc(p.x, p.y - h / 4, w, 0, Math.PI / 2);
+          ctx.stroke();
+        }
+      } else if (type === 'window') {
+        if (props['X']) {
+          const cx = props['X'].value as number;
+          const cy = props['Y']!.value as number;
+          const w = (props['Width']?.value as number ?? 1200) / SCALE;
+          const p = worldToScreen(cx, cy, width, height);
+          const depth = 8;
+          // Draw window as rectangle with centre line
+          ctx.beginPath();
+          ctx.rect(p.x - w / 2, p.y - depth / 2, w, depth);
+          ctx.fill();
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(p.x - w / 2, p.y);
+          ctx.lineTo(p.x + w / 2, p.y);
+          ctx.stroke();
+        }
+      } else if (type === 'column') {
+        if (props['X']) {
+          const cx = props['X'].value as number;
+          const cy = props['Y']!.value as number;
+          const colW = (props['Width']?.value as number ?? 400) / SCALE;
+          const colD = (props['Depth']?.value as number ?? 400) / SCALE;
+          const p = worldToScreen(cx, cy, width, height);
+          // Draw column as a filled square centred on the placement point
+          ctx.beginPath();
+          ctx.rect(p.x - colW / 2, p.y - colD / 2, colW, colD);
+          ctx.fill();
+          ctx.stroke();
+        }
+      } else if (type === 'beam') {
+        if (props['StartX'] && props['EndX']) {
+          const p1 = worldToScreen(
+            props['StartX'].value as number,
+            props['StartY']!.value as number,
+            width,
+            height,
+          );
+          const p2 = worldToScreen(
+            props['EndX'].value as number,
+            props['EndY']!.value as number,
+            width,
+            height,
+          );
+          // Draw beam as a single bold line
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.stroke();
+        }
       } else {
         // Fallback: bounding box
         const bb = element.boundingBox;
@@ -344,7 +465,7 @@ export function useViewport() {
     }
 
     // ── Draw preview while user is drawing ──
-    const { isDrawing, startPoint, currentPoint, points } = drawingState;
+    const { startPoint, currentPoint, points } = drawingState;
     if (!startPoint) return;
 
     ctx.strokeStyle = theme.accent;
@@ -416,6 +537,29 @@ export function useViewport() {
       }
     }
 
+    // Slab: show committed points + rubber-band + light fill preview
+    if (activeTool === 'slab' && points.length > 0) {
+      ctx.fillStyle = 'rgba(154, 179, 196, 0.15)';
+      ctx.beginPath();
+      const sp0 = worldToScreen(points[0]!.x, points[0]!.y, width, height);
+      ctx.moveTo(sp0.x, sp0.y);
+      for (let i = 1; i < points.length; i++) {
+        const pp = worldToScreen(points[i]!.x, points[i]!.y, width, height);
+        ctx.lineTo(pp.x, pp.y);
+      }
+      if (currentPoint) ctx.lineTo(cp.x, cp.y);
+      if (points.length >= 3) ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+      // Draw dot at each committed vertex
+      ctx.setLineDash([]);
+      ctx.fillStyle = theme.accent;
+      for (const pt of points) {
+        const s = worldToScreen(pt.x, pt.y, width, height);
+        ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
     ctx.setLineDash([]);
 
     // Snap indicator
@@ -458,8 +602,8 @@ export function useViewport() {
 
     if (MULTICLICK_TOOLS.has(activeTool)) {
       setDrawingState((prev) => {
-        // Close polygon if clicking near start
-        if (activeTool === 'polygon' && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * SCALE) {
+        // Close polygon or slab if clicking near start
+        if ((activeTool === 'polygon' || activeTool === 'slab') && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * SCALE) {
           commitShape(activeTool, prev.points[0], prev.points[prev.points.length - 1]!, prev.points);
           return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
         }
@@ -550,7 +694,7 @@ export function useViewport() {
 
   // ─── Effects ──────────────────────────────────────────────────────────────
 
-  useEffect(() => { draw(); }, [doc]);
+  useEffect(() => { draw(); }, [doc, draw]);
 
   useEffect(() => {
     const handleThemeChange = () => draw();

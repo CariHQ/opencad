@@ -73,6 +73,9 @@ blob-report/
 # Benchmarks
 benchmark-results/
 
+# Turbo
+.turbo/
+
 # Temporary
 tmp/
 temp/
