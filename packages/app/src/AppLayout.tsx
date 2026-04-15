@@ -6,6 +6,7 @@ import { LayersPanel } from './components/LayerPanel';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { StatusBar } from './components/StatusBar';
 import { Viewport } from './components/Viewport';
+import { SplitViewport } from './components/SplitViewport';
 import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
 import { LevelManager } from './components/LevelManager';
@@ -126,7 +127,7 @@ export function AppLayout() {
 
         <main className="app-main">
           <div className="viewport-wrapper">
-            <Viewport viewType={activeView} />
+            <SplitViewport viewType={activeView} />
           </div>
           <LevelSelector
             levels={doc?.levels || {}}
