@@ -18,6 +18,8 @@ import {
   RectangleHorizontal,
   Maximize2,
   Pentagon,
+  Bot,
+  PanelRight,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 
@@ -57,7 +59,14 @@ const categories = [
   { id: 'annotation', name: 'Annotate', icon: FileText },
 ];
 
-export function ToolShelf() {
+interface ToolShelfProps {
+  onToggleAI?: () => void;
+  onToggleProperties?: () => void;
+  propertiesVisible?: boolean;
+  theme?: 'light' | 'dark';
+}
+
+export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, theme = 'light' }: ToolShelfProps = {}) {
   const { activeTool, setActiveTool } = useDocumentStore();
   const [activeCategory, setActiveCategory] = React.useState<string>(() => {
     try { return localStorage.getItem('opencad-activeCategory') ?? 'modify'; } catch { return 'modify'; }
@@ -117,6 +126,33 @@ export function ToolShelf() {
         })}
       </div>
       <div className="toolshelf-active-label">{activeTool}</div>
+      {(onToggleAI != null || onToggleProperties != null) && (
+        <>
+          <div className="toolshelf-divider" />
+          <div className="toolshelf-actions">
+            {onToggleAI != null && (
+              <button className="toolbar-btn" onClick={onToggleAI} title="Toggle AI panel">
+                <span className="tool-icon">
+                  <Bot size={15} />
+                </span>
+              </button>
+            )}
+            {onToggleProperties != null && (
+              <button
+                className={`toolbar-btn panel-toggle-btn${propertiesVisible ? ' panel-on' : ''}`}
+                onClick={onToggleProperties}
+                title="Toggle properties panel"
+              >
+                <PanelRight
+                  size={16}
+                  strokeWidth={2}
+                  style={propertiesVisible ? { stroke: theme === 'dark' ? '#18a0fb' : '#0d99ff' } : undefined}
+                />
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
