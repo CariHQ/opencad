@@ -6,7 +6,7 @@ export function LevelManager() {
 
   if (!doc) return null;
 
-  const sortedLevels = Object.values(doc.levels).sort((a, b) => a.order - b.order);
+  const sortedLevels = Object.values(doc.organization.levels).sort((a, b) => a.order - b.order);
 
   const handleAdd = () => {
     const maxElev = sortedLevels.length > 0
@@ -50,16 +50,18 @@ export function LevelManager() {
               className="level-name-input"
               defaultValue={level.name}
               onBlur={(e) => handleNameBlur(level.id, e.target.value)}
+              placeholder="Level name"
             />
             <input
               type="number"
               className="level-elev-input"
               defaultValue={level.elevation}
               onBlur={(e) => handleElevBlur(level.id, e.target.value)}
+              placeholder="0"
               title="Elevation (mm)"
             />
             <button
-              className="panel-action-btn danger"
+              className="level-delete-btn"
               title="Delete level"
               onClick={() => handleDelete(level.id)}
             >

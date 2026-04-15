@@ -119,7 +119,7 @@ describe('T-IFC-001: IFC 2x3 Import', () => {
 
   it('should import to DocumentSchema with all entities as elements', () => {
     const doc = parseIFC(ifc2x3Fixture());
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     // wall, door, window, slab, column, beam, space = 7
     expect(elements.length).toBeGreaterThanOrEqual(7);
   });
@@ -152,7 +152,7 @@ describe('T-IFC-002: IFC 4 Import', () => {
 
   it('should import IFC 4 elements to DocumentSchema', () => {
     const doc = parseIFC(ifc4Fixture());
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     expect(elements.length).toBeGreaterThanOrEqual(2); // wall + door
   });
 });
@@ -180,10 +180,10 @@ describe('T-IFC-003: IFC 2x3 Export', () => {
 
   it('should export IFCWALLSTANDARDCASE for wall elements', () => {
     const project = createProject('Wall Test', 'tester');
-    const layerId = Object.keys(project.layers)[0];
-    const levelId = Object.keys(project.levels)[0];
+    const layerId = Object.keys(project.organization.layers)[0];
+    const levelId = Object.keys(project.organization.levels)[0];
     const wallId = crypto.randomUUID();
-    project.elements[wallId] = {
+    project.content.elements[wallId] = {
       id: wallId,
       type: 'wall',
       properties: { Name: { type: 'string', value: 'South Wall' } },
@@ -228,10 +228,10 @@ describe('T-IFC-004: IFC 4 Export', () => {
 
   it('should use IFCWALL (not IFCWALLSTANDARDCASE) for IFC4', () => {
     const project = createProject('IFC4 Wall', 'tester');
-    const layerId = Object.keys(project.layers)[0];
-    const levelId = Object.keys(project.levels)[0];
+    const layerId = Object.keys(project.organization.layers)[0];
+    const levelId = Object.keys(project.organization.levels)[0];
     const wallId = crypto.randomUUID();
-    project.elements[wallId] = {
+    project.content.elements[wallId] = {
       id: wallId,
       type: 'wall',
       properties: { Name: { type: 'string', value: 'IFC4 Wall' } },
@@ -270,12 +270,12 @@ describe('T-IFC-004: IFC 4 Export', () => {
 describe('T-IFC-005: IFC Round-trip', () => {
   it('should export then re-import preserving element count', () => {
     const project = createProject('Round-trip', 'tester');
-    const layerId = Object.keys(project.layers)[0];
-    const levelId = Object.keys(project.levels)[0];
+    const layerId = Object.keys(project.organization.layers)[0];
+    const levelId = Object.keys(project.organization.levels)[0];
 
     // Add a wall
     const wallId = crypto.randomUUID();
-    project.elements[wallId] = {
+    project.content.elements[wallId] = {
       id: wallId,
       type: 'wall',
       properties: { Name: { type: 'string', value: 'RT Wall' } },
@@ -305,17 +305,17 @@ describe('T-IFC-005: IFC Round-trip', () => {
 
     const exported = serializeIFC(project);
     const reimported = parseIFC(exported);
-    const elements = Object.values(reimported.elements);
+    const elements = Object.values(reimported.content.elements);
 
-    expect(elements.length).toBe(Object.values(project.elements).length);
+    expect(elements.length).toBe(Object.values(project.content.elements).length);
   });
 
   it('should preserve element names through round-trip', () => {
     const project = createProject('RT Name', 'tester');
-    const layerId = Object.keys(project.layers)[0];
-    const levelId = Object.keys(project.levels)[0];
+    const layerId = Object.keys(project.organization.layers)[0];
+    const levelId = Object.keys(project.organization.levels)[0];
     const wallId = crypto.randomUUID();
-    project.elements[wallId] = {
+    project.content.elements[wallId] = {
       id: wallId,
       type: 'wall',
       properties: { Name: { type: 'string', value: 'Named Wall' } },
@@ -345,21 +345,21 @@ describe('T-IFC-005: IFC Round-trip', () => {
 
     const exported = serializeIFC(project);
     const reimported = parseIFC(exported);
-    const elements = Object.values(reimported.elements);
+    const elements = Object.values(reimported.content.elements);
     const names = elements.map((e) => e.properties['Name']?.value);
     expect(names).toContain('Named Wall');
   });
 
   it('should preserve bounding box within 0.1mm tolerance', () => {
     const project = createProject('RT Geo', 'tester');
-    const layerId = Object.keys(project.layers)[0];
-    const levelId = Object.keys(project.levels)[0];
+    const layerId = Object.keys(project.organization.layers)[0];
+    const levelId = Object.keys(project.organization.levels)[0];
     const wallId = crypto.randomUUID();
     const bbox = {
       min: { x: 100.0, y: 200.0, z: 0.0, _type: 'Point3D' as const },
       max: { x: 5100.0, y: 500.0, z: 3000.0, _type: 'Point3D' as const },
     };
-    project.elements[wallId] = {
+    project.content.elements[wallId] = {
       id: wallId,
       type: 'wall',
       properties: { Name: { type: 'string', value: 'Geo Wall' } },
@@ -386,7 +386,7 @@ describe('T-IFC-005: IFC Round-trip', () => {
 
     const exported = serializeIFC(project);
     const reimported = parseIFC(exported);
-    const el = Object.values(reimported.elements).find(
+    const el = Object.values(reimported.content.elements).find(
       (e) => e.properties['Name']?.value === 'Geo Wall'
     );
     expect(el).toBeDefined();
@@ -425,7 +425,7 @@ describe('T-IFC-006: IFC Property Sets', () => {
 
   it('should import Psets into element propertySets on parseIFC', () => {
     const doc = parseIFC(psetFixture());
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     const wall = elements.find((e) => e.type === 'wall');
     expect(wall?.propertySets.length).toBeGreaterThan(0);
     const psetNames = wall?.propertySets.map((ps) => ps.name) ?? [];
@@ -474,7 +474,7 @@ describe('T-IFC-007: Large IFC Import Performance', () => {
     const start = Date.now();
     const doc = parseIFC(content);
     const elapsed = Date.now() - start;
-    expect(Object.values(doc.elements).length).toBe(1_000);
+    expect(Object.values(doc.content.elements).length).toBe(1_000);
     expect(elapsed).toBeLessThan(2_000);
   });
 });

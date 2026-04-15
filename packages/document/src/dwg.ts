@@ -216,7 +216,7 @@ class DXFSerializer {
 
   private serializeEntities(): string[] {
     const lines: string[] = [];
-    const elements = Object.values(this.document.elements);
+    const elements = Object.values(this.document.content.elements);
 
     for (const element of elements) {
       if (element.type === 'line') {
@@ -386,41 +386,41 @@ export function parseDXF(content: string): DocumentSchema {
   const { entities, layers } = parser.parse();
 
   const document = createProject('Imported DXF', 'dxf-import');
-  document.blocks = {};
+  document.library.blocks = {};
 
   for (const layerName of Object.keys(layers)) {
     const layerId = crypto.randomUUID();
-    document.layers[layerId] = {
+    document.organization.layers[layerId] = {
       id: layerId,
       name: layerName,
       color: '#808080',
       visible: true,
       locked: false,
-      order: Object.keys(document.layers).length,
+      order: Object.keys(document.organization.layers).length,
     };
   }
 
   for (const entity of entities) {
     const elementType = DXF_ENTITY_MAP[entity.type] || 'annotation';
 
-    let layerId = Object.keys(document.layers).find(
-      (id) => document.layers[id].name === entity.layer
+    let layerId = Object.keys(document.organization.layers).find(
+      (id) => document.organization.layers[id].name === entity.layer
     );
 
     if (!layerId && entity.layer && entity.layer !== '0') {
       const newLayerId = crypto.randomUUID();
-      document.layers[newLayerId] = {
+      document.organization.layers[newLayerId] = {
         id: newLayerId,
         name: entity.layer,
         color: '#808080',
         visible: true,
         locked: false,
-        order: Object.keys(document.layers).length,
+        order: Object.keys(document.organization.layers).length,
       };
       layerId = newLayerId;
     }
 
-    layerId = layerId || Object.keys(document.layers)[0];
+    layerId = layerId || Object.keys(document.organization.layers)[0];
 
     if (elementType === 'line') {
       addElement(document, {
@@ -440,14 +440,14 @@ export function parseDXF(content: string): DocumentSchema {
           },
         ],
         layerId,
-        levelId: Object.keys(document.levels)[0],
+        levelId: Object.keys(document.organization.levels)[0],
       });
     } else if (elementType === 'circle') {
       addElement(document, {
         type: 'circle',
         properties: { Radius: { type: 'number', value: entity.coordinates.radius || 25 } },
         layerId,
-        levelId: Object.keys(document.levels)[0],
+        levelId: Object.keys(document.organization.levels)[0],
         transform: {
           translation: {
             x: entity.coordinates.x || 0,
@@ -468,13 +468,13 @@ export function parseDXF(content: string): DocumentSchema {
           { x: 0, y: 10, z: 0, _type: 'Point3D' },
         ],
         layerId,
-        levelId: Object.keys(document.levels)[0],
+        levelId: Object.keys(document.organization.levels)[0],
       });
     } else if (elementType === 'surface') {
       addElement(document, {
         type: 'surface',
         layerId,
-        levelId: Object.keys(document.levels)[0],
+        levelId: Object.keys(document.organization.levels)[0],
         transform: {
           translation: {
             x: entity.coordinates.x || 0,
@@ -489,7 +489,7 @@ export function parseDXF(content: string): DocumentSchema {
       addElement(document, {
         type: elementType as ElementType,
         layerId,
-        levelId: Object.keys(document.levels)[0],
+        levelId: Object.keys(document.organization.levels)[0],
         transform: {
           translation: {
             x: entity.coordinates.x || 0,

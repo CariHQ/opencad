@@ -27,12 +27,12 @@ export function parsePDF(content: string): DocumentSchema {
   const { pages, annotations, metadata } = parser.parse();
 
   const doc = createProject(metadata.title || 'Imported PDF', 'pdf-import');
-  doc.elements = {};
-  doc.annotations = {};
-  doc.views = {};
+  doc.content.elements = {};
+  doc.presentation.annotations = {};
+  doc.presentation.views = {};
 
   for (const p of pages) {
-    doc.views[p.id] = {
+    doc.presentation.views[p.id] = {
       id: p.id,
       name: `Page ${p.number}`,
       type: '2d',
@@ -49,7 +49,7 @@ export function parsePDF(content: string): DocumentSchema {
 
   for (const annot of annotations) {
     const annotId = crypto.randomUUID();
-    doc.annotations[annotId] = {
+    doc.presentation.annotations[annotId] = {
       type: annot.type as 'text',
       content: annot.content,
       position: { x: annot.rectangle.x, y: annot.rectangle.y, z: 0, _type: 'Point3D' },
@@ -70,7 +70,7 @@ export function serializePDF(doc: DocumentSchema): string {
   lines.push('%PDF-1.4');
   lines.push(`%Title ${doc.name}`);
 
-  const pages = Object.values(doc.views);
+  const pages = Object.values(doc.presentation.views);
 
   let objectNum = 1;
   lines.push(`${objectNum} 0 obj`);

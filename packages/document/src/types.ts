@@ -180,21 +180,37 @@ export interface PhaseSchema {
   status: 'existing' | 'new' | 'demolished' | 'incomplete';
 }
 
+export interface DocumentContent {
+  elements: Record<string, ElementSchema>;
+  spaces: Record<string, SpaceSchema>;
+}
+
+export interface DocumentOrganization {
+  layers: Record<string, LayerSchema>;
+  levels: Record<string, LevelSchema>;
+  phases?: Record<string, PhaseSchema>;
+}
+
+export interface DocumentPresentation {
+  views: Record<string, ViewSchema>;
+  annotations: Record<string, AnnotationSchema>;
+}
+
+export interface DocumentLibrary {
+  materials: Record<string, MaterialSchema>;
+  families?: Record<string, FamilySchema>;
+  blocks?: Record<string, ElementSchema>;
+}
+
 export interface DocumentSchema {
   id: string;
   name: string;
   version: VectorClock;
-  elements: Record<string, ElementSchema>;
-  layers: Record<string, LayerSchema>;
-  levels: Record<string, LevelSchema>;
-  views: Record<string, ViewSchema>;
-  materials: Record<string, MaterialSchema>;
-  spaces: Record<string, SpaceSchema>;
-  annotations: Record<string, AnnotationSchema>;
   metadata: DocumentMetadata;
-  blocks?: Record<string, ElementSchema>;
-  families?: Record<string, FamilySchema>;
-  phases?: Record<string, PhaseSchema>;
+  content: DocumentContent;
+  organization: DocumentOrganization;
+  presentation: DocumentPresentation;
+  library: DocumentLibrary;
 }
 
 export interface SyncOperation {
@@ -216,8 +232,7 @@ export interface SyncResult {
 }
 
 export interface SaveEventData {
-  layers: Record<string, LayerSchema>;
-  elements: Record<string, ElementSchema>;
-  levels: Record<string, LevelSchema>;
+  content: DocumentContent;
+  organization: DocumentOrganization;
   timestamp: number;
 }

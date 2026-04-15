@@ -27,22 +27,22 @@ describe('Document Model - TDD Tests', () => {
       expect(project.id).toBe(projectId);
       expect(project.name).toBe('Untitled Project');
       expect(project.version).toEqual({ clock: {} });
-      expect(project.elements).toEqual({});
-      expect(project.layers).toBeDefined();
-      expect(project.levels).toBeDefined();
-      expect(project.views).toEqual({});
-      expect(project.materials).toBeDefined();
-      expect(project.spaces).toEqual({});
-      expect(project.annotations).toEqual({});
+      expect(project.content.elements).toEqual({});
+      expect(project.organization.layers).toBeDefined();
+      expect(project.organization.levels).toBeDefined();
+      expect(project.presentation.views).toEqual({});
+      expect(project.library.materials).toBeDefined();
+      expect(project.content.spaces).toEqual({});
+      expect(project.presentation.annotations).toEqual({});
       expect(project.metadata.schemaVersion).toBe('1.0.0');
     });
 
     it('should create a default layer named "Layer 1"', () => {
       const project = createProject('test', 'user');
-      const layerIds = Object.keys(project.layers);
+      const layerIds = Object.keys(project.organization.layers);
 
       expect(layerIds.length).toBe(1);
-      const defaultLayer = project.layers[layerIds[0]];
+      const defaultLayer = project.organization.layers[layerIds[0]];
       expect(defaultLayer.name).toBe('Layer 1');
       expect(defaultLayer.visible).toBe(true);
       expect(defaultLayer.locked).toBe(false);
@@ -50,10 +50,10 @@ describe('Document Model - TDD Tests', () => {
 
     it('should create a default level named "Level 1" with elevation 0', () => {
       const project = createProject('test', 'user');
-      const levelIds = Object.keys(project.levels);
+      const levelIds = Object.keys(project.organization.levels);
 
       expect(levelIds.length).toBe(1);
-      const defaultLevel = project.levels[levelIds[0]];
+      const defaultLevel = project.organization.levels[levelIds[0]];
       expect(defaultLevel.name).toBe('Level 1');
       expect(defaultLevel.elevation).toBe(0);
       expect(defaultLevel.height).toBe(3000); // 3m default height
@@ -61,10 +61,10 @@ describe('Document Model - TDD Tests', () => {
 
     it('should create default material library', () => {
       const project = createProject('test', 'user');
-      const materialIds = Object.keys(project.materials);
+      const materialIds = Object.keys(project.library.materials);
 
       expect(materialIds.length).toBeGreaterThan(0);
-      expect(project.materials[materialIds[0]]).toBeDefined();
+      expect(project.library.materials[materialIds[0]]).toBeDefined();
     });
   });
 
@@ -94,9 +94,9 @@ describe('Document Model - TDD Tests', () => {
       vi.advanceTimersByTime(2500); // Wait for debounce
 
       expect(savedData).toBeDefined();
-      const data = savedData as { layers: Record<string, LayerSchema> };
-      expect(data.layers[layerId]).toBeDefined();
-      expect(data.layers[layerId].name).toBe('Test Layer');
+      const data = savedData as { organization: { layers: Record<string, LayerSchema> } };
+      expect(data.organization.layers[layerId]).toBeDefined();
+      expect(data.organization.layers[layerId].name).toBe('Test Layer');
       vi.useRealTimers();
     });
 
@@ -175,7 +175,7 @@ describe('Document Model - TDD Tests', () => {
       `;
 
       const model = DocumentModel.fromIFC(ifcData);
-      const elements = Object.values(model.document.elements);
+      const elements = Object.values(model.document.content.elements);
 
       expect(elements.length).toBeGreaterThanOrEqual(2);
     });
@@ -216,7 +216,7 @@ describe('Document Model - TDD Tests', () => {
       `;
 
       const model = DocumentModel.fromIFC(ifcData);
-      const elements = Object.values(model.document.elements);
+      const elements = Object.values(model.document.content.elements);
 
       const wall = elements.find((e) => e.type === 'wall');
       const door = elements.find((e) => e.type === 'door');
@@ -231,9 +231,9 @@ describe('Document Model - TDD Tests', () => {
   describe('T-DOC-005: Export IFC → verify exported file validates against IFC schema', () => {
     it('should export to valid IFC format', () => {
       const project = createProject('test', 'user');
-      const layerId = Object.keys(project.layers)[0];
+      const layerId = Object.keys(project.organization.layers)[0];
 
-      project.elements[layerId + '-el'] = {
+      project.content.elements[layerId + '-el'] = {
         id: layerId + '-el',
         type: 'wall',
         properties: {
@@ -283,11 +283,11 @@ describe('Document Model - TDD Tests', () => {
 
     it('should export element properties as IFC attributes', () => {
       const project = createProject('test', 'user');
-      const layerId = Object.keys(project.layers)[0];
+      const layerId = Object.keys(project.organization.layers)[0];
       const wallId = crypto.randomUUID();
       const now = Date.now();
 
-      project.elements[wallId] = {
+      project.content.elements[wallId] = {
         id: wallId,
         type: 'wall',
         properties: {
@@ -353,7 +353,7 @@ describe('Document Model - TDD Tests', () => {
       model.createVersion('After Layer B');
 
       const version1State = model.getVersion(1);
-      const layerCount = Object.keys(version1State.layers).length;
+      const layerCount = Object.keys(version1State.organization.layers).length;
 
       expect(layerCount).toBe(1); // Only default layer
     });
@@ -382,7 +382,7 @@ describe('Document Model - TDD Tests', () => {
       model.restoreVersion(2);
 
       // Verify current state matches version 2
-      const currentLayers = Object.values(model.document.layers).map((l) => l.name);
+      const currentLayers = Object.values(model.document.organization.layers).map((l) => l.name);
 
       expect(currentLayers).toContain('V1-Layer');
       expect(currentLayers).toContain('V2-Layer');
@@ -511,8 +511,10 @@ describe('Document Model - TDD Tests', () => {
         const validDoc = {
           id: 'test-1',
           metadata: { createdAt: Date.now(), createdBy: 'user', schemaVersion: '1.0.0' },
-          elements: {},
-          layers: {},
+          content: { elements: {}, spaces: {} },
+          organization: { layers: {}, levels: {} },
+          presentation: { views: {}, annotations: {} },
+          library: { materials: {} },
         };
 
         const warnings = validateDocumentStructure(validDoc);
@@ -567,7 +569,7 @@ ENDSEC
 EOF`;
 
         const doc = parseDXF(dxfContent);
-        const lineEntities = Object.values(doc.elements).filter((e) => e.type === 'line');
+        const lineEntities = Object.values(doc.content.elements).filter((e) => e.type === 'line');
         expect(lineEntities.length).toBe(1);
       });
 
@@ -604,7 +606,7 @@ ENDSEC
 EOF`;
 
         const doc = parseDXF(dxfContent);
-        const circleEntities = Object.values(doc.elements).filter((e) => e.type === 'circle');
+        const circleEntities = Object.values(doc.content.elements).filter((e) => e.type === 'circle');
         expect(circleEntities.length).toBe(1);
       });
 
@@ -657,7 +659,7 @@ ENDSEC
 EOF`;
 
         const doc = parseDXF(dxfContent);
-        const faceEntities = Object.values(doc.elements).filter((e) => e.type === 'surface');
+        const faceEntities = Object.values(doc.content.elements).filter((e) => e.type === 'surface');
         expect(faceEntities.length).toBe(1);
       });
 
@@ -698,7 +700,7 @@ ENDSEC
 EOF`;
 
         const doc = parseDXF(dxfContent);
-        const layerNames = Object.values(doc.layers).map((l) => l.name);
+        const layerNames = Object.values(doc.organization.layers).map((l) => l.name);
         expect(layerNames).toContain('WALLS');
       });
 
@@ -749,7 +751,7 @@ ENDSEC
 EOF`;
 
         const doc = parseDXF(dxfContent);
-        expect(doc.blocks).toBeDefined();
+        expect(doc.library.blocks).toBeDefined();
       });
 
       it('T-DWG-005: should serialize document to DXF', async () => {
@@ -757,7 +759,7 @@ EOF`;
         const { createProject } = await import('./document');
 
         const doc = createProject('test', 'user');
-        const _elementId = Object.keys(doc.elements)[0];
+        const _elementId = Object.keys(doc.content.elements)[0];
 
         const dxf = serializeDXF(doc);
         expect(dxf).toContain('SECTION');
@@ -810,7 +812,7 @@ ENDSEC
 EOF`;
 
         const doc = parseDXF(dxfContent);
-        const polylineEntities = Object.values(doc.elements).filter((e) => e.type === 'polyline');
+        const polylineEntities = Object.values(doc.content.elements).filter((e) => e.type === 'polyline');
         expect(polylineEntities.length).toBe(1);
       });
 
@@ -826,8 +828,8 @@ EOF`;
             { x: 10, y: 0, z: 0 },
             { x: 10, y: 10, z: 0 },
           ],
-          layerId: Object.keys(doc.layers)[0],
-          levelId: Object.keys(doc.levels)[0],
+          layerId: Object.keys(doc.organization.layers)[0],
+          levelId: Object.keys(doc.organization.levels)[0],
         });
 
         const dxf = serializeDXF(doc);
@@ -848,7 +850,7 @@ EOF`;
 </RevitXML>`;
 
         const doc = parseRVT(rvtContent);
-        const wallElements = Object.values(doc.elements).filter((e) => e.type === 'wall');
+        const wallElements = Object.values(doc.content.elements).filter((e) => e.type === 'wall');
         expect(wallElements.length).toBe(1);
       });
 
@@ -866,7 +868,7 @@ EOF`;
 </RevitXML>`;
 
         const doc = parseRVT(rvtContent);
-        const elementTypes = [...new Set(Object.values(doc.elements).map((e) => e.type))];
+        const elementTypes = [...new Set(Object.values(doc.content.elements).map((e) => e.type))];
         expect(elementTypes).toContain('wall');
         expect(elementTypes).toContain('door');
         expect(elementTypes).toContain('window');
@@ -884,7 +886,7 @@ EOF`;
 </RevitXML>`;
 
         const doc = parseRVT(rvtContent);
-        const element = Object.values(doc.elements)[0];
+        const element = Object.values(doc.content.elements)[0];
         expect(element.properties.Width).toBeDefined();
       });
 
@@ -900,8 +902,8 @@ EOF`;
 </RevitXML>`;
 
         const doc = parseRVT(rvtContent);
-        expect(Object.keys(doc.levels).length).toBe(2);
-        expect(doc.levels[Object.keys(doc.levels)[0]].elevation).toBeDefined();
+        expect(Object.keys(doc.organization.levels).length).toBe(2);
+        expect(doc.organization.levels[Object.keys(doc.organization.levels)[0]].elevation).toBeDefined();
       });
 
       it('T-RVT-005: should parse family definitions', async () => {
@@ -916,7 +918,7 @@ EOF`;
 </RevitXML>`;
 
         const doc = parseRVT(rvtContent);
-        expect(doc.families).toBeDefined();
+        expect(doc.library.families).toBeDefined();
       });
 
       it('T-RVT-006: should generate import report', async () => {
@@ -950,7 +952,7 @@ EOF`;
 </RevitXML>`;
 
         const doc = parseRVT(rvtContent);
-        expect(doc.phases).toBeDefined();
+        expect(doc.organization.phases).toBeDefined();
       });
     });
 

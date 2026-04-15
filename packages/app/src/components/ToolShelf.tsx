@@ -116,10 +116,7 @@ export function ToolShelf() {
           );
         })}
       </div>
-      <div className="toolshelf-divider" />
-      <div className="toolshelf-info">
-        <span className="current-tool">{activeTool}</span>
-      </div>
+      <div className="toolshelf-active-label">{activeTool}</div>
     </div>
   );
 }

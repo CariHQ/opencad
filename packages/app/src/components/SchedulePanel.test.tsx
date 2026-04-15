@@ -39,13 +39,17 @@ const makeDoor = (id: string) => ({
 const makeStore = (overrides = {}) => ({
   document: {
     id: 'doc-1',
-    elements: {
-      'w1': makeWall('w1'),
-      'w2': makeWall('w2', { properties: { height: { type: 'number', value: 2700, unit: 'mm' }, thickness: { type: 'number', value: 300, unit: 'mm' }, material: { type: 'string', value: 'Brick' } } }),
-      'd1': makeDoor('d1'),
+    content: {
+      elements: {
+        'w1': makeWall('w1'),
+        'w2': makeWall('w2', { properties: { height: { type: 'number', value: 2700, unit: 'mm' }, thickness: { type: 'number', value: 300, unit: 'mm' }, material: { type: 'string', value: 'Brick' } } }),
+        'd1': makeDoor('d1'),
+      },
+      spaces: {},
     },
-    layers: {},
-    levels: {},
+    organization: { layers: {}, levels: {} },
+    presentation: { views: {}, annotations: {} },
+    library: { materials: {} },
     versions: [],
     vectorClock: {},
   },
@@ -136,7 +140,7 @@ describe('T-SCHED-001: SchedulePanel', () => {
   it('shows empty state when no elements of type exist', () => {
     vi.mocked(useDocumentStore).mockReturnValue(
       makeStore({
-        document: { id: 'doc-1', elements: {}, layers: {}, levels: {}, versions: [], vectorClock: {} },
+        document: { id: 'doc-1', content: { elements: {}, spaces: {} }, organization: { layers: {}, levels: {} }, presentation: { views: {}, annotations: {} }, library: { materials: {} }, versions: [], vectorClock: {} },
       }) as ReturnType<typeof useDocumentStore>
     );
     render(<SchedulePanel />);

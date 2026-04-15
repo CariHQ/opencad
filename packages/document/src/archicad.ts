@@ -30,18 +30,18 @@ export function parsePLN(content: string): DocumentSchema {
 
   const doc = createProject(name, 'archicad-import');
   doc.name = name;
-  doc.elements = {};
-  doc.layers = {};
-  doc.views = {};
+  doc.content.elements = {};
+  doc.organization.layers = {};
+  doc.presentation.views = {};
 
   for (const layer of layers) {
-    doc.layers[layer.id] = {
+    doc.organization.layers[layer.id] = {
       id: layer.id,
       name: layer.name,
       color: '#808080',
       visible: layer.visible,
       locked: false,
-      order: Object.keys(doc.layers).length,
+      order: Object.keys(doc.organization.layers).length,
     };
   }
 
@@ -49,7 +49,7 @@ export function parsePLN(content: string): DocumentSchema {
     const elementType = AC_CATEGORY_MAP[elem.type] || 'annotation';
     const elementId = elem.id;
 
-    doc.elements[elementId] = {
+    doc.content.elements[elementId] = {
       id: elementId,
       type: elementType,
       properties: {
@@ -58,7 +58,7 @@ export function parsePLN(content: string): DocumentSchema {
       },
       propertySets: [],
       geometry: { type: 'brep', data: null },
-      layerId: layers[0]?.id || Object.keys(doc.layers)[0] || '',
+      layerId: layers[0]?.id || Object.keys(doc.organization.layers)[0] || '',
       levelId: '',
       transform: {
         translation: { x: 0, y: 0, z: 0 },
@@ -83,7 +83,7 @@ export function parsePLN(content: string): DocumentSchema {
 
   let _viewIdx = 0;
   for (const drawing of drawings) {
-    doc.views[drawing.id] = {
+    doc.presentation.views[drawing.id] = {
       id: drawing.id,
       name: drawing.name,
       type: '2d',

@@ -7,6 +7,7 @@
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { AppLayout } from './AppLayout';
 import { useDocumentStore } from './stores/documentStore';
 
@@ -58,24 +59,24 @@ describe('T-UI-006: AppLayout', () => {
   });
 
   it('renders brand name', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     expect(screen.getByText('OpenCAD')).toBeInTheDocument();
   });
 
   it('renders view tabs', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     expect(screen.getByRole('button', { name: 'Floor Plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '3D View' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Section' })).toBeInTheDocument();
   });
 
   it('renders Navigator panel', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     expect(screen.getByText('Navigator')).toBeInTheDocument();
   });
 
   it('renders Layers panel', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     const layerPanelTitle = document.querySelector('.panel-title');
     expect(layerPanelTitle).not.toBeNull();
     const layersTitles = screen.getAllByText('Layers');
@@ -83,26 +84,26 @@ describe('T-UI-006: AppLayout', () => {
   });
 
   it('renders StatusBar', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     expect(screen.getByText('Online')).toBeInTheDocument();
   });
 
   it('switches to Floor Plan view when Floor Plan tab is clicked', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     const floorPlanTab = screen.getByRole('button', { name: 'Floor Plan' });
     fireEvent.click(floorPlanTab);
     expect(floorPlanTab).toHaveClass('active');
   });
 
   it('shows AI chat panel when Bot button is clicked', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     const aiBtn = screen.getByTitle('AI Assistant');
     fireEvent.click(aiBtn);
     expect(screen.getByText('AI Assistant')).toBeInTheDocument();
   });
 
   it('closes AI chat panel when close button is clicked', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('AI Assistant'));
     const closeBtn = screen.getByRole('button', { name: 'Close AI chat' });
     fireEvent.click(closeBtn);
@@ -110,32 +111,32 @@ describe('T-UI-006: AppLayout', () => {
   });
 
   it('opens import modal when import button is clicked', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('Import IFC'));
     expect(screen.getByText(/Import/)).toBeInTheDocument();
   });
 
   // Panel collapse
   it('renders left and right panel toggle buttons', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     expect(screen.getByTitle('Toggle navigator (⌘[)')).toBeInTheDocument();
     expect(screen.getByTitle('Toggle properties (⌘])')).toBeInTheDocument();
   });
 
   it('collapses left panel when toggle button is clicked', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('Toggle navigator (⌘[)'));
     expect(document.querySelector('.app-left-panel')).toHaveClass('panel-collapsed');
   });
 
   it('collapses right panel when toggle button is clicked', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('Toggle properties (⌘])'));
     expect(document.querySelector('.app-right-panel')).toHaveClass('panel-collapsed');
   });
 
   it('re-expands left panel on second toggle click', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     const btn = screen.getByTitle('Toggle navigator (⌘[)');
     fireEvent.click(btn);
     fireEvent.click(btn);
@@ -144,14 +145,14 @@ describe('T-UI-006: AppLayout', () => {
 
   // Focus mode
   it('enters focus mode on \\ keypress and hides toolbar', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.keyDown(window, { key: '\\' });
     expect(document.querySelector('.app-toolbar')).toBeNull();
     expect(screen.getByText(/exit focus mode/i)).toBeInTheDocument();
   });
 
   it('exits focus mode on second \\ keypress', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.keyDown(window, { key: '\\' });
     fireEvent.keyDown(window, { key: '\\' });
     expect(document.querySelector('.app-toolbar')).not.toBeNull();
@@ -159,7 +160,7 @@ describe('T-UI-006: AppLayout', () => {
 
   // Floating level selector
   it('renders level selector inside viewport-wrapper', () => {
-    render(<AppLayout />);
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     const floatingSelector = document.querySelector('.floating-level-selector');
     expect(floatingSelector).not.toBeNull();
     const wrapper = document.querySelector('.viewport-wrapper');

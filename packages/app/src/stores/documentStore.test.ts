@@ -63,7 +63,7 @@ describe('T-BIM-006: Level operations', () => {
     expect(typeof levelId).toBe('string');
     expect(levelId.length).toBeGreaterThan(0);
     const doc = useDocumentStore.getState().document;
-    expect(doc?.levels[levelId]).toBeDefined();
+    expect(doc?.organization.levels[levelId]).toBeDefined();
   });
 
   it('addLevel sets selectedLevelId to the new level id', () => {
@@ -74,32 +74,32 @@ describe('T-BIM-006: Level operations', () => {
   it('deleteLevel removes a level when more than 1 exist', () => {
     const levelId = useDocumentStore.getState().addLevel({ name: 'Temp Level', elevation: 1000 });
     const docBefore = useDocumentStore.getState().document;
-    const countBefore = Object.keys(docBefore?.levels ?? {}).length;
+    const countBefore = Object.keys(docBefore?.organization.levels ?? {}).length;
     expect(countBefore).toBeGreaterThan(1);
 
     useDocumentStore.getState().deleteLevel(levelId);
     const docAfter = useDocumentStore.getState().document;
-    expect(docAfter?.levels[levelId]).toBeUndefined();
+    expect(docAfter?.organization.levels[levelId]).toBeUndefined();
   });
 
   it('deleteLevel does NOT remove the last remaining level', () => {
     // loadProject creates exactly 1 level; try to delete it
     const doc = useDocumentStore.getState().document;
-    const levelIds = Object.keys(doc?.levels ?? {});
+    const levelIds = Object.keys(doc?.organization.levels ?? {});
     expect(levelIds.length).toBe(1);
 
     useDocumentStore.getState().deleteLevel(levelIds[0]!);
     const docAfter = useDocumentStore.getState().document;
-    expect(Object.keys(docAfter?.levels ?? {}).length).toBe(1);
+    expect(Object.keys(docAfter?.organization.levels ?? {}).length).toBe(1);
   });
 
   it('renameLevel changes the level name', () => {
     const doc = useDocumentStore.getState().document;
-    const levelId = Object.keys(doc?.levels ?? {})[0]!;
+    const levelId = Object.keys(doc?.organization.levels ?? {})[0]!;
 
     useDocumentStore.getState().renameLevel(levelId, 'Ground Floor');
     const docAfter = useDocumentStore.getState().document;
-    expect(docAfter?.levels[levelId]?.name).toBe('Ground Floor');
+    expect(docAfter?.organization.levels[levelId]?.name).toBe('Ground Floor');
   });
 
   it('setActiveLevel sets selectedLevelId', () => {

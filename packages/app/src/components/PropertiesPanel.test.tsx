@@ -36,9 +36,10 @@ const mockElement = {
 
 const mockDoc = {
   id: 'doc-1',
-  elements: { 'el-1': mockElement },
-  layers: {},
-  levels: {},
+  content: { elements: { 'el-1': mockElement }, spaces: {} },
+  organization: { layers: {}, levels: {} },
+  presentation: { views: {}, annotations: {} },
+  library: { materials: {} },
   metadata: { createdAt: 0, updatedAt: 0, createdBy: 'u1', schemaVersion: '1' },
   projectId: 'p1',
   userId: 'u1',

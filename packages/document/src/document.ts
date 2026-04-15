@@ -55,18 +55,26 @@ export function createProject(
     id: projectId,
     name: options.name || 'Untitled Project',
     version: { clock: {} },
-    elements: {},
-    layers: { [defaultLayerId]: defaultLayer },
-    levels: { [defaultLevelId]: defaultLevel },
-    views: {},
-    materials: createDefaultMaterials(),
-    spaces: {},
-    annotations: {},
     metadata: {
       createdAt: now,
       updatedAt: now,
       createdBy: userId,
       schemaVersion: '1.0.0',
+    },
+    content: {
+      elements: {},
+      spaces: {},
+    },
+    organization: {
+      layers: { [defaultLayerId]: defaultLayer },
+      levels: { [defaultLevelId]: defaultLevel },
+    },
+    presentation: {
+      views: {},
+      annotations: {},
+    },
+    library: {
+      materials: createDefaultMaterials(),
     },
   };
 }
@@ -121,7 +129,7 @@ export function addElement(document: DocumentSchema, params: AddElementParams): 
     (element as { points?: Point3D[] }).points = params.points;
   }
 
-  document.elements[elementId] = element;
+  document.content.elements[elementId] = element;
   document.metadata.updatedAt = now;
 
   return elementId;
@@ -173,15 +181,15 @@ export class DocumentModel {
   }
 
   get elements(): Record<string, ElementSchema> {
-    return this.document.elements;
+    return this.document.content.elements;
   }
 
   get layers(): Record<string, LayerSchema> {
-    return this.document.layers;
+    return this.document.organization.layers;
   }
 
   get levels(): Record<string, LevelSchema> {
-    return this.document.levels;
+    return this.document.organization.levels;
   }
 
   onSave(handler: SaveHandler): () => void {
@@ -218,7 +226,7 @@ export class DocumentModel {
 
   addLayer(params: { name: string; color: string; visible?: boolean; locked?: boolean }): string {
     const layerId = crypto.randomUUID();
-    const order = Object.keys(this.document.layers).length;
+    const order = Object.keys(this.document.organization.layers).length;
 
     const layer: LayerSchema = {
       id: layerId,
@@ -229,7 +237,7 @@ export class DocumentModel {
       order,
     };
 
-    this.document.layers[layerId] = layer;
+    this.document.organization.layers[layerId] = layer;
     this.queueOperation('create', 'layer', layerId, layer);
     this.scheduleSave();
     this.document.metadata.updatedAt = Date.now();
@@ -238,7 +246,7 @@ export class DocumentModel {
   }
 
   updateLayer(layerId: string, updates: Partial<Omit<LayerSchema, 'id'>>): void {
-    const layer = this.document.layers[layerId];
+    const layer = this.document.organization.layers[layerId];
     if (!layer) {
       throw new Error(`Layer ${layerId} not found`);
     }
@@ -250,12 +258,12 @@ export class DocumentModel {
   }
 
   deleteLayer(layerId: string): void {
-    const layer = this.document.layers[layerId];
+    const layer = this.document.organization.layers[layerId];
     if (!layer) {
       throw new Error(`Layer ${layerId} not found`);
     }
 
-    delete this.document.layers[layerId];
+    delete this.document.organization.layers[layerId];
     this.queueOperation('delete', 'layer', layerId, null);
     this.scheduleSave();
     this.document.metadata.updatedAt = Date.now();
@@ -263,7 +271,7 @@ export class DocumentModel {
 
   addLevel(params: { name: string; elevation: number; height?: number }): string {
     const levelId = crypto.randomUUID();
-    const order = Object.keys(this.document.levels).length;
+    const order = Object.keys(this.document.organization.levels).length;
 
     const level: LevelSchema = {
       id: levelId,
@@ -273,7 +281,7 @@ export class DocumentModel {
       order,
     };
 
-    this.document.levels[levelId] = level;
+    this.document.organization.levels[levelId] = level;
     this.queueOperation('create', 'level', levelId, level);
     this.scheduleSave();
     this.document.metadata.updatedAt = Date.now();
@@ -319,7 +327,7 @@ export class DocumentModel {
       locked: false,
     };
 
-    this.document.elements[elementId] = element;
+    this.document.content.elements[elementId] = element;
     this.queueOperation('create', 'element', elementId, element);
     this.scheduleSave();
     this.document.metadata.updatedAt = Date.now();
@@ -328,11 +336,13 @@ export class DocumentModel {
   }
 
   getElementByName(name: string): ElementSchema | undefined {
-    return Object.values(this.document.elements).find((e) => e.properties.Name?.value === name);
+    return Object.values(this.document.content.elements).find(
+      (e) => e.properties.Name?.value === name
+    );
   }
 
   getElementById(id: string): ElementSchema | undefined {
-    return this.document.elements[id];
+    return this.document.content.elements[id];
   }
 
   createVersion(message?: string): VersionSnapshot {
@@ -408,9 +418,8 @@ export class DocumentModel {
 
   private emitSave(): void {
     const saveData: SaveEventData = {
-      layers: { ...this.document.layers },
-      elements: { ...this.document.elements },
-      levels: { ...this.document.levels },
+      content: { ...this.document.content },
+      organization: { ...this.document.organization },
       timestamp: Date.now(),
     };
 

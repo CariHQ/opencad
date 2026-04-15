@@ -6,7 +6,7 @@ export function LayersPanel() {
 
   if (!doc) return null;
 
-  const layers = Object.values(doc.layers).sort((a, b) => a.order - b.order);
+  const layers = Object.values(doc.organization.layers).sort((a, b) => a.order - b.order);
 
   const handleToggleVisibility = (layerId: string, visible: boolean) => {
     updateLayer(layerId, { visible: !visible });

@@ -30,7 +30,7 @@ describe('T-UI-002: LayersPanel', () => {
     fireEvent.click(addBtn);
 
     expect(screen.getByText('Layer 2')).toBeInTheDocument();
-    const layers = Object.values(useDocumentStore.getState().document!.layers);
+    const layers = Object.values(useDocumentStore.getState().document!.organization.layers);
     expect(layers.length).toBe(2);
   });
 
@@ -39,7 +39,7 @@ describe('T-UI-002: LayersPanel', () => {
     const hideBtn = screen.getByTitle('Hide Layer');
     fireEvent.click(hideBtn);
 
-    const layers = Object.values(useDocumentStore.getState().document!.layers);
+    const layers = Object.values(useDocumentStore.getState().document!.organization.layers);
     expect(layers[0].visible).toBe(false);
   });
 

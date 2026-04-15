@@ -9,6 +9,7 @@ vi.mock('../stores/documentStore');
 const makeStore = (overrides = {}) => ({
   document: {
     id: 'doc-1',
+    content: {
     elements: {
       'sp1': {
         id: 'sp1',
@@ -49,8 +50,11 @@ const makeStore = (overrides = {}) => ({
         metadata: { id: 'sp2', createdBy: 'u1', createdAt: 0, updatedAt: 0, version: {} },
       },
     },
-    layers: {},
-    levels: {},
+    spaces: {},
+    },
+    organization: { layers: {}, levels: {} },
+    presentation: { views: {}, annotations: {} },
+    library: { materials: {} },
     versions: [],
     vectorClock: {},
   },

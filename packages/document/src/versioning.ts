@@ -71,15 +71,23 @@ export function compareVersions(a: Version, b: Version): VersionDiff {
   const aDoc = a.document;
   const bDoc = b.document;
 
-  const addedElements = Object.keys(bDoc.elements).filter((k) => !aDoc.elements[k]);
-  const removedElements = Object.keys(aDoc.elements).filter((k) => !bDoc.elements[k]);
-  const modifiedElements = Object.keys(bDoc.elements).filter((k) => {
-    if (!aDoc.elements[k]) return false;
-    return JSON.stringify(aDoc.elements[k]) !== JSON.stringify(bDoc.elements[k]);
+  const addedElements = Object.keys(bDoc.content.elements).filter(
+    (k) => !aDoc.content.elements[k]
+  );
+  const removedElements = Object.keys(aDoc.content.elements).filter(
+    (k) => !bDoc.content.elements[k]
+  );
+  const modifiedElements = Object.keys(bDoc.content.elements).filter((k) => {
+    if (!aDoc.content.elements[k]) return false;
+    return JSON.stringify(aDoc.content.elements[k]) !== JSON.stringify(bDoc.content.elements[k]);
   });
 
-  const addedLayers = Object.keys(bDoc.layers).filter((k) => !aDoc.layers[k]);
-  const removedLayers = Object.keys(aDoc.layers).filter((k) => !bDoc.layers[k]);
+  const addedLayers = Object.keys(bDoc.organization.layers).filter(
+    (k) => !aDoc.organization.layers[k]
+  );
+  const removedLayers = Object.keys(aDoc.organization.layers).filter(
+    (k) => !bDoc.organization.layers[k]
+  );
 
   return {
     versionA: a.version,

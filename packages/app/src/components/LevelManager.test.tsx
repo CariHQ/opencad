@@ -20,9 +20,10 @@ function makeStore(overrides = {}) {
   return {
     document: {
       id: 'doc-1',
-      elements: {},
-      layers: {},
-      levels: mockLevels,
+      content: { elements: {}, spaces: {} },
+      organization: { layers: {}, levels: mockLevels },
+      presentation: { views: {}, annotations: {} },
+      library: { materials: {} },
       metadata: { createdAt: 0, updatedAt: 0, createdBy: 'u1', schemaVersion: '1' },
       projectId: 'p1',
       userId: 'u1',

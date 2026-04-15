@@ -223,12 +223,12 @@ export class IFCSerializer {
     lines.push(...this._generateHeader());
     lines.push('DATA;');
 
-    const levels = Object.values(this.document.levels);
+    const levels = Object.values(this.document.organization.levels);
     levels.forEach((level) => {
       lines.push(...this._serializeLevel(level.id));
     });
 
-    const elements = Object.values(this.document.elements);
+    const elements = Object.values(this.document.content.elements);
     elements.forEach((element) => {
       lines.push(...this._serializeElement(element));
     });
@@ -254,7 +254,7 @@ export class IFCSerializer {
   }
 
   private _serializeLevel(id: string): string[] {
-    const level = this.document.levels[id];
+    const level = this.document.organization.levels[id];
     if (!level) return [];
 
     const lineNum = this.lineNumber++;
@@ -416,35 +416,43 @@ export function parseIFC(content: string): DocumentSchema {
     id: crypto.randomUUID(),
     name: 'Imported IFC',
     version: { clock: {} },
-    elements: {},
-    layers: {
-      [defaultLayerId]: {
-        id: defaultLayerId,
-        name: 'Layer 1',
-        color: '#808080',
-        visible: true,
-        locked: false,
-        order: 0,
-      },
-    },
-    levels: {
-      [defaultLevelId]: {
-        id: defaultLevelId,
-        name: 'Level 1',
-        elevation: 0,
-        height: 3000,
-        order: 0,
-      },
-    },
-    views: {},
-    materials: {},
-    spaces: {},
-    annotations: {},
     metadata: {
       createdAt: now,
       updatedAt: now,
       createdBy: 'ifc-import',
       schemaVersion: '1.0.0',
+    },
+    content: {
+      elements: {},
+      spaces: {},
+    },
+    organization: {
+      layers: {
+        [defaultLayerId]: {
+          id: defaultLayerId,
+          name: 'Layer 1',
+          color: '#808080',
+          visible: true,
+          locked: false,
+          order: 0,
+        },
+      },
+      levels: {
+        [defaultLevelId]: {
+          id: defaultLevelId,
+          name: 'Level 1',
+          elevation: 0,
+          height: 3000,
+          order: 0,
+        },
+      },
+    },
+    presentation: {
+      views: {},
+      annotations: {},
+    },
+    library: {
+      materials: {},
     },
   };
 
@@ -507,7 +515,7 @@ export function parseIFC(content: string): DocumentSchema {
       return { id: ps.id, name: ps.name, properties: propRecord };
     });
 
-    document.elements[elementId] = {
+    document.content.elements[elementId] = {
       id: elementId,
       type: entity.elementType,
       properties: {

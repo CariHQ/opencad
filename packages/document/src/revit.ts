@@ -142,20 +142,20 @@ export function parseRVT(content: string): DocumentSchema {
 
   const document = createProject('Imported Revit', 'revit-import');
 
-  document.levels = {};
+  document.organization.levels = {};
   for (const level of levels) {
-    document.levels[level.id] = {
+    document.organization.levels[level.id] = {
       id: level.id,
       name: level.name,
       elevation: level.elevation,
       height: 3000,
-      order: Object.keys(document.levels).length,
+      order: Object.keys(document.organization.levels).length,
     };
   }
 
-  document.families = {};
+  document.library.families = {};
   for (const family of families) {
-    document.families[family.id] = {
+    document.library.families[family.id] = {
       id: family.id,
       name: family.name,
       category: family.category,
@@ -163,25 +163,25 @@ export function parseRVT(content: string): DocumentSchema {
     };
   }
 
-  document.phases = {};
+  document.organization.phases = {};
   for (const phase of phases) {
-    document.phases[phase.id] = {
+    document.organization.phases[phase.id] = {
       id: phase.id,
       name: phase.name,
       status: 'incomplete',
     };
   }
 
-  const layerIds = Object.keys(document.layers);
+  const layerIds = Object.keys(document.organization.layers);
   const defaultLayerId = layerIds[0] || crypto.randomUUID();
 
   for (const elem of elements) {
     const elementType = REVIT_CATEGORY_MAP[elem.category] || 'annotation';
     const layerId = layerIds[0] || defaultLayerId;
-    const levelId = levels[0]?.id || Object.keys(document.levels)[0] || '';
+    const levelId = levels[0]?.id || Object.keys(document.organization.levels)[0] || '';
 
     const elementId = crypto.randomUUID();
-    document.elements[elementId] = {
+    document.content.elements[elementId] = {
       id: elementId,
       type: elementType,
       properties: {

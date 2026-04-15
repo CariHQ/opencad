@@ -90,8 +90,14 @@ export const useDocumentStore = create<DocumentState>()(
           const saved = localStorage.getItem('opencad-document');
           if (saved) {
             const docData = JSON.parse(saved);
-            model = new DocumentModel(projectId, userId);
-            model.loadDocument(docData);
+            // Guard against pre-refactor schema (no content/organization groups)
+            if (docData?.content && docData?.organization) {
+              model = new DocumentModel(projectId, userId);
+              model.loadDocument(docData);
+            } else {
+              localStorage.removeItem('opencad-document');
+              model = new DocumentModel(projectId, userId);
+            }
           } else {
             model = new DocumentModel(projectId, userId);
           }
@@ -202,7 +208,7 @@ export const useDocumentStore = create<DocumentState>()(
         const { model, document } = get();
         if (!model || !document) return;
 
-        delete document.elements[elementId];
+        delete document.content.elements[elementId];
         set({
           document: { ...document },
           lastSaved: Date.now(),
@@ -295,17 +301,25 @@ export const useDocumentStore = create<DocumentState>()(
       updateLevel: (levelId, updates) => {
         const { document } = get();
         if (!document) return;
-        const level = document.levels[levelId];
+        const level = document.organization.levels[levelId];
         if (!level) return;
         Object.assign(level, updates);
-        set({ document: { ...document, levels: { ...document.levels, [levelId]: { ...level } } } });
+        set({
+          document: {
+            ...document,
+            organization: {
+              ...document.organization,
+              levels: { ...document.organization.levels, [levelId]: { ...level } },
+            },
+          },
+        });
       },
 
       deleteLevel: (levelId) => {
         const { model } = get();
         if (!model) return;
 
-        const levels = model.documentData.levels;
+        const levels = model.documentData.organization.levels;
         if (Object.keys(levels).length <= 1) return;
 
         delete levels[levelId];
@@ -321,7 +335,7 @@ export const useDocumentStore = create<DocumentState>()(
         const { model } = get();
         if (!model) return;
 
-        const level = model.documentData.levels[levelId];
+        const level = model.documentData.organization.levels[levelId];
         if (!level) return;
         level.name = name;
         model.documentData.metadata.updatedAt = Date.now();

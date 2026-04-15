@@ -11,6 +11,7 @@ import { useDocumentStore } from '../stores/documentStore';
 
 describe('T-UI-004: Navigator', () => {
   beforeEach(() => {
+    localStorage.clear();
     useDocumentStore.getState().initProject('test-project', 'test-user');
     useDocumentStore.setState({ selectedIds: [] });
   });
@@ -45,7 +46,7 @@ describe('T-UI-004: Navigator', () => {
     render(<Navigator />);
     // Default document has at least one layer
     const doc = useDocumentStore.getState().document!;
-    const firstLayer = Object.values(doc.layers)[0];
+    const firstLayer = Object.values(doc.organization.layers)[0];
     expect(screen.getByText(firstLayer.name)).toBeInTheDocument();
   });
 
@@ -65,7 +66,7 @@ describe('T-UI-004: Navigator', () => {
   it('collapses Layers section on click', () => {
     render(<Navigator />);
     const doc = useDocumentStore.getState().document!;
-    const firstLayer = Object.values(doc.layers)[0];
+    const firstLayer = Object.values(doc.organization.layers)[0];
     const layersFolder = screen.getByText('Layers').closest('.nav-item')!;
     fireEvent.click(layersFolder);
     expect(screen.queryByText(firstLayer.name)).not.toBeInTheDocument();
@@ -115,7 +116,7 @@ describe('T-UI-004: Navigator', () => {
   it('search input filters elements by type', () => {
     // Add an element so we have something to filter
     const state = useDocumentStore.getState();
-    const layerId = Object.keys(state.document!.layers)[0];
+    const layerId = Object.keys(state.document!.organization.layers)[0];
     state.addElement({ type: 'wall', layerId, properties: {} });
 
     render(<Navigator />);
@@ -128,7 +129,7 @@ describe('T-UI-004: Navigator', () => {
 
   it('search hides non-matching elements', () => {
     const state = useDocumentStore.getState();
-    const layerId = Object.keys(state.document!.layers)[0];
+    const layerId = Object.keys(state.document!.organization.layers)[0];
     state.addElement({ type: 'wall', layerId, properties: {} });
     state.addElement({ type: 'door', layerId, properties: {} });
 
@@ -146,7 +147,7 @@ describe('T-UI-004: Navigator', () => {
     useDocumentStore.getState().initProject('test-project', 'test-user');
 
     const state = useDocumentStore.getState();
-    const layerId = Object.keys(state.document!.layers)[0];
+    const layerId = Object.keys(state.document!.organization.layers)[0];
     state.addElement({ type: 'wall', layerId, properties: {} });
     state.addElement({ type: 'wall', layerId, properties: {} });
 
@@ -158,7 +159,7 @@ describe('T-UI-004: Navigator', () => {
 
   it('clicking an element in tree selects it in the store', () => {
     const state = useDocumentStore.getState();
-    const layerId = Object.keys(state.document!.layers)[0];
+    const layerId = Object.keys(state.document!.organization.layers)[0];
     const elemId = state.addElement({ type: 'wall', layerId, properties: {} });
 
     render(<Navigator />);

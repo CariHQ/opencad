@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { FolderOpen, FileDown, Bot, Plus, Sun, Moon, PanelLeft, PanelRight } from 'lucide-react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 import { LayersPanel } from './components/LayerPanel';
@@ -21,6 +22,8 @@ import { useUndoRedo } from './hooks/useUndoRedo';
 import './styles/app.css';
 
 export function AppLayout() {
+  const { id: projectId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { document: doc, initProject, activeTool, undo, redo, canUndo, canRedo } = useDocumentStore();
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
@@ -40,7 +43,7 @@ export function AppLayout() {
   const [showLeftPanel, setShowLeftPanel] = useLocalStorage('opencad-showLeftPanel', true);
   const [showRightPanel, setShowRightPanel] = useLocalStorage('opencad-showRightPanel', true);
   const [focusMode, setFocusMode] = useState(false);
-  const [showModal, setShowModal] = useState<'import' | 'export' | 'projects' | null>(null);
+  const [showModal, setShowModal] = useState<'import' | 'export' | null>(null);
 
   const leftVisible = showLeftPanel && !focusMode;
   const rightVisible = showRightPanel && !focusMode;
@@ -58,12 +61,14 @@ export function AppLayout() {
   const toggleTheme = () => setTheme(theme === 'light' ? 'dark' : 'light');
 
   useEffect(() => {
-    initProject('project-1', 'user-1');
-  }, [initProject]);
+    if (projectId) {
+      initProject(projectId, 'user-1');
+    }
+  }, [projectId, initProject]);
 
   useEffect(() => {
-    if (doc?.levels && Object.keys(doc.levels).length > 0 && !selectedLevel) {
-      const firstLevel = Object.keys(doc.levels)[0];
+    if (doc?.organization.levels && Object.keys(doc.organization.levels).length > 0 && !selectedLevel) {
+      const firstLevel = Object.keys(doc.organization.levels)[0];
       setSelectedLevel(firstLevel);
     }
   }, [doc, selectedLevel, setSelectedLevel]);
@@ -102,14 +107,13 @@ export function AppLayout() {
               onClick={() => setShowLeftPanel((v) => !v)}
               title="Toggle navigator (⌘[)"
             >
-              <PanelLeft size={16} strokeWidth={1.75} />
+              <PanelLeft size={16} strokeWidth={2} color={leftVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : undefined} style={leftVisible ? { stroke: theme === 'dark' ? '#18a0fb' : '#0d99ff' } : undefined} />
             </button>
-            <span className="brand-logo">OC</span>
             <span className="brand-name">OpenCAD</span>
             <button
               className="toolbar-btn"
-              onClick={() => setShowModal('projects')}
-              title="New Project"
+              onClick={() => navigate('/')}
+              title="Back to projects"
             >
               <Plus size={14} strokeWidth={2} />
             </button>
@@ -171,7 +175,7 @@ export function AppLayout() {
               onClick={() => setShowRightPanel((v) => !v)}
               title="Toggle properties (⌘])"
             >
-              <PanelRight size={16} strokeWidth={1.75} />
+              <PanelRight size={16} strokeWidth={2} color={rightVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : undefined} style={rightVisible ? { stroke: theme === 'dark' ? '#18a0fb' : '#0d99ff' } : undefined} />
             </button>
           </div>
         </header>
@@ -193,7 +197,7 @@ export function AppLayout() {
             {chromeVisible && (
               <div className="floating-level-selector">
                 <LevelSelector
-                  levels={doc?.levels || {}}
+                  levels={doc?.organization.levels || {}}
                   selectedLevel={selectedLevel}
                   onSelectLevel={setSelectedLevel}
                 />

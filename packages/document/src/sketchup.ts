@@ -38,15 +38,15 @@ export function parseSKP(content: string): DocumentSchema {
 
   const doc = createProject('sketchup-import', 'sketchup-import');
   doc.name = name || 'Imported SketchUp';
-  doc.elements = {};
-  doc.materials = {};
+  doc.content.elements = {};
+  doc.library.materials = {};
 
   for (const mat of materials) {
     const matId = crypto.randomUUID();
     const colorVal = parseInt(mat.color.slice(1, 3), 16);
     const greenVal = parseInt(mat.color.slice(3, 5), 16);
     const blueVal = parseInt(mat.color.slice(5, 7), 16);
-    doc.materials[matId] = {
+    doc.library.materials[matId] = {
       id: matId,
       name: mat.name,
       category: 'Generic',
@@ -65,7 +65,7 @@ export function parseSKP(content: string): DocumentSchema {
     const elementType = SKP_CATEGORY_MAP[entity.type] || 'annotation';
     const elementId = entity.id;
 
-    doc.elements[elementId] = {
+    doc.content.elements[elementId] = {
       id: elementId,
       type: elementType,
       properties: {
@@ -74,8 +74,8 @@ export function parseSKP(content: string): DocumentSchema {
       },
       propertySets: [],
       geometry: { type: 'brep', data: null },
-      layerId: Object.keys(doc.layers)[0],
-      levelId: Object.keys(doc.levels)[0] || null,
+      layerId: Object.keys(doc.organization.layers)[0],
+      levelId: Object.keys(doc.organization.levels)[0] || null,
       transform: {
         translation: entity.position || { x: 0, y: 0, z: 0 },
         rotation: { x: 0, y: 0, z: 0 },
@@ -114,7 +114,7 @@ export function serializeSKP(doc: DocumentSchema): string {
   lines.push(`  <Name>${doc.name}</Name>`);
 
   lines.push('  <Materials>');
-  for (const mat of Object.values(doc.materials)) {
+  for (const mat of Object.values(doc.library.materials)) {
     const props = mat.properties;
     const colorVal = (props as { color?: string }).color || props.color;
     const opacityVal = (props as { transparency?: number }).transparency || 1;
@@ -125,7 +125,7 @@ export function serializeSKP(doc: DocumentSchema): string {
   lines.push('  </Materials>');
 
   lines.push('  <Entities>');
-  for (const elem of Object.values(doc.elements)) {
+  for (const elem of Object.values(doc.content.elements)) {
     // Use proper element type tags so the parser can round-trip
     const tag = elem.type.charAt(0).toUpperCase() + elem.type.slice(1);
     const nameVal = (elem.properties.Name as { value?: string } | undefined)?.value || tag;

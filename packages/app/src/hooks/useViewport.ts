@@ -2,27 +2,27 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 
 const LIGHT_THEME = {
-  background: '#f1f5f9',
-  grid: '#cbd5e1',
-  gridMajor: '#e2e8f0',
-  axis: '#94a3b8',
-  element: '#64748b',
-  elementFill: 'rgba(100, 116, 139, 0.1)',
-  selected: '#4f46e5',
-  selectedFill: 'rgba(79, 70, 229, 0.2)',
-  accent: '#4f46e5',
-  snap: '#4f46e5',
+  background: '#e8e8e8',
+  grid: '#d0d0d0',
+  gridMajor: '#c0c0c0',
+  axis: '#a0a0a0',
+  element: '#6b6b6b',
+  elementFill: 'rgba(107, 107, 107, 0.1)',
+  selected: '#0d99ff',
+  selectedFill: 'rgba(13, 153, 255, 0.2)',
+  accent: '#0d99ff',
+  snap: '#0d99ff',
 };
 
 const DARK_THEME = {
-  background: '#1a1a2e',
-  grid: '#2a2a3e',
-  gridMajor: '#3a3a4e',
-  axis: '#4a4a5e',
-  element: '#8888aa',
-  elementFill: 'rgba(136, 136, 170, 0.1)',
-  selected: '#4f46e5',
-  selectedFill: 'rgba(79, 70, 229, 0.2)',
+  background: '#2c2c2c',
+  grid: '#383838',
+  gridMajor: '#444444',
+  axis: '#555555',
+  element: '#a0a0a0',
+  elementFill: 'rgba(160, 160, 160, 0.1)',
+  selected: '#18a0fb',
+  selectedFill: 'rgba(24, 160, 251, 0.2)',
   accent: '#4f46e5',
   snap: '#4f46e5',
 };
@@ -112,7 +112,7 @@ export function useViewport() {
 
   const applySnapping = useCallback((point: Point): Point => {
     if (!doc || !snapEnabled) return point;
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     const snaps = findSnapPoints(elements, point);
     if (snaps.length > 0) {
       const closest = snaps.reduce((a, b) => dist(point, a.point) < dist(point, b.point) ? a : b);
@@ -132,7 +132,7 @@ export function useViewport() {
 
   const commitShape = useCallback((tool: string, start: Point, end: Point, extraPoints?: Point[]) => {
     if (!doc) return;
-    const layerId = Object.keys(doc.layers)[0] || 'default';
+    const layerId = Object.keys(doc.organization.layers)[0] || 'default';
 
     if (tool === 'line') {
       if (Math.abs(end.x - start.x) < 50 && Math.abs(end.y - start.y) < 50) return;
@@ -260,7 +260,7 @@ export function useViewport() {
 
     if (tool === 'door' || tool === 'window') {
       // Find nearest wall element to host this opening
-      const walls = Object.values(doc.elements).filter((el) => el.type === 'wall');
+      const walls = Object.values(doc.content.elements).filter((el) => el.type === 'wall');
       let hostWallId = '';
       let minD = Infinity;
       for (const wall of walls) {
@@ -392,7 +392,7 @@ export function useViewport() {
     if (!doc) return;
 
     // ── Render existing elements ──
-    for (const element of Object.values(doc.elements)) {
+    for (const element of Object.values(doc.content.elements)) {
       const isSelected = selectedIds.includes(element.id);
       const color = isSelected ? theme.selected : theme.element;
       const fillColor = isSelected ? theme.selectedFill : theme.elementFill;
@@ -564,7 +564,7 @@ export function useViewport() {
 
     if (activeTool === 'select') {
       if (!doc) return;
-      const elements = Object.values(doc.elements);
+      const elements = Object.values(doc.content.elements);
       const clicked = elements.filter((el) => {
         const bb = el.boundingBox;
         return wp.x >= bb.min.x && wp.x <= bb.max.x && wp.y >= bb.min.y && wp.y <= bb.max.y;

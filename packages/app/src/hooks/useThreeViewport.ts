@@ -156,7 +156,7 @@ export function useThreeViewport() {
   const zoomToFit = useCallback(() => {
     if (!doc) return;
 
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     if (elements.length === 0) {
       setViewPreset('3d');
       return;
@@ -197,7 +197,7 @@ export function useThreeViewport() {
     });
     elementMeshesRef.current.clear();
 
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     for (const element of elements) {
       const mesh = createMeshFromElement(element);
       if (mesh) {

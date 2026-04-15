@@ -45,18 +45,18 @@ describe('T-PDF-001: Import PDF as underlay → verify displays in viewport', ()
   it('parsePDF returns a DocumentSchema', () => {
     const doc = parsePDF(SAMPLE_PDF);
     expect(doc).toBeDefined();
-    expect(doc.views).toBeDefined();
+    expect(doc.presentation.views).toBeDefined();
   });
 
   it('parsed PDF has at least one view (page)', () => {
     const doc = parsePDF(SAMPLE_PDF);
-    const views = Object.values(doc.views ?? {});
+    const views = Object.values(doc.presentation.views ?? {});
     expect(views.length).toBeGreaterThan(0);
   });
 
   it('each page becomes a view with 2d type', () => {
     const doc = parsePDF(SAMPLE_PDF);
-    const views = Object.values(doc.views ?? {});
+    const views = Object.values(doc.presentation.views ?? {});
     for (const v of views) {
       expect(v.type).toBe('2d');
     }
@@ -64,7 +64,7 @@ describe('T-PDF-001: Import PDF as underlay → verify displays in viewport', ()
 
   it('views have camera positions suitable for viewport display', () => {
     const doc = parsePDF(SAMPLE_PDF);
-    const views = Object.values(doc.views ?? {});
+    const views = Object.values(doc.presentation.views ?? {});
     for (const v of views) {
       expect(v.camera).toBeDefined();
       expect(v.camera.position).toBeDefined();
@@ -74,13 +74,13 @@ describe('T-PDF-001: Import PDF as underlay → verify displays in viewport', ()
 
   it('page views have numbered names', () => {
     const doc = parsePDF(SAMPLE_PDF);
-    const viewNames = Object.values(doc.views ?? {}).map((v) => v.name);
+    const viewNames = Object.values(doc.presentation.views ?? {}).map((v) => v.name);
     expect(viewNames).toContain('Page 1');
   });
 
   it('document without pages still creates at least one fallback view', () => {
     const doc = parsePDF(EMPTY_PDF);
-    expect(Object.keys(doc.views ?? {}).length).toBeGreaterThanOrEqual(1);
+    expect(Object.keys(doc.presentation.views ?? {}).length).toBeGreaterThanOrEqual(1);
   });
 });
 
@@ -126,7 +126,7 @@ describe('T-PDF-002: Export 2D drawing to PDF → verify vector quality, scale',
 describe('T-PDF-003: Export sheet set to multi-page PDF → verify all views included', () => {
   it('multiple views export as multiple pages', () => {
     const doc = parsePDF(SAMPLE_PDF);
-    const viewCount = Object.keys(doc.views ?? {}).length;
+    const viewCount = Object.keys(doc.presentation.views ?? {}).length;
     const output = serializePDF(doc);
     // Count page objects in output
     const pageMatches = output.match(/\/Type \/Page[^s]/g) || [];
@@ -143,7 +143,7 @@ describe('T-PDF-003: Export sheet set to multi-page PDF → verify all views inc
 
   it('document with no views still exports valid PDF', () => {
     const doc = createProject('Empty', 'user-1');
-    doc.views = {};
+    doc.presentation.views = {};
     const output = serializePDF(doc);
     expect(output).toContain('%PDF-');
     expect(output).toContain('%%EOF');
@@ -162,9 +162,9 @@ describe('T-PDF-004: Export PDF → verify layers preserved as PDF layers', () =
   it('annotations are imported from PDF', () => {
     const doc = parsePDF(SAMPLE_PDF);
     // The sample PDF has a Text annotation
-    const annotations = Object.values(doc.annotations ?? {});
+    const annotations = Object.values(doc.presentation.annotations ?? {});
     // Check that annotations were imported (if any exist in the sample)
-    expect(doc.annotations).toBeDefined();
+    expect(doc.presentation.annotations).toBeDefined();
   });
 
   it('annotation content is preserved on import', () => {
@@ -178,7 +178,7 @@ endobj
 xref
 %%EOF`;
     const doc = parsePDF(annotPdf);
-    const annotations = Object.values(doc.annotations ?? {});
+    const annotations = Object.values(doc.presentation.annotations ?? {});
     // If annotation was parsed, verify its content
     const textAnnot = annotations.find(
       (a) => (a as { content?: string }).content === 'Foundation Plan Note'

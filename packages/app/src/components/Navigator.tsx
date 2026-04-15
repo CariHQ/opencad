@@ -6,7 +6,6 @@ import {
   Box,
   Scissors,
   Building2,
-  Gauge,
   BrickWall,
   Square,
   DoorOpen,
@@ -16,26 +15,30 @@ import {
   EyeOff,
   Lock,
   Unlock,
+  Plus,
+  ArrowUpDown,
+  Minus,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 
 export function Navigator() {
-  const { document: doc, selectedIds, setSelectedIds, updateLayer } = useDocumentStore();
+  const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer } = useDocumentStore();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     views: true,
     levels: true,
     layers: true,
     elements: true,
   });
+  const [expandedLayers, setExpandedLayers] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const levels = doc?.levels ? Object.values(doc.levels) : [];
-  const layers = doc?.layers ? Object.values(doc.layers) : [];
-  const elements = doc?.elements ? Object.values(doc.elements) : [];
+  const levels = doc?.organization.levels ? Object.values(doc.organization.levels) : [];
+  const layers = doc?.organization.layers ? Object.values(doc.organization.layers) : [];
+  const elements = doc?.content.elements ? Object.values(doc.content.elements) : [];
 
   const filteredElements = search
     ? elements.filter((el) => {
@@ -128,7 +131,7 @@ export function Navigator() {
               <ChevronRight size={12} />
             </span>
             <span className="item-icon">
-              <Building2 size={14} />
+              <ArrowUpDown size={14} />
             </span>
             <span className="item-name">Levels</span>
             <span className="item-count">{levels.length}</span>
@@ -144,7 +147,7 @@ export function Navigator() {
                     onClick={() => setSelectedIds([level.id])}
                   >
                     <span className="item-icon">
-                      <Gauge size={14} />
+                      <Minus size={14} />
                     </span>
                     <span className="item-name">{level.name}</span>
                     <span className="item-meta">{level.elevation.toFixed(0)}m</span>
@@ -165,6 +168,17 @@ export function Navigator() {
             </span>
             <span className="item-name">Layers</span>
             <span className="item-count">{layers.length}</span>
+            <button
+              className="nav-icon-btn"
+              title="Add layer"
+              onClick={(e) => {
+                e.stopPropagation();
+                const colors = ['#808080', '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+                addLayer({ name: `Layer ${layers.length + 1}`, color: colors[layers.length % colors.length] });
+              }}
+            >
+              <Plus size={11} />
+            </button>
           </div>
           {expanded.layers && (
             <div className="nav-children">
@@ -172,9 +186,16 @@ export function Navigator() {
                 .sort((a, b) => a.order - b.order)
                 .map((layer) => {
                   const layerElements = filteredElements.filter((e) => e.layerId === layer.id);
+                  const layerExpanded = expandedLayers[layer.id] ?? true;
                   return (
                     <React.Fragment key={layer.id}>
-                      <div className="nav-item layer">
+                      <div
+                        className="nav-item layer"
+                        onClick={() => setExpandedLayers((prev) => ({ ...prev, [layer.id]: !layerExpanded }))}
+                      >
+                        <span className={`expand-icon ${layerExpanded ? 'expanded' : ''}`}>
+                          <ChevronRight size={12} />
+                        </span>
                         <span
                           className="layer-color-dot"
                           style={{ background: layer.color }}
@@ -183,7 +204,7 @@ export function Navigator() {
                         <span className="item-count">{layerElements.length}</span>
                         <button
                           className="nav-icon-btn"
-                          title={layer.visible ? 'Hide layer visibility' : 'Show layer visibility'}
+                          title={layer.visible ? 'Hide layer (toggle visibility)' : 'Show layer (toggle visibility)'}
                           onClick={(e) => {
                             e.stopPropagation();
                             updateLayer(layer.id, { visible: !layer.visible });
@@ -202,7 +223,7 @@ export function Navigator() {
                           {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
                         </button>
                       </div>
-                      {layerElements.slice(0, 50).map((element) => (
+                      {layerExpanded && layerElements.slice(0, 50).map((element) => (
                         <div
                           key={element.id}
                           className={`nav-item element nav-child-indent ${selectedIds.includes(element.id) ? 'selected' : ''}`}

@@ -19,7 +19,7 @@ export function SchedulePanel() {
 
   const elements = useMemo(() => {
     if (!doc) return [];
-    return Object.values(doc.elements).filter((el) => el.type === selectedType);
+    return Object.values(doc.content.elements).filter((el) => el.type === selectedType);
   }, [doc, selectedType]);
 
   // Derive column headers from the union of property keys

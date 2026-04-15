@@ -1,8 +1,10 @@
 import React from 'react';
 import { LayoutGrid, List, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../stores/projectStore';
 
 export function ProjectDashboard() {
+  const navigate = useNavigate();
   const {
     viewMode,
     sortBy,
@@ -20,9 +22,15 @@ export function ProjectDashboard() {
 
   const projects = getFilteredProjects();
 
+  function handleOpenProject(id: string) {
+    openProject(id);
+    navigate(`/project/${id}`);
+  }
+
   function handleNewProject() {
     const id = createProject('Untitled Project');
     openProject(id);
+    navigate(`/project/${id}`);
   }
 
   return (
@@ -98,10 +106,10 @@ export function ProjectDashboard() {
             <div key={project.id} className="project-card">
               <div
                 className="project-card-thumb"
-                onClick={() => openProject(project.id)}
+                onClick={() => handleOpenProject(project.id)}
                 role="button"
                 tabIndex={0}
-                onKeyDown={(e) => e.key === 'Enter' && openProject(project.id)}
+                onKeyDown={(e) => e.key === 'Enter' && handleOpenProject(project.id)}
               >
                 {project.thumbnail ? (
                   <img src={project.thumbnail} alt={project.name} />
@@ -112,10 +120,10 @@ export function ProjectDashboard() {
               <div className="project-card-footer">
                 <span
                   className="project-name"
-                  onClick={() => openProject(project.id)}
+                  onClick={() => handleOpenProject(project.id)}
                   role="button"
                   tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && openProject(project.id)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleOpenProject(project.id)}
                 >
                   {project.name}
                 </span>

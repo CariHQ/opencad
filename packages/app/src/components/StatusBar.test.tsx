@@ -11,6 +11,7 @@ import { useDocumentStore } from '../stores/documentStore';
 
 describe('T-UI-003: StatusBar', () => {
   beforeEach(() => {
+    localStorage.clear();
     useDocumentStore.setState({
       isOnline: true,
       isSaving: false,

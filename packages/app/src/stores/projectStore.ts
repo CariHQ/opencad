@@ -56,7 +56,8 @@ function saveProjects(projects: ProjectMeta[]): void {
   }
 }
 
-export const useProjectStore = create<ProjectState>((set, get) => ({
+export const useProjectStore = create<ProjectState>()(
+  (set, get) => ({
   projects: loadProjects(),
   activeProjectId: null,
   viewMode: 'grid',
@@ -151,4 +152,5 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
 
     return filtered;
   },
-}));
+  })
+);

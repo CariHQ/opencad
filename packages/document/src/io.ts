@@ -314,12 +314,12 @@ export function validateDocumentStructure(data: unknown): string[] {
     warnings.push('Document missing metadata');
   }
 
-  if (!doc.elements || typeof doc.elements !== 'object') {
-    warnings.push('Document missing elements object');
+  if (!doc.content || typeof doc.content !== 'object') {
+    warnings.push('Document missing content object');
   }
 
-  if (!doc.layers || typeof doc.layers !== 'object') {
-    warnings.push('Document missing layers object');
+  if (!doc.organization || typeof doc.organization !== 'object') {
+    warnings.push('Document missing organization object');
   }
 
   return warnings;

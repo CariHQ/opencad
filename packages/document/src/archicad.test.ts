@@ -53,12 +53,12 @@ describe('T-AC-001: Import PLN → verify 3D geometry renders', () => {
     const { parsePLN: fn } = await import('./archicad');
     const doc = fn(SAMPLE_PLN);
     expect(doc).toBeDefined();
-    expect(doc.elements).toBeDefined();
+    expect(doc.content.elements).toBeDefined();
   });
 
   it('parsed document contains elements with geometry', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     expect(elements.length).toBeGreaterThan(0);
     for (const el of elements) {
       expect(el.geometry).toBeDefined();
@@ -68,13 +68,13 @@ describe('T-AC-001: Import PLN → verify 3D geometry renders', () => {
 
   it('wall elements have correct type', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const walls = Object.values(doc.elements).filter((e) => e.type === 'wall');
+    const walls = Object.values(doc.content.elements).filter((e) => e.type === 'wall');
     expect(walls.length).toBe(2);
   });
 
   it('door and window elements are included', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const types = Object.values(doc.elements).map((e) => e.type);
+    const types = Object.values(doc.content.elements).map((e) => e.type);
     expect(types).toContain('door');
     expect(types).toContain('window');
   });
@@ -83,24 +83,24 @@ describe('T-AC-001: Import PLN → verify 3D geometry renders', () => {
 describe('T-AC-002: Import PLN → verify layers/stories mapped correctly', () => {
   it('layers are imported from PLN', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const layers = Object.values(doc.layers);
+    const layers = Object.values(doc.organization.layers);
     expect(layers.length).toBeGreaterThan(0);
   });
 
   it('layer names are preserved', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const layerNames = Object.values(doc.layers).map((l) => l.name);
+    const layerNames = Object.values(doc.organization.layers).map((l) => l.name);
     expect(layerNames).toContain('Walls');
     expect(layerNames).toContain('Structural');
   });
 
   it('layer visibility is preserved', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const hiddenLayer = Object.values(doc.layers).find((l) => l.name === 'Hidden');
+    const hiddenLayer = Object.values(doc.organization.layers).find((l) => l.name === 'Hidden');
     if (hiddenLayer) {
       expect(hiddenLayer.visible).toBe(false);
     }
-    const wallsLayer = Object.values(doc.layers).find((l) => l.name === 'Walls');
+    const wallsLayer = Object.values(doc.organization.layers).find((l) => l.name === 'Walls');
     if (wallsLayer) {
       expect(wallsLayer.visible).toBe(true);
     }
@@ -115,7 +115,7 @@ describe('T-AC-002: Import PLN → verify layers/stories mapped correctly', () =
 describe('T-AC-003: Import PLN → verify IFC data preserved', () => {
   it('element properties include type information', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const elements = Object.values(doc.elements);
+    const elements = Object.values(doc.content.elements);
     for (const el of elements) {
       expect(el.properties['Type']).toBeDefined();
       expect((el.properties['Type'] as { value: string }).value).toBeTruthy();
@@ -124,7 +124,7 @@ describe('T-AC-003: Import PLN → verify IFC data preserved', () => {
 
   it('all supported element types are mapped', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const types = new Set(Object.values(doc.elements).map((e) => e.type));
+    const types = new Set(Object.values(doc.content.elements).map((e) => e.type));
     expect(types.has('wall')).toBe(true);
     expect(types.has('door')).toBe(true);
     expect(types.has('window')).toBe(true);
@@ -165,20 +165,20 @@ describe('T-AC-004: Import PLA → verify all linked assets included', () => {
 describe('T-AC-005: Import PLN → verify 2D drawings on layouts preserved', () => {
   it('drawings/views are imported', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const views = Object.values(doc.views ?? {});
+    const views = Object.values(doc.presentation.views ?? {});
     expect(views.length).toBeGreaterThan(0);
   });
 
   it('view names match drawing names from PLN', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const viewNames = Object.values(doc.views ?? {}).map((v) => v.name);
+    const viewNames = Object.values(doc.presentation.views ?? {}).map((v) => v.name);
     expect(viewNames).toContain('Ground Floor Plan');
     expect(viewNames).toContain('Section A-A');
   });
 
   it('views have 2d type', () => {
     const doc = parsePLN(SAMPLE_PLN);
-    const views = Object.values(doc.views ?? {});
+    const views = Object.values(doc.presentation.views ?? {});
     for (const v of views) {
       expect(v.type).toBe('2d');
     }

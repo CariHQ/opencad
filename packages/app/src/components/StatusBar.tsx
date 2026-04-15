@@ -36,7 +36,7 @@ export function StatusBar() {
         )}
         {doc && (
           <div className="status-item">
-            <span>{Object.keys(doc.elements).length} elements</span>
+            <span>{Object.keys(doc.content.elements).length} elements</span>
           </div>
         )}
       </div>

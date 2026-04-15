@@ -47,7 +47,7 @@ export function PropertiesPanel() {
     );
   }
 
-  const selectedElement = doc.elements[selectedIds[0]];
+  const selectedElement = doc.content.elements[selectedIds[0]];
   if (!selectedElement) return null;
 
   const handleTranslationBlur = (axis: 'x' | 'y' | 'z', rawValue: string) => {

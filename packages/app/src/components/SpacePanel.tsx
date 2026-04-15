@@ -30,7 +30,7 @@ export function SpacePanel() {
   const requiredArea = Number(spaceParams.requiredArea ?? 20);
 
   const spaces = doc
-    ? Object.values(doc.elements).filter((el) => el.type === ('space' as string))
+    ? Object.values(doc.content.elements).filter((el) => el.type === ('space' as string))
     : [];
 
   const totalArea = spaces.reduce((sum, sp) => {
