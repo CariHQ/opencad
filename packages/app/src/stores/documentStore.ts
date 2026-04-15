@@ -225,10 +225,6 @@ export const useDocumentStore = create<DocumentState>()(
           description,
         });
 
-        if (newHistory.length > 50) {
-          newHistory.shift();
-        }
-
         set({
           history: newHistory,
           historyIndex: newHistory.length - 1,

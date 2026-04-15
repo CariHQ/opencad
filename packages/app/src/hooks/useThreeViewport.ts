@@ -63,7 +63,20 @@ export function useThreeViewport() {
   const { document: doc, selectedIds, setSelectedIds } = useDocumentStore();
 
   const [sectionBox, setSectionBox] = useState(false);
-  const [_sectionPosition, _setSectionPosition] = useState(0);
+  const [sectionPosition, setSectionPosition] = useState(0);
+  const [sectionDirection, setSectionDirection] = useState<'x' | 'y' | 'z'>('z');
+
+  const saveSectionView = useCallback(() => {
+    // Persist the current section view settings
+    try {
+      localStorage.setItem(
+        'opencad-section-view',
+        JSON.stringify({ position: sectionPosition, direction: sectionDirection })
+      );
+    } catch {
+      // ignore storage errors
+    }
+  }, [sectionPosition, sectionDirection]);
 
   const elementMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
 
@@ -485,5 +498,10 @@ export function useThreeViewport() {
     zoomToFit,
     sectionBox,
     setSectionBox,
+    sectionPosition,
+    setSectionPosition,
+    sectionDirection,
+    setSectionDirection,
+    saveSectionView,
   };
 }
