@@ -50,6 +50,7 @@ struct UpdateInfo {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+#[allow(dead_code)]
 struct RecoveryData {
     project_id: String,
     timestamp: i64,
