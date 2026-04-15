@@ -208,7 +208,9 @@ fn get_storage_info() -> Result<(u64, u64), String> {
 
     if data_dir.exists() {
         for entry in walkdir(&data_dir) {
-            total_size += entry.metadata().map(|m| m.len()).unwrap_or(0);
+            if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
+                total_size += entry.metadata().map(|m| m.len()).unwrap_or(0);
+            }
         }
     }
 
@@ -276,7 +278,7 @@ fn get_current_window_id(app: AppHandle) -> Result<String, String> {
     app.webview_windows()
         .into_keys()
         .next()
-        .ok_or_else(|| "No windows found".to_string())
+        .ok_or_else(|| "No current window".to_string())
 }
 
 // T-DSK-011: System Tray Status
