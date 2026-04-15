@@ -2,9 +2,18 @@ import React, { useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import type { PropertyValue } from '@opencad/document';
 
+interface PendingProp {
+  name: string;
+  value: string;
+}
+
+function formatPropValue(prop: PropertyValue): string {
+  return `${prop.value}${prop.unit ? ' ' + prop.unit : ''}`;
+}
+
 export function PropertiesPanel() {
   const { document: doc, selectedIds, updateElement, pushHistory } = useDocumentStore();
-  const [localValues, setLocalValues] = useState<Record<string, Record<string, string>>>({});
+  const [pendingProps, setPendingProps] = useState<PendingProp[]>([]);
 
   if (!doc) return null;
 
@@ -23,153 +32,177 @@ export function PropertiesPanel() {
     );
   }
 
-  const isMulti = selectedIds.length > 1;
-  const selectedElements = selectedIds
-    .map((id) => doc.elements[id])
-    .filter(Boolean);
+  if (selectedIds.length > 1) {
+    return (
+      <div className="properties-panel">
+        <div className="panel-header">
+          <span className="panel-title">Properties</span>
+        </div>
+        <div className="properties-content">
+          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px' }}>
+            {selectedIds.length} elements selected
+          </p>
+        </div>
+      </div>
+    );
+  }
 
-  if (selectedElements.length === 0) return null;
+  const selectedElement = doc.elements[selectedIds[0]];
+  if (!selectedElement) return null;
 
-  const primaryElement = selectedElements[0]!;
-
-  // For multi-select: only show properties shared by all selected elements
-  const sharedProperties = isMulti
-    ? Object.fromEntries(
-        Object.entries(primaryElement.properties).filter(([key]) =>
-          selectedElements.every((el) => key in el.properties)
-        )
-      )
-    : primaryElement.properties;
-
-  const handlePropertyChange = (propKey: string, rawValue: string) => {
-    setLocalValues((prev) => ({
-      ...prev,
-      [primaryElement.id]: { ...(prev[primaryElement.id] ?? {}), [propKey]: rawValue },
-    }));
-  };
-
-  const handlePropertyBlur = (propKey: string, prop: PropertyValue, rawValue: string) => {
-    const parsed: PropertyValue =
-      prop.type === 'number'
-        ? { ...prop, value: parseFloat(rawValue) || 0 }
-        : { ...prop, value: rawValue };
-
-    for (const el of selectedElements) {
-      updateElement(el.id, {
-        properties: { ...el.properties, [propKey]: parsed },
-      });
-    }
-    pushHistory(`Edit ${propKey}`);
-
-    // Clear local override
-    setLocalValues((prev) => {
-      const next = { ...prev };
-      if (next[primaryElement.id]) {
-        const copy = { ...next[primaryElement.id] };
-        delete copy[propKey];
-        next[primaryElement.id] = copy;
-      }
-      return next;
+  const handleTranslationBlur = (axis: 'x' | 'y' | 'z', rawValue: string) => {
+    const num = parseFloat(rawValue);
+    if (isNaN(num)) return;
+    pushHistory(`Move element`);
+    updateElement(selectedIds[0], {
+      transform: {
+        ...selectedElement.transform,
+        translation: {
+          ...selectedElement.transform.translation,
+          [axis]: num,
+        },
+      },
     });
   };
 
-  const handleLocationBlur = (axis: 'x' | 'y' | 'z', rawValue: string) => {
-    const num = parseFloat(rawValue) || 0;
-    for (const el of selectedElements) {
-      updateElement(el.id, {
-        transform: {
-          ...el.transform,
-          translation: { ...el.transform.translation, [axis]: num },
-        },
-      });
+  const handlePropertyBlur = (key: string, rawValue: string) => {
+    const existing = selectedElement.properties[key];
+    if (!existing) return;
+
+    // Parse "value unit" format
+    let parsed: string | number = rawValue;
+    const match = rawValue.match(/^([\d.]+)\s*(.*)$/);
+    if (match && existing.type === 'number') {
+      parsed = parseFloat(match[1]);
+    } else if (existing.type === 'string') {
+      // strip any trailing unit accidentally typed
+      parsed = rawValue;
     }
-    pushHistory(`Move ${axis.toUpperCase()}`);
+
+    pushHistory(`Edit ${key}`);
+    updateElement(selectedIds[0], {
+      properties: {
+        ...selectedElement.properties,
+        [key]: {
+          ...existing,
+          value: parsed,
+        },
+      },
+    });
   };
 
   const handleAddProperty = () => {
-    const newKey = 'Custom Property';
-    const newProp: PropertyValue = { type: 'string', value: '' };
-    for (const el of selectedElements) {
-      updateElement(el.id, {
-        properties: { ...el.properties, [newKey]: newProp },
-      });
-    }
-    pushHistory('Add property');
+    setPendingProps((prev) => [...prev, { name: '', value: '' }]);
   };
 
-  const getDisplayValue = (propKey: string, prop: PropertyValue): string => {
-    const local = localValues[primaryElement.id]?.[propKey];
-    if (local !== undefined) return local;
-    return String(prop.value);
+  const handlePendingNameChange = (index: number, name: string) => {
+    setPendingProps((prev) => prev.map((p, i) => (i === index ? { ...p, name } : p)));
   };
 
-  const { x, y, z } = primaryElement.transform.translation;
+  const handlePendingValueChange = (index: number, value: string) => {
+    setPendingProps((prev) => prev.map((p, i) => (i === index ? { ...p, value } : p)));
+  };
+
+  const handlePendingBlur = (index: number) => {
+    const pending = pendingProps[index];
+    if (!pending.name.trim()) return;
+    pushHistory(`Add property ${pending.name}`);
+    updateElement(selectedIds[0], {
+      properties: {
+        ...selectedElement.properties,
+        [pending.name]: {
+          type: 'string',
+          value: pending.value,
+        },
+      },
+    });
+    setPendingProps((prev) => prev.filter((_, i) => i !== index));
+  };
 
   return (
     <div className="properties-panel">
       <div className="panel-header">
         <span className="panel-title">Properties</span>
+        <div className="panel-actions">
+          <button className="panel-action-btn" title="More">
+            ⋮
+          </button>
+        </div>
       </div>
       <div className="properties-content">
-        {isMulti && (
-          <div className="properties-multi-summary">{selectedIds.length} elements selected</div>
-        )}
-
         <div className="property-group">
           <div className="property-group-title">General</div>
           <div className="property-row">
             <span className="property-label">Type</span>
             <div className="property-value">
-              <span>{primaryElement.type}</span>
+              <input type="text" className="property-input" value={selectedElement.type} readOnly />
             </div>
           </div>
         </div>
 
-        {!isMulti && (
-          <div className="property-group">
-            <div className="property-group-title">Location</div>
-            {(['x', 'y', 'z'] as const).map((axis) => (
-              <div key={axis} className="property-row">
-                <label htmlFor={`loc-${axis}`} className="property-label">
-                  {axis.toUpperCase()}
-                </label>
-                <div className="property-value">
-                  <input
-                    id={`loc-${axis}`}
-                    type="number"
-                    className="property-input"
-                    defaultValue={axis === 'x' ? x.toFixed(1) : axis === 'y' ? y.toFixed(1) : z.toFixed(1)}
-                    onBlur={(e) => handleLocationBlur(axis, e.target.value)}
-                  />
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
         <div className="property-group">
-          <div className="property-group-title">Dimensions</div>
-          {Object.entries(sharedProperties).map(([key, prop]) => (
-            <div key={key} className="property-row">
-              <span className="property-label">{key}</span>
-              <div className="property-value property-value-with-unit">
+          <div className="property-group-title">Location</div>
+          {(['x', 'y', 'z'] as const).map((axis) => (
+            <div key={axis} className="property-row">
+              <span className="property-label">{axis.toUpperCase()}</span>
+              <div className="property-value">
                 <input
-                  type={prop.type === 'number' ? 'number' : 'text'}
+                  type="number"
                   className="property-input"
-                  value={getDisplayValue(key, prop)}
-                  onChange={(e) => handlePropertyChange(key, e.target.value)}
-                  onBlur={(e) => handlePropertyBlur(key, prop, e.target.value)}
+                  defaultValue={selectedElement.transform.translation[axis].toFixed(1)}
+                  onBlur={(e) => handleTranslationBlur(axis, e.target.value)}
                 />
-                {prop.unit && <span className="property-unit">{prop.unit}</span>}
               </div>
             </div>
           ))}
         </div>
 
-        <div className="property-group-actions">
-          <button className="btn-add-property" onClick={handleAddProperty} aria-label="Add property">
-            + Add Property
-          </button>
+        <div className="property-group">
+          <div className="property-group-title">
+            Dimensions
+            <button
+              className="panel-action-btn"
+              title="Add property"
+              onClick={handleAddProperty}
+              style={{ marginLeft: 'auto', fontSize: '12px' }}
+            >
+              +
+            </button>
+          </div>
+          {Object.entries(selectedElement.properties).map(([key, prop]) => (
+            <div key={key} className="property-row">
+              <span className="property-label">{key}</span>
+              <div className="property-value">
+                <input
+                  type="text"
+                  className="property-input"
+                  defaultValue={formatPropValue(prop)}
+                  onBlur={(e) => handlePropertyBlur(key, e.target.value)}
+                />
+              </div>
+            </div>
+          ))}
+          {pendingProps.map((pending, idx) => (
+            <div key={`pending-${idx}`} className="property-row">
+              <div className="property-value" style={{ display: 'flex', gap: '4px' }}>
+                <input
+                  type="text"
+                  className="property-input"
+                  placeholder="Name"
+                  value={pending.name}
+                  onChange={(e) => handlePendingNameChange(idx, e.target.value)}
+                />
+                <input
+                  type="text"
+                  className="property-input"
+                  placeholder="Value"
+                  value={pending.value}
+                  onChange={(e) => handlePendingValueChange(idx, e.target.value)}
+                  onBlur={() => handlePendingBlur(idx)}
+                />
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

@@ -477,12 +477,32 @@ body {
 
 /* Right Panel */
 .app-right-panel {
-  width: 300px;
+  width: 260px;
+  min-width: 260px;
   background: var(--bg-secondary);
   border-left: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transition: width var(--panel-transition), min-width var(--panel-transition), border-color var(--panel-transition);
+}
+
+.app-right-panel.panel-collapsed {
+  width: 0;
+  min-width: 0;
+  border-left-color: transparent;
+}
+
+/* AI Panel collapse */
+.app-ai-panel {
+  overflow: hidden;
+  transition: width var(--panel-transition), min-width var(--panel-transition), border-color var(--panel-transition);
+}
+
+.app-ai-panel.panel-collapsed {
+  width: 0;
+  min-width: 0;
+  border-left-color: transparent;
 }
 
 /* Layers Panel */
