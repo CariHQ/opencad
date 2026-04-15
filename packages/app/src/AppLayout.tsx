@@ -12,11 +12,12 @@ import { LevelManager } from './components/LevelManager';
 import { ImportExportModal } from './components/ImportExportModal';
 import { useDocumentStore } from './stores/documentStore';
 import { useLocalStorage } from './hooks/useLocalStorage';
+import { WallToolPanel } from './components/WallToolPanel';
 import { useUndoRedo } from './hooks/useUndoRedo';
 import './styles/app.css';
 
 export function AppLayout() {
-  const { document: doc, initProject, undo, redo, canUndo, canRedo } = useDocumentStore();
+  const { document: doc, initProject, activeTool, undo, redo, canUndo, canRedo } = useDocumentStore();
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
@@ -203,6 +204,7 @@ export function AppLayout() {
         </main>
 
         <aside className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}>
+          {activeTool === 'wall' && <WallToolPanel />}
           <LayersPanel />
           <PropertiesPanel />
         </aside>
