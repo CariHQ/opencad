@@ -9,7 +9,6 @@ import {
   createPluginAPI,
   PluginPermissionManager,
   PluginUIMount,
-  type PluginContext,
   type PluginManifest,
 } from './sandbox';
 

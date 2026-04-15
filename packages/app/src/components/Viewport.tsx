@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, Maximize, RotateCcw, Box } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport, ViewPreset } from '../hooks/useThreeViewport';
 
@@ -19,7 +18,6 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     handleCanvasMouseUp,
     handleCanvasDoubleClick,
     activeTool,
-    drawingState,
   } = useViewport();
   const {
     containerRef: threeContainerRef,

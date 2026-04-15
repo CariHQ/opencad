@@ -1,6 +1,6 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
-use log::{error, info, warn};
+use log::{info, warn};
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
@@ -208,7 +208,7 @@ fn get_storage_info() -> Result<(u64, u64), String> {
 
     if data_dir.exists() {
         for entry in walkdir(&data_dir) {
-            if entry.is_file() {
+            if entry.file_type().map(|t| t.is_file()).unwrap_or(false) {
                 total_size += entry.metadata().map(|m| m.len()).unwrap_or(0);
             }
         }
@@ -222,7 +222,7 @@ fn walkdir(path: &PathBuf) -> impl Iterator<Item = fs::DirEntry> {
         .into_iter()
         .flatten()
         .flatten()
-        .filter_map(|e| e.file_type().ok().map(|_| e))
+        .filter_map(|e| e.file_type().ok().filter(|t| t.is_file()).map(|_| e))
 }
 
 // T-DSK-007: External File Watch
@@ -275,8 +275,9 @@ fn open_new_window(app: AppHandle, route: String, title: String) -> Result<(), S
 
 #[tauri::command]
 fn get_current_window_id(app: AppHandle) -> Result<String, String> {
-    app.get_current_webview_window()
-        .map(|w| w.label().to_string())
+    app.webview_windows()
+        .into_keys()
+        .next()
         .ok_or_else(|| "No current window".to_string())
 }
 

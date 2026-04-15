@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileDown, X, FileText } from 'lucide-react';
+import { Upload, X, FileText } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 import { parseIFC, serializeIFC } from '@opencad/document';
 
@@ -9,7 +9,7 @@ interface ImportExportModalProps {
 }
 
 export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
-  const { document: doc, initProject, loadProject } = useDocumentStore();
+  const { document: doc, initProject } = useDocumentStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,7 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
 
       if (file.name.toLowerCase().endsWith('.ifc')) {
         const parsed = parseIFC(content);
-        console.log('Imported IFC entities:', parsed);
+        void parsed; // IFC parsed successfully
         initProject(file.name, 'user-1');
       } else {
         setError('Unsupported file format. Please use .ifc files.');

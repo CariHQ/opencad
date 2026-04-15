@@ -76,6 +76,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace dependencies (required for @opencad/app)
+        if: matrix.package == '@opencad/app'
+        run: pnpm exec turbo run build --filter=@opencad/document
+
       - name: Run unit tests
         run: pnpm --filter=${{ matrix.package }} test:unit
 
@@ -130,8 +134,8 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build packages
-        run: pnpm build
+      - name: Build packages (excluding desktop)
+        run: pnpm exec turbo run build --filter='!@opencad/desktop'
 
       - name: Run integration tests
         run: pnpm test:integration

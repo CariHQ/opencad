@@ -9,15 +9,11 @@
  * Test IDs from PRD: T-DOC-001 through T-DOC-006
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   DocumentModel,
   createProject,
-  type DocumentSchema,
   type LayerSchema,
-  type LevelSchema,
-  type ElementSchema,
-  type Point3D,
 } from './index';
 
 describe('Document Model - TDD Tests', () => {
@@ -139,7 +135,7 @@ describe('Document Model - TDD Tests', () => {
       const model = new DocumentModel('test', 'user');
       model.setOnlineStatus(false);
 
-      const layerId = model.addLayer({ name: 'Offline Layer', color: '#333333' });
+      const _layerId = model.addLayer({ name: 'Offline Layer', color: '#333333' });
 
       model.setOnlineStatus(true);
 
@@ -350,7 +346,7 @@ describe('Document Model - TDD Tests', () => {
     it('should store layer changes in versions', () => {
       const model = new DocumentModel('test', 'user');
 
-      const v1 = model.createVersion('Before adding layers');
+      const _v1 = model.createVersion('Before adding layers');
       model.addLayer({ name: 'Layer A', color: '#AAAAAA' });
       model.createVersion('After Layer A');
       model.addLayer({ name: 'Layer B', color: '#BBBBBB' });
@@ -370,7 +366,7 @@ describe('Document Model - TDD Tests', () => {
       model.createVersion('Version 1');
 
       model.addLayer({ name: 'V2-Layer', color: '#222222' });
-      const v2 = model.createVersion('Version 2');
+      const _v2 = model.createVersion('Version 2');
 
       model.addLayer({ name: 'V3-Layer', color: '#333333' });
       model.createVersion('Version 3');
@@ -382,7 +378,7 @@ describe('Document Model - TDD Tests', () => {
       model.createVersion('Version 5');
 
       // Restore to version 2
-      const v2State = model.getVersion(2);
+      const _v2State = model.getVersion(2);
       model.restoreVersion(2);
 
       // Verify current state matches version 2
@@ -761,7 +757,7 @@ EOF`;
         const { createProject } = await import('./document');
 
         const doc = createProject('test', 'user');
-        const elementId = Object.keys(doc.elements)[0];
+        const _elementId = Object.keys(doc.elements)[0];
 
         const dxf = serializeDXF(doc);
         expect(dxf).toContain('SECTION');
@@ -823,7 +819,7 @@ EOF`;
         const { createProject, addElement } = await import('./document');
 
         const doc = createProject('test', 'user');
-        const elementId = addElement(doc, {
+        const _elementId = addElement(doc, {
           type: 'polyline',
           points: [
             { x: 0, y: 0, z: 0 },

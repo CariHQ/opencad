@@ -14,7 +14,7 @@ import { useLocalStorage } from './hooks/useLocalStorage';
 import './styles/app.css';
 
 export function AppLayout() {
-  const { document: doc, initProject, activeTool } = useDocumentStore();
+  const { document: doc, initProject } = useDocumentStore();
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
   const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>(
     'opencad-activeView',
@@ -47,7 +47,7 @@ export function AppLayout() {
       const firstLevel = Object.keys(doc.levels)[0];
       setSelectedLevel(firstLevel);
     }
-  }, [doc, selectedLevel]);
+  }, [doc, selectedLevel, setSelectedLevel]);
 
   const toggleAIChat = () => setShowAIChat(!showAIChat);
 
