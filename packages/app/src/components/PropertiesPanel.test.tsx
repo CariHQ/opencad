@@ -1,5 +1,6 @@
 /**
  * T-UI-003: Properties panel inline editing tests
+ * T-BIM-009: IFC Property Sets (Psets) display and editing
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom/vitest';
@@ -141,5 +142,94 @@ describe('T-UI-003: PropertiesPanel', () => {
     );
     render(<PropertiesPanel />);
     expect(screen.getByText(/2 elements selected/i)).toBeInTheDocument();
+  });
+});
+
+describe('T-BIM-009: IFC Property Sets (Psets)', () => {
+  const mockElementWithPsets = {
+    ...mockElement,
+    propertySets: [
+      {
+        id: 'pset-1',
+        name: 'Pset_WallCommon',
+        properties: {
+          IsExternal: { type: 'boolean' as const, value: true },
+          LoadBearing: { type: 'boolean' as const, value: false },
+          FireRating: { type: 'string' as const, value: 'REI 90' },
+        },
+      },
+      {
+        id: 'pset-2',
+        name: 'Pset_MaterialCommon',
+        properties: {
+          MassDensity: { type: 'number' as const, value: 2400, unit: 'kg/m³' },
+        },
+      },
+    ],
+  };
+
+  const mockDocWithPsets = {
+    ...mockDoc,
+    content: { elements: { 'el-1': mockElementWithPsets }, spaces: {} },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockUseDocumentStore.mockReturnValue(
+      makeStore({ document: mockDocWithPsets }) as ReturnType<typeof useDocumentStore>
+    );
+  });
+
+  it('renders Pset section heading', () => {
+    render(<PropertiesPanel />);
+    expect(screen.getAllByText(/Pset|Property Sets/i).length).toBeGreaterThan(0);
+  });
+
+  it('displays Pset name Pset_WallCommon', () => {
+    render(<PropertiesPanel />);
+    expect(screen.getByText('Pset_WallCommon')).toBeInTheDocument();
+  });
+
+  it('displays Pset name Pset_MaterialCommon', () => {
+    render(<PropertiesPanel />);
+    expect(screen.getByText('Pset_MaterialCommon')).toBeInTheDocument();
+  });
+
+  it('displays Pset property names', () => {
+    render(<PropertiesPanel />);
+    expect(screen.getByText('IsExternal')).toBeInTheDocument();
+    expect(screen.getByText('FireRating')).toBeInTheDocument();
+  });
+
+  it('displays Pset property values', () => {
+    render(<PropertiesPanel />);
+    expect(screen.getByDisplayValue('REI 90')).toBeInTheDocument();
+  });
+
+  it('displays numeric Pset property with unit', () => {
+    render(<PropertiesPanel />);
+    expect(screen.getByDisplayValue(/2400/)).toBeInTheDocument();
+  });
+
+  it('calls updateElement when a Pset property value is edited', () => {
+    const store = makeStore({ document: mockDocWithPsets });
+    mockUseDocumentStore.mockReturnValue(store as ReturnType<typeof useDocumentStore>);
+    render(<PropertiesPanel />);
+    const fireRatingInput = screen.getByDisplayValue('REI 90');
+    fireEvent.change(fireRatingInput, { target: { value: 'REI 120' } });
+    fireEvent.blur(fireRatingInput);
+    expect(store.updateElement).toHaveBeenCalledWith(
+      'el-1',
+      expect.objectContaining({
+        propertySets: expect.arrayContaining([
+          expect.objectContaining({
+            name: 'Pset_WallCommon',
+            properties: expect.objectContaining({
+              FireRating: expect.objectContaining({ value: 'REI 120' }),
+            }),
+          }),
+        ]),
+      })
+    );
   });
 });
