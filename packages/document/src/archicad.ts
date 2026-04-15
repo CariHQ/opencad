@@ -81,7 +81,7 @@ export function parsePLN(content: string): DocumentSchema {
     };
   }
 
-  let viewIdx = 0;
+  let _viewIdx = 0;
   for (const drawing of drawings) {
     doc.views[drawing.id] = {
       id: drawing.id,
@@ -96,7 +96,7 @@ export function parsePLN(content: string): DocumentSchema {
         far: 1000,
       },
     };
-    viewIdx++;
+    _viewIdx++;
   }
 
   const errorElements = elements.filter((e) => e.status === 'Error');

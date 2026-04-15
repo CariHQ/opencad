@@ -6,12 +6,10 @@
 import { describe, it, expect } from 'vitest';
 import {
   IFCParser,
-  IFCSerializer,
   parseIFC,
   serializeIFC,
   IFC4Parser,
   parsePropertySets,
-  type IFCPropertySet,
 } from './ifc';
 import { createProject } from './document';
 

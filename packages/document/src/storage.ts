@@ -84,7 +84,7 @@ export async function loadProject(projectId: string): Promise<DocumentSchema | n
     request.onsuccess = () => {
       const result = request.result;
       if (result) {
-        const { savedAt, ...project } = result;
+        const { savedAt: _savedAt, ...project } = result;
         resolve(project as DocumentSchema);
       } else {
         resolve(null);
