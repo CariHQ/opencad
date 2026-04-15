@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import { useDocumentStore } from '../stores/documentStore';
+import { type ElementSchema } from '@opencad/document';
 
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
@@ -62,7 +63,7 @@ export function useThreeViewport() {
   const { document: doc, selectedIds, setSelectedIds } = useDocumentStore();
 
   const [sectionBox, setSectionBox] = useState(false);
-  const [sectionPosition, setSectionPosition] = useState(0);
+  const [_sectionPosition, _setSectionPosition] = useState(0);
 
   const elementMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
 
@@ -76,7 +77,7 @@ export function useThreeViewport() {
   }, []);
 
   const createMeshFromElement = useCallback(
-    (element: any): THREE.Mesh | null => {
+    (element: ElementSchema): THREE.Mesh | null => {
       const bb = element.boundingBox;
       let width = bb.max.x - bb.min.x || 1000;
       let depth = bb.max.y - bb.min.y || 1000;
@@ -168,7 +169,7 @@ export function useThreeViewport() {
     cameraStateRef.current.target.set(centerX, centerY, 0);
     cameraStateRef.current.distance = size * 2;
     updateCamera();
-  }, [doc, updateCamera]);
+  }, [doc, updateCamera, setViewPreset]);
 
   const updateScene = useCallback(() => {
     const { scene } = stateRef.current;

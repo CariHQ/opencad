@@ -2,7 +2,7 @@ import { Plus, Settings, Eye, EyeOff } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 
 export function LayersPanel() {
-  const { document: doc, addLayer, updateLayer, deleteLayer } = useDocumentStore();
+  const { document: doc, addLayer, updateLayer } = useDocumentStore();
 
   if (!doc) return null;
 

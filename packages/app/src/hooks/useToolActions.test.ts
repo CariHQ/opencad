@@ -3,7 +3,7 @@
  * Issue #1: Wire up drawing tools in ToolShelf
  */
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { getDefaultElementForTool, buildElementProps } from './useToolActions';
 
 describe('Issue #1: Wire up drawing tools', () => {

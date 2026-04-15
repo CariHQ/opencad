@@ -13,16 +13,11 @@ import {
   Boxes,
   FileText,
   Circle,
-  MinusSquare,
-  PlusSquare,
   Hexagon,
   Minus,
-  Plus,
   RectangleHorizontal,
   Maximize2,
-  Minimize2,
   Pentagon,
-  Triangle,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 

@@ -3,8 +3,8 @@
  * Issue #2: IFC import/export file dialogs — recent files list
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { RecentFilesStore, type RecentFile } from './useRecentFiles';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { RecentFilesStore } from './useRecentFiles';
 
 describe('Issue #2: Recent files for IFC dialogs', () => {
   let store: RecentFilesStore;

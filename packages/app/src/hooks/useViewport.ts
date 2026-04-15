@@ -344,7 +344,7 @@ export function useViewport() {
     }
 
     // ── Draw preview while user is drawing ──
-    const { isDrawing, startPoint, currentPoint, points } = drawingState;
+    const { isDrawing: _isDrawing, startPoint, currentPoint, points } = drawingState;
     if (!startPoint) return;
 
     ctx.strokeStyle = theme.accent;
@@ -550,6 +550,7 @@ export function useViewport() {
 
   // ─── Effects ──────────────────────────────────────────────────────────────
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { draw(); }, [doc]);
 
   useEffect(() => {
