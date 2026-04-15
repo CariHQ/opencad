@@ -8,6 +8,7 @@ import { StatusBar } from './components/StatusBar';
 import { Viewport } from './components/Viewport';
 import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
+import { LevelManager } from './components/LevelManager';
 import { ImportExportModal } from './components/ImportExportModal';
 import { useDocumentStore } from './stores/documentStore';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -116,6 +117,7 @@ export function AppLayout() {
       <div className="app-body">
         <aside className="app-left-panel">
           <Navigator />
+          <LevelManager />
         </aside>
 
         <div className="app-toolshelf-container">

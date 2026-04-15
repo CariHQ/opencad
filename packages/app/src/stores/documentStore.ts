@@ -50,7 +50,8 @@ interface DocumentState {
   restoreVersion: (versionNumber: number) => void;
 
   setActiveLevel: (levelId: string) => void;
-  addLevel: (params: { name: string; elevation: number }) => string;
+  addLevel: (params: { name: string; elevation: number; height?: number }) => string;
+  updateLevel: (levelId: string, updates: { name?: string; elevation?: number; height?: number }) => void;
   deleteLevel: (levelId: string) => void;
   renameLevel: (levelId: string, name: string) => void;
 }
@@ -267,13 +268,22 @@ export const useDocumentStore = create<DocumentState>()(
         const { model } = get();
         if (!model) throw new Error('No document loaded');
 
-        const levelId = model.addLevel({ name: params.name, elevation: params.elevation });
+        const levelId = model.addLevel({ name: params.name, elevation: params.elevation, height: params.height });
         set({
           document: { ...model.documentData },
           selectedLevelId: levelId,
           lastSaved: Date.now(),
         });
         return levelId;
+      },
+
+      updateLevel: (levelId, updates) => {
+        const { document } = get();
+        if (!document) return;
+        const level = document.levels[levelId];
+        if (!level) return;
+        Object.assign(level, updates);
+        set({ document: { ...document, levels: { ...document.levels, [levelId]: { ...level } } } });
       },
 
       deleteLevel: (levelId) => {
