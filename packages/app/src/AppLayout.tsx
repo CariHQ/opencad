@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { FolderOpen, FileDown, Bot, Plus, Sun, Moon } from 'lucide-react';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
@@ -9,6 +9,7 @@ import { Viewport } from './components/Viewport';
 import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
 import { ImportExportModal } from './components/ImportExportModal';
+import { CommandPalette } from './components/CommandPalette';
 import { useDocumentStore } from './stores/documentStore';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import './styles/app.css';
@@ -26,6 +27,7 @@ export function AppLayout() {
   );
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('opencad-theme', 'light');
   const [showModal, setShowModal] = useState<'import' | 'export' | 'projects' | null>(null);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -50,6 +52,18 @@ export function AppLayout() {
   }, [doc, selectedLevel]);
 
   const toggleAIChat = () => setShowAIChat(!showAIChat);
+
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      e.preventDefault();
+      setShowCommandPalette((s) => !s);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
 
   return (
     <div className="app-container">
@@ -148,6 +162,16 @@ export function AppLayout() {
       <StatusBar />
 
       {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
+      {showCommandPalette && (
+        <div className="command-palette-overlay" onClick={() => setShowCommandPalette(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <CommandPalette
+              onClose={() => setShowCommandPalette(false)}
+              onExecute={() => setShowCommandPalette(false)}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
