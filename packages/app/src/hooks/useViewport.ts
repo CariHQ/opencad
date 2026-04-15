@@ -59,8 +59,8 @@ const OFFSET = 5000;
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
 const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension']);
-// Tools that use click-to-add-vertex (polygon, polyline)
-const MULTICLICK_TOOLS = new Set(['polygon', 'polyline']);
+// Tools that use click-to-add-vertex (polygon, polyline, slab, roof)
+const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof']);
 
 function screenToWorld(sx: number, sy: number, cw: number, ch: number): Point {
   return { x: (sx - cw / 2) * SCALE - OFFSET, y: (sy - ch / 2) * SCALE - OFFSET };
@@ -236,6 +236,23 @@ export function useViewport() {
           Name: { type: 'string', value: tool === 'polygon' ? 'Polygon' : 'Polyline' },
           Points: { type: 'string', value: JSON.stringify(extraPoints) },
           Closed: { type: 'string', value: tool === 'polygon' ? 'true' : 'false' },
+        },
+      });
+      getStoreActions().pushHistory(`Add ${tool}`);
+    }
+
+    if ((tool === 'slab' || tool === 'roof') && extraPoints && extraPoints.length >= 3) {
+      const sp = (toolParams?.['slab'] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: tool === 'roof' ? 'roof' : 'slab', layerId,
+        properties: {
+          Name: { type: 'string', value: tool === 'roof' ? 'Roof' : 'Slab' },
+          Points: { type: 'string', value: JSON.stringify(extraPoints) },
+          Thickness: { type: 'number', value: sp['thickness'] ?? 250 },
+          Material: { type: 'string', value: sp['material'] ?? 'Concrete' },
+          SlopeAngle: { type: 'number', value: sp['slopeAngle'] ?? 0 },
+          ElevationOffset: { type: 'number', value: sp['elevationOffset'] ?? 0 },
+          SlabType: { type: 'string', value: sp['slabType'] ?? tool },
         },
       });
       getStoreActions().pushHistory(`Add ${tool}`);
@@ -462,8 +479,9 @@ export function useViewport() {
 
     if (MULTICLICK_TOOLS.has(activeTool)) {
       setDrawingState((prev) => {
-        // Close polygon if clicking near start
-        if (activeTool === 'polygon' && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * SCALE) {
+        // Close polygon/slab/roof if clicking near start
+        const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
+        if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * SCALE) {
           commitShape(activeTool, prev.points[0], prev.points[prev.points.length - 1]!, prev.points);
           return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
         }

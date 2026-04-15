@@ -13,6 +13,7 @@ import { ImportExportModal } from './components/ImportExportModal';
 import { useDocumentStore } from './stores/documentStore';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { WallToolPanel } from './components/WallToolPanel';
+import { SlabToolPanel } from './components/SlabToolPanel';
 import { useUndoRedo } from './hooks/useUndoRedo';
 import './styles/app.css';
 
@@ -205,6 +206,7 @@ export function AppLayout() {
 
         <aside className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}>
           {activeTool === 'wall' && <WallToolPanel />}
+          {activeTool === 'slab' && <SlabToolPanel />
           <LayersPanel />
           <PropertiesPanel />
         </aside>
