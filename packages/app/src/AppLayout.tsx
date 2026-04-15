@@ -10,6 +10,7 @@ import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
 import { LevelManager } from './components/LevelManager';
 import { ImportExportModal } from './components/ImportExportModal';
+import { ColumnBeamPanel } from './components/ColumnBeamPanel';
 import { useDocumentStore } from './stores/documentStore';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { WallToolPanel } from './components/WallToolPanel';
@@ -209,6 +210,7 @@ export function AppLayout() {
           {activeTool === 'wall' && <WallToolPanel />}
           {activeTool === 'slab' && <SlabToolPanel />}
           {(activeTool === 'door' || activeTool === 'window') && <DoorWindowPanel />}
+          {(activeTool === 'column' || activeTool === 'beam') && <ColumnBeamPanel />
           <LayersPanel />
           <PropertiesPanel />
         </aside>
