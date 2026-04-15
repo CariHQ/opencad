@@ -142,7 +142,7 @@ importers:
         specifier: ^8.0.8
         version: 8.0.8(@types/node@25.6.0)(esbuild@0.25.12)
       vitest:
-        specifier: ^1.4.0
+        specifier: ^1.6.1
         version: 1.6.1(@types/node@25.6.0)(happy-dom@14.12.3)(jsdom@29.0.2)(lightningcss@1.32.0)
 
   packages/desktop:

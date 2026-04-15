@@ -107,7 +107,13 @@ export function AppLayout() {
               onClick={() => setShowLeftPanel((v) => !v)}
               title="Toggle navigator (⌘[)"
             >
-              <PanelLeft size={16} strokeWidth={2} color={leftVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : undefined} style={leftVisible ? { stroke: theme === 'dark' ? '#18a0fb' : '#0d99ff' } : undefined} />
+              <PanelLeft
+                size={16}
+                strokeWidth={2}
+                color={leftVisible
+                  ? (theme === 'dark' ? '#18a0fb' : '#0d99ff')
+                  : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')}
+              />
             </button>
             <span className="brand-name">OpenCAD</span>
             <button
@@ -175,7 +181,13 @@ export function AppLayout() {
               onClick={() => setShowRightPanel((v) => !v)}
               title="Toggle properties (⌘])"
             >
-              <PanelRight size={16} strokeWidth={2} color={rightVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : undefined} style={rightVisible ? { stroke: theme === 'dark' ? '#18a0fb' : '#0d99ff' } : undefined} />
+              <PanelRight
+                size={16}
+                strokeWidth={2}
+                color={rightVisible
+                  ? (theme === 'dark' ? '#18a0fb' : '#0d99ff')
+                  : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')}
+              />
             </button>
           </div>
         </header>
