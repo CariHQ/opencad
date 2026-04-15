@@ -58,7 +58,7 @@ const SCALE = 20;
 const OFFSET = 5000;
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
-const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension']);
+const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam']);
 // Tools that use click-to-add-vertex (polygon, polyline, slab, roof)
 const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof']);
 
@@ -288,6 +288,44 @@ export function useViewport() {
       });
       getStoreActions().pushHistory(`Add ${tool}`);
     }
+
+    if (tool === 'column') {
+      const cp = (toolParams?.['column'] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: 'column', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Column' },
+          X: { type: 'number', value: start.x },
+          Y: { type: 'number', value: start.y },
+          Height: { type: 'number', value: (cp['height'] as number | undefined) ?? 3000 },
+          SectionType: { type: 'string', value: (cp['sectionType'] as string | undefined) ?? 'Circular' },
+          Diameter: { type: 'number', value: (cp['diameter'] as number | undefined) ?? 300 },
+          Material: { type: 'string', value: (cp['material'] as string | undefined) ?? 'Concrete' },
+        },
+      });
+      getStoreActions().pushHistory('Add column');
+    }
+
+    if (tool === 'beam') {
+      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
+      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
+      if (maxX - minX < 100 && maxY - minY < 100) return;
+      const bp = (toolParams?.['beam'] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: 'beam', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Beam' },
+          StartX: { type: 'number', value: start.x },
+          StartY: { type: 'number', value: start.y },
+          EndX: { type: 'number', value: end.x },
+          EndY: { type: 'number', value: end.y },
+          SectionProfile: { type: 'string', value: (bp['sectionProfile'] as string | undefined) ?? 'IPE' },
+          SectionSize: { type: 'string', value: (bp['sectionSize'] as string | undefined) ?? '200' },
+          Material: { type: 'string', value: (bp['material'] as string | undefined) ?? 'Steel' },
+        },
+      });
+      getStoreActions().pushHistory('Add beam');
+    }
   }, [doc, addElement, toolParams]);
 
   // ─── Canvas draw loop ─────────────────────────────────────────────────────
@@ -500,6 +538,11 @@ export function useViewport() {
       } else {
         setSelectedIds([]);
       }
+      return;
+    }
+
+    if (activeTool === 'column') {
+      commitShape('column', wp, wp);
       return;
     }
 
