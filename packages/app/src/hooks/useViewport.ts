@@ -257,7 +257,38 @@ export function useViewport() {
       });
       getStoreActions().pushHistory(`Add ${tool}`);
     }
-  }, [doc, addElement]);
+
+    if (tool === 'door' || tool === 'window') {
+      // Find nearest wall element to host this opening
+      const walls = Object.values(doc.elements).filter((el) => el.type === 'wall');
+      let hostWallId = '';
+      let minD = Infinity;
+      for (const wall of walls) {
+        const bb = wall.boundingBox;
+        const cx = (bb.min.x + bb.max.x) / 2;
+        const cy = (bb.min.y + bb.max.y) / 2;
+        const d = dist(start, { x: cx, y: cy });
+        if (d < minD) { minD = d; hostWallId = wall.id; }
+      }
+      const tp = (toolParams?.[tool] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: tool, layerId,
+        properties: {
+          Name: { type: 'string', value: tool === 'door' ? 'Door' : 'Window' },
+          X: { type: 'number', value: start.x },
+          Y: { type: 'number', value: start.y },
+          Width: { type: 'number', value: tp['width'] ?? (tool === 'door' ? 900 : 1200) },
+          Height: { type: 'number', value: tp['height'] ?? (tool === 'door' ? 2100 : 1200) },
+          ...(tool === 'door'
+            ? { Swing: { type: 'number', value: tp['swing'] ?? 90 } }
+            : { SillHeight: { type: 'number', value: tp['sillHeight'] ?? 900 } }),
+          FrameType: { type: 'string', value: tp['frameType'] ?? 'standard' },
+          HostWallId: { type: 'reference', value: hostWallId },
+        },
+      });
+      getStoreActions().pushHistory(`Add ${tool}`);
+    }
+  }, [doc, addElement, toolParams]);
 
   // ─── Canvas draw loop ─────────────────────────────────────────────────────
 
