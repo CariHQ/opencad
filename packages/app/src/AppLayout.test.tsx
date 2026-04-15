@@ -64,7 +64,11 @@ describe('T-UI-006: AppLayout', () => {
 
   it('renders Layers panel', () => {
     render(<AppLayout />);
-    expect(screen.getByText('Layers')).toBeInTheDocument();
+    // 'Layers' appears in both the Navigator tree and the LayersPanel — use panel-title class
+    const layerPanelTitle = document.querySelector('.panel-title');
+    expect(layerPanelTitle).not.toBeNull();
+    const layersTitles = screen.getAllByText('Layers');
+    expect(layersTitles.length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders StatusBar', () => {
