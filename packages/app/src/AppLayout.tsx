@@ -82,6 +82,7 @@ import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import { MobileViewer } from './components/MobileViewer';
 import { VersionHistoryPanel } from './components/VersionHistoryPanel';
+import { usePresence } from './hooks/usePresence';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -140,6 +141,16 @@ export function AppLayout() {
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
+
+  // Stable local user ID from localStorage so it survives refreshes
+  const localUserId = React.useMemo(() => {
+    const stored = localStorage.getItem('opencad-local-uid');
+    if (stored) return stored;
+    const id = crypto.randomUUID();
+    localStorage.setItem('opencad-local-uid', id);
+    return id;
+  }, []);
+  const { users: presenceUsers } = usePresence({ userId: localUserId, displayName: 'You' });
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
   const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>(
     'opencad-activeView',
@@ -403,7 +414,17 @@ export function AppLayout() {
           <PanelErrorBoundary>
             <div className="viewport-wrapper">
               <SplitViewport viewType={activeView} />
-              <PresenceOverlay collaborators={[]} />
+              <PresenceOverlay
+                collaborators={presenceUsers
+                  .filter((u) => u.cursor !== null)
+                  .map((u) => ({
+                    userId: u.userId,
+                    name: u.displayName,
+                    color: u.color,
+                    cursor: u.cursor!,
+                    activeTool: u.activeTool,
+                  }))}
+              />
               {chromeVisible && (
                 <div className="floating-level-selector">
                   <LevelSelector
