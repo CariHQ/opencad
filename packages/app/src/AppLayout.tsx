@@ -34,6 +34,7 @@ import {
   History,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useProjectStore } from './stores/projectStore';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 import { LayersPanel } from './components/LayerPanel';
@@ -138,6 +139,10 @@ export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo } = useDocumentStore();
+  const { projects, renameProject } = useProjectStore();
+  const currentProject = projects.find((p) => p.id === projectId);
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
@@ -339,6 +344,36 @@ export function AppLayout() {
             >
               <Plus size={14} strokeWidth={2} />
             </button>
+            {currentProject && (
+              editingName ? (
+                <input
+                  className="project-name-input"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onBlur={() => {
+                    if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
+                    setEditingName(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
+                      setEditingName(false);
+                    } else if (e.key === 'Escape') {
+                      setEditingName(false);
+                    }
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <button
+                  className="project-name-btn"
+                  onClick={() => { setNameInput(currentProject.name); setEditingName(true); }}
+                  title="Click to rename project"
+                >
+                  {currentProject.name}
+                </button>
+              )
+            )}
           </div>
 
           <div className="toolbar-tabs">
