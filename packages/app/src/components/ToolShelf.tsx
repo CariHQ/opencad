@@ -95,7 +95,7 @@ export function ToolShelf() {
               title={cat.name}
             >
               <span className="tool-icon">
-                <Icon size={18} />
+                <Icon size={16} strokeWidth={2} />
               </span>
             </button>
           );
@@ -113,7 +113,7 @@ export function ToolShelf() {
               title={`${tool.name} (${tool.shortcut})`}
             >
               <span className="tool-icon">
-                <Icon size={18} />
+                <Icon size={16} strokeWidth={2} />
               </span>
             </button>
           );
