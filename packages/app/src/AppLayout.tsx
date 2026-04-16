@@ -17,6 +17,9 @@ import {
   Sheet,
   MessageSquareWarning,
   Package,
+  MessageCircle,
+  Leaf,
+  DollarSign,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -48,6 +51,9 @@ import { BCFPanel } from './components/BCFPanel';
 import { MaterialLibrary } from './components/MaterialLibrary';
 import { PresenceOverlay } from './components/PresenceOverlay';
 import { CommandPalette } from './components/CommandPalette';
+import { CommentsPanel } from './components/CommentsPanel';
+import { CarbonPanel } from './components/CarbonPanel';
+import { CostPanel } from './components/CostPanel';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -59,7 +65,10 @@ type RightPanelTab =
   | 'render'
   | 'sheets'
   | 'bcf'
-  | 'materials';
+  | 'materials'
+  | 'comments'
+  | 'carbon'
+  | 'cost';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
@@ -71,6 +80,9 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'sheets', title: 'Sheets', icon: <Sheet size={16} strokeWidth={2} /> },
   { id: 'bcf', title: 'Issues', icon: <MessageSquareWarning size={16} strokeWidth={2} /> },
   { id: 'materials', title: 'Materials', icon: <Package size={16} strokeWidth={2} /> },
+  { id: 'comments', title: 'Comments', icon: <MessageCircle size={16} strokeWidth={2} /> },
+  { id: 'carbon', title: 'Carbon', icon: <Leaf size={16} strokeWidth={2} /> },
+  { id: 'cost', title: 'Cost', icon: <DollarSign size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -370,6 +382,9 @@ export function AppLayout() {
                   }}
                 />
               )}
+              {rightPanelTab === 'comments' && <CommentsPanel />}
+              {rightPanelTab === 'carbon' && <CarbonPanel />}
+              {rightPanelTab === 'cost' && <CostPanel />}
             </PanelErrorBoundary>
           </div>
         </aside>

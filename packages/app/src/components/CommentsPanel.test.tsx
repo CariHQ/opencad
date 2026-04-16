@@ -34,48 +34,48 @@ describe('T-COL-011: CommentsPanel', () => {
   ];
 
   it('renders Comments header', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getByText(/comments/i)).toBeInTheDocument();
   });
 
   it('shows comment text', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getByText('Check this wall thickness')).toBeInTheDocument();
   });
 
   it('shows author name', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getAllByText('Alice').length).toBeGreaterThan(0);
   });
 
   it('shows resolved badge for resolved comments', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getByText(/resolved/i)).toBeInTheDocument();
   });
 
   it('shows Resolve button for unresolved comments', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getByRole('button', { name: /resolve/i })).toBeInTheDocument();
   });
 
   it('calls onResolve when Resolve clicked', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     fireEvent.click(screen.getByRole('button', { name: /resolve/i }));
     expect(onResolve).toHaveBeenCalledWith('c1');
   });
 
   it('shows replies under a comment', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getByText('Fixed!')).toBeInTheDocument();
   });
 
   it('has a text input for new comment', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getByPlaceholderText(/add a comment/i)).toBeInTheDocument();
   });
 
   it('calls onAdd when submitting new comment', () => {
-    render(<CommentsPanel comments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={comments} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     const input = screen.getByPlaceholderText(/add a comment/i);
     fireEvent.change(input, { target: { value: 'New comment' } });
     fireEvent.click(screen.getByRole('button', { name: /post|submit|add comment/i }));
@@ -83,7 +83,7 @@ describe('T-COL-011: CommentsPanel', () => {
   });
 
   it('shows empty state when no comments', () => {
-    render(<CommentsPanel comments={[]} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
+    render(<CommentsPanel initialComments={[]} onAdd={onAdd} onResolve={onResolve} onReply={onReply} />);
     expect(screen.getByText(/no comments/i)).toBeInTheDocument();
   });
 });
