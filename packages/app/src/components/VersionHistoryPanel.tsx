@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { History, Tag, RotateCcw } from 'lucide-react';
+import { Tag, RotateCcw } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 
 export function VersionHistoryPanel() {
@@ -22,9 +22,8 @@ export function VersionHistoryPanel() {
 
   return (
     <div className="version-history-panel">
-      <div className="version-history-header">
-        <History size={15} />
-        <span>Version History</span>
+      <div className="panel-header">
+        <span className="panel-title">Version History</span>
       </div>
 
       <div className="version-create">

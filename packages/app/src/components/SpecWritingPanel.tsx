@@ -26,24 +26,24 @@ export function SpecWritingPanel({ sheets = [], onGenerate, onExport }: SpecWrit
   return (
     <div className="spec-writing-panel">
       <div className="panel-header">
-        <span className="panel-title">Spec Writing — Room Data Sheets</span>
-        <div className="spec-actions">
-          <button
-            aria-label="Generate from model"
-            className="btn-generate"
-            onClick={() => onGenerate?.()}
-          >
-            Generate from Model
-          </button>
-          <button
-            aria-label="Export sheets"
-            className="btn-export"
-            onClick={() => onExport?.(sheets)}
-            disabled={sheets.length === 0}
-          >
-            Export
-          </button>
-        </div>
+        <span className="panel-title">Room Data Sheets</span>
+      </div>
+      <div className="spec-actions">
+        <button
+          aria-label="Generate from model"
+          className="btn-generate"
+          onClick={() => onGenerate?.()}
+        >
+          Generate
+        </button>
+        <button
+          aria-label="Export sheets"
+          className="btn-export"
+          onClick={() => onExport?.(sheets)}
+          disabled={sheets.length === 0}
+        >
+          Export
+        </button>
       </div>
 
       {sheets.length === 0 ? (
