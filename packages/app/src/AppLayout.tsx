@@ -517,11 +517,7 @@ export function AppLayout() {
         {leftVisible && <PanelResizer panelRef={leftPanelRef} side="right" minWidth={180} maxWidth={480} />}
 
         <div className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}>
-          <ToolShelf
-            onToggleAI={toggleAIChat}
-            onToggleProperties={() => setShowRightPanel((v) => !v)}
-            propertiesVisible={rightVisible}
-          />
+          <ToolShelf />
         </div>
 
         <main className="app-main">

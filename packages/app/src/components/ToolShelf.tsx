@@ -12,13 +12,6 @@ import {
   Minus,
   RectangleHorizontal,
   Pentagon,
-  PenLine,
-  AppWindow,
-  RectangleVertical,
-  StretchHorizontal,
-  Triangle,
-  Spline,
-  LayoutGrid,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 import { useRole } from '../hooks/useRole';
@@ -75,13 +68,7 @@ const categories = [
   { id: 'annotation', name: 'Annotate', icon: FileText },
 ];
 
-interface ToolShelfProps {
-  onToggleAI?: () => void;
-  onToggleProperties?: () => void;
-  propertiesVisible?: boolean;
-}
-
-export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible }: ToolShelfProps = {}) {
+export function ToolShelf() {
   const { activeTool, setActiveTool } = useDocumentStore();
   const { can } = useRole();
   const [expanded, setExpanded] = useState<boolean>(() => readStoredExpanded());
@@ -122,31 +109,6 @@ export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible }:
           );
         })}
       </div>
-      {(onToggleAI != null || onToggleProperties != null) && (
-        <>
-          <div className="toolshelf-divider" />
-          <div className="toolshelf-actions">
-            {onToggleAI != null && (
-              <button className="toolbar-btn" onClick={onToggleAI} title="Toggle AI panel">
-                <span className="tool-icon">
-                  <Bot size={15} />
-                </span>
-              </button>
-            )}
-            {onToggleProperties != null && (
-              <button
-                className={`toolbar-btn panel-toggle-btn${propertiesVisible ? ' panel-on' : ''}`}
-                onClick={onToggleProperties}
-                title="Toggle properties panel"
-              >
-                <span className="tool-icon">
-                  <PanelRight size={15} strokeWidth={2} />
-                </span>
-              </button>
-            )}
-          </div>
-        </>
-      )}
     </div>
   );
 }
