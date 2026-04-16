@@ -1,67 +1,58 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Bot, User, X, Settings } from 'lucide-react';
-import { FloorPlanGenerator, validateElement } from '@opencad/ai';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import { Bot, User, X, Settings, Zap } from 'lucide-react';
+import {
+  AIStreamClient,
+  createOpenAICompatibleProvider,
+  createOllamaProvider,
+  type ChatMessage,
+} from '../hooks/useAIStream';
 import { useDocumentStore } from '../stores/documentStore';
-import type { DocumentSchema } from '@opencad/document';
 
-/**
- * Run BIM validation on all elements in a generated schema.
- * Returns a human-readable summary of errors and warnings, or null if all pass.
- */
-function buildValidationSummary(schema: DocumentSchema): string | null {
-  const layers = schema.organization.layers as Record<string, { name: string; locked: boolean }>;
-  const elements = Object.values(schema.content.elements);
-  if (elements.length === 0) return null;
+const AI_CONFIG_KEY = 'opencad-ai-config';
 
-  const minimalDoc = {
-    organization: { layers },
-    content: {
-      elements: schema.content.elements as Parameters<typeof validateElement>[1]['content']['elements'],
-    },
-  };
-
-  const allErrors: string[] = [];
-  const allWarnings: string[] = [];
-
-  for (const el of elements) {
-    const result = validateElement(
-      el as Parameters<typeof validateElement>[0],
-      minimalDoc,
-    );
-    allErrors.push(...result.errors);
-    allWarnings.push(...result.warnings);
-  }
-
-  if (allErrors.length === 0 && allWarnings.length === 0) return null;
-
-  const lines: string[] = [];
-  if (allErrors.length > 0) {
-    lines.push(`BIM Validation — ${allErrors.length} error(s):`);
-    allErrors.forEach((e) => lines.push(`  • ${e}`));
-  }
-  if (allWarnings.length > 0) {
-    lines.push(`BIM Validation — ${allWarnings.length} warning(s):`);
-    allWarnings.forEach((w) => lines.push(`  ⚠ ${w}`));
-  }
-  return lines.join('\n');
+interface AIConfig {
+  baseUrl: string;
+  apiKey: string;
+  model: string;
+  provider: 'openai' | 'ollama' | 'custom';
 }
 
-/** Returns true when the message looks like a floor-plan generation request. */
-function isFloorPlanRequest(text: string): boolean {
-  const lower = text.toLowerCase();
-  const keywords = [
-    'bedroom', 'room', 'house', 'apartment', 'flat', 'floor plan',
-    'floorplan', 'm²', 'm2', 'sqft', 'sq ft', 'square feet',
-    'generate a', 'design a', 'create a',
-  ];
-  return keywords.some((kw) => lower.includes(kw));
+const DEFAULT_CONFIG: AIConfig = {
+  baseUrl: '',
+  apiKey: '',
+  model: 'gpt-4o-mini',
+  provider: 'openai',
+};
+
+function loadConfig(): AIConfig {
+  try {
+    const raw = localStorage.getItem(AI_CONFIG_KEY);
+    return raw ? { ...DEFAULT_CONFIG, ...(JSON.parse(raw) as Partial<AIConfig>) } : DEFAULT_CONFIG;
+  } catch {
+    return DEFAULT_CONFIG;
+  }
 }
+
+function saveConfig(c: AIConfig): void {
+  localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(c));
+}
+
+const BIM_SYSTEM_PROMPT = `You are OpenCAD AI, an expert architectural design assistant embedded in a browser-native BIM platform. You help architects and designers with:
+- Building layout and floor plan design
+- IBC code compliance checking
+- Wall, door, window, slab, column, beam, stair, and railing placement
+- Material selection and cost estimation
+- Section views and documentation
+- IFC file handling and interoperability
+
+Keep responses concise and actionable. When suggesting design changes, be specific about element types and dimensions. Use metric units (mm, m) by default.`;
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   content: string;
   timestamp: number;
+  streaming?: boolean;
 }
 
 interface AIChatPanelProps {
@@ -78,10 +69,10 @@ const STORAGE_KEY = 'opencad-ai-config';
 
 const suggestedPrompts = [
   'Design a residential floor plan',
-  'Add a staircase to level 2',
   'Check building code compliance',
+  'Add a staircase to level 2',
   'Generate quantity takeoff',
-  'Create a section view',
+  'What elements are in my model?',
 ];
 
 function loadConfig(): AIConfig | null {
@@ -97,25 +88,22 @@ function saveConfig(config: AIConfig): void {
 }
 
 export function AIChatPanel({ onClose }: AIChatPanelProps) {
-  const { loadDocumentSchema } = useDocumentStore();
+  const { document: doc } = useDocumentStore();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content:
-        "Hello! I'm your OpenCAD AI assistant. I can help you with:\n• Designing building layouts\n• Checking code compliance\n• Generating documentation\n• Modifying elements\n\nWhat would you like to do?",
+      content: "Hello! I'm your OpenCAD AI assistant. I can help you design buildings, check code compliance, and answer architecture questions.\n\nWhat would you like to do?",
       timestamp: Date.now(),
     },
   ]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showConfig, setShowConfig] = useState(false);
-  const [config, setConfig] = useState<AIConfig>(() => loadConfig() ?? {
-    provider: 'anthropic',
-    apiKey: '',
-    ollamaBaseUrl: 'http://localhost:11434',
-  });
+  const [config, setConfig] = useState<AIConfig>(loadConfig);
+  const [configDraft, setConfigDraft] = useState<AIConfig>(loadConfig);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef<(() => void) | null>(null);
 
   const isConfigured = Boolean(
     config.apiKey || config.provider === 'ollama'
@@ -125,70 +113,116 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const doSend = async (text: string) => {
-    if (!text.trim() || isLoading) return;
+  const isConfigured = config.baseUrl.length > 0 || config.provider === 'ollama';
 
+  const buildClient = useCallback((): AIStreamClient => {
+    const storage = {
+      storageGet: (k: string) => localStorage.getItem(k),
+      storageSet: (k: string, v: string) => localStorage.setItem(k, v),
+    };
+    if (config.provider === 'ollama') {
+      const url = config.baseUrl || 'http://localhost:11434';
+      return new AIStreamClient(createOllamaProvider(url, config.model || 'llama3'), storage);
+    }
+    return new AIStreamClient(
+      createOpenAICompatibleProvider(config.baseUrl, config.apiKey, config.model),
+      storage
+    );
+  }, [config]);
+
+  const buildContext = (): string => {
+    if (!doc) return '';
+    const elements = doc.content.elements ? Object.values(doc.content.elements) : [];
+    const layers = doc.organization.layers ? Object.values(doc.organization.layers) : [];
+    const levels = doc.organization.levels ? Object.values(doc.organization.levels) : [];
+    return `\n\nCurrent project context:\n- Project: ${doc.name}\n- Levels: ${levels.map((l) => l.name).join(', ') || 'none'}\n- Layers: ${layers.map((l) => l.name).join(', ') || 'none'}\n- Elements: ${elements.length} total (${Object.entries(elements.reduce<Record<string,number>>((acc, e) => { acc[e.type] = (acc[e.type] ?? 0) + 1; return acc; }, {})).map(([t, c]) => `${c} ${t}s`).join(', ') || 'none'})`;
+  };
+
+  const handleSend = useCallback(async () => {
+    if (!input.trim() || isLoading) return;
+
+    const userText = input.trim();
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
-      content: text,
+      content: userText,
       timestamp: Date.now(),
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setIsLoading(true);
 
-    // T-AI-001: Floor plan generation path — uses FloorPlanGenerator when
-    // an Anthropic API key is configured and the message looks like a floor plan request.
-    const anthropicApiKey = config.apiKey || (import.meta.env['VITE_ANTHROPIC_API_KEY'] as string | undefined);
-    if (isFloorPlanRequest(text) && anthropicApiKey) {
-      const assistantId = (Date.now() + 1).toString();
+    if (!isConfigured) {
       setMessages((prev) => [
         ...prev,
-        { id: assistantId, role: 'assistant', content: 'Generating floor plan…', timestamp: Date.now() },
+        {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: 'Please configure your AI provider first. Click the ⚙ icon above to set up Ollama (local) or an OpenAI-compatible endpoint.',
+          timestamp: Date.now(),
+        },
       ]);
-      const generator = new FloorPlanGenerator({ apiKey: anthropicApiKey });
-      try {
-        const schema = await generator.generateFloorPlan(text);
-        loadDocumentSchema(schema);
-        const validationSummary = buildValidationSummary(schema);
-        const baseContent = 'Floor plan generated and loaded into the canvas. Switch to 2D view to see the layout.';
-        const content = validationSummary
-          ? `${baseContent}\n\n${validationSummary}`
-          : baseContent;
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, content }
-              : m
-          )
-        );
-      } catch (err) {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId
-              ? { ...m, content: `Failed to generate floor plan: ${err instanceof Error ? err.message : 'Unknown error'}` }
-              : m
-          )
-        );
-      } finally {
-        setIsLoading(false);
-      }
+      setIsLoading(false);
       return;
     }
 
-    setTimeout(() => {
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content:
-          "I'm processing your request. This feature is powered by AI and will be available soon. In the meantime, you can use the manual tools to create walls, doors, and other elements.",
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
+    const assistantId = (Date.now() + 1).toString();
+    setMessages((prev) => [
+      ...prev,
+      { id: assistantId, role: 'assistant', content: '', timestamp: Date.now(), streaming: true },
+    ]);
+
+    const client = buildClient();
+    const history: ChatMessage[] = messages
+      .filter((m) => !m.streaming)
+      .map((m) => ({ id: m.id, role: m.role, content: m.content, timestamp: m.timestamp }));
+
+    const systemAugmentedPrompt = BIM_SYSTEM_PROMPT + buildContext() + '\n\nUser: ' + userText;
+
+    let cancelled = false;
+    abortRef.current = () => { cancelled = true; };
+
+    try {
+      let accumulated = '';
+      for await (const chunk of client.stream(systemAugmentedPrompt, history)) {
+        if (cancelled) break;
+        if (chunk.type === 'delta') {
+          accumulated += chunk.content;
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId ? { ...m, content: accumulated } : m
+            )
+          );
+        } else if (chunk.type === 'done' || chunk.type === 'error') {
+          if (chunk.type === 'error' && accumulated === '') {
+            accumulated = `Error: ${chunk.content}`;
+          }
+          break;
+        }
+      }
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId ? { ...m, content: accumulated || '(no response)', streaming: false } : m
+        )
+      );
+      client.saveHistory([
+        ...history,
+        { id: userMessage.id, role: 'user', content: userText, timestamp: userMessage.timestamp },
+        { id: assistantId, role: 'assistant', content: accumulated, timestamp: Date.now() },
+      ]);
+    } catch (err) {
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.id === assistantId
+            ? { ...m, content: `Error: ${err instanceof Error ? err.message : 'Unknown error'}`, streaming: false }
+            : m
+        )
+      );
+    } finally {
       setIsLoading(false);
-    }, 1000);
-  };
+      abortRef.current = null;
+    }
+  }, [input, isLoading, isConfigured, messages, buildClient, doc]);
 
   const handleSend = () => {
     void doSend(input);
@@ -203,12 +237,18 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      void handleSend();
     }
   };
 
+  const handleStop = () => {
+    abortRef.current?.();
+    setIsLoading(false);
+  };
+
   const handleSaveConfig = () => {
-    saveConfig(config);
+    saveConfig(configDraft);
+    setConfig(configDraft);
     setShowConfig(false);
   };
 
@@ -217,57 +257,84 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       <div className="ai-chat-panel">
         <div className="chat-header">
           <span className="chat-title">AI Provider Setup</span>
-          <button className="chat-close" onClick={() => setShowConfig(false)} aria-label="Close AI chat">
+          <button className="chat-close" onClick={() => setShowConfig(false)} aria-label="Close settings">
             <X size={18} />
           </button>
         </div>
-
-        <div className="ai-config-panel">
+        <div className="ai-config-form">
           <div className="config-field">
             <label htmlFor="ai-provider">Provider</label>
             <select
               id="ai-provider"
-              value={config.provider}
-              onChange={(e) => setConfig({ ...config, provider: e.target.value as AIConfig['provider'] })}
+              value={configDraft.provider}
+              onChange={(e) => setConfigDraft((d) => ({ ...d, provider: e.target.value as AIConfig['provider'] }))}
             >
-              <option value="anthropic">Anthropic (Claude)</option>
-              <option value="openai">OpenAI</option>
+              <option value="openai">OpenAI / OpenAI-compatible proxy</option>
               <option value="ollama">Ollama (local)</option>
             </select>
           </div>
 
-          {config.provider !== 'ollama' && (
-            <div className="config-field">
-              <label htmlFor="ai-api-key">
-                {config.provider === 'anthropic' ? 'Anthropic API Key' : 'OpenAI API Key'}
-              </label>
-              <input
-                id="ai-api-key"
-                type="password"
-                value={config.apiKey}
-                onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
-                placeholder="sk-..."
-              />
-            </div>
+          {configDraft.provider === 'ollama' ? (
+            <>
+              <div className="config-field">
+                <label htmlFor="ai-ollama-url">Ollama base URL</label>
+                <input
+                  id="ai-ollama-url"
+                  type="text"
+                  value={configDraft.baseUrl || 'http://localhost:11434'}
+                  onChange={(e) => setConfigDraft((d) => ({ ...d, baseUrl: e.target.value }))}
+                  placeholder="http://localhost:11434"
+                />
+              </div>
+              <div className="config-field">
+                <label htmlFor="ai-model">Model</label>
+                <input
+                  id="ai-model"
+                  type="text"
+                  value={configDraft.model}
+                  onChange={(e) => setConfigDraft((d) => ({ ...d, model: e.target.value }))}
+                  placeholder="llama3"
+                />
+              </div>
+              <p className="config-hint">Install Ollama from ollama.com, then run: <code>ollama pull llama3</code></p>
+            </>
+          ) : (
+            <>
+              <div className="config-field">
+                <label htmlFor="ai-base-url">Base URL</label>
+                <input
+                  id="ai-base-url"
+                  type="text"
+                  value={configDraft.baseUrl}
+                  onChange={(e) => setConfigDraft((d) => ({ ...d, baseUrl: e.target.value }))}
+                  placeholder="https://api.openai.com/v1"
+                />
+              </div>
+              <div className="config-field">
+                <label htmlFor="ai-api-key">API Key</label>
+                <input
+                  id="ai-api-key"
+                  type="password"
+                  value={configDraft.apiKey}
+                  onChange={(e) => setConfigDraft((d) => ({ ...d, apiKey: e.target.value }))}
+                  placeholder="sk-..."
+                />
+              </div>
+              <div className="config-field">
+                <label htmlFor="ai-model-name">Model</label>
+                <input
+                  id="ai-model-name"
+                  type="text"
+                  value={configDraft.model}
+                  onChange={(e) => setConfigDraft((d) => ({ ...d, model: e.target.value }))}
+                  placeholder="gpt-4o-mini"
+                />
+              </div>
+              <p className="config-hint">Supports OpenAI, LM Studio, and any OpenAI-compatible endpoint.</p>
+            </>
           )}
 
-          {config.provider === 'ollama' && (
-            <div className="config-field">
-              <label htmlFor="ai-ollama-url">Ollama base URL</label>
-              <input
-                id="ai-ollama-url"
-                type="url"
-                value={config.ollamaBaseUrl}
-                onChange={(e) => setConfig({ ...config, ollamaBaseUrl: e.target.value })}
-              />
-            </div>
-          )}
-
-          <button
-            className="btn-save-config"
-            onClick={handleSaveConfig}
-            aria-label="Save AI configuration"
-          >
+          <button className="btn-save-config" onClick={handleSaveConfig} aria-label="Save AI configuration">
             Save Configuration
           </button>
         </div>
@@ -280,13 +347,14 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       <div className="chat-header">
         <span className="chat-title">AI Assistant</span>
         <div className="chat-header-actions">
-          <button
-            className="chat-config-btn"
-            onClick={() => setShowConfig(true)}
-            aria-label="Configure AI"
-            title="Configure AI provider"
-          >
-            <Settings size={16} />
+          {isConfigured && (
+            <span className="ai-provider-badge" title={`Provider: ${config.provider}`}>
+              <Zap size={12} />
+              {config.provider === 'ollama' ? 'Local AI' : config.model}
+            </span>
+          )}
+          <button className="chat-icon-btn" onClick={() => setShowConfig(true)} title="Configure AI provider" aria-label="Configure AI">
+            <Settings size={15} />
           </button>
           <button className="chat-close" onClick={onClose} aria-label="Close AI chat">
             <X size={18} />
@@ -296,14 +364,9 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
 
       {!isConfigured && (
         <div className="ai-setup-banner">
-          <p>Configure an AI provider to enable chat</p>
-          <button
-            className="btn-setup-ai"
-            onClick={() => setShowConfig(true)}
-            aria-label="Set up AI provider"
-          >
-            Set Up
-          </button>
+          <Zap size={16} />
+          <span>Configure an AI provider to enable chat.</span>
+          <button onClick={() => setShowConfig(true)} className="btn-setup-ai" aria-label="Set up AI provider">Set up</button>
         </div>
       )}
 
@@ -315,20 +378,19 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
             </div>
             <div className="message-content">
               {msg.content.split('\n').map((line, i) => (
-                <p key={i}>{line}</p>
+                <p key={i}>{line || '\u00a0'}</p>
               ))}
+              {msg.streaming && <span className="streaming-cursor">▌</span>}
             </div>
           </div>
         ))}
-        {isLoading && (
+        {isLoading && messages[messages.length - 1]?.streaming !== true && (
           <div className="message assistant">
-            <div className="message-avatar">
-              <Bot size={16} />
-            </div>
+            <div className="message-avatar"><Bot size={16} /></div>
             <div className="message-content typing">
-              <span className="typing-dot"></span>
-              <span className="typing-dot"></span>
-              <span className="typing-dot"></span>
+              <span className="typing-dot" />
+              <span className="typing-dot" />
+              <span className="typing-dot" />
             </div>
           </div>
         )}
@@ -349,17 +411,21 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Configure AI provider to chat"
+          placeholder={isConfigured ? 'Ask me anything…' : 'Configure AI provider to chat'}
           rows={2}
         />
-        <button
-          className="chat-send"
-          onClick={handleSend}
-          disabled={!input.trim() || isLoading}
-          aria-label="Send message"
-        >
-          Send
-        </button>
+        {isLoading ? (
+          <button className="chat-stop" onClick={handleStop} aria-label="Stop generation">Stop</button>
+        ) : (
+          <button
+            className="chat-send"
+            onClick={() => void handleSend()}
+            disabled={!input.trim()}
+            aria-label="Send message"
+          >
+            Send
+          </button>
+        )}
       </div>
     </div>
   );
