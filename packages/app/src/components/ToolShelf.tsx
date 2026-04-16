@@ -67,7 +67,21 @@ const tools: Tool[] = [
   { id: 'polyline',  name: 'Polyline',  icon: PenLine,            shortcut: 'Y' },
 ];
 
-export function ToolShelf() {
+const categories = [
+  { id: 'modify', name: 'Modify', icon: Settings },
+  { id: 'draw', name: 'Draw', icon: Square },
+  { id: 'structure', name: 'Structure', icon: Boxes },
+  { id: 'opening', name: 'Openings', icon: DoorOpen },
+  { id: 'annotation', name: 'Annotate', icon: FileText },
+];
+
+interface ToolShelfProps {
+  onToggleAI?: () => void;
+  onToggleProperties?: () => void;
+  propertiesVisible?: boolean;
+}
+
+export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible }: ToolShelfProps = {}) {
   const { activeTool, setActiveTool } = useDocumentStore();
   const { can } = useRole();
   const [expanded, setExpanded] = useState<boolean>(() => readStoredExpanded());
@@ -108,6 +122,31 @@ export function ToolShelf() {
           );
         })}
       </div>
+      {(onToggleAI != null || onToggleProperties != null) && (
+        <>
+          <div className="toolshelf-divider" />
+          <div className="toolshelf-actions">
+            {onToggleAI != null && (
+              <button className="toolbar-btn" onClick={onToggleAI} title="Toggle AI panel">
+                <span className="tool-icon">
+                  <Bot size={15} />
+                </span>
+              </button>
+            )}
+            {onToggleProperties != null && (
+              <button
+                className={`toolbar-btn panel-toggle-btn${propertiesVisible ? ' panel-on' : ''}`}
+                onClick={onToggleProperties}
+                title="Toggle properties panel"
+              >
+                <span className="tool-icon">
+                  <PanelRight size={15} strokeWidth={2} />
+                </span>
+              </button>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

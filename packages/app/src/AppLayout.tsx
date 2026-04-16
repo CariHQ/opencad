@@ -1,10 +1,37 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
-  FolderOpen, FileDown, Bot, Home, Sun, Moon, PanelLeft, PanelRight, History, GitPullRequest,
-  Layers, Settings2, Table2, LayoutDashboard, AlertTriangle, Camera, Sheet,
-  MessageSquareWarning, Package, MessageCircle, Leaf, DollarSign, Palette,
-  Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Shield,
-  MessageCirclePlus,
+  FolderOpen,
+  FileDown,
+  Bot,
+  Home,
+  Sun,
+  Moon,
+  PanelLeft,
+  PanelRight,
+  Layers,
+  Settings2,
+  Table2,
+  LayoutDashboard,
+  AlertTriangle,
+  Camera,
+  Sheet,
+  MessageSquareWarning,
+  Package,
+  MessageCircle,
+  Leaf,
+  DollarSign,
+  Palette,
+  Stamp,
+  Scissors,
+  SunMedium,
+  MapPin,
+  FileText,
+  Image,
+  Store,
+  Wind,
+  User,
+  Settings,
+  History,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from './stores/projectStore';
@@ -371,46 +398,54 @@ export function AppLayout() {
           }}
         >
           <div className="toolbar-left">
-            <button className={`toolbar-btn panel-toggle-btn${leftVisible ? ' panel-on' : ''}`} onClick={() => setShowLeftPanel((v) => !v)} title="Toggle navigator (⌘[)">
-              <PanelLeft size={16} strokeWidth={2} color={leftVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')} />
+            <button
+              className={`toolbar-btn panel-toggle-btn${leftVisible ? ' panel-on' : ''}`}
+              onClick={() => setShowLeftPanel((v) => !v)}
+              title="Toggle navigator (⌘[)"
+            >
+              <span className="tool-icon">
+                <PanelLeft size={15} strokeWidth={2} />
+              </span>
             </button>
-            <img src="/favicon.svg" alt="OpenCAD" className="brand-logo-img" />
-            <button className="toolbar-btn" onClick={() => navigate('/')} title="Back to projects"><Home size={14} strokeWidth={2} /></button>
-            <div className="toolbar-sep" />
-            {isRenamingProject ? (
-              <input
-                ref={renameInputRef}
-                className="project-name-input"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onBlur={() => {
-                  const trimmed = renameValue.trim();
-                  if (trimmed) renameProject(trimmed);
-                  setIsRenamingProject(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    const trimmed = renameValue.trim();
-                    if (trimmed) renameProject(trimmed);
-                    setIsRenamingProject(false);
-                  } else if (e.key === 'Escape') {
-                    setIsRenamingProject(false);
-                  }
-                }}
-                autoFocus
-              />
-            ) : (
-              <button
-                className="toolbar-btn project-name-btn"
-                title="Click to rename project"
-                onClick={() => {
-                  setRenameValue(doc?.name ?? 'Untitled Project');
-                  setIsRenamingProject(true);
-                  setTimeout(() => renameInputRef.current?.select(), 0);
-                }}
-              >
-                <span className="project-name-text">{doc?.name ?? 'Untitled Project'}</span>
-              </button>
+            <span className="brand-name">OpenCAD</span>
+            <button
+              className="toolbar-btn"
+              onClick={() => navigate('/')}
+              title="Home — back to projects"
+            >
+              <span className="tool-icon">
+                <Home size={15} strokeWidth={2} />
+              </span>
+            </button>
+            {currentProject && (
+              editingName ? (
+                <input
+                  className="project-name-input"
+                  value={nameInput}
+                  onChange={(e) => setNameInput(e.target.value)}
+                  onBlur={() => {
+                    if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
+                    setEditingName(false);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
+                      setEditingName(false);
+                    } else if (e.key === 'Escape') {
+                      setEditingName(false);
+                    }
+                  }}
+                  autoFocus
+                />
+              ) : (
+                <button
+                  className="project-name-btn"
+                  onClick={() => { setNameInput(currentProject.name); setEditingName(true); }}
+                  title="Click to rename project"
+                >
+                  {currentProject.name}
+                </button>
+              )
             )}
           </div>
 
@@ -448,8 +483,14 @@ export function AppLayout() {
               <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In"><span className="tool-icon"><User size={15} /></span></button>
             )}
             <div className="toolbar-sep" />
-            <button className={`toolbar-btn panel-toggle-btn${rightVisible ? ' panel-on' : ''}`} onClick={() => setShowRightPanel((v) => !v)} title="Toggle properties (⌘])">
-              <PanelRight size={16} strokeWidth={2} color={rightVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')} />
+            <button
+              className={`toolbar-btn panel-toggle-btn${rightVisible ? ' panel-on' : ''}`}
+              onClick={() => setShowRightPanel((v) => !v)}
+              title="Toggle properties (⌘])"
+            >
+              <span className="tool-icon">
+                <PanelRight size={15} strokeWidth={2} />
+              </span>
             </button>
           </div>
         </header>
@@ -476,7 +517,11 @@ export function AppLayout() {
         {leftVisible && <PanelResizer panelRef={leftPanelRef} side="right" minWidth={180} maxWidth={480} />}
 
         <div className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}>
-          <ToolShelf />
+          <ToolShelf
+            onToggleAI={toggleAIChat}
+            onToggleProperties={() => setShowRightPanel((v) => !v)}
+            propertiesVisible={rightVisible}
+          />
         </div>
 
         <main className="app-main">
