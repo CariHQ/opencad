@@ -505,11 +505,7 @@ export function AppLayout() {
         </aside>
 
         <div className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}>
-          <ToolShelf
-            onToggleAI={toggleAIChat}
-            onToggleProperties={() => setShowRightPanel((v) => !v)}
-            propertiesVisible={rightVisible}
-          />
+          <ToolShelf />
         </div>
 
         <main className="app-main">

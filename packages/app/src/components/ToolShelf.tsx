@@ -18,8 +18,6 @@ import {
   RectangleHorizontal,
   Maximize2,
   Pentagon,
-  Bot,
-  PanelRight,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 
@@ -59,13 +57,7 @@ const categories = [
   { id: 'annotation', name: 'Annotate', icon: FileText },
 ];
 
-interface ToolShelfProps {
-  onToggleAI?: () => void;
-  onToggleProperties?: () => void;
-  propertiesVisible?: boolean;
-}
-
-export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible }: ToolShelfProps = {}) {
+export function ToolShelf() {
   const { activeTool, setActiveTool } = useDocumentStore();
   const [activeCategory, setActiveCategory] = React.useState<string>(() => {
     try { return localStorage.getItem('opencad-activeCategory') ?? 'modify'; } catch { return 'modify'; }
@@ -124,31 +116,6 @@ export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible }:
           );
         })}
       </div>
-      {(onToggleAI != null || onToggleProperties != null) && (
-        <>
-          <div className="toolshelf-divider" />
-          <div className="toolshelf-actions">
-            {onToggleAI != null && (
-              <button className="toolbar-btn" onClick={onToggleAI} title="Toggle AI panel">
-                <span className="tool-icon">
-                  <Bot size={15} />
-                </span>
-              </button>
-            )}
-            {onToggleProperties != null && (
-              <button
-                className={`toolbar-btn panel-toggle-btn${propertiesVisible ? ' panel-on' : ''}`}
-                onClick={onToggleProperties}
-                title="Toggle properties panel"
-              >
-                <span className="tool-icon">
-                  <PanelRight size={15} strokeWidth={2} />
-                </span>
-              </button>
-            )}
-          </div>
-        </>
-      )}
     </div>
   );
 }
