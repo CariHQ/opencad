@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import {
   FolderOpen,
   FileDown,
@@ -182,6 +182,46 @@ export function AppLayout() {
     'opencad-rightPanelTab',
     'layers'
   );
+
+  const [leftPanelWidth, setLeftPanelWidth] = useLocalStorage('opencad-leftPanelWidth', 240);
+  const [rightPanelWidth, setRightPanelWidth] = useLocalStorage('opencad-rightPanelWidth', 260);
+  const resizingRef = useRef<{ side: 'left' | 'right'; startX: number; startWidth: number } | null>(null);
+
+  const startResize = useCallback((side: 'left' | 'right', e: React.MouseEvent) => {
+    e.preventDefault();
+    resizingRef.current = {
+      side,
+      startX: e.clientX,
+      startWidth: side === 'left' ? leftPanelWidth : rightPanelWidth,
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }, [leftPanelWidth, rightPanelWidth]);
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!resizingRef.current) return;
+      const { side, startX, startWidth } = resizingRef.current;
+      const delta = e.clientX - startX;
+      if (side === 'left') {
+        setLeftPanelWidth(Math.max(180, Math.min(480, startWidth + delta)));
+      } else {
+        setRightPanelWidth(Math.max(220, Math.min(520, startWidth - delta)));
+      }
+    };
+    const onMouseUp = () => {
+      if (!resizingRef.current) return;
+      resizingRef.current = null;
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [setLeftPanelWidth, setRightPanelWidth]);
 
   const leftVisible = showLeftPanel && !focusMode;
   const rightVisible = showRightPanel && !focusMode;
@@ -455,9 +495,19 @@ export function AppLayout() {
       )}
 
       <div className="app-body">
-        <aside className={`app-left-panel${leftVisible ? '' : ' panel-collapsed'}`}>
+        <aside
+          className={`app-left-panel${leftVisible ? '' : ' panel-collapsed'}`}
+          style={leftVisible ? { width: leftPanelWidth, minWidth: leftPanelWidth } : undefined}
+        >
           <Navigator />
           <LevelManager />
+          {leftVisible && (
+            <div
+              className="panel-resize-handle"
+              onMouseDown={(e) => startResize('left', e)}
+              title="Drag to resize"
+            />
+          )}
         </aside>
 
         <div className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}>
@@ -510,7 +560,17 @@ export function AppLayout() {
           </PanelErrorBoundary>
         </main>
 
-        <aside className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}>
+        <aside
+          className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}
+          style={rightVisible ? { width: rightPanelWidth, minWidth: rightPanelWidth } : undefined}
+        >
+          {rightVisible && (
+            <div
+              className="panel-resize-handle"
+              onMouseDown={(e) => startResize('right', e)}
+              title="Drag to resize"
+            />
+          )}
           <div className="right-panel-tab-bar">
             {RIGHT_PANEL_TABS.map((tab) => (
               <button
