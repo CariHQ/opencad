@@ -46,6 +46,7 @@ vi.mock('./hooks/useViewport', () => ({
     handleCanvasMouseDown: vi.fn(),
     handleCanvasMouseMove: vi.fn(),
     handleCanvasMouseUp: vi.fn(),
+    handleCanvasDoubleClick: vi.fn(),
     activeTool: 'select',
     drawingState: null,
   }),

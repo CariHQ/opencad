@@ -28,6 +28,9 @@ import {
   FileText,
   Image,
   Store,
+  Wind,
+  User,
+  Settings,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -35,7 +38,6 @@ import { Navigator } from './components/Navigator';
 import { LayersPanel } from './components/LayerPanel';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { StatusBar } from './components/StatusBar';
-import { Viewport } from './components/Viewport';
 import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
 import { LevelManager } from './components/LevelManager';
@@ -70,6 +72,12 @@ import { SiteImportPanel } from './components/SiteImportPanel';
 import { SpecWritingPanel } from './components/SpecWritingPanel';
 import { PhotoToModelPanel } from './components/PhotoToModelPanel';
 import { MarketplacePanel } from './components/MarketplacePanel';
+import { WindAnalysisPanel } from './components/WindAnalysisPanel';
+import { SplitViewport } from './components/SplitViewport';
+import { AuthModal } from './components/AuthModal';
+import { APIKeyPanel } from './components/APIKeyPanel';
+import { PermissionsPanel } from './components/PermissionsPanel';
+import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -92,7 +100,8 @@ type RightPanelTab =
   | 'site'
   | 'specs'
   | 'photo'
-  | 'marketplace';
+  | 'marketplace'
+  | 'wind';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
@@ -115,6 +124,7 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'specs', title: 'Specs', icon: <FileText size={16} strokeWidth={2} /> },
   { id: 'photo', title: 'Photo to Model', icon: <Image size={16} strokeWidth={2} /> },
   { id: 'marketplace', title: 'Marketplace', icon: <Store size={16} strokeWidth={2} /> },
+  { id: 'wind', title: 'Wind Analysis', icon: <Wind size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -142,6 +152,9 @@ export function AppLayout() {
   const [focusMode, setFocusMode] = useState(false);
   const [showModal, setShowModal] = useState<'import' | 'export' | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>(
     'opencad-rightPanelTab',
     'layers'
@@ -315,6 +328,16 @@ export function AppLayout() {
                 <Bot size={15} />
               </span>
             </button>
+            <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In">
+              <span className="tool-icon">
+                <User size={15} />
+              </span>
+            </button>
+            <button className="toolbar-btn" onClick={() => setShowSettings(true)} title="Settings">
+              <span className="tool-icon">
+                <Settings size={15} />
+              </span>
+            </button>
             <div className="toolbar-sep" />
             <button
               className={`toolbar-btn panel-toggle-btn${rightVisible ? ' panel-on' : ''}`}
@@ -351,7 +374,7 @@ export function AppLayout() {
         <main className="app-main">
           <PanelErrorBoundary>
             <div className="viewport-wrapper">
-              <Viewport viewType={activeView} />
+              <SplitViewport viewType={activeView} />
               <PresenceOverlay collaborators={[]} />
               {chromeVisible && (
                 <div className="floating-level-selector">
@@ -425,6 +448,7 @@ export function AppLayout() {
               {rightPanelTab === 'specs' && <SpecWritingPanel />}
               {rightPanelTab === 'photo' && <PhotoToModelPanel />}
               {rightPanelTab === 'marketplace' && <MarketplacePanel />}
+              {rightPanelTab === 'wind' && <WindAnalysisPanel />}
             </PanelErrorBoundary>
           </div>
         </aside>
@@ -447,6 +471,57 @@ export function AppLayout() {
               onClose={() => setShowCommandPalette(false)}
               onExecute={handleCommandExecute}
             />
+          </div>
+        </div>
+      )}
+
+      {showAuth && (
+        <AuthModal
+          mode={showAuth}
+          onClose={() => setShowAuth(null)}
+          onLogin={() => setShowAuth(null)}
+          onRegister={() => setShowAuth(null)}
+        />
+      )}
+
+      {showSettings && (
+        <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <h2 className="settings-modal-title">Settings</h2>
+              <button
+                className="settings-close"
+                aria-label="Close settings"
+                onClick={() => setShowSettings(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="settings-tabs">
+              <button
+                className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`}
+                onClick={() => setSettingsTab('apikeys')}
+              >
+                API Keys
+              </button>
+              <button
+                className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`}
+                onClick={() => setSettingsTab('permissions')}
+              >
+                Permissions
+              </button>
+              <button
+                className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`}
+                onClick={() => setSettingsTab('sso')}
+              >
+                SSO
+              </button>
+            </div>
+            <div className="settings-content">
+              {settingsTab === 'apikeys' && <APIKeyPanel />}
+              {settingsTab === 'permissions' && <PermissionsPanel />}
+              {settingsTab === 'sso' && <SSOSettingsPanel />}
+            </div>
           </div>
         </div>
       )}

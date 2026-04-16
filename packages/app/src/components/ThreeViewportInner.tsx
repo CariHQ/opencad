@@ -22,9 +22,9 @@ export function ThreeViewportInner({ onViewChange }: ThreeViewportInnerProps) {
     zoomToFit,
     sectionBox,
     setSectionBox,
-    sectionPosition,
+    sectionPosition: _sectionPosition,
     setSectionPosition,
-    sectionDirection,
+    sectionDirection: _sectionDirection,
     setSectionDirection,
     saveSectionView,
   } = useThreeViewport();

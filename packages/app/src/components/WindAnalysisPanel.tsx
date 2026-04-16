@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export interface WindAnalysisSettings {
   latitude: number;
@@ -9,10 +9,18 @@ export interface WindAnalysisSettings {
   showVentilationPotential: boolean;
 }
 
+const DEFAULT_SETTINGS: WindAnalysisSettings = {
+  latitude: 51.5074,
+  longitude: -0.1278,
+  prevailingDirection: 225,   // SW — prevailing in London
+  averageSpeedMs: 4.5,
+  showWindRose: true,
+  showVentilationPotential: false,
+};
+
 interface WindAnalysisPanelProps {
-  settings: WindAnalysisSettings;
-  onRun: (settings: WindAnalysisSettings) => void;
-  onChange: (settings: WindAnalysisSettings) => void;
+  onRun?: (settings: WindAnalysisSettings) => void;
+  onChange?: (settings: WindAnalysisSettings) => void;
 }
 
 function directionLabel(deg: number): string {
@@ -20,8 +28,14 @@ function directionLabel(deg: number): string {
   return dirs[Math.round(deg / 45) % 8] ?? 'N';
 }
 
-export function WindAnalysisPanel({ settings, onRun, onChange }: WindAnalysisPanelProps) {
-  const update = (patch: Partial<WindAnalysisSettings>) => onChange({ ...settings, ...patch });
+export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = {}) {
+  const [settings, setSettings] = useState<WindAnalysisSettings>(DEFAULT_SETTINGS);
+
+  const update = (patch: Partial<WindAnalysisSettings>) => {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    onChange?.(next);
+  };
 
   return (
     <div className="wind-analysis-panel">
@@ -112,7 +126,7 @@ export function WindAnalysisPanel({ settings, onRun, onChange }: WindAnalysisPan
       <button
         aria-label="Run analysis"
         className="btn-run-analysis"
-        onClick={() => onRun(settings)}
+        onClick={() => onRun?.(settings)}
       >
         Run Analysis
       </button>
