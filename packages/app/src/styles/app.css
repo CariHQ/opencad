@@ -502,6 +502,15 @@ body {
   padding: 4px 8px;
 }
 
+.floating-placement-panel {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  pointer-events: auto;
+}
+
 /* Focus mode */
 .focus-hint {
   position: absolute;

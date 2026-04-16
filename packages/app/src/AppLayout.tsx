@@ -74,6 +74,7 @@ import { PhotoToModelPanel } from './components/PhotoToModelPanel';
 import { MarketplacePanel } from './components/MarketplacePanel';
 import { WindAnalysisPanel } from './components/WindAnalysisPanel';
 import { SplitViewport } from './components/SplitViewport';
+import { PlacementPanel } from './components/PlacementPanel';
 import { AuthModal } from './components/AuthModal';
 import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
@@ -405,6 +406,14 @@ export function AppLayout() {
                     levels={doc?.organization.levels || {}}
                     selectedLevel={selectedLevel}
                     onSelectLevel={setSelectedLevel}
+                  />
+                </div>
+              )}
+              {(activeTool === 'door' || activeTool === 'window') && (
+                <div className="floating-placement-panel">
+                  <PlacementPanel
+                    elementType={activeTool as 'door' | 'window'}
+                    onClose={() => setActiveTool('select')}
                   />
                 </div>
               )}
