@@ -214,30 +214,46 @@ export function AppLayout() {
   }, [doc, selectedLevel, setSelectedLevel]);
 
   useEffect(() => {
+    const TOOL_SHORTCUTS: Record<string, string> = {
+      v: 'select', l: 'line', r: 'rectangle', c: 'circle', a: 'arc',
+      p: 'polygon', w: 'wall', k: 'column', b: 'beam', s: 'slab',
+      o: 'roof', t: 'stair', d: 'door', n: 'window', g: 'railing',
+      m: 'dimension', x: 'text',
+    };
+
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.metaKey || e.ctrlKey || e.altKey) {
+        if ((e.metaKey || e.ctrlKey) && e.key === '[') {
+          e.preventDefault();
+          setShowLeftPanel((v) => !v);
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === ']') {
+          e.preventDefault();
+          setShowRightPanel((v) => !v);
+        }
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          setShowCommandPalette((v) => !v);
+        }
+        return;
+      }
 
-      if (e.key === '\\' && !e.metaKey && !e.ctrlKey && !e.shiftKey) {
+      if (e.key === '\\') {
         setFocusMode((f) => !f);
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key === '[') {
+
+      const toolId = TOOL_SHORTCUTS[e.key.toLowerCase()];
+      if (toolId) {
         e.preventDefault();
-        setShowLeftPanel((v) => !v);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === ']') {
-        e.preventDefault();
-        setShowRightPanel((v) => !v);
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setShowCommandPalette((v) => !v);
+        setActiveTool(toolId as Parameters<typeof setActiveTool>[0]);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [setShowLeftPanel, setShowRightPanel]);
+  }, [setShowLeftPanel, setShowRightPanel, setActiveTool]);
 
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 768px)');
