@@ -33,20 +33,11 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
     try {
       const ext = file.name.toLowerCase().split('.').pop();
 
-      if (ext === 'ifc') {
-        const content = await file.text();
-        loadDocumentSchema(parseIFC(content));
-      } else if (ext === 'dxf') {
-        const content = await file.text();
-        loadDocumentSchema(parseDXF(content));
-      } else if (ext === 'dwg') {
-        const buffer = await file.arrayBuffer();
-        loadDocumentSchema(parseDWG(buffer));
-      } else if (ext === 'rvt') {
-        const content = await file.text();
-        loadDocumentSchema(parseRVT(content));
+      if (file.name.toLowerCase().endsWith('.ifc')) {
+        const parsed = parseIFC(content);
+        loadDocumentSchema(parsed);
       } else {
-        setError('Unsupported format. Supported: IFC, DXF, DWG, RVT');
+        setError('Unsupported file format. Please use .ifc files for import.');
         setImporting(false);
         return;
       }
