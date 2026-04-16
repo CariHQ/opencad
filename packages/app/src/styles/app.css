@@ -98,7 +98,7 @@ body {
   justify-content: space-between;
   height: 40px;
   padding: 0 8px;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
   gap: 8px;
   flex-shrink: 0;
@@ -413,7 +413,7 @@ body {
 .app-toolshelf-container {
   width: 48px;
   min-width: 48px;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   padding: 8px 0;
   overflow: hidden;
@@ -462,8 +462,8 @@ body {
 }
 
 .category-btn.active {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--bg-elevated);
+  color: var(--accent-primary);
 }
 
 .toolshelf-divider {
@@ -501,8 +501,8 @@ body {
 }
 
 .tool-btn.active {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--bg-elevated);
+  color: var(--accent-primary);
 }
 
 .toolshelf-info {
@@ -2150,7 +2150,7 @@ body {
   width: 40px;
   min-width: 40px;
   padding: 6px 4px;
-  background: var(--bg-secondary);
+  background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   gap: 2px;
   overflow-y: auto;
@@ -2185,8 +2185,8 @@ body {
 }
 
 .right-panel-tab-btn.active {
-  background: var(--accent-primary);
-  color: white;
+  background: var(--bg-elevated);
+  color: var(--accent-primary);
 }
 
 .right-panel-content {
