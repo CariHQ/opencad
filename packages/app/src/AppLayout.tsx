@@ -24,6 +24,10 @@ import {
   Stamp,
   Scissors,
   SunMedium,
+  MapPin,
+  FileText,
+  Image,
+  Store,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -62,6 +66,10 @@ import { HatchPanel } from './components/HatchPanel';
 import { SymbolLibrary } from './components/SymbolLibrary';
 import { ShadowAnalysisPanel } from './components/ShadowAnalysisPanel';
 import { SectionBoxPanel } from './components/SectionBoxPanel';
+import { SiteImportPanel } from './components/SiteImportPanel';
+import { SpecWritingPanel } from './components/SpecWritingPanel';
+import { PhotoToModelPanel } from './components/PhotoToModelPanel';
+import { MarketplacePanel } from './components/MarketplacePanel';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -80,7 +88,11 @@ type RightPanelTab =
   | 'hatch'
   | 'symbols'
   | 'shadow'
-  | 'section';
+  | 'section'
+  | 'site'
+  | 'specs'
+  | 'photo'
+  | 'marketplace';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
@@ -99,6 +111,10 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'symbols', title: 'Symbols', icon: <Stamp size={16} strokeWidth={2} /> },
   { id: 'shadow', title: 'Shadow', icon: <SunMedium size={16} strokeWidth={2} /> },
   { id: 'section', title: 'Section', icon: <Scissors size={16} strokeWidth={2} /> },
+  { id: 'site', title: 'Site Import', icon: <MapPin size={16} strokeWidth={2} /> },
+  { id: 'specs', title: 'Specs', icon: <FileText size={16} strokeWidth={2} /> },
+  { id: 'photo', title: 'Photo to Model', icon: <Image size={16} strokeWidth={2} /> },
+  { id: 'marketplace', title: 'Marketplace', icon: <Store size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -405,6 +421,10 @@ export function AppLayout() {
               {rightPanelTab === 'symbols' && <SymbolLibrary />}
               {rightPanelTab === 'shadow' && <ShadowAnalysisPanel />}
               {rightPanelTab === 'section' && <SectionBoxPanel />}
+              {rightPanelTab === 'site' && <SiteImportPanel />}
+              {rightPanelTab === 'specs' && <SpecWritingPanel />}
+              {rightPanelTab === 'photo' && <PhotoToModelPanel />}
+              {rightPanelTab === 'marketplace' && <MarketplacePanel />}
             </PanelErrorBoundary>
           </div>
         </aside>

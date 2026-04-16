@@ -10,8 +10,8 @@ interface SiteImportParams {
 }
 
 interface SiteImportPanelProps {
-  onImport: (params: SiteImportParams) => void;
-  onSearch: (query: string) => void;
+  onImport?: (params: SiteImportParams) => void;
+  onSearch?: (query: string) => void;
 }
 
 const LAYERS: { id: SiteLayer; label: string }[] = [
@@ -23,7 +23,7 @@ const LAYERS: { id: SiteLayer; label: string }[] = [
   { id: 'boundaries', label: 'Site Boundaries' },
 ];
 
-export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps) {
+export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps = {}) {
   const [query, setQuery] = useState('');
   const [source, setSource] = useState<'osm' | 'ordnance-survey'>('osm');
   const [selectedLayers, setSelectedLayers] = useState<SiteLayer[]>(['terrain', 'buildings', 'roads']);
@@ -36,11 +36,11 @@ export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps) {
   };
 
   const handleSearch = () => {
-    if (query.trim()) onSearch(query.trim());
+    if (query.trim()) onSearch?.(query.trim());
   };
 
   const handleImport = () => {
-    onImport({ query, source, layers: selectedLayers, radius });
+    onImport?.({ query, source, layers: selectedLayers, radius });
   };
 
   return (

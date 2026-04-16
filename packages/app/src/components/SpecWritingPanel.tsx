@@ -17,12 +17,12 @@ export interface RoomDataSheet {
 }
 
 interface SpecWritingPanelProps {
-  sheets: RoomDataSheet[];
-  onGenerate: () => void;
-  onExport: (sheets: RoomDataSheet[]) => void;
+  sheets?: RoomDataSheet[];
+  onGenerate?: () => void;
+  onExport?: (sheets: RoomDataSheet[]) => void;
 }
 
-export function SpecWritingPanel({ sheets, onGenerate, onExport }: SpecWritingPanelProps) {
+export function SpecWritingPanel({ sheets = [], onGenerate, onExport }: SpecWritingPanelProps = {}) {
   return (
     <div className="spec-writing-panel">
       <div className="panel-header">
@@ -31,14 +31,14 @@ export function SpecWritingPanel({ sheets, onGenerate, onExport }: SpecWritingPa
           <button
             aria-label="Generate from model"
             className="btn-generate"
-            onClick={onGenerate}
+            onClick={() => onGenerate?.()}
           >
             Generate from Model
           </button>
           <button
             aria-label="Export sheets"
             className="btn-export"
-            onClick={() => onExport(sheets)}
+            onClick={() => onExport?.(sheets)}
             disabled={sheets.length === 0}
           >
             Export

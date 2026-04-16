@@ -12,12 +12,12 @@ export interface MarketplaceItem {
 }
 
 interface MarketplacePanelProps {
-  items: MarketplaceItem[];
-  onInstall: (item: MarketplaceItem) => void;
-  onPublish: () => void;
+  items?: MarketplaceItem[];
+  onInstall?: (item: MarketplaceItem) => void;
+  onPublish?: () => void;
 }
 
-export function MarketplacePanel({ items, onInstall, onPublish }: MarketplacePanelProps) {
+export function MarketplacePanel({ items = [], onInstall, onPublish }: MarketplacePanelProps = {}) {
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -36,7 +36,7 @@ export function MarketplacePanel({ items, onInstall, onPublish }: MarketplacePan
         <button
           aria-label="Publish component"
           className="btn-publish"
-          onClick={onPublish}
+          onClick={() => onPublish?.()}
         >
           Publish
         </button>
@@ -67,7 +67,7 @@ export function MarketplacePanel({ items, onInstall, onPublish }: MarketplacePan
               <button
                 aria-label={`Install ${item.name}`}
                 className="btn-install"
-                onClick={() => onInstall(item)}
+                onClick={() => onInstall?.(item)}
               >
                 Install
               </button>
