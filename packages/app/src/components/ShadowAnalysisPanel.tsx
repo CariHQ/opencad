@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export interface ShadowAnalysisSettings {
   latitude: number;
@@ -9,14 +9,28 @@ export interface ShadowAnalysisSettings {
   showShadowMap: boolean;
 }
 
+const DEFAULT_SETTINGS: ShadowAnalysisSettings = {
+  latitude: 51.5074,   // London
+  longitude: -0.1278,
+  date: new Date().toISOString().slice(0, 10),
+  time: '12:00',
+  showSunPath: true,
+  showShadowMap: true,
+};
+
 interface ShadowAnalysisPanelProps {
-  settings: ShadowAnalysisSettings;
-  onRun: (settings: ShadowAnalysisSettings) => void;
-  onChange: (settings: ShadowAnalysisSettings) => void;
+  onRun?: (settings: ShadowAnalysisSettings) => void;
+  onChange?: (settings: ShadowAnalysisSettings) => void;
 }
 
-export function ShadowAnalysisPanel({ settings, onRun, onChange }: ShadowAnalysisPanelProps) {
-  const update = (patch: Partial<ShadowAnalysisSettings>) => onChange({ ...settings, ...patch });
+export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProps = {}) {
+  const [settings, setSettings] = useState<ShadowAnalysisSettings>(DEFAULT_SETTINGS);
+
+  const update = (patch: Partial<ShadowAnalysisSettings>) => {
+    const next = { ...settings, ...patch };
+    setSettings(next);
+    onChange?.(next);
+  };
 
   return (
     <div className="shadow-analysis-panel">
@@ -95,7 +109,7 @@ export function ShadowAnalysisPanel({ settings, onRun, onChange }: ShadowAnalysi
       <button
         aria-label="Run analysis"
         className="btn-run-analysis"
-        onClick={() => onRun(settings)}
+        onClick={() => onRun?.(settings)}
       >
         Run Analysis
       </button>

@@ -20,6 +20,10 @@ import {
   MessageCircle,
   Leaf,
   DollarSign,
+  Palette,
+  Stamp,
+  Scissors,
+  SunMedium,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -54,6 +58,10 @@ import { CommandPalette } from './components/CommandPalette';
 import { CommentsPanel } from './components/CommentsPanel';
 import { CarbonPanel } from './components/CarbonPanel';
 import { CostPanel } from './components/CostPanel';
+import { HatchPanel } from './components/HatchPanel';
+import { SymbolLibrary } from './components/SymbolLibrary';
+import { ShadowAnalysisPanel } from './components/ShadowAnalysisPanel';
+import { SectionBoxPanel } from './components/SectionBoxPanel';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -68,7 +76,11 @@ type RightPanelTab =
   | 'materials'
   | 'comments'
   | 'carbon'
-  | 'cost';
+  | 'cost'
+  | 'hatch'
+  | 'symbols'
+  | 'shadow'
+  | 'section';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
@@ -83,6 +95,10 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'comments', title: 'Comments', icon: <MessageCircle size={16} strokeWidth={2} /> },
   { id: 'carbon', title: 'Carbon', icon: <Leaf size={16} strokeWidth={2} /> },
   { id: 'cost', title: 'Cost', icon: <DollarSign size={16} strokeWidth={2} /> },
+  { id: 'hatch', title: 'Hatch', icon: <Palette size={16} strokeWidth={2} /> },
+  { id: 'symbols', title: 'Symbols', icon: <Stamp size={16} strokeWidth={2} /> },
+  { id: 'shadow', title: 'Shadow', icon: <SunMedium size={16} strokeWidth={2} /> },
+  { id: 'section', title: 'Section', icon: <Scissors size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -385,6 +401,10 @@ export function AppLayout() {
               {rightPanelTab === 'comments' && <CommentsPanel />}
               {rightPanelTab === 'carbon' && <CarbonPanel />}
               {rightPanelTab === 'cost' && <CostPanel />}
+              {rightPanelTab === 'hatch' && <HatchPanel />}
+              {rightPanelTab === 'symbols' && <SymbolLibrary />}
+              {rightPanelTab === 'shadow' && <ShadowAnalysisPanel />}
+              {rightPanelTab === 'section' && <SectionBoxPanel />}
             </PanelErrorBoundary>
           </div>
         </aside>

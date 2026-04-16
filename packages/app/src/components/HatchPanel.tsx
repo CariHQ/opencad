@@ -20,9 +20,9 @@ const HATCH_PATTERNS = [
   { id: 'dots', label: 'Dot Grid', description: 'Regular dot pattern' },
 ];
 
-interface HatchPanelProps { onApply: (config: HatchConfig) => void; }
+interface HatchPanelProps { onApply?: (config: HatchConfig) => void; }
 
-export function HatchPanel({ onApply }: HatchPanelProps) {
+export function HatchPanel({ onApply }: HatchPanelProps = {}) {
   const [selected, setSelected] = useState('concrete');
   const [scale, setScale] = useState(1.0);
   const [angle, setAngle] = useState(0);
@@ -57,7 +57,7 @@ export function HatchPanel({ onApply }: HatchPanelProps) {
             onChange={(e) => setSpacing(parseFloat(e.target.value) || 5)} />
         </div>
       </div>
-      <button className="btn-primary" onClick={() => onApply({ pattern: selected, scale, angle, spacing })}
+      <button className="btn-primary" onClick={() => onApply?.({ pattern: selected, scale, angle, spacing })}
         aria-label="Apply hatch">Apply</button>
     </div>
   );

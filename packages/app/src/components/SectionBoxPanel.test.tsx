@@ -4,53 +4,52 @@ import '@testing-library/jest-dom/vitest';
 import { SectionBoxPanel } from './SectionBoxPanel';
 
 describe('T-BIM-007: SectionBoxPanel', () => {
-  const defaultProps = {
-    enabled: false,
-    position: 0,
-    direction: 'x' as const,
-    onToggle: vi.fn(),
-    onPositionChange: vi.fn(),
-    onDirectionChange: vi.fn(),
-    onSaveView: vi.fn(),
-  };
+  const onToggle = vi.fn();
+  const onPositionChange = vi.fn();
+  const onDirectionChange = vi.fn();
+  const onSaveView = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
   it('renders the Section Box panel header', () => {
-    render(<SectionBoxPanel {...defaultProps} />);
+    render(<SectionBoxPanel />);
     expect(screen.getByText('Section View')).toBeInTheDocument();
   });
 
   it('shows enable/disable toggle', () => {
-    render(<SectionBoxPanel {...defaultProps} />);
+    render(<SectionBoxPanel />);
     expect(screen.getByRole('checkbox', { name: /enable/i })).toBeInTheDocument();
   });
 
-  it('toggle is unchecked when enabled=false', () => {
-    render(<SectionBoxPanel {...defaultProps} />);
+  it('toggle is unchecked by default', () => {
+    render(<SectionBoxPanel />);
     expect(screen.getByRole('checkbox', { name: /enable/i })).not.toBeChecked();
   });
 
-  it('toggle is checked when enabled=true', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
-    expect(screen.getByRole('checkbox', { name: /enable/i })).toBeChecked();
+  it('checking the toggle shows direction and position controls', () => {
+    render(<SectionBoxPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
+    expect(screen.getByLabelText(/direction/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/position/i)).toBeInTheDocument();
   });
 
-  it('calls onToggle when checkbox clicked', () => {
-    render(<SectionBoxPanel {...defaultProps} />);
+  it('calls onToggle callback when checkbox clicked', () => {
+    render(<SectionBoxPanel onToggle={onToggle} />);
     fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
-    expect(defaultProps.onToggle).toHaveBeenCalled();
+    expect(onToggle).toHaveBeenCalledWith(true);
   });
 
   it('shows direction select when enabled', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     expect(screen.getByLabelText(/direction/i)).toBeInTheDocument();
   });
 
   it('direction select has X, Y, Z options', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     const select = screen.getByLabelText(/direction/i);
     const options = Array.from(select.querySelectorAll('option')).map((o) => o.textContent);
     expect(options).toContain('X (Left/Right)');
@@ -59,49 +58,56 @@ describe('T-BIM-007: SectionBoxPanel', () => {
   });
 
   it('calls onDirectionChange when direction changes', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel onDirectionChange={onDirectionChange} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     const select = screen.getByLabelText(/direction/i);
     fireEvent.change(select, { target: { value: 'y' } });
-    expect(defaultProps.onDirectionChange).toHaveBeenCalledWith('y');
+    expect(onDirectionChange).toHaveBeenCalledWith('y');
   });
 
   it('shows position slider when enabled', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     expect(screen.getByLabelText(/position/i)).toBeInTheDocument();
   });
 
   it('position slider is a range input', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     const slider = screen.getByLabelText(/position/i);
     expect(slider).toHaveAttribute('type', 'range');
   });
 
   it('calls onPositionChange when slider moves', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel onPositionChange={onPositionChange} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     const slider = screen.getByLabelText(/position/i);
     fireEvent.change(slider, { target: { value: '500' } });
-    expect(defaultProps.onPositionChange).toHaveBeenCalledWith(500);
+    expect(onPositionChange).toHaveBeenCalledWith(500);
   });
 
   it('shows save view button when enabled', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     expect(screen.getByRole('button', { name: /save.*view/i })).toBeInTheDocument();
   });
 
   it('calls onSaveView when save button clicked', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} />);
+    render(<SectionBoxPanel onSaveView={onSaveView} />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
     fireEvent.click(screen.getByRole('button', { name: /save.*view/i }));
-    expect(defaultProps.onSaveView).toHaveBeenCalled();
+    expect(onSaveView).toHaveBeenCalled();
   });
 
   it('hides controls when not enabled', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={false} />);
+    render(<SectionBoxPanel />);
     expect(screen.queryByLabelText(/direction/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText(/position/i)).not.toBeInTheDocument();
   });
 
-  it('shows current position value', () => {
-    render(<SectionBoxPanel {...defaultProps} enabled={true} position={750} />);
-    expect(screen.getByText(/750/)).toBeInTheDocument();
+  it('shows default position value of 0', () => {
+    render(<SectionBoxPanel />);
+    fireEvent.click(screen.getByRole('checkbox', { name: /enable/i }));
+    expect(screen.getByText(/0mm/)).toBeInTheDocument();
   });
 });

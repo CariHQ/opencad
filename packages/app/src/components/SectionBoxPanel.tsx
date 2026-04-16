@@ -1,15 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 type SectionDirection = 'x' | 'y' | 'z';
 
 interface SectionBoxPanelProps {
-  enabled: boolean;
-  position: number;
-  direction: SectionDirection;
-  onToggle: () => void;
-  onPositionChange: (position: number) => void;
-  onDirectionChange: (direction: SectionDirection) => void;
-  onSaveView: () => void;
+  onToggle?: (enabled: boolean) => void;
+  onPositionChange?: (position: number) => void;
+  onDirectionChange?: (direction: SectionDirection) => void;
+  onSaveView?: () => void;
 }
 
 const DIRECTION_OPTIONS: { value: SectionDirection; label: string }[] = [
@@ -19,14 +16,31 @@ const DIRECTION_OPTIONS: { value: SectionDirection; label: string }[] = [
 ];
 
 export function SectionBoxPanel({
-  enabled,
-  position,
-  direction,
   onToggle,
   onPositionChange,
   onDirectionChange,
   onSaveView,
-}: SectionBoxPanelProps) {
+}: SectionBoxPanelProps = {}) {
+  const [enabled, setEnabled] = useState(false);
+  const [position, setPosition] = useState(0);
+  const [direction, setDirection] = useState<SectionDirection>('z');
+
+  const handleToggle = () => {
+    const next = !enabled;
+    setEnabled(next);
+    onToggle?.(next);
+  };
+
+  const handlePositionChange = (value: number) => {
+    setPosition(value);
+    onPositionChange?.(value);
+  };
+
+  const handleDirectionChange = (value: SectionDirection) => {
+    setDirection(value);
+    onDirectionChange?.(value);
+  };
+
   return (
     <div className="tool-panel">
       <div className="tool-panel-header">Section View</div>
@@ -40,7 +54,7 @@ export function SectionBoxPanel({
             id="section-enable"
             type="checkbox"
             checked={enabled}
-            onChange={onToggle}
+            onChange={handleToggle}
             aria-label="Enable section cut"
           />
         </div>
@@ -54,7 +68,7 @@ export function SectionBoxPanel({
                 aria-label="Direction"
                 className="tool-panel-select"
                 value={direction}
-                onChange={(e) => onDirectionChange(e.target.value as SectionDirection)}
+                onChange={(e) => handleDirectionChange(e.target.value as SectionDirection)}
               >
                 {DIRECTION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -74,7 +88,7 @@ export function SectionBoxPanel({
                 max="10000"
                 step="100"
                 value={position}
-                onChange={(e) => onPositionChange(parseInt(e.target.value, 10))}
+                onChange={(e) => handlePositionChange(parseInt(e.target.value, 10))}
                 className="section-position-slider"
               />
             </div>
@@ -82,7 +96,7 @@ export function SectionBoxPanel({
             <div className="tool-panel-row">
               <button
                 className="btn-secondary"
-                onClick={onSaveView}
+                onClick={() => onSaveView?.()}
                 aria-label="Save section view"
               >
                 Save View
