@@ -106,13 +106,13 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     );
   }, [config]);
 
-  const buildContext = (): string => {
+  const buildContext = useCallback((): string => {
     if (!doc) return '';
     const elements = doc.content.elements ? Object.values(doc.content.elements) : [];
     const layers = doc.organization.layers ? Object.values(doc.organization.layers) : [];
     const levels = doc.organization.levels ? Object.values(doc.organization.levels) : [];
     return `\n\nCurrent project context:\n- Project: ${doc.name}\n- Levels: ${levels.map((l) => l.name).join(', ') || 'none'}\n- Layers: ${layers.map((l) => l.name).join(', ') || 'none'}\n- Elements: ${elements.length} total (${Object.entries(elements.reduce<Record<string,number>>((acc, e) => { acc[e.type] = (acc[e.type] ?? 0) + 1; return acc; }, {})).map(([t, c]) => `${c} ${t}s`).join(', ') || 'none'})`;
-  };
+  }, [doc]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -199,7 +199,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [input, isLoading, isConfigured, messages, buildClient, doc]);
+  }, [input, isLoading, isConfigured, messages, buildClient, buildContext]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
