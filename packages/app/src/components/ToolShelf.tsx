@@ -63,10 +63,9 @@ interface ToolShelfProps {
   onToggleAI?: () => void;
   onToggleProperties?: () => void;
   propertiesVisible?: boolean;
-  theme?: 'light' | 'dark';
 }
 
-export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, theme = 'light' }: ToolShelfProps = {}) {
+export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible }: ToolShelfProps = {}) {
   const { activeTool, setActiveTool } = useDocumentStore();
   const [activeCategory, setActiveCategory] = React.useState<string>(() => {
     try { return localStorage.getItem('opencad-activeCategory') ?? 'modify'; } catch { return 'modify'; }
@@ -142,13 +141,9 @@ export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, t
                 onClick={onToggleProperties}
                 title="Toggle properties panel"
               >
-                <PanelRight
-                  size={16}
-                  strokeWidth={2}
-                  color={propertiesVisible
-                    ? (theme === 'dark' ? '#18a0fb' : '#0d99ff')
-                    : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')}
-                />
+                <span className="tool-icon">
+                  <PanelRight size={15} strokeWidth={2} />
+                </span>
               </button>
             )}
           </div>

@@ -3,7 +3,7 @@ import {
   FolderOpen,
   FileDown,
   Bot,
-  Plus,
+  Home,
   Sun,
   Moon,
   PanelLeft,
@@ -368,21 +368,19 @@ export function AppLayout() {
               onClick={() => setShowLeftPanel((v) => !v)}
               title="Toggle navigator (⌘[)"
             >
-              <PanelLeft
-                size={16}
-                strokeWidth={2}
-                color={leftVisible
-                  ? (theme === 'dark' ? '#18a0fb' : '#0d99ff')
-                  : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')}
-              />
+              <span className="tool-icon">
+                <PanelLeft size={15} strokeWidth={2} />
+              </span>
             </button>
             <span className="brand-name">OpenCAD</span>
             <button
               className="toolbar-btn"
               onClick={() => navigate('/')}
-              title="Back to projects"
+              title="Home — back to projects"
             >
-              <Plus size={14} strokeWidth={2} />
+              <span className="tool-icon">
+                <Home size={15} strokeWidth={2} />
+              </span>
             </button>
             {currentProject && (
               editingName ? (
@@ -482,13 +480,9 @@ export function AppLayout() {
               onClick={() => setShowRightPanel((v) => !v)}
               title="Toggle properties (⌘])"
             >
-              <PanelRight
-                size={16}
-                strokeWidth={2}
-                color={rightVisible
-                  ? (theme === 'dark' ? '#18a0fb' : '#0d99ff')
-                  : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')}
-              />
+              <span className="tool-icon">
+                <PanelRight size={15} strokeWidth={2} />
+              </span>
             </button>
           </div>
         </header>
@@ -515,7 +509,6 @@ export function AppLayout() {
             onToggleAI={toggleAIChat}
             onToggleProperties={() => setShowRightPanel((v) => !v)}
             propertiesVisible={rightVisible}
-            theme={theme}
           />
         </div>
 
