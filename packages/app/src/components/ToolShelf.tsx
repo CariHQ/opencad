@@ -125,7 +125,6 @@ export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, t
           );
         })}
       </div>
-      <div className="toolshelf-active-label">{activeTool}</div>
       {(onToggleAI != null || onToggleProperties != null) && (
         <>
           <div className="toolshelf-divider" />

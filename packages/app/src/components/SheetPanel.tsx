@@ -14,10 +14,10 @@ export interface SheetConfig {
 }
 
 interface SheetPanelProps {
-  onExportPDF: (config: SheetConfig) => void;
+  onExportPDF?: (config: SheetConfig) => void;
 }
 
-export function SheetPanel({ onExportPDF }: SheetPanelProps) {
+export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
   const [size, setSize] = useState('A1');
   const [orientation, setOrientation] = useState('Landscape');
   const [scale, setScale] = useState('1:100');
@@ -26,7 +26,7 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps) {
   const [sheetNumber, setSheetNumber] = useState('A1-01');
 
   const handleExport = () => {
-    onExportPDF({ size, orientation, scale, projectName, drawnBy, sheetNumber });
+    onExportPDF?.({ size, orientation, scale, projectName, drawnBy, sheetNumber });
   };
 
   // Approximate sheet ratio for preview

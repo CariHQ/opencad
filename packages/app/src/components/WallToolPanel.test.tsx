@@ -81,8 +81,5 @@ describe('T-BIM-001: WallToolPanel', () => {
     expect(store.setToolParam).toHaveBeenCalledWith('wall', 'wallType', 'exterior');
   });
 
-  it('shows placement hint', () => {
-    render(<WallToolPanel />);
-    expect(screen.getByText(/click.*drag/i)).toBeInTheDocument();
-  });
+
 });

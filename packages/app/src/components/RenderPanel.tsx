@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 type ToneMapping = 'linear' | 'aces' | 'reinhard' | 'cineon';
 type EnvironmentMap = 'studio' | 'outdoor' | 'sunset' | 'night' | 'none';
@@ -15,13 +15,21 @@ export interface RenderSettings {
   bloomStrength: number;
 }
 
-interface RenderPanelProps {
-  settings: RenderSettings;
-  onChange: (settings: RenderSettings) => void;
-}
+const DEFAULT_SETTINGS: RenderSettings = {
+  ambientOcclusion: true,
+  shadows: true,
+  shadowIntensity: 0.5,
+  exposure: 1.0,
+  toneMapping: 'aces',
+  environmentMap: 'studio',
+  groundReflections: false,
+  bloomEnabled: false,
+  bloomStrength: 0.3,
+};
 
-export function RenderPanel({ settings, onChange }: RenderPanelProps) {
-  const update = (patch: Partial<RenderSettings>) => onChange({ ...settings, ...patch });
+export function RenderPanel() {
+  const [settings, setSettings] = useState<RenderSettings>(DEFAULT_SETTINGS);
+  const update = (patch: Partial<RenderSettings>) => setSettings((s) => ({ ...s, ...patch }));
 
   return (
     <div className="render-panel">

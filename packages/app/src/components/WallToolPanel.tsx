@@ -71,7 +71,6 @@ export function WallToolPanel() {
         </div>
       </div>
 
-      <div className="placement-hint">Click and drag to place wall</div>
     </div>
   );
 }

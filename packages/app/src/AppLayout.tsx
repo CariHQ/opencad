@@ -1,5 +1,23 @@
 import React, { useEffect, useState } from 'react';
-import { FolderOpen, FileDown, Bot, Plus, Sun, Moon, PanelLeft, PanelRight } from 'lucide-react';
+import {
+  FolderOpen,
+  FileDown,
+  Bot,
+  Plus,
+  Sun,
+  Moon,
+  PanelLeft,
+  PanelRight,
+  Layers,
+  Settings2,
+  Table2,
+  LayoutDashboard,
+  AlertTriangle,
+  Camera,
+  Sheet,
+  MessageSquareWarning,
+  Package,
+} from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
@@ -19,14 +37,49 @@ import { WallToolPanel } from './components/WallToolPanel';
 import { SlabToolPanel } from './components/SlabToolPanel';
 import { DoorWindowPanel } from './components/DoorWindowPanel';
 import { useUndoRedo } from './hooks/useUndoRedo';
+import { useAutoSave } from './hooks/useAutoSave';
+import { PanelErrorBoundary } from './components/ErrorBoundary';
+import { SchedulePanel } from './components/SchedulePanel';
+import { SpacePanel } from './components/SpacePanel';
+import { ClashDetectionPanel } from './components/ClashDetectionPanel';
+import { RenderPanel } from './components/RenderPanel';
+import { SheetPanel } from './components/SheetPanel';
+import { BCFPanel } from './components/BCFPanel';
+import { MaterialLibrary } from './components/MaterialLibrary';
+import { PresenceOverlay } from './components/PresenceOverlay';
+import { CommandPalette } from './components/CommandPalette';
 import './styles/app.css';
+
+type RightPanelTab =
+  | 'layers'
+  | 'properties'
+  | 'schedule'
+  | 'spaces'
+  | 'clash'
+  | 'render'
+  | 'sheets'
+  | 'bcf'
+  | 'materials';
+
+const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
+  { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
+  { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
+  { id: 'schedule', title: 'Schedule', icon: <Table2 size={16} strokeWidth={2} /> },
+  { id: 'spaces', title: 'Spaces', icon: <LayoutDashboard size={16} strokeWidth={2} /> },
+  { id: 'clash', title: 'Clash', icon: <AlertTriangle size={16} strokeWidth={2} /> },
+  { id: 'render', title: 'Render', icon: <Camera size={16} strokeWidth={2} /> },
+  { id: 'sheets', title: 'Sheets', icon: <Sheet size={16} strokeWidth={2} /> },
+  { id: 'bcf', title: 'Issues', icon: <MessageSquareWarning size={16} strokeWidth={2} /> },
+  { id: 'materials', title: 'Materials', icon: <Package size={16} strokeWidth={2} /> },
+];
 
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, undo, redo, canUndo, canRedo } = useDocumentStore();
+  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo } = useDocumentStore();
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
+  useAutoSave();
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
   const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>(
     'opencad-activeView',
@@ -44,10 +97,22 @@ export function AppLayout() {
   const [showRightPanel, setShowRightPanel] = useLocalStorage('opencad-showRightPanel', true);
   const [focusMode, setFocusMode] = useState(false);
   const [showModal, setShowModal] = useState<'import' | 'export' | null>(null);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>(
+    'opencad-rightPanelTab',
+    'layers'
+  );
 
   const leftVisible = showLeftPanel && !focusMode;
   const rightVisible = showRightPanel && !focusMode;
   const chromeVisible = !focusMode;
+
+  // Auto-switch to properties tab when an element is selected
+  useEffect(() => {
+    if (selectedIds.length > 0) {
+      setRightPanelTab('properties');
+    }
+  }, [selectedIds, setRightPanelTab]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -90,12 +155,43 @@ export function AppLayout() {
         e.preventDefault();
         setShowRightPanel((v) => !v);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setShowCommandPalette((v) => !v);
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [setShowLeftPanel, setShowRightPanel]);
 
   const toggleAIChat = () => setShowAIChat(!showAIChat);
+
+  function handleCommandExecute(command: {
+    id: string;
+    label: string;
+    category: string;
+    action: () => void;
+  }) {
+    setShowCommandPalette(false);
+    const toolIds = [
+      'select',
+      'wall',
+      'door',
+      'window',
+      'slab',
+      'column',
+      'beam',
+      'stair',
+      'railing',
+      'line',
+      'rectangle',
+      'circle',
+      'text',
+    ];
+    if (toolIds.includes(command.id)) {
+      setActiveTool(command.id as Parameters<typeof setActiveTool>[0]);
+    }
+  }
 
   return (
     <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
@@ -209,33 +305,73 @@ export function AppLayout() {
         </div>
 
         <main className="app-main">
-          <div className="viewport-wrapper">
-            <Viewport viewType={activeView} />
-            {chromeVisible && (
-              <div className="floating-level-selector">
-                <LevelSelector
-                  levels={doc?.organization.levels || {}}
-                  selectedLevel={selectedLevel}
-                  onSelectLevel={setSelectedLevel}
-                />
-              </div>
-            )}
-            {focusMode && (
-              <div className="focus-hint">
-                Press <kbd>\</kbd> to exit focus mode
-              </div>
-            )}
-          </div>
+          <PanelErrorBoundary>
+            <div className="viewport-wrapper">
+              <Viewport viewType={activeView} />
+              <PresenceOverlay collaborators={[]} />
+              {chromeVisible && (
+                <div className="floating-level-selector">
+                  <LevelSelector
+                    levels={doc?.organization.levels || {}}
+                    selectedLevel={selectedLevel}
+                    onSelectLevel={setSelectedLevel}
+                  />
+                </div>
+              )}
+              {focusMode && (
+                <div className="focus-hint">
+                  Press <kbd>\</kbd> to exit focus mode
+                </div>
+              )}
+            </div>
+          </PanelErrorBoundary>
         </main>
 
         <aside className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}>
-          {activeTool === 'wall' && <WallToolPanel />}
-          {activeTool === 'slab' && <SlabToolPanel />}
-          {(activeTool === 'door' || activeTool === 'window') && <DoorWindowPanel />}
-          {(activeTool === 'column' || activeTool === 'beam') && <ColumnBeamPanel />}
-          {(activeTool === 'stair' || activeTool === 'railing') && <StairRailingPanel />}
-          <LayersPanel />
-          <PropertiesPanel />
+          <div className="right-panel-tab-bar">
+            {RIGHT_PANEL_TABS.map((tab) => (
+              <button
+                key={tab.id}
+                className={`right-panel-tab-btn${rightPanelTab === tab.id ? ' active' : ''}`}
+                onClick={() => setRightPanelTab(tab.id)}
+                title={tab.title}
+                aria-label={tab.title}
+              >
+                {tab.icon}
+              </button>
+            ))}
+          </div>
+
+          <div className="right-panel-content">
+            <PanelErrorBoundary>
+              {rightPanelTab === 'layers' && <LayersPanel />}
+
+              {rightPanelTab === 'properties' && (
+                <>
+                  {activeTool === 'wall' && <WallToolPanel />}
+                  {activeTool === 'slab' && <SlabToolPanel />}
+                  {(activeTool === 'door' || activeTool === 'window') && <DoorWindowPanel />}
+                  {(activeTool === 'column' || activeTool === 'beam') && <ColumnBeamPanel />}
+                  {(activeTool === 'stair' || activeTool === 'railing') && <StairRailingPanel />}
+                  <PropertiesPanel />
+                </>
+              )}
+
+              {rightPanelTab === 'schedule' && <SchedulePanel />}
+              {rightPanelTab === 'spaces' && <SpacePanel />}
+              {rightPanelTab === 'clash' && <ClashDetectionPanel />}
+              {rightPanelTab === 'render' && <RenderPanel />}
+              {rightPanelTab === 'sheets' && <SheetPanel />}
+              {rightPanelTab === 'bcf' && <BCFPanel />}
+              {rightPanelTab === 'materials' && (
+                <MaterialLibrary
+                  onSelect={() => {
+                    /* material selection is a no-op at layout level */
+                  }}
+                />
+              )}
+            </PanelErrorBoundary>
+          </div>
         </aside>
 
         {showAIChat && (
@@ -248,6 +384,17 @@ export function AppLayout() {
       {chromeVisible && <StatusBar />}
 
       {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
+
+      {showCommandPalette && (
+        <div className="command-palette-overlay" onClick={() => setShowCommandPalette(false)}>
+          <div onClick={(e) => e.stopPropagation()}>
+            <CommandPalette
+              onClose={() => setShowCommandPalette(false)}
+              onExecute={handleCommandExecute}
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
