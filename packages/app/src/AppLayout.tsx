@@ -8,7 +8,6 @@ import {
   Moon,
   PanelLeft,
   PanelRight,
-  Layers,
   Settings2,
   Table2,
   LayoutDashboard,
@@ -37,7 +36,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from './stores/projectStore';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
-import { LayersPanel } from './components/LayerPanel';
+
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { StatusBar } from './components/StatusBar';
 import { AIChatPanel } from './components/AIChatPanel';
@@ -87,7 +86,6 @@ import { usePresence } from './hooks/usePresence';
 import './styles/app.css';
 
 type RightPanelTab =
-  | 'layers'
   | 'properties'
   | 'schedule'
   | 'spaces'
@@ -111,7 +109,6 @@ type RightPanelTab =
   | 'history';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
-  { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
   { id: 'schedule', title: 'Schedule', icon: <Table2 size={16} strokeWidth={2} /> },
   { id: 'spaces', title: 'Spaces', icon: <LayoutDashboard size={16} strokeWidth={2} /> },
@@ -180,7 +177,7 @@ export function AppLayout() {
   const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>(
     'opencad-rightPanelTab',
-    'layers'
+    'properties'
   );
 
   const [leftPanelWidth, setLeftPanelWidth] = useLocalStorage('opencad-leftPanelWidth', 260);
@@ -337,7 +334,7 @@ export function AppLayout() {
         case 'panel-left': setShowLeftPanel((v) => !v); break;
         case 'panel-right': setShowRightPanel((v) => !v); break;
         case 'history': setRightPanelTab('history'); setShowRightPanel(true); break;
-        case 'layers': setRightPanelTab('layers'); setShowRightPanel(true); break;
+
         case 'properties': setRightPanelTab('properties'); setShowRightPanel(true); break;
         default: break;
       }
@@ -576,8 +573,6 @@ export function AppLayout() {
 
           <div className="right-panel-content">
             <PanelErrorBoundary>
-              {rightPanelTab === 'layers' && <LayersPanel />}
-
               {rightPanelTab === 'properties' && (
                 <>
                   {activeTool === 'wall' && <WallToolPanel />}
