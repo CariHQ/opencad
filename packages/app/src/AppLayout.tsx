@@ -16,13 +16,13 @@ import {
   Camera,
   Sheet,
   MessageSquareWarning,
-  Package,
+  Blocks,
   MessageCircle,
   Leaf,
   DollarSign,
   Palette,
-  Stamp,
-  Scissors,
+  Waypoints,
+  Slice,
   SunMedium,
   MapPin,
   FileText,
@@ -116,30 +116,28 @@ type RightPanelTab =
   | 'history' | 'review';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
-  { id: 'layers',      title: 'Layers',           icon: <Layers size={16} strokeWidth={2} /> },
-  { id: 'properties',  title: 'Properties',        icon: <Settings2 size={16} strokeWidth={2} /> },
-  { id: 'schedule',    title: 'Schedule',           icon: <Table2 size={16} strokeWidth={2} /> },
-  { id: 'spaces',      title: 'Spaces',             icon: <LayoutDashboard size={16} strokeWidth={2} /> },
-  { id: 'clash',       title: 'Clash',              icon: <AlertTriangle size={16} strokeWidth={2} /> },
-  { id: 'render',      title: 'Render',             icon: <Camera size={16} strokeWidth={2} /> },
-  { id: 'sheets',      title: 'Sheets',             icon: <Sheet size={16} strokeWidth={2} /> },
-  { id: 'bcf',         title: 'Issues',             icon: <MessageSquareWarning size={16} strokeWidth={2} /> },
-  { id: 'materials',   title: 'Materials',          icon: <Package size={16} strokeWidth={2} /> },
-  { id: 'comments',    title: 'Comments',           icon: <MessageCircle size={16} strokeWidth={2} /> },
-  { id: 'carbon',      title: 'Carbon',             icon: <Leaf size={16} strokeWidth={2} /> },
-  { id: 'cost',        title: 'Cost',               icon: <DollarSign size={16} strokeWidth={2} /> },
-  { id: 'hatch',       title: 'Hatch',              icon: <Palette size={16} strokeWidth={2} /> },
-  { id: 'symbols',     title: 'Symbols',            icon: <Stamp size={16} strokeWidth={2} /> },
-  { id: 'shadow',      title: 'Shadow',             icon: <SunMedium size={16} strokeWidth={2} /> },
-  { id: 'section',     title: 'Section',            icon: <Scissors size={16} strokeWidth={2} /> },
-  { id: 'site',        title: 'Site Import',        icon: <MapPin size={16} strokeWidth={2} /> },
-  { id: 'specs',       title: 'Specs',              icon: <FileText size={16} strokeWidth={2} /> },
-  { id: 'photo',       title: 'Photo to Model',     icon: <Image size={16} strokeWidth={2} /> },
-  { id: 'marketplace', title: 'Marketplace',        icon: <Store size={16} strokeWidth={2} /> },
-  { id: 'wind',        title: 'Wind Analysis',      icon: <Wind size={16} strokeWidth={2} /> },
-  { id: 'admin',       title: 'Admin',              icon: <Shield size={16} strokeWidth={2} /> },
-  { id: 'history',     title: 'History',            icon: <History size={16} strokeWidth={2} /> },
-  { id: 'review',      title: 'Review',             icon: <GitPullRequest size={16} strokeWidth={2} /> },
+  { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
+  { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
+  { id: 'schedule', title: 'Schedule', icon: <Table2 size={16} strokeWidth={2} /> },
+  { id: 'spaces', title: 'Spaces', icon: <LayoutDashboard size={16} strokeWidth={2} /> },
+  { id: 'clash', title: 'Clash', icon: <AlertTriangle size={16} strokeWidth={2} /> },
+  { id: 'render', title: 'Render', icon: <Camera size={16} strokeWidth={2} /> },
+  { id: 'sheets', title: 'Sheets', icon: <Sheet size={16} strokeWidth={2} /> },
+  { id: 'bcf', title: 'Issues', icon: <MessageSquareWarning size={16} strokeWidth={2} /> },
+  { id: 'materials', title: 'Materials', icon: <Blocks size={16} strokeWidth={2} /> },
+  { id: 'comments', title: 'Comments', icon: <MessageCircle size={16} strokeWidth={2} /> },
+  { id: 'carbon', title: 'Carbon', icon: <Leaf size={16} strokeWidth={2} /> },
+  { id: 'cost', title: 'Cost', icon: <DollarSign size={16} strokeWidth={2} /> },
+  { id: 'hatch', title: 'Hatch', icon: <Palette size={16} strokeWidth={2} /> },
+  { id: 'symbols', title: 'Symbols', icon: <Waypoints size={16} strokeWidth={2} /> },
+  { id: 'shadow', title: 'Shadow', icon: <SunMedium size={16} strokeWidth={2} /> },
+  { id: 'section', title: 'Section', icon: <Slice size={16} strokeWidth={2} /> },
+  { id: 'site', title: 'Site Import', icon: <MapPin size={16} strokeWidth={2} /> },
+  { id: 'specs', title: 'Specs', icon: <FileText size={16} strokeWidth={2} /> },
+  { id: 'photo', title: 'Photo to Model', icon: <Image size={16} strokeWidth={2} /> },
+  { id: 'marketplace', title: 'Marketplace', icon: <Store size={16} strokeWidth={2} /> },
+  { id: 'wind', title: 'Wind Analysis', icon: <Wind size={16} strokeWidth={2} /> },
+  { id: 'history', title: 'History', icon: <History size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -208,7 +206,7 @@ export function AppLayout() {
     setCurrentFilePath(path);
   }, [loadDocumentSchema, setCurrentFilePath]);
 
-  const [leftPanelWidth, setLeftPanelWidth] = useLocalStorage('opencad-leftPanelWidth', 240);
+  const [leftPanelWidth, setLeftPanelWidth] = useLocalStorage('opencad-leftPanelWidth', 260);
   const [rightPanelWidth, setRightPanelWidth] = useLocalStorage('opencad-rightPanelWidth', 260);
   const resizingRef = useRef<{ side: 'left' | 'right'; startX: number; startWidth: number } | null>(null);
 
