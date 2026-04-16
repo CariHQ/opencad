@@ -9,7 +9,7 @@ interface ImportExportModalProps {
 }
 
 export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
-  const { document: doc, initProject } = useDocumentStore();
+  const { document: doc, loadDocumentSchema, initProject } = useDocumentStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,17 +26,20 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
 
       if (file.name.toLowerCase().endsWith('.ifc')) {
         const parsed = parseIFC(content);
-        void parsed; // IFC parsed successfully
-        initProject(file.name, 'user-1');
+        loadDocumentSchema(parsed);
       } else {
-        setError('Unsupported file format. Please use .ifc files.');
+        setError('Unsupported file format. Please use .ifc files for import.');
+        setImporting(false);
+        return;
       }
     } catch (err) {
       setError('Failed to import file: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
       setImporting(false);
-      onClose();
+      return;
     }
+
+    setImporting(false);
+    onClose();
   };
 
   const triggerDownload = (content: string, filename: string, mime: string) => {

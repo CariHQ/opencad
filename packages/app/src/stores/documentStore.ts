@@ -55,6 +55,7 @@ interface DocumentState {
   createVersion: (message?: string) => void;
   restoreVersion: (versionNumber: number) => void;
   getVersionList: () => Array<{ version: number; timestamp: number; message?: string }>;
+  loadDocumentSchema: (schema: DocumentSchema) => void;
 
   setActiveLevel: (levelId: string) => void;
   addLevel: (params: { name: string; elevation: number; height?: number }) => string;
@@ -316,6 +317,23 @@ export const useDocumentStore = create<DocumentState>()(
       getVersionList: () => {
         const { model } = get();
         return model?.getVersionList() ?? [];
+      },
+
+      loadDocumentSchema: (schema) => {
+        const existing = get().model;
+        const userId = existing ? existing.documentData.metadata.createdBy : 'user-1';
+        const newModel = new DocumentModel(schema.id, userId);
+        newModel.loadDocument(schema);
+        set({
+          document: { ...newModel.documentData },
+          model: newModel,
+          currentProjectId: schema.id,
+          lastSaved: Date.now(),
+          history: [],
+          historyIndex: -1,
+          canUndo: false,
+          canRedo: false,
+        });
       },
 
       setActiveLevel: (levelId) => {
