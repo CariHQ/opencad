@@ -13,14 +13,18 @@
   --bg-secondary: #ffffff;
   --bg-tertiary: #f5f5f5;
   --bg-elevated: #ffffff;
+  --bg-hover: rgba(0, 0, 0, 0.06);
   --border-color: #e0e0e0;
   --text-primary: #1a1a1a;
   --text-secondary: #6b6b6b;
   --text-muted: #a0a0a0;
   --accent-primary: #0d99ff;
+  --accent-secondary: #0078d4;
+  --accent-primary-muted: rgba(13, 153, 255, 0.12);
   --accent-success: #1bc47d;
   --accent-warning: #f5a623;
   --accent-danger: #f24822;
+  --danger-color: #e53e3e;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.06);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
@@ -35,11 +39,15 @@
     --bg-secondary: #252525;
     --bg-tertiary: #2a2a2a;
     --bg-elevated: #303030;
+    --bg-hover: rgba(255, 255, 255, 0.07);
     --border-color: #3a3a3a;
     --text-primary: #ebebeb;
     --text-secondary: #a0a0a0;
     --text-muted: #666666;
     --accent-primary: #18a0fb;
+    --accent-secondary: #1a9ef5;
+    --accent-primary-muted: rgba(24, 160, 251, 0.15);
+    --danger-color: #fc5c5c;
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -53,11 +61,15 @@
   --bg-secondary: #252525;
   --bg-tertiary: #2a2a2a;
   --bg-elevated: #303030;
+  --bg-hover: rgba(255, 255, 255, 0.07);
   --border-color: #3a3a3a;
   --text-primary: #ebebeb;
   --text-secondary: #a0a0a0;
   --text-muted: #666666;
   --accent-primary: #18a0fb;
+  --accent-secondary: #1a9ef5;
+  --accent-primary-muted: rgba(24, 160, 251, 0.15);
+  --danger-color: #fc5c5c;
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
   --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -2121,9 +2133,9 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 36px;
-  min-width: 36px;
-  padding: 6px 0;
+  width: 40px;
+  min-width: 40px;
+  padding: 6px 4px;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   gap: 2px;
@@ -2132,18 +2144,25 @@ body {
 }
 
 .right-panel-tab-btn {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
   background: transparent;
-  color: var(--text-muted);
-  border-radius: 5px;
+  color: var(--text-secondary);
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
   transition: background 0.12s ease, color 0.12s ease;
+}
+
+.right-panel-tab-btn svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+  flex-shrink: 0;
 }
 
 .right-panel-tab-btn:hover {
