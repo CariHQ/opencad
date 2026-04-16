@@ -98,7 +98,25 @@ export function ToolShelf() {
   }
 
   return (
-    <div className={classNames} onDoubleClick={handleDoubleClick}>
+    <div className="toolshelf">
+      <div className="toolshelf-categories">
+        {categories.map((cat) => {
+          const Icon = cat.icon;
+          return (
+            <button
+              key={cat.id}
+              className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
+              onClick={() => handleSetCategory(cat.id)}
+              title={cat.name}
+            >
+              <span className="tool-icon">
+                <Icon size={16} strokeWidth={2} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="toolshelf-divider" />
       <div className="toolshelf-tools">
         {allowedTools.map((tool) => {
           const Icon = tool.icon;
@@ -109,8 +127,9 @@ export function ToolShelf() {
               onClick={() => setActiveTool(tool.id)}
               title={`${tool.name} (${tool.shortcut})`}
             >
-              <Icon size={16} strokeWidth={activeTool === tool.id ? 2.5 : 1.5} />
-              {expanded && <span className="tool-name">{tool.name}</span>}
+              <span className="tool-icon">
+                <Icon size={16} strokeWidth={2} />
+              </span>
             </button>
           );
         })}
