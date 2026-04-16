@@ -8,7 +8,6 @@ import {
   Moon,
   PanelLeft,
   PanelRight,
-  Layers,
   Settings2,
   Table2,
   LayoutDashboard,
@@ -37,7 +36,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from './stores/projectStore';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
-import { LayersPanel } from './components/LayerPanel';
+
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { StatusBar } from './components/StatusBar';
 import { AIChatPanel } from './components/AIChatPanel';
@@ -110,13 +109,29 @@ import { usePresence } from './hooks/usePresence';
 import './styles/app.css';
 
 type RightPanelTab =
-  | 'layers' | 'properties' | 'schedule' | 'spaces' | 'clash' | 'render' | 'sheets'
-  | 'bcf' | 'materials' | 'comments' | 'carbon' | 'cost' | 'hatch' | 'symbols'
-  | 'shadow' | 'section' | 'site' | 'specs' | 'photo' | 'marketplace' | 'wind' | 'admin'
-  | 'history' | 'review';
+  | 'properties'
+  | 'schedule'
+  | 'spaces'
+  | 'clash'
+  | 'render'
+  | 'sheets'
+  | 'bcf'
+  | 'materials'
+  | 'comments'
+  | 'carbon'
+  | 'cost'
+  | 'hatch'
+  | 'symbols'
+  | 'shadow'
+  | 'section'
+  | 'site'
+  | 'specs'
+  | 'photo'
+  | 'marketplace'
+  | 'wind'
+  | 'history';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
-  { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
   { id: 'schedule', title: 'Schedule', icon: <Table2 size={16} strokeWidth={2} /> },
   { id: 'spaces', title: 'Spaces', icon: <LayoutDashboard size={16} strokeWidth={2} /> },
@@ -183,28 +198,11 @@ export function AppLayout() {
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
   const { status: authStatus, profile: authProfile, signOut: authSignOut } = useAuthStore();
   const [showSettings, setShowSettings] = useState(false);
-  const [showUpgrade, setShowUpgrade] = useState(false);
-  const [showFeedback, setShowFeedback] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso' | 'billing'>('apikeys');
-  const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>('opencad-rightPanelTab', 'layers');
-  const [currentFilePath, setCurrentFilePath] = useLocalStorage<string | null>('opencad-currentFilePath', null);
-  const [tauriUpdateInfo, setTauriUpdateInfo] = React.useState<TauriUpdateInfo | null>(null);
-
-  const handleNativeSave = useCallback(async (): Promise<void> => {
-    if (!doc) return;
-    const path = currentFilePath ?? await saveFileDialog(`${(doc as { name?: string }).name ?? 'untitled'}.opencad`);
-    if (!path) return;
-    setCurrentFilePath(path);
-    await saveFile(path, JSON.stringify(doc));
-  }, [doc, currentFilePath, setCurrentFilePath]);
-
-  const handleNativeOpen = useCallback(async (): Promise<void> => {
-    const path = await openFileDialog();
-    if (!path) return;
-    const schema = await openFile(path);
-    loadDocumentSchema(schema);
-    setCurrentFilePath(path);
-  }, [loadDocumentSchema, setCurrentFilePath]);
+  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
+  const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>(
+    'opencad-rightPanelTab',
+    'properties'
+  );
 
   const [leftPanelWidth, setLeftPanelWidth] = useLocalStorage('opencad-leftPanelWidth', 260);
   const [rightPanelWidth, setRightPanelWidth] = useLocalStorage('opencad-rightPanelWidth', 260);
@@ -346,8 +344,32 @@ export function AppLayout() {
 
   function handleCommandExecute(command: { id: string; label: string; category: string; action: () => void }) {
     setShowCommandPalette(false);
-    const toolIds = ['select','wall','door','window','slab','column','beam','stair','railing','line','rectangle','circle','text'];
-    if (toolIds.includes(command.id)) setActiveTool(command.id as Parameters<typeof setActiveTool>[0]);
+    const toolIds = [
+      'select', 'wall', 'door', 'window', 'slab', 'column', 'beam',
+      'stair', 'railing', 'line', 'rectangle', 'circle', 'arc',
+      'polyline', 'text', 'dimension', 'polygon',
+    ];
+    if (toolIds.includes(command.id)) {
+      setActiveTool(command.id as Parameters<typeof setActiveTool>[0]);
+    } else {
+      switch (command.id) {
+        case 'undo': undo(); break;
+        case 'redo': redo(); break;
+        case 'view-3d': setActiveView('3d'); break;
+        case 'view-top': setActiveView('floor-plan'); break;
+        case 'view-section': setActiveView('section'); break;
+        case 'toggle-ai': toggleAIChat(); break;
+        case 'import': setShowModal('import'); break;
+        case 'export': setShowModal('export'); break;
+        case 'focus-mode': setFocusMode((f) => !f); break;
+        case 'panel-left': setShowLeftPanel((v) => !v); break;
+        case 'panel-right': setShowRightPanel((v) => !v); break;
+        case 'history': setRightPanelTab('history'); setShowRightPanel(true); break;
+
+        case 'properties': setRightPanelTab('properties'); setShowRightPanel(true); break;
+        default: break;
+      }
+    }
   }
 
   if (isMobile) {
@@ -564,8 +586,7 @@ export function AppLayout() {
 
           <div className="right-panel-content">
             <PanelErrorBoundary>
-              {rightPanelTab === 'layers' && <LayersPanel />}
-              {rightPanelTab === 'properties' && can('panel:properties') && (
+              {rightPanelTab === 'properties' && (
                 <>
                   {activeTool === 'wall' && <WallToolPanel />}
                   {activeTool === 'curtain_wall' && <CurtainWallPanel />}
