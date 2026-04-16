@@ -54,9 +54,11 @@ interface SnapResult {
 
 const GRID_SIZE = 500;
 const SNAP_TOLERANCE = 15;
-const DEFAULT_SCALE = 20;   // world units per screen pixel
-const DEFAULT_PAN_X = -5000; // world x at screen center (= -OFFSET)
-const DEFAULT_PAN_Y = -5000; // world y at screen center
+const DEFAULT_SCALE = 20;   // world units per screen pixel (higher = more zoomed out)
+const DEFAULT_PAN_X = -5000; // world x at screen centre
+const DEFAULT_PAN_Y = -5000; // world y at screen centre
+const MIN_SCALE = 0.5;       // max zoom-in
+const MAX_SCALE = 5000;      // max zoom-out
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
 const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
@@ -82,8 +84,9 @@ function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
 }
 
-function findSnapPoints(elements: unknown[], currentPoint: Point, tolerance: number = SNAP_TOLERANCE): SnapResult[] {
+function findSnapPoints(elements: unknown[], currentPoint: Point, scale: number, tolerance: number = SNAP_TOLERANCE): SnapResult[] {
   const snaps: SnapResult[] = [];
+  const snapDistWorld = tolerance * scale;
   for (const element of elements) {
     const el = element as { boundingBox: { min: Point; max: Point } };
     const bb = el.boundingBox;
@@ -92,12 +95,12 @@ function findSnapPoints(elements: unknown[], currentPoint: Point, tolerance: num
       { x: bb.min.x, y: bb.max.y }, { x: bb.max.x, y: bb.max.y },
     ];
     for (const corner of corners) {
-      if (dist(corner, currentPoint) < tolerance * DEFAULT_SCALE) snaps.push({ point: corner, type: 'endpoint' });
+      if (dist(corner, currentPoint) < snapDistWorld) snaps.push({ point: corner, type: 'endpoint' });
     }
     const midX = (bb.min.x + bb.max.x) / 2;
     const midY = (bb.min.y + bb.max.y) / 2;
     for (const mp of [{ x: midX, y: bb.min.y }, { x: midX, y: bb.max.y }, { x: bb.min.x, y: midY }, { x: bb.max.x, y: midY }]) {
-      if (dist(mp, currentPoint) < tolerance * DEFAULT_SCALE) snaps.push({ point: mp, type: 'midpoint' });
+      if (dist(mp, currentPoint) < snapDistWorld) snaps.push({ point: mp, type: 'midpoint' });
     }
   }
   return snaps;
@@ -114,17 +117,35 @@ export function useViewport() {
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [currentSnap, setCurrentSnap] = useState<SnapResult | null>(null);
 
+  // ─── View transform (pan / zoom) ──────────────────────────────────────────
+  const [viewTransform, setViewTransform] = useState<ViewTransform>(DEFAULT_VIEW);
+  const viewTransformRef = useRef<ViewTransform>(DEFAULT_VIEW);
+
+  // Dirty flag: only redraw when something actually changed
+  const dirtyRef = useRef(true);
+
+  // Pan state (middle-mouse drag) — tracked via ref to avoid re-renders mid-drag
+  const panRef = useRef({ active: false, lastX: 0, lastY: 0 });
+
+  /** Update view transform — syncs both state (for effects) and ref (for callbacks) */
+  const setView = useCallback((v: ViewTransform) => {
+    viewTransformRef.current = v;
+    dirtyRef.current = true;
+    setViewTransform(v);
+  }, []);
+
   const applySnapping = useCallback((point: Point): Point => {
+    const scale = viewTransformRef.current.scale;
     if (!doc || !snapEnabled) return point;
     const elements = Object.values(doc.content.elements);
-    const snaps = findSnapPoints(elements, point);
+    const snaps = findSnapPoints(elements, point, scale);
     if (snaps.length > 0) {
       const closest = snaps.reduce((a, b) => dist(point, a.point) < dist(point, b.point) ? a : b);
       setCurrentSnap(closest);
       return closest.point;
     }
     const snapped = snapToGrid(point);
-    if (dist(point, snapped) < SNAP_TOLERANCE * DEFAULT_SCALE) {
+    if (dist(point, snapped) < SNAP_TOLERANCE * scale) {
       setCurrentSnap({ point: snapped, type: 'grid' });
       return snapped;
     }
@@ -279,15 +300,13 @@ export function useViewport() {
         type: tool, layerId,
         properties: {
           Name: { type: 'string', value: tool === 'door' ? 'Door' : 'Window' },
-          X: { type: 'number', value: start.x },
-          Y: { type: 'number', value: start.y },
+          X: { type: 'number', value: start.x }, Y: { type: 'number', value: start.y },
           Width: { type: 'number', value: tp['width'] ?? (tool === 'door' ? 900 : 1200) },
           Height: { type: 'number', value: tp['height'] ?? (tool === 'door' ? 2100 : 1200) },
+          HostWallId: { type: 'string', value: hostWallId },
           ...(tool === 'door'
-            ? { Swing: { type: 'number', value: tp['swing'] ?? 90 } }
-            : { SillHeight: { type: 'number', value: tp['sillHeight'] ?? 900 } }),
-          FrameType: { type: 'string', value: tp['frameType'] ?? 'standard' },
-          HostWallId: { type: 'reference', value: hostWallId },
+            ? { Swing: { type: 'number', value: tp['swing'] ?? 90 }, FrameType: { type: 'string', value: tp['frameType'] ?? 'standard' } }
+            : { SillHeight: { type: 'number', value: tp['sillHeight'] ?? 900 }, FrameType: { type: 'string', value: tp['frameType'] ?? 'standard' } }),
         },
       });
       getStoreActions().pushHistory(`Add ${tool}`);
@@ -299,33 +318,31 @@ export function useViewport() {
         type: 'column', layerId,
         properties: {
           Name: { type: 'string', value: 'Column' },
-          X: { type: 'number', value: start.x },
-          Y: { type: 'number', value: start.y },
-          Height: { type: 'number', value: (cp['height'] as number | undefined) ?? 3000 },
-          SectionType: { type: 'string', value: (cp['sectionType'] as string | undefined) ?? 'Circular' },
-          Diameter: { type: 'number', value: (cp['diameter'] as number | undefined) ?? 300 },
-          Material: { type: 'string', value: (cp['material'] as string | undefined) ?? 'Concrete' },
+          X: { type: 'number', value: start.x }, Y: { type: 'number', value: start.y },
+          Height: { type: 'number', value: cp['height'] ?? 3000 },
+          SectionType: { type: 'string', value: cp['sectionType'] ?? 'Circular' },
+          Diameter: { type: 'number', value: cp['diameter'] ?? 300 },
+          Width: { type: 'number', value: cp['width'] ?? 300 },
+          Depth: { type: 'number', value: cp['depth'] ?? 300 },
+          Material: { type: 'string', value: cp['material'] ?? 'Concrete' },
         },
       });
       getStoreActions().pushHistory('Add column');
     }
 
-    if (tool === 'beam') {
-      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
-      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
-      if (maxX - minX < 100 && maxY - minY < 100) return;
+    if (tool === 'beam' && extraPoints && extraPoints.length >= 2 ||
+        (tool === 'beam' && start !== end)) {
       const bp = (toolParams?.['beam'] ?? {}) as Record<string, unknown>;
       addElement({
         type: 'beam', layerId,
         properties: {
           Name: { type: 'string', value: 'Beam' },
-          StartX: { type: 'number', value: start.x },
-          StartY: { type: 'number', value: start.y },
-          EndX: { type: 'number', value: end.x },
-          EndY: { type: 'number', value: end.y },
-          SectionProfile: { type: 'string', value: (bp['sectionProfile'] as string | undefined) ?? 'IPE' },
-          SectionSize: { type: 'string', value: (bp['sectionSize'] as string | undefined) ?? '200' },
-          Material: { type: 'string', value: (bp['material'] as string | undefined) ?? 'Steel' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX: { type: 'number', value: end.x }, EndY: { type: 'number', value: end.y },
+          Span: { type: 'number', value: dist(start, end) },
+          SectionProfile: { type: 'string', value: bp['sectionProfile'] ?? 'IPE' },
+          SectionSize: { type: 'string', value: bp['sectionSize'] ?? '200' },
+          Material: { type: 'string', value: bp['material'] ?? 'Steel' },
         },
       });
       getStoreActions().pushHistory('Add beam');
@@ -334,7 +351,6 @@ export function useViewport() {
     if (tool === 'stair') {
       const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
       const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
-      if (maxX - minX < 200 && maxY - minY < 200) return;
       const sp = (toolParams?.['stair'] ?? {}) as Record<string, unknown>;
       addElement({
         type: 'stair', layerId,
@@ -376,194 +392,285 @@ export function useViewport() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    const v = viewTransformRef.current;
     const theme = getTheme();
-    const { width, height } = canvas;
-    ctx.clearRect(0, 0, width, height);
-    ctx.fillStyle = theme.background;
-    ctx.fillRect(0, 0, width, height);
+    const cw = canvas.width;
+    const ch = canvas.height;
 
-    // Grid
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.fillStyle = theme.background;
+    ctx.fillRect(0, 0, cw, ch);
+
+    // ── Grid drawn in world space (pan/zoom aware, batched single stroke) ──
+    // Apply canvas transform so we can draw in world coordinates directly
+    const sx = 1 / v.scale;
+    const tx = cw / 2 - v.panX / v.scale;
+    const ty = ch / 2 - v.panY / v.scale;
+
+    // Visible world extent
+    const worldMinX = (0 - tx) / sx;
+    const worldMaxX = (cw - tx) / sx;
+    const worldMinY = (0 - ty) / sx;
+    const worldMaxY = (ch - ty) / sx;
+
+    // Choose grid spacing: use major grid when zoomed out, minor when zoomed in
+    const screenGridPx = GRID_SIZE / v.scale;
+    const gridSpacing = screenGridPx < 8 ? GRID_SIZE * 10 : GRID_SIZE;
+    const gx0 = Math.floor(worldMinX / gridSpacing) * gridSpacing;
+    const gy0 = Math.floor(worldMinY / gridSpacing) * gridSpacing;
+
+    ctx.save();
+    ctx.setTransform(sx, 0, 0, sx, tx, ty);
+
+    // Minor grid lines — single batched path
     ctx.strokeStyle = theme.grid;
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= width; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
-    for (let y = 0; y <= height; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
-    ctx.strokeStyle = theme.gridMajor;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath(); ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
-    ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2); ctx.stroke();
+    ctx.lineWidth = v.scale; // 1 screen pixel in world units
+    ctx.beginPath();
+    for (let x = gx0; x <= worldMaxX + gridSpacing; x += gridSpacing) {
+      ctx.moveTo(x, worldMinY); ctx.lineTo(x, worldMaxY);
+    }
+    for (let y = gy0; y <= worldMaxY + gridSpacing; y += gridSpacing) {
+      ctx.moveTo(worldMinX, y); ctx.lineTo(worldMaxX, y);
+    }
+    ctx.stroke();
+
+    // Axis lines (X=0, Y=0)
+    ctx.strokeStyle = theme.axis;
+    ctx.lineWidth = v.scale * 1.5;
+    ctx.setLineDash([v.scale * 4, v.scale * 4]);
+    ctx.beginPath();
+    ctx.moveTo(0, worldMinY); ctx.lineTo(0, worldMaxY);
+    ctx.moveTo(worldMinX, 0); ctx.lineTo(worldMaxX, 0);
+    ctx.stroke();
     ctx.setLineDash([]);
 
-    if (!doc) return;
+    if (!doc) { ctx.restore(); return; }
 
-    // ── Render existing elements ──
+    // ── Render existing elements in world space ──
     for (const element of Object.values(doc.content.elements)) {
       const isSelected = selectedIds.includes(element.id);
       const color = isSelected ? theme.selected : theme.element;
       const fillColor = isSelected ? theme.selectedFill : theme.elementFill;
       ctx.strokeStyle = color;
       ctx.fillStyle = fillColor;
-      ctx.lineWidth = isSelected ? 2 : 1.5;
+      ctx.lineWidth = (isSelected ? 2 : 1.5) * v.scale;
 
       const props = element.properties as Record<string, { value: unknown }>;
       const type = element.type;
 
       if (type === 'annotation' || type === 'wall' || type === 'dimension') {
-        // Lines and walls drawn as bounding rect or line
         if (props['StartX'] && props['EndX']) {
-          const p1 = worldToScreen(props['StartX'].value as number, props['StartY']!.value as number, width, height);
-          const p2 = worldToScreen(props['EndX'].value as number, props['EndY']!.value as number, width, height);
+          const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
+          const x2 = props['EndX'].value as number, y2 = props['EndY']!.value as number;
           if (type === 'annotation') {
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
           } else if (type === 'wall') {
-            ctx.fillStyle = fillColor;
             ctx.beginPath();
-            ctx.rect(Math.min(p1.x, p2.x), Math.min(p1.y, p2.y), Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y));
+            ctx.rect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
             ctx.fill(); ctx.stroke();
-            ctx.fillStyle = color; ctx.font = '10px sans-serif';
-            ctx.fillText('Wall', Math.min(p1.x, p2.x) + 4, Math.min(p1.y, p2.y) + 12);
           } else if (type === 'dimension') {
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-            const d = props['Value']?.value as number ?? 0;
-            ctx.fillStyle = color; ctx.font = '10px sans-serif';
-            ctx.fillText(`${Math.round(d / DEFAULT_SCALE)}`, (p1.x + p2.x) / 2 + 4, (p1.y + p2.y) / 2 - 6);
+            ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
           }
         }
       } else if (type === 'rectangle') {
         if (props['X']) {
-          const p = worldToScreen(props['X'].value as number, props['Y']!.value as number, width, height);
-          const w = (props['Width']!.value as number) / DEFAULT_SCALE;
-          const h = (props['Height']!.value as number) / DEFAULT_SCALE;
-          ctx.beginPath(); ctx.rect(p.x, p.y, w, h); ctx.fill(); ctx.stroke();
+          const x = props['X'].value as number, y = props['Y']!.value as number;
+          const w = props['Width']!.value as number, h = props['Height']!.value as number;
+          ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
         }
       } else if (type === 'circle') {
         if (props['CenterX']) {
-          const c = worldToScreen(props['CenterX'].value as number, props['CenterY']!.value as number, width, height);
-          const r = (props['Radius']!.value as number) / DEFAULT_SCALE;
-          ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          const cx2 = props['CenterX'].value as number, cy2 = props['CenterY']!.value as number;
+          const r = props['Radius']!.value as number;
+          ctx.beginPath(); ctx.arc(cx2, cy2, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         }
       } else if (type === 'arc') {
         if (props['CenterX']) {
-          const c = worldToScreen(props['CenterX'].value as number, props['CenterY']!.value as number, width, height);
-          const r = (props['Radius']!.value as number) / DEFAULT_SCALE;
+          const cx2 = props['CenterX'].value as number, cy2 = props['CenterY']!.value as number;
+          const r = props['Radius']!.value as number;
           const sa = props['StartAngle']!.value as number;
           const ea = props['EndAngle']!.value as number;
-          ctx.beginPath(); ctx.arc(c.x, c.y, r, sa, ea); ctx.stroke();
+          ctx.beginPath(); ctx.arc(cx2, cy2, r, sa, ea); ctx.stroke();
         }
       } else if (type === 'polygon' || type === 'polyline') {
         if (props['Points']) {
           const pts = JSON.parse(props['Points'].value as string) as Point[];
           if (pts.length < 2) continue;
           ctx.beginPath();
-          const p0 = worldToScreen(pts[0]!.x, pts[0]!.y, width, height);
-          ctx.moveTo(p0.x, p0.y);
-          for (let i = 1; i < pts.length; i++) {
-            const p = worldToScreen(pts[i]!.x, pts[i]!.y, width, height);
-            ctx.lineTo(p.x, p.y);
-          }
+          ctx.moveTo(pts[0]!.x, pts[0]!.y);
+          for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
           ctx.stroke();
         }
       } else {
-        // Fallback: bounding box
+        // Fallback: bounding box in world space
         const bb = element.boundingBox;
-        const p = worldToScreen(bb.min.x, bb.min.y, width, height);
-        const w = (bb.max.x - bb.min.x) / DEFAULT_SCALE;
-        const h = (bb.max.y - bb.min.y) / DEFAULT_SCALE;
-        ctx.beginPath(); ctx.rect(p.x, p.y, w, h); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.rect(bb.min.x, bb.min.y, bb.max.x - bb.min.x, bb.max.y - bb.min.y);
+        ctx.fill(); ctx.stroke();
       }
     }
 
-    // ── Draw preview while user is drawing ──
-    const { isDrawing: _isDrawing, startPoint, currentPoint, points } = drawingState;
-    if (!startPoint) return;
+    // ── Draw preview while user is drawing (in world space) ──
+    const { startPoint, currentPoint, points } = drawingState;
+    if (startPoint) {
+      ctx.strokeStyle = theme.accent;
+      ctx.fillStyle = 'rgba(79, 70, 229, 0.1)';
+      ctx.lineWidth = 2 * v.scale;
+      ctx.setLineDash([5 * v.scale, 5 * v.scale]);
 
-    ctx.strokeStyle = theme.accent;
-    ctx.fillStyle = 'rgba(79, 70, 229, 0.1)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([5, 5]);
+      const cp = currentPoint ?? startPoint;
 
-    const sp = worldToScreen(startPoint.x, startPoint.y, width, height);
-    const cp = currentPoint ? worldToScreen(currentPoint.x, currentPoint.y, width, height) : sp;
+      if (activeTool === 'line' || activeTool === 'dimension') {
+        if (currentPoint) {
+          ctx.beginPath(); ctx.moveTo(startPoint.x, startPoint.y); ctx.lineTo(cp.x, cp.y); ctx.stroke();
+        }
+      }
 
-    if (activeTool === 'line' || activeTool === 'dimension') {
-      if (currentPoint) {
-        ctx.beginPath(); ctx.moveTo(sp.x, sp.y); ctx.lineTo(cp.x, cp.y); ctx.stroke();
-        if (activeTool === 'dimension') {
-          const d = dist(startPoint, currentPoint);
-          ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
-          ctx.fillText(`${Math.round(d / DEFAULT_SCALE)}`, (sp.x + cp.x) / 2 + 4, (sp.y + cp.y) / 2 - 6);
+      if (activeTool === 'wall' || activeTool === 'rectangle') {
+        if (currentPoint) {
+          const x = Math.min(startPoint.x, cp.x), y = Math.min(startPoint.y, cp.y);
+          const w = Math.abs(cp.x - startPoint.x), h = Math.abs(cp.y - startPoint.y);
+          ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
+        }
+      }
+
+      if (activeTool === 'circle') {
+        if (currentPoint) {
+          const r = dist(startPoint, cp);
+          ctx.beginPath(); ctx.arc(startPoint.x, startPoint.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        }
+      }
+
+      if (activeTool === 'arc') {
+        if (currentPoint) {
+          const r = dist(startPoint, cp);
+          const sa = Math.atan2(cp.y - startPoint.y, cp.x - startPoint.x);
+          ctx.beginPath(); ctx.arc(startPoint.x, startPoint.y, r, sa, sa + Math.PI); ctx.stroke();
+        }
+      }
+
+      // Polygon / polyline: show committed vertices + rubber-band
+      if ((activeTool === 'polygon' || activeTool === 'polyline') && points.length > 0) {
+        ctx.beginPath();
+        ctx.moveTo(points[0]!.x, points[0]!.y);
+        for (let i = 1; i < points.length; i++) ctx.lineTo(points[i]!.x, points[i]!.y);
+        if (currentPoint) ctx.lineTo(cp.x, cp.y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.fillStyle = theme.accent;
+        for (const pt of points) {
+          ctx.beginPath(); ctx.arc(pt.x, pt.y, 4 * v.scale, 0, Math.PI * 2); ctx.fill();
+        }
+      }
+
+      ctx.setLineDash([]);
+    }
+
+    // Snap indicator (world space)
+    if (currentSnap) {
+      ctx.strokeStyle = theme.snap;
+      ctx.lineWidth = 1.5 * v.scale;
+      ctx.beginPath(); ctx.arc(currentSnap.point.x, currentSnap.point.y, 6 * v.scale, 0, Math.PI * 2); ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // ── Screen-space text labels (drawn after restoring transform) ──
+    ctx.font = '10px sans-serif';
+    if (doc) {
+      for (const element of Object.values(doc.content.elements)) {
+        const props = element.properties as Record<string, { value: unknown }>;
+        const type = element.type;
+        if (type === 'wall' && props['StartX']) {
+          const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
+          const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+          const p1s = worldToScreen(x1, y1, cw, ch, v);
+          const p2s = worldToScreen(x2, y2, cw, ch, v);
+          ctx.fillStyle = element.properties['Name'] ? theme.element : theme.element;
+          ctx.fillText('Wall', Math.min(p1s.x, p2s.x) + 4, Math.min(p1s.y, p2s.y) + 12);
+        }
+        if (type === 'dimension' && props['Value']) {
+          const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
+          const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+          const d = props['Value'].value as number;
+          const p1s = worldToScreen(x1, y1, cw, ch, v);
+          const p2s = worldToScreen(x2, y2, cw, ch, v);
+          const selectedEl = selectedIds.includes(element.id);
+          ctx.fillStyle = selectedEl ? theme.selected : theme.element;
+          ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
         }
       }
     }
 
-    if (activeTool === 'wall' || activeTool === 'rectangle') {
-      if (currentPoint) {
-        const x = Math.min(sp.x, cp.x), y = Math.min(sp.y, cp.y);
-        const w = Math.abs(cp.x - sp.x), h = Math.abs(cp.y - sp.y);
-        ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
+    // Preview text labels (screen space)
+    if (drawingState.startPoint && drawingState.currentPoint) {
+      const sp = worldToScreen(drawingState.startPoint.x, drawingState.startPoint.y, cw, ch, v);
+      const cp2 = worldToScreen(drawingState.currentPoint.x, drawingState.currentPoint.y, cw, ch, v);
+      ctx.fillStyle = theme.accent;
+      if (activeTool === 'dimension') {
+        const d = dist(drawingState.startPoint, drawingState.currentPoint);
+        ctx.fillText(`${Math.round(d / v.scale)}`, (sp.x + cp2.x) / 2 + 4, (sp.y + cp2.y) / 2 - 6);
+      }
+      if (activeTool === 'wall' || activeTool === 'rectangle') {
+        const ww = Math.abs(drawingState.currentPoint.x - drawingState.startPoint.x);
+        const hh = Math.abs(drawingState.currentPoint.y - drawingState.startPoint.y);
         ctx.fillText(
-          `${Math.round(Math.abs(currentPoint.x - startPoint.x) / DEFAULT_SCALE)} × ${Math.round(Math.abs(currentPoint.y - startPoint.y) / DEFAULT_SCALE)}`,
-          x + 4, y - 6
+          `${Math.round(ww / v.scale)} × ${Math.round(hh / v.scale)}`,
+          Math.min(sp.x, cp2.x) + 4, Math.min(sp.y, cp2.y) - 6
         );
       }
-    }
-
-    if (activeTool === 'circle') {
-      if (currentPoint) {
-        const r = dist(startPoint, currentPoint) / DEFAULT_SCALE;
-        ctx.beginPath(); ctx.arc(sp.x, sp.y, dist(sp, cp), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
+      if (activeTool === 'circle') {
+        const r = dist(drawingState.startPoint, drawingState.currentPoint) / v.scale;
         ctx.fillText(`r=${Math.round(r)}`, sp.x + 4, sp.y - 6);
       }
     }
-
-    if (activeTool === 'arc') {
-      if (currentPoint) {
-        const r = dist(sp, cp);
-        const sa = Math.atan2(cp.y - sp.y, cp.x - sp.x);
-        ctx.beginPath(); ctx.arc(sp.x, sp.y, r, sa, sa + Math.PI); ctx.stroke();
-      }
-    }
-
-    // Polygon / polyline: show committed points so far + rubber-band to mouse
-    if ((activeTool === 'polygon' || activeTool === 'polyline') && points.length > 0) {
-      ctx.beginPath();
-      const p0 = worldToScreen(points[0]!.x, points[0]!.y, width, height);
-      ctx.moveTo(p0.x, p0.y);
-      for (let i = 1; i < points.length; i++) {
-        const p = worldToScreen(points[i]!.x, points[i]!.y, width, height);
-        ctx.lineTo(p.x, p.y);
-      }
-      if (currentPoint) ctx.lineTo(cp.x, cp.y);
-      ctx.stroke();
-      // Draw dot at each committed vertex
-      ctx.setLineDash([]);
-      ctx.fillStyle = theme.accent;
-      for (const pt of points) {
-        const s = worldToScreen(pt.x, pt.y, width, height);
-        ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
-      }
-    }
-
-    ctx.setLineDash([]);
-
-    // Snap indicator
-    if (currentSnap) {
-      const ss = worldToScreen(currentSnap.point.x, currentSnap.point.y, width, height);
-      ctx.strokeStyle = theme.snap;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath(); ctx.arc(ss.x, ss.y, 6, 0, Math.PI * 2); ctx.stroke();
-    }
   }, [doc, selectedIds, drawingState, activeTool, currentSnap]);
+
+  // ─── Wheel: zoom centred on cursor ────────────────────────────────────────
+
+  const handleCanvasWheel = useCallback((event: React.WheelEvent<HTMLCanvasElement>) => {
+    event.preventDefault();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const sx = event.clientX - rect.left;
+    const sy = event.clientY - rect.top;
+    const v = viewTransformRef.current;
+
+    // Zoom towards cursor
+    const zoomFactor = event.deltaY < 0 ? 0.85 : 1 / 0.85;
+    const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, v.scale * zoomFactor));
+    if (newScale === v.scale) return;
+
+    // Keep world point under cursor fixed:
+    //   worldX = (sx - cw/2) * oldScale + panX = (sx - cw/2) * newScale + newPanX
+    const worldX = (sx - canvas.width / 2) * v.scale + v.panX;
+    const worldY = (sy - canvas.height / 2) * v.scale + v.panY;
+    const newPanX = worldX - (sx - canvas.width / 2) * newScale;
+    const newPanY = worldY - (sy - canvas.height / 2) * newScale;
+
+    setView({ scale: newScale, panX: newPanX, panY: newPanY });
+  }, [setView]);
 
   // ─── Mouse handlers ───────────────────────────────────────────────────────
 
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    // Middle mouse button → start pan
+    if (event.button === 1) {
+      event.preventDefault();
+      panRef.current = { active: true, lastX: event.clientX, lastY: event.clientY };
+      const canvas = canvasRef.current;
+      if (canvas) canvas.style.cursor = 'grabbing';
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height);
+    const v = viewTransformRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
     wp = applySnapping(wp);
 
     if (activeTool === 'select') {
@@ -593,9 +700,9 @@ export function useViewport() {
 
     if (MULTICLICK_TOOLS.has(activeTool)) {
       setDrawingState((prev) => {
-        // Close polygon/slab/roof if clicking near start
+        const scale = viewTransformRef.current.scale;
         const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
-        if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * DEFAULT_SCALE) {
+        if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * scale) {
           commitShape(activeTool, prev.points[0], prev.points[prev.points.length - 1]!, prev.points);
           return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
         }
@@ -606,17 +713,37 @@ export function useViewport() {
   }, [activeTool, doc, selectedIds, setSelectedIds, applySnapping, commitShape]);
 
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    // Pan via middle mouse drag
+    if (panRef.current.active) {
+      const dx = event.clientX - panRef.current.lastX;
+      const dy = event.clientY - panRef.current.lastY;
+      panRef.current.lastX = event.clientX;
+      panRef.current.lastY = event.clientY;
+      const v = viewTransformRef.current;
+      setView({ ...v, panX: v.panX - dx * v.scale, panY: v.panY - dy * v.scale });
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height);
+    const v = viewTransformRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
     wp = applySnapping(wp);
 
     if (!drawingState.isDrawing) return;
     setDrawingState((prev) => ({ ...prev, currentPoint: wp }));
-  }, [drawingState.isDrawing, applySnapping]);
+  }, [drawingState.isDrawing, applySnapping, setView]);
 
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    // End pan
+    if (panRef.current.active) {
+      panRef.current.active = false;
+      const canvas = canvasRef.current;
+      if (canvas) canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas || !drawingState.isDrawing || !drawingState.startPoint) {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
@@ -624,7 +751,8 @@ export function useViewport() {
     }
 
     const rect = canvas.getBoundingClientRect();
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height);
+    const v = viewTransformRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
     wp = applySnapping(wp);
 
     if (DRAG_TOOLS.has(activeTool)) {
@@ -641,7 +769,8 @@ export function useViewport() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height);
+    const v = viewTransformRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
     wp = applySnapping(wp);
     setDrawingState((prev) => {
       if (prev.points.length >= 2) {
@@ -686,14 +815,19 @@ export function useViewport() {
 
   // ─── Effects ──────────────────────────────────────────────────────────────
 
+  // Mark dirty whenever doc changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { draw(); }, [doc]);
+  useEffect(() => { dirtyRef.current = true; }, [doc]);
+
+  // Mark dirty on viewTransform change (setView already does this, but ensures
+  // the first paint after a state update happens even if draw is cached)
+  useEffect(() => { dirtyRef.current = true; }, [viewTransform]);
 
   useEffect(() => {
-    const handleThemeChange = () => draw();
+    const handleThemeChange = () => { dirtyRef.current = true; };
     window.addEventListener('theme-change', handleThemeChange);
     return () => window.removeEventListener('theme-change', handleThemeChange);
-  }, [draw]);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -703,13 +837,13 @@ export function useViewport() {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width;
         canvas.height = entry.contentRect.height;
-        draw();
+        dirtyRef.current = true;
       }
     });
     ro.observe(container);
-    draw();
+    dirtyRef.current = true;
     return () => ro.disconnect();
-  }, [draw]);
+  }, []);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -717,12 +851,22 @@ export function useViewport() {
     return () => { window.removeEventListener('keydown', handleKeyDown); window.removeEventListener('keyup', handleKeyUp); };
   }, [handleKeyDown, handleKeyUp]);
 
+  // Dirty-checked rAF loop — only calls draw() when something changed
   useEffect(() => {
     let id: number;
-    const loop = () => { draw(); id = requestAnimationFrame(loop); };
+    const loop = () => {
+      if (dirtyRef.current) {
+        draw();
+        dirtyRef.current = false;
+      }
+      id = requestAnimationFrame(loop);
+    };
     id = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(id);
-  }, [draw, activeTool]);
+  }, [draw]);
+
+  // Mark dirty when drawing state or snap changes
+  useEffect(() => { dirtyRef.current = true; }, [drawingState, currentSnap, activeTool, selectedIds]);
 
   // Update canvas cursor based on active tool
   useEffect(() => {
@@ -731,5 +875,16 @@ export function useViewport() {
     canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
   }, [activeTool]);
 
-  return { canvasRef, containerRef, handleCanvasMouseDown, handleCanvasMouseMove, handleCanvasMouseUp, handleCanvasDoubleClick, activeTool, drawingState };
+  return {
+    canvasRef,
+    containerRef,
+    handleCanvasMouseDown,
+    handleCanvasMouseMove,
+    handleCanvasMouseUp,
+    handleCanvasDoubleClick,
+    handleCanvasWheel,
+    activeTool,
+    drawingState,
+    viewTransform,
+  };
 }

@@ -17,6 +17,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     handleCanvasMouseMove,
     handleCanvasMouseUp,
     handleCanvasDoubleClick,
+    handleCanvasWheel,
     activeTool,
   } = useViewport();
   const {
@@ -52,6 +53,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
           onDoubleClick={handleCanvasDoubleClick}
+          onWheel={handleCanvasWheel}
         />
       )}
       <div className="viewport-overlay">
@@ -112,7 +114,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
             {show3D ? (
               <span>Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0</span>
             ) : (
-              <span>Draw: W L M | Ctrl+Z/Y undo | Ctrl snap</span>
+              <span>Zoom: scroll | Pan: middle-drag | Ctrl: snap off</span>
             )}
           </div>
         </div>
