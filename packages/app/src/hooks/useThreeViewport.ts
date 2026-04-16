@@ -46,6 +46,28 @@ const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; dis
   perspective: { azimuth: Math.PI / 4, elevation: Math.PI / 6, distance: 8000 },
 };
 
+const ELEMENT_COLORS: Record<string, string> = {
+  wall: '#c8c8d0',
+  slab: '#a0a8b0',
+  roof: '#b0b8c0',
+  column: '#d4c8a0',
+  beam: '#8090a8',
+  door: '#c8a878',
+  window: '#78aac8',
+  stair: '#b8a8d0',
+  railing: '#90a0a8',
+  space: '#d0e8d0',
+  annotation: '#7890a8',
+  line: '#7890a8',
+  rectangle: '#8898b0',
+  circle: '#8898b0',
+  arc: '#8898b0',
+  polygon: '#8898b0',
+  polyline: '#8898b0',
+  dimension: '#a0a0b8',
+  text: '#b0b0c0',
+};
+
 export function useThreeViewport() {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<ViewportState>({
@@ -91,23 +113,79 @@ export function useThreeViewport() {
 
   const createMeshFromElement = useCallback(
     (element: ElementSchema): THREE.Mesh | null => {
-      const bb = element.boundingBox;
-      let width = bb.max.x - bb.min.x || 1000;
-      let depth = bb.max.y - bb.min.y || 1000;
-      let height = bb.max.z - bb.min.z || 3000;
+      const props = element.properties as Record<string, { value: unknown }>;
+      const pv = (key: string, fallback: number) => (typeof props[key]?.value === 'number' ? (props[key]!.value as number) : fallback);
+      const color = ELEMENT_COLORS[element.type] ?? '#8888aa';
+      const type = element.type;
 
-      if (width < 1) width = 1000;
-      if (depth < 1) depth = 1000;
-      if (height < 1) height = 3000;
+      let geometry: THREE.BufferGeometry;
+      let px = 0, py = 0, pz = 0;
+      let rx = 0, rz = 0;
 
-      const geometry = new THREE.BoxGeometry(width, depth, height);
-      const material = createMaterial('#8888aa', 0.8);
+      if (type === 'wall' || type === 'annotation' || type === 'beam') {
+        const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+        const x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
+        const wallH = pv('Height', 3000);
+        const wallT = pv('Width', type === 'beam' ? 200 : 200);
+        const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
+        geometry = new THREE.BoxGeometry(len, wallT, wallH);
+        px = (x1 + x2) / 2;
+        py = (y1 + y2) / 2;
+        pz = wallH / 2;
+        rz = -Math.atan2(y2 - y1, x2 - x1);
+      } else if (type === 'slab' || type === 'roof') {
+        const x = pv('X', 0), y = pv('Y', 0);
+        const w = pv('Width', 5000), d = pv('Depth', 5000), t = pv('Thickness', 250);
+        geometry = new THREE.BoxGeometry(w, d, t);
+        px = x + w / 2; py = y + d / 2; pz = -t / 2;
+      } else if (type === 'column') {
+        const h = pv('Height', 3000), dia = pv('Diameter', 300);
+        const sect = props['SectionType']?.value;
+        if (sect === 'Rectangular') {
+          geometry = new THREE.BoxGeometry(dia, dia, h);
+        } else {
+          geometry = new THREE.CylinderGeometry(dia / 2, dia / 2, h, 16);
+          rx = Math.PI / 2; // align cylinder with Z axis
+        }
+        px = pv('X', 0); py = pv('Y', 0); pz = h / 2;
+      } else if (type === 'door' || type === 'window') {
+        const w = pv('Width', type === 'door' ? 900 : 1200);
+        const h = pv('Height', type === 'door' ? 2100 : 1200);
+        const sill = type === 'window' ? pv('SillHeight', 900) : 0;
+        geometry = new THREE.BoxGeometry(w, 50, h);
+        px = pv('X', 0); py = pv('Y', 0); pz = sill + h / 2;
+      } else if (type === 'stair') {
+        const sw = pv('Width2D', 1200), sl = pv('Length', 3000), sh = pv('TotalRise', 3000);
+        geometry = new THREE.BoxGeometry(sw, sl, sh);
+        px = pv('X', 0) + sw / 2; py = pv('Y', 0) + sl / 2; pz = sh / 2;
+      } else if (type === 'rectangle') {
+        const w = pv('Width', 1000), h = pv('Height', 1000);
+        geometry = new THREE.BoxGeometry(w, h, 50);
+        px = pv('X', 0) + w / 2; py = pv('Y', 0) + h / 2; pz = 25;
+      } else if (type === 'circle') {
+        const r = pv('Radius', 500);
+        geometry = new THREE.CylinderGeometry(r, r, 50, 32);
+        rx = Math.PI / 2;
+        px = pv('CenterX', 0); py = pv('CenterY', 0); pz = 25;
+      } else {
+        // Fallback: flat bounding-box marker
+        const bb = element.boundingBox;
+        const bw = Math.max(bb.max.x - bb.min.x, 100);
+        const bd = Math.max(bb.max.y - bb.min.y, 100);
+        geometry = new THREE.BoxGeometry(bw, bd, 50);
+        px = bb.min.x + bw / 2; py = bb.min.y + bd / 2; pz = 25;
+      }
 
+      const material = createMaterial(color, type === 'space' ? 0.3 : 0.85);
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(bb.min.x + width / 2, bb.min.y + depth / 2, bb.min.z + height / 2);
+      mesh.position.set(px, py, pz);
+      if (rx !== 0) mesh.rotation.x = rx;
+      if (rz !== 0) mesh.rotation.z = rz;
 
       mesh.userData.elementId = element.id;
-      mesh.userData.elementType = element.type;
+      mesh.userData.elementType = type;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
 
       return mesh;
     },
@@ -156,31 +234,24 @@ export function useThreeViewport() {
   const zoomToFit = useCallback(() => {
     if (!doc) return;
 
-    const elements = Object.values(doc.content.elements);
-    if (elements.length === 0) {
+    const meshes = Array.from(elementMeshesRef.current.values());
+    if (meshes.length === 0) {
       setViewPreset('3d');
       return;
     }
 
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
-
-    for (const element of elements) {
-      const bb = element.boundingBox;
-      minX = Math.min(minX, bb.min.x);
-      minY = Math.min(minY, bb.min.y);
-      maxX = Math.max(maxX, bb.max.x);
-      maxY = Math.max(maxY, bb.max.y);
+    const box = new THREE.Box3();
+    for (const mesh of meshes) {
+      box.expandByObject(mesh);
     }
+    const center = new THREE.Vector3();
+    const size = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z, 1000);
 
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    const size = Math.max(maxX - minX, maxY - minY);
-
-    cameraStateRef.current.target.set(centerX, centerY, 0);
-    cameraStateRef.current.distance = size * 2;
+    cameraStateRef.current.target.copy(center);
+    cameraStateRef.current.distance = maxDim * 2.5;
     updateCamera();
   }, [doc, updateCamera, setViewPreset]);
 

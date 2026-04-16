@@ -54,20 +54,24 @@ interface SnapResult {
 
 const GRID_SIZE = 500;
 const SNAP_TOLERANCE = 15;
-const SCALE = 20;
-const OFFSET = 5000;
+const DEFAULT_SCALE = 20;   // world units per screen pixel
+const DEFAULT_PAN_X = -5000; // world x at screen center (= -OFFSET)
+const DEFAULT_PAN_Y = -5000; // world y at screen center
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
 const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
 // Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing)
 const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing']);
 
-function screenToWorld(sx: number, sy: number, cw: number, ch: number): Point {
-  return { x: (sx - cw / 2) * SCALE - OFFSET, y: (sy - ch / 2) * SCALE - OFFSET };
+interface ViewTransform { scale: number; panX: number; panY: number; }
+const DEFAULT_VIEW: ViewTransform = { scale: DEFAULT_SCALE, panX: DEFAULT_PAN_X, panY: DEFAULT_PAN_Y };
+
+function screenToWorld(sx: number, sy: number, cw: number, ch: number, v: ViewTransform = DEFAULT_VIEW): Point {
+  return { x: (sx - cw / 2) * v.scale + v.panX, y: (sy - ch / 2) * v.scale + v.panY };
 }
 
-function worldToScreen(wx: number, wy: number, cw: number, ch: number): Point {
-  return { x: (wx + OFFSET) / SCALE + cw / 2, y: (wy + OFFSET) / SCALE + ch / 2 };
+function worldToScreen(wx: number, wy: number, cw: number, ch: number, v: ViewTransform = DEFAULT_VIEW): Point {
+  return { x: (wx - v.panX) / v.scale + cw / 2, y: (wy - v.panY) / v.scale + ch / 2 };
 }
 
 function snapToGrid(point: Point, gridSize: number = GRID_SIZE): Point {
@@ -88,12 +92,12 @@ function findSnapPoints(elements: unknown[], currentPoint: Point, tolerance: num
       { x: bb.min.x, y: bb.max.y }, { x: bb.max.x, y: bb.max.y },
     ];
     for (const corner of corners) {
-      if (dist(corner, currentPoint) < tolerance * SCALE) snaps.push({ point: corner, type: 'endpoint' });
+      if (dist(corner, currentPoint) < tolerance * DEFAULT_SCALE) snaps.push({ point: corner, type: 'endpoint' });
     }
     const midX = (bb.min.x + bb.max.x) / 2;
     const midY = (bb.min.y + bb.max.y) / 2;
     for (const mp of [{ x: midX, y: bb.min.y }, { x: midX, y: bb.max.y }, { x: bb.min.x, y: midY }, { x: bb.max.x, y: midY }]) {
-      if (dist(mp, currentPoint) < tolerance * SCALE) snaps.push({ point: mp, type: 'midpoint' });
+      if (dist(mp, currentPoint) < tolerance * DEFAULT_SCALE) snaps.push({ point: mp, type: 'midpoint' });
     }
   }
   return snaps;
@@ -120,7 +124,7 @@ export function useViewport() {
       return closest.point;
     }
     const snapped = snapToGrid(point);
-    if (dist(point, snapped) < SNAP_TOLERANCE * SCALE) {
+    if (dist(point, snapped) < SNAP_TOLERANCE * DEFAULT_SCALE) {
       setCurrentSnap({ point: snapped, type: 'grid' });
       return snapped;
     }
@@ -421,26 +425,26 @@ export function useViewport() {
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
             const d = props['Value']?.value as number ?? 0;
             ctx.fillStyle = color; ctx.font = '10px sans-serif';
-            ctx.fillText(`${Math.round(d / SCALE)}`, (p1.x + p2.x) / 2 + 4, (p1.y + p2.y) / 2 - 6);
+            ctx.fillText(`${Math.round(d / DEFAULT_SCALE)}`, (p1.x + p2.x) / 2 + 4, (p1.y + p2.y) / 2 - 6);
           }
         }
       } else if (type === 'rectangle') {
         if (props['X']) {
           const p = worldToScreen(props['X'].value as number, props['Y']!.value as number, width, height);
-          const w = (props['Width']!.value as number) / SCALE;
-          const h = (props['Height']!.value as number) / SCALE;
+          const w = (props['Width']!.value as number) / DEFAULT_SCALE;
+          const h = (props['Height']!.value as number) / DEFAULT_SCALE;
           ctx.beginPath(); ctx.rect(p.x, p.y, w, h); ctx.fill(); ctx.stroke();
         }
       } else if (type === 'circle') {
         if (props['CenterX']) {
           const c = worldToScreen(props['CenterX'].value as number, props['CenterY']!.value as number, width, height);
-          const r = (props['Radius']!.value as number) / SCALE;
+          const r = (props['Radius']!.value as number) / DEFAULT_SCALE;
           ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         }
       } else if (type === 'arc') {
         if (props['CenterX']) {
           const c = worldToScreen(props['CenterX'].value as number, props['CenterY']!.value as number, width, height);
-          const r = (props['Radius']!.value as number) / SCALE;
+          const r = (props['Radius']!.value as number) / DEFAULT_SCALE;
           const sa = props['StartAngle']!.value as number;
           const ea = props['EndAngle']!.value as number;
           ctx.beginPath(); ctx.arc(c.x, c.y, r, sa, ea); ctx.stroke();
@@ -463,8 +467,8 @@ export function useViewport() {
         // Fallback: bounding box
         const bb = element.boundingBox;
         const p = worldToScreen(bb.min.x, bb.min.y, width, height);
-        const w = (bb.max.x - bb.min.x) / SCALE;
-        const h = (bb.max.y - bb.min.y) / SCALE;
+        const w = (bb.max.x - bb.min.x) / DEFAULT_SCALE;
+        const h = (bb.max.y - bb.min.y) / DEFAULT_SCALE;
         ctx.beginPath(); ctx.rect(p.x, p.y, w, h); ctx.fill(); ctx.stroke();
       }
     }
@@ -487,7 +491,7 @@ export function useViewport() {
         if (activeTool === 'dimension') {
           const d = dist(startPoint, currentPoint);
           ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
-          ctx.fillText(`${Math.round(d / SCALE)}`, (sp.x + cp.x) / 2 + 4, (sp.y + cp.y) / 2 - 6);
+          ctx.fillText(`${Math.round(d / DEFAULT_SCALE)}`, (sp.x + cp.x) / 2 + 4, (sp.y + cp.y) / 2 - 6);
         }
       }
     }
@@ -499,7 +503,7 @@ export function useViewport() {
         ctx.beginPath(); ctx.rect(x, y, w, h); ctx.fill(); ctx.stroke();
         ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
         ctx.fillText(
-          `${Math.round(Math.abs(currentPoint.x - startPoint.x) / SCALE)} × ${Math.round(Math.abs(currentPoint.y - startPoint.y) / SCALE)}`,
+          `${Math.round(Math.abs(currentPoint.x - startPoint.x) / DEFAULT_SCALE)} × ${Math.round(Math.abs(currentPoint.y - startPoint.y) / DEFAULT_SCALE)}`,
           x + 4, y - 6
         );
       }
@@ -507,7 +511,7 @@ export function useViewport() {
 
     if (activeTool === 'circle') {
       if (currentPoint) {
-        const r = dist(startPoint, currentPoint) / SCALE;
+        const r = dist(startPoint, currentPoint) / DEFAULT_SCALE;
         ctx.beginPath(); ctx.arc(sp.x, sp.y, dist(sp, cp), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
         ctx.fillText(`r=${Math.round(r)}`, sp.x + 4, sp.y - 6);
@@ -591,7 +595,7 @@ export function useViewport() {
       setDrawingState((prev) => {
         // Close polygon/slab/roof if clicking near start
         const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
-        if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * SCALE) {
+        if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * DEFAULT_SCALE) {
           commitShape(activeTool, prev.points[0], prev.points[prev.points.length - 1]!, prev.points);
           return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
         }
