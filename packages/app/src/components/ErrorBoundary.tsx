@@ -23,6 +23,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     this.props.onError?.(error, info);
+    // eslint-disable-next-line no-console
     console.error('[OpenCAD] Unhandled error:', error, info.componentStack);
   }
 

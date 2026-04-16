@@ -42,7 +42,7 @@ export function VersionHistoryPanel() {
       </div>
 
       {versions.length === 0 ? (
-        <p className="version-empty">No saved versions yet. Click "Save Version" to create a snapshot.</p>
+        <p className="version-empty">No saved versions yet. Click &quot;Save Version&quot; to create a snapshot.</p>
       ) : (
         <ul className="version-list">
           {[...versions].reverse().map((v) => (
