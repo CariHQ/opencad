@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { DocumentModel, type DocumentSchema, type PropertyValue } from '@opencad/document';
+import { DocumentModel, type DocumentSchema, type PropertyValue, loadProject as idbLoadProject } from '@opencad/document';
 import { isTauri, tauriLoadProject } from '../hooks/useTauri';
 
 interface HistoryEntry {
@@ -129,22 +129,58 @@ export const useDocumentStore = create<DocumentState>()(
             applyDocData(null);
           });
         } else {
-          // Browser: check localStorage (with legacy key migration)
-          let saved = localStorage.getItem(storageKey);
-          if (!saved) {
-            const legacy = localStorage.getItem('opencad-document');
-            if (legacy) {
-              try {
-                const docData = JSON.parse(legacy);
-                if (docData?.content && docData?.organization) {
-                  localStorage.setItem(storageKey, legacy);
-                  saved = legacy;
+          // Browser: try IndexedDB first (most reliable), fall back to localStorage
+          void idbLoadProject(projectId).then((schema) => {
+            if (schema) {
+              // IndexedDB had data — use it directly
+              const model2 = new DocumentModel(schema.id, userId);
+              model2.loadDocument(schema);
+              set({
+                document: model2.documentData,
+                model: model2,
+                currentProjectId: schema.id,
+                lastSaved: Date.now(),
+                history: [],
+                historyIndex: -1,
+                canUndo: false,
+                canRedo: false,
+              });
+            } else {
+              // Fall back to localStorage (with legacy key migration)
+              let saved = localStorage.getItem(storageKey);
+              if (!saved) {
+                const legacy = localStorage.getItem('opencad-document');
+                if (legacy) {
+                  try {
+                    const docData = JSON.parse(legacy);
+                    if (docData?.content && docData?.organization) {
+                      localStorage.setItem(storageKey, legacy);
+                      saved = legacy;
+                    }
+                  } catch { /* ignore */ }
+                  localStorage.removeItem('opencad-document');
                 }
-              } catch { /* ignore */ }
-              localStorage.removeItem('opencad-document');
+              }
+              applyDocData(saved);
             }
-          }
-          applyDocData(saved);
+          }).catch(() => {
+            // IndexedDB unavailable — use localStorage
+            let saved = localStorage.getItem(storageKey);
+            if (!saved) {
+              const legacy = localStorage.getItem('opencad-document');
+              if (legacy) {
+                try {
+                  const docData = JSON.parse(legacy);
+                  if (docData?.content && docData?.organization) {
+                    localStorage.setItem(storageKey, legacy);
+                    saved = legacy;
+                  }
+                } catch { /* ignore */ }
+                localStorage.removeItem('opencad-document');
+              }
+            }
+            applyDocData(saved);
+          });
         }
       },
 
