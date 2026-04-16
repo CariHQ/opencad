@@ -11,6 +11,7 @@ interface HistoryEntry {
 interface DocumentState {
   document: DocumentSchema | null;
   model: DocumentModel | null;
+  currentProjectId: string | null;
   selectedIds: string[];
   activeTool: string;
   isOnline: boolean;
@@ -52,6 +53,7 @@ interface DocumentState {
 
   createVersion: (message?: string) => void;
   restoreVersion: (versionNumber: number) => void;
+  getVersionList: () => Array<{ version: number; timestamp: number; message?: string }>;
 
   setActiveLevel: (levelId: string) => void;
   addLevel: (params: { name: string; elevation: number; height?: number }) => string;
@@ -65,6 +67,7 @@ export const useDocumentStore = create<DocumentState>()(
     (set, get) => ({
       document: null,
       model: null,
+      currentProjectId: null,
       selectedIds: [],
       activeTool: 'select',
       isOnline: true,
@@ -85,9 +88,10 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       initProject: (projectId, userId) => {
+        const storageKey = `opencad-doc-${projectId}`;
         let model: DocumentModel;
         try {
-          const saved = localStorage.getItem('opencad-document');
+          const saved = localStorage.getItem(storageKey);
           if (saved) {
             const docData = JSON.parse(saved);
             // Guard against pre-refactor schema (no content/organization groups)
@@ -95,10 +99,21 @@ export const useDocumentStore = create<DocumentState>()(
               model = new DocumentModel(projectId, userId);
               model.loadDocument(docData);
             } else {
-              localStorage.removeItem('opencad-document');
+              localStorage.removeItem(storageKey);
               model = new DocumentModel(projectId, userId);
             }
           } else {
+            // Migrate from legacy single-key storage if present
+            const legacy = localStorage.getItem('opencad-document');
+            if (legacy) {
+              try {
+                const docData = JSON.parse(legacy);
+                if (docData?.content && docData?.organization) {
+                  localStorage.setItem(storageKey, legacy);
+                }
+              } catch { /* ignore */ }
+              localStorage.removeItem('opencad-document');
+            }
             model = new DocumentModel(projectId, userId);
           }
         } catch {
@@ -109,6 +124,7 @@ export const useDocumentStore = create<DocumentState>()(
         set({
           document,
           model,
+          currentProjectId: projectId,
           lastSaved: Date.now(),
           history: [],
           historyIndex: -1,
@@ -124,6 +140,7 @@ export const useDocumentStore = create<DocumentState>()(
         set({
           document,
           model,
+          currentProjectId: projectId,
           lastSaved: Date.now(),
           history: [],
           historyIndex: -1,
@@ -173,7 +190,7 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       addElement: (params) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) throw new Error('No document loaded');
 
         const elementId = model.addElement({
@@ -188,7 +205,8 @@ export const useDocumentStore = create<DocumentState>()(
           lastSaved: Date.now(),
         });
         try {
-          localStorage.setItem('opencad-document', JSON.stringify(newDoc));
+          const key = currentProjectId ? `opencad-doc-${currentProjectId}` : 'opencad-document';
+          localStorage.setItem(key, JSON.stringify(newDoc));
         } catch { /* ignore storage errors */ }
         return elementId;
       },
@@ -279,6 +297,11 @@ export const useDocumentStore = create<DocumentState>()(
 
         model.restoreVersion(versionNumber);
         set({ document: { ...model.documentData } });
+      },
+
+      getVersionList: () => {
+        const { model } = get();
+        return model?.getVersionList() ?? [];
       },
 
       setActiveLevel: (levelId) => {

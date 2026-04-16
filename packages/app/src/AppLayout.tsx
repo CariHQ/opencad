@@ -31,6 +31,7 @@ import {
   Wind,
   User,
   Settings,
+  History,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -80,6 +81,7 @@ import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import { MobileViewer } from './components/MobileViewer';
+import { VersionHistoryPanel } from './components/VersionHistoryPanel';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -103,7 +105,8 @@ type RightPanelTab =
   | 'specs'
   | 'photo'
   | 'marketplace'
-  | 'wind';
+  | 'wind'
+  | 'history';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'layers', title: 'Layers', icon: <Layers size={16} strokeWidth={2} /> },
@@ -127,6 +130,7 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'photo', title: 'Photo to Model', icon: <Image size={16} strokeWidth={2} /> },
   { id: 'marketplace', title: 'Marketplace', icon: <Store size={16} strokeWidth={2} /> },
   { id: 'wind', title: 'Wind Analysis', icon: <Wind size={16} strokeWidth={2} /> },
+  { id: 'history', title: 'History', icon: <History size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -481,6 +485,7 @@ export function AppLayout() {
               {rightPanelTab === 'photo' && <PhotoToModelPanel />}
               {rightPanelTab === 'marketplace' && <MarketplacePanel />}
               {rightPanelTab === 'wind' && <WindAnalysisPanel />}
+              {rightPanelTab === 'history' && <VersionHistoryPanel />}
             </PanelErrorBoundary>
           </div>
         </aside>

@@ -361,6 +361,10 @@ export class DocumentModel {
     return snapshot;
   }
 
+  getVersionList(): Array<{ version: number; timestamp: number; message?: string }> {
+    return this.versions.map(({ version, timestamp, message }) => ({ version, timestamp, message }));
+  }
+
   getVersion(versionNumber: number): DocumentSchema {
     const version = this.versions.find((v) => v.version === versionNumber);
     if (!version) {
