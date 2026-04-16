@@ -143,3 +143,72 @@ export function createMockProvider(responses: string[]): AIProvider {
     },
   };
 }
+
+/**
+ * OpenAI-compatible streaming provider.
+ * Works with OpenAI, Ollama (/v1 endpoint), LM Studio, and any compatible proxy.
+ */
+export function createOpenAICompatibleProvider(
+  baseUrl: string,
+  apiKey: string,
+  model: string
+): AIProvider {
+  return {
+    name: 'openai-compatible',
+    async *stream(prompt: string, history?: ChatMessage[]): AsyncGenerator<StreamChunk, void, unknown> {
+      const messages = [
+        ...(history ?? []).map((m) => ({ role: m.role, content: m.content })),
+        { role: 'user', content: prompt },
+      ];
+
+      let resp: Response;
+      try {
+        resp = await fetch(`${baseUrl}/chat/completions`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}),
+          },
+          body: JSON.stringify({ model, messages, stream: true }),
+        });
+      } catch (err) {
+        yield { type: 'error', content: err instanceof Error ? err.message : 'Network error' };
+        return;
+      }
+
+      if (!resp.ok) {
+        yield { type: 'error', content: `HTTP ${resp.status}: ${resp.statusText}` };
+        return;
+      }
+
+      const reader = resp.body?.getReader();
+      if (!reader) {
+        yield { type: 'error', content: 'No response body' };
+        return;
+      }
+
+      const decoder = new TextDecoder();
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        const lines = decoder.decode(value, { stream: true }).split('\n');
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') {
+            yield { type: 'done', content: '' };
+            return;
+          }
+          try {
+            const json = JSON.parse(data) as { choices?: Array<{ delta?: { content?: string } }> };
+            const text = json.choices?.[0]?.delta?.content;
+            if (text) yield { type: 'delta', content: text };
+          } catch {
+            // skip malformed lines
+          }
+        }
+      }
+      yield { type: 'done', content: '' };
+    },
+  };
+}
