@@ -4709,3 +4709,315 @@ input[type='range']::-moz-range-track {
   font-size: 11px;
   color: var(--text-muted);
 }
+
+/* ── IFC Property Sets (PropertiesPanel) ─────────────── */
+.pset-group {
+  border-left: 2px solid var(--accent-primary);
+  margin: 4px 0;
+  padding-left: 8px;
+}
+
+.pset-name {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--accent-primary);
+  padding: 4px 0 2px;
+}
+
+.pset-row {
+  opacity: 0.9;
+}
+
+/* ── Properties empty state ──────────────────────────── */
+.properties-content.empty,
+.properties-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.properties-empty-hint {
+  padding: 32px 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+  line-height: 1.6;
+}
+
+/* ── Error Boundary ──────────────────────────────────── */
+.error-boundary-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  text-align: center;
+  gap: 8px;
+  height: 100%;
+}
+
+.error-boundary-icon {
+  font-size: 28px;
+  margin-bottom: 4px;
+}
+
+.error-boundary-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.error-boundary-message {
+  font-size: 11px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  max-width: 220px;
+}
+
+.error-boundary-retry {
+  margin-top: 8px;
+  padding: 6px 14px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.error-boundary-retry:hover {
+  background: var(--accent-secondary);
+}
+
+.panel-error {
+  padding: 16px;
+  font-size: 12px;
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* ── Presence Overlay ────────────────────────────────── */
+.presence-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 100;
+}
+
+.collaborator-cursor {
+  position: absolute;
+}
+
+.collaborator-label {
+  position: absolute;
+  top: 16px;
+  left: 8px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+  font-family: inherit;
+  font-weight: 500;
+  white-space: nowrap;
+  color: #fff;
+}
+
+.collaborator-avatar {
+  position: absolute;
+  top: -18px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 600;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+}
+
+.presence-avatar-bar {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+}
+
+.presence-avatar-bar > div {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  border: 2px solid var(--bg-secondary);
+}
+
+/* ── Analysis panel roots ────────────────────────────── */
+/* ShadowAnalysisPanel and WindAnalysisPanel share analysis-section / field-row styles */
+.shadow-analysis-panel,
+.wind-analysis-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+}
+
+/* ── Mobile Viewer ───────────────────────────────────── */
+.mobile-viewer {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bg-secondary);
+  font-family: inherit;
+}
+
+.mobile-header {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-project-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.read-only-badge {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  padding: 2px 6px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.element-count {
+  font-size: 11px;
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.mobile-view-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.mobile-view-tabs .tab-btn {
+  flex: 1;
+  padding: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.1s, border-color 0.1s;
+}
+
+.mobile-view-tabs .tab-btn:hover {
+  color: var(--text-primary);
+}
+
+.mobile-view-tabs .tab-btn.active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+  background: transparent;
+}
+
+.mobile-level-bar {
+  padding: 4px 8px;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-level-bar .level-btn {
+  padding: 2px 8px;
+  font-size: 11px;
+  font-family: inherit;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.1s, color 0.1s;
+}
+
+.mobile-level-bar .level-btn:hover {
+  color: var(--text-primary);
+}
+
+.mobile-level-bar .level-btn.active {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+.mobile-viewport {
+  flex: 1;
+  position: relative;
+  background: var(--bg-tertiary);
+  overflow: hidden;
+}
+
+.mobile-zoom-controls {
+  position: absolute;
+  bottom: 16px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.btn-zoom-in,
+.btn-zoom-out {
+  width: 40px;
+  height: 40px;
+  font-size: 20px;
+  font-family: inherit;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);
+  transition: background 0.1s;
+}
+
+.btn-zoom-in:hover,
+.btn-zoom-out:hover {
+  background: var(--bg-elevated);
+}
