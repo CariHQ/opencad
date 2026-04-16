@@ -1,31 +1,19 @@
 import { useDocumentStore } from '../stores/documentStore';
+import { SyncStatusBar, type SyncStatus } from './SyncStatusBar';
 
 export function StatusBar() {
   const { document: doc, isOnline, isSaving, lastSaved, selectedIds } = useDocumentStore();
 
-  const formatTime = (timestamp: number | null) => {
-    if (!timestamp) return 'Not saved';
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+  const syncStatus: SyncStatus = !isOnline ? 'offline' : isSaving ? 'syncing' : 'connected';
 
   return (
     <footer className="app-status-bar">
       <div className="status-left">
-        <div className="status-item">
-          <span className={`status-indicator ${isOnline ? '' : 'offline'}`} />
-          <span>{isOnline ? 'Online' : 'Offline'}</span>
-        </div>
-        {isSaving && (
-          <div className="status-item">
-            <span>Saving...</span>
-          </div>
-        )}
-        {!isSaving && lastSaved && (
-          <div className="status-item">
-            <span>Saved {formatTime(lastSaved)}</span>
-          </div>
-        )}
+        <SyncStatusBar
+          status={syncStatus}
+          pendingOps={0}
+          lastSynced={lastSaved}
+        />
       </div>
 
       <div className="status-right">

@@ -85,7 +85,7 @@ describe('T-UI-006: AppLayout', () => {
 
   it('renders StatusBar', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
-    expect(screen.getByText('Online')).toBeInTheDocument();
+    expect(screen.getByText('Connected')).toBeInTheDocument();
   });
 
   it('switches to Floor Plan view when Floor Plan tab is clicked', () => {

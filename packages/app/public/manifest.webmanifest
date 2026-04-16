@@ -1,0 +1,33 @@
+{
+  "name": "OpenCAD",
+  "short_name": "OpenCAD",
+  "description": "Browser-native, AI-powered BIM platform",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e1e1e",
+  "theme_color": "#1e1e1e",
+  "orientation": "landscape",
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "utilities"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "New Project",
+      "url": "/?new=true",
+      "description": "Create a new BIM project"
+    }
+  ]
+}
