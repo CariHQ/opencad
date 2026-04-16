@@ -256,22 +256,30 @@ export function AppLayout() {
   }) {
     setShowCommandPalette(false);
     const toolIds = [
-      'select',
-      'wall',
-      'door',
-      'window',
-      'slab',
-      'column',
-      'beam',
-      'stair',
-      'railing',
-      'line',
-      'rectangle',
-      'circle',
-      'text',
+      'select', 'wall', 'door', 'window', 'slab', 'column', 'beam',
+      'stair', 'railing', 'line', 'rectangle', 'circle', 'arc',
+      'polyline', 'text', 'dimension', 'polygon',
     ];
     if (toolIds.includes(command.id)) {
       setActiveTool(command.id as Parameters<typeof setActiveTool>[0]);
+    } else {
+      switch (command.id) {
+        case 'undo': undo(); break;
+        case 'redo': redo(); break;
+        case 'view-3d': setActiveView('3d'); break;
+        case 'view-top': setActiveView('floor-plan'); break;
+        case 'view-section': setActiveView('section'); break;
+        case 'toggle-ai': toggleAIChat(); break;
+        case 'import': setShowModal('import'); break;
+        case 'export': setShowModal('export'); break;
+        case 'focus-mode': setFocusMode((f) => !f); break;
+        case 'panel-left': setShowLeftPanel((v) => !v); break;
+        case 'panel-right': setShowRightPanel((v) => !v); break;
+        case 'history': setRightPanelTab('history'); setShowRightPanel(true); break;
+        case 'layers': setRightPanelTab('layers'); setShowRightPanel(true); break;
+        case 'properties': setRightPanelTab('properties'); setShowRightPanel(true); break;
+        default: break;
+      }
     }
   }
 

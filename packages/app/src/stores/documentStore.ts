@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DocumentModel, type DocumentSchema, type PropertyValue } from '@opencad/document';
+import { isTauri, tauriLoadProject } from '../hooks/useTauri';
 
 interface HistoryEntry {
   document: DocumentSchema;
@@ -89,48 +90,61 @@ export const useDocumentStore = create<DocumentState>()(
 
       initProject: (projectId, userId) => {
         const storageKey = `opencad-doc-${projectId}`;
-        let model: DocumentModel;
-        try {
-          const saved = localStorage.getItem(storageKey);
-          if (saved) {
-            const docData = JSON.parse(saved);
-            // Guard against pre-refactor schema (no content/organization groups)
-            if (docData?.content && docData?.organization) {
-              model = new DocumentModel(projectId, userId);
-              model.loadDocument(docData);
+
+        const applyDocData = (saved: string | null) => {
+          let model: DocumentModel;
+          try {
+            if (saved) {
+              const docData = JSON.parse(saved);
+              if (docData?.content && docData?.organization) {
+                model = new DocumentModel(projectId, userId);
+                model.loadDocument(docData);
+              } else {
+                model = new DocumentModel(projectId, userId);
+              }
             } else {
-              localStorage.removeItem(storageKey);
               model = new DocumentModel(projectId, userId);
             }
-          } else {
-            // Migrate from legacy single-key storage if present
+          } catch {
+            model = new DocumentModel(projectId, userId);
+          }
+          set({
+            document: model.documentData,
+            model,
+            currentProjectId: projectId,
+            lastSaved: Date.now(),
+            history: [],
+            historyIndex: -1,
+            canUndo: false,
+            canRedo: false,
+          });
+        };
+
+        if (isTauri()) {
+          // Async: load from SQLite on desktop
+          void tauriLoadProject(projectId).then((data) => {
+            applyDocData(data);
+          }).catch(() => {
+            applyDocData(null);
+          });
+        } else {
+          // Browser: check localStorage (with legacy key migration)
+          let saved = localStorage.getItem(storageKey);
+          if (!saved) {
             const legacy = localStorage.getItem('opencad-document');
             if (legacy) {
               try {
                 const docData = JSON.parse(legacy);
                 if (docData?.content && docData?.organization) {
                   localStorage.setItem(storageKey, legacy);
+                  saved = legacy;
                 }
               } catch { /* ignore */ }
               localStorage.removeItem('opencad-document');
             }
-            model = new DocumentModel(projectId, userId);
           }
-        } catch {
-          model = new DocumentModel(projectId, userId);
+          applyDocData(saved);
         }
-        const document = model.documentData;
-
-        set({
-          document,
-          model,
-          currentProjectId: projectId,
-          lastSaved: Date.now(),
-          history: [],
-          historyIndex: -1,
-          canUndo: false,
-          canRedo: false,
-        });
       },
 
       loadProject: (projectId, userId) => {
