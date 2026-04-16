@@ -2321,6 +2321,7 @@ input[type='range']::-moz-range-track {
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
   gap: 2px;
+  overflow-x: hidden;
   overflow-y: auto;
   overflow-x: hidden;
   flex-shrink: 0;
