@@ -22,6 +22,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     handleCanvasMouseMove,
     handleCanvasMouseUp,
     handleCanvasDoubleClick,
+    handleCanvasWheel,
     activeTool,
     drawingText,
     textInputRef,
@@ -70,48 +71,16 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           style={{ width: '100%', height: '100%' }}
         />
       ) : (
-        <>
-          <canvas
-            ref={canvasRef}
-            className={`viewport-canvas${isViewOnly ? ' viewport-canvas--view-only' : ''}`}
-            onMouseDown={handleCanvasMouseDown}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseUp={handleCanvasMouseUp}
-            onMouseLeave={handleCanvasMouseUp}
-            onDoubleClick={handleCanvasDoubleClick}
-          />
-          {drawingText && (() => {
-            const { left, top } = computeTextOverlayPosition();
-            return (
-              <input
-                ref={textInputRef}
-                data-testid="text-tool-input"
-                style={{
-                  position: 'absolute',
-                  left,
-                  top,
-                  background: 'transparent',
-                  border: 'none',
-                  borderBottom: '1px solid currentColor',
-                  outline: 'none',
-                  color: 'inherit',
-                  font: `14px sans-serif`,
-                  minWidth: 80,
-                  zIndex: 100,
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    confirmText(e.currentTarget.value);
-                  } else if (e.key === 'Escape') {
-                    cancelText();
-                  }
-                }}
-                onBlur={(e) => confirmText(e.currentTarget.value)}
-                autoFocus
-              />
-            );
-          })()}
-        </>
+        <canvas
+          ref={canvasRef}
+          className="viewport-canvas"
+          onMouseDown={handleCanvasMouseDown}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseUp={handleCanvasMouseUp}
+          onMouseLeave={handleCanvasMouseUp}
+          onDoubleClick={handleCanvasDoubleClick}
+          onWheel={handleCanvasWheel}
+        />
       )}
       <div className="viewport-overlay">
         <div className="viewport-corner top-left">
@@ -173,7 +142,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
             ) : show3D ? (
               <span>Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0</span>
             ) : (
-              <span>Draw: W L M | Ctrl+Z/Y undo | Ctrl snap</span>
+              <span>Zoom: scroll | Pan: middle-drag | Ctrl: snap off</span>
             )}
           </div>
         </div>
