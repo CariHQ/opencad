@@ -78,6 +78,7 @@ import { AuthModal } from './components/AuthModal';
 import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
+import { MobileViewer } from './components/MobileViewer';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -146,6 +147,7 @@ export function AppLayout() {
 
   const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('opencad-theme', systemTheme);
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches);
 
   const [showLeftPanel, setShowLeftPanel] = useLocalStorage('opencad-showLeftPanel', true);
   const [showRightPanel, setShowRightPanel] = useLocalStorage('opencad-showRightPanel', true);
@@ -221,6 +223,13 @@ export function AppLayout() {
     return () => window.removeEventListener('keydown', handler);
   }, [setShowLeftPanel, setShowRightPanel]);
 
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
   const toggleAIChat = () => setShowAIChat(!showAIChat);
 
   function handleCommandExecute(command: {
@@ -248,6 +257,20 @@ export function AppLayout() {
     if (toolIds.includes(command.id)) {
       setActiveTool(command.id as Parameters<typeof setActiveTool>[0]);
     }
+  }
+
+  if (isMobile) {
+    const levels = doc?.organization.levels
+      ? Object.values(doc.organization.levels).map((l) => ({ id: l.id, name: l.name }))
+      : [];
+    const elementCount = doc?.content.elements ? Object.keys(doc.content.elements).length : undefined;
+    return (
+      <MobileViewer
+        projectName={doc?.name ?? 'Project'}
+        levels={levels}
+        elementCount={elementCount}
+      />
+    );
   }
 
   return (
