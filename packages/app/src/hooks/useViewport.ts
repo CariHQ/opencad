@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { ElementSchema } from '@opencad/document';
 import { SpatialGrid } from '../utils/spatialIndex';
@@ -7,6 +7,158 @@ import {
   moveElementProps, resizeElementProps,
   type HandleKind,
 } from '../utils/elementMath';
+import { BUILT_IN_MATERIALS } from '../lib/materials';
+
+// ─── 2D material hatch patterns ───────────────────────────────────────────────
+// Patterns are cached after first creation (keyed by "category:color").
+// Each is a 16×16 px tile drawn on an offscreen canvas.
+
+const _hatchCache = new Map<string, CanvasPattern>();
+
+function _hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+function _getHatchPattern(
+  ctx: CanvasRenderingContext2D,
+  category: string,
+  color: string,
+): CanvasPattern | null {
+  const key = `${category}:${color}`;
+  const cached = _hatchCache.get(key);
+  if (cached) return cached;
+
+  const S = 16;
+  const oc = document.createElement('canvas');
+  oc.width = S; oc.height = S;
+  const oc2 = oc.getContext('2d');
+  if (!oc2) return null;
+
+  const [r, g, b] = _hexToRgb(color);
+  oc2.fillStyle = `rgba(${r},${g},${b},0.14)`;
+  oc2.fillRect(0, 0, S, S);
+  oc2.strokeStyle = `rgba(${r},${g},${b},0.55)`;
+
+  switch (category) {
+    case 'Concrete':
+    case 'Waterproofing': {
+      // Diagonal lines at 45°, 4px pitch
+      oc2.lineWidth = 0.8;
+      for (let x = -S; x < S * 2; x += 4) {
+        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S); oc2.stroke();
+      }
+      break;
+    }
+    case 'Masonry': {
+      // Brick coursing — horizontal mortar + offset vertical joints
+      oc2.lineWidth = 0.7;
+      // mortar bed
+      oc2.beginPath(); oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2); oc2.stroke();
+      // joints — bottom course offset by half-brick
+      oc2.beginPath();
+      oc2.moveTo(S / 4,     0); oc2.lineTo(S / 4,     S / 2);
+      oc2.moveTo(3 * S / 4, 0); oc2.lineTo(3 * S / 4, S / 2);
+      oc2.moveTo(0,         S / 2); oc2.lineTo(0,       S);
+      oc2.moveTo(S / 2,     S / 2); oc2.lineTo(S / 2,   S);
+      oc2.stroke();
+      break;
+    }
+    case 'Timber': {
+      // Parallel horizontal grain lines
+      oc2.lineWidth = 0.5;
+      const offsets = [2, 5, 8, 11, 14]; // fixed offsets — no random
+      for (const y of offsets) {
+        oc2.beginPath(); oc2.moveTo(0, y); oc2.lineTo(S, y); oc2.stroke();
+      }
+      break;
+    }
+    case 'Metal': {
+      // Cross-hatch at 45° and 135°, fine pitch
+      oc2.lineWidth = 0.55;
+      for (let x = -S; x < S * 2; x += 4) {
+        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S);  oc2.stroke();
+        oc2.beginPath(); oc2.moveTo(x, S); oc2.lineTo(x + S, 0);  oc2.stroke();
+      }
+      break;
+    }
+    case 'Glass': {
+      // Sparse single diagonal
+      oc2.lineWidth = 0.4;
+      oc2.strokeStyle = `rgba(${r},${g},${b},0.3)`;
+      oc2.beginPath(); oc2.moveTo(0, 0); oc2.lineTo(S, S); oc2.stroke();
+      oc2.beginPath(); oc2.moveTo(S, 0); oc2.lineTo(0, S); oc2.stroke();
+      break;
+    }
+    case 'Insulation': {
+      // Zigzag across the tile
+      oc2.lineWidth = 0.8;
+      oc2.beginPath();
+      oc2.moveTo(0, S / 2);
+      for (let x = 0; x <= S; x += 4) {
+        oc2.lineTo(x, x % 8 === 0 ? S * 0.25 : S * 0.75);
+      }
+      oc2.stroke();
+      break;
+    }
+    case 'Plaster':
+    case 'Paint': {
+      // Very sparse horizontal lines
+      oc2.lineWidth = 0.4;
+      oc2.strokeStyle = `rgba(${r},${g},${b},0.25)`;
+      oc2.beginPath(); oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2); oc2.stroke();
+      break;
+    }
+    case 'Roofing': {
+      // Arc-scales (roof tile silhouette)
+      oc2.lineWidth = 0.7;
+      oc2.beginPath();
+      oc2.arc(0,     S,     S / 2, Math.PI, 0);
+      oc2.arc(S / 2, S / 2, S / 2, Math.PI, 0);
+      oc2.stroke();
+      break;
+    }
+    case 'Flooring':
+    case 'Tile': {
+      // Grid — tile joints
+      oc2.lineWidth = 0.6;
+      oc2.beginPath();
+      oc2.moveTo(S / 2, 0); oc2.lineTo(S / 2, S);
+      oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2);
+      oc2.stroke();
+      break;
+    }
+    case 'Acoustic': {
+      // Diagonal dots (perforation pattern)
+      oc2.fillStyle = `rgba(${r},${g},${b},0.45)`;
+      oc2.beginPath(); oc2.arc(S / 4, S / 4, 1.2, 0, Math.PI * 2); oc2.fill();
+      oc2.beginPath(); oc2.arc(3 * S / 4, 3 * S / 4, 1.2, 0, Math.PI * 2); oc2.fill();
+      break;
+    }
+    case 'Cladding': {
+      // Horizontal laps
+      oc2.lineWidth = 0.7;
+      for (let y = 2; y < S; y += 4) {
+        oc2.beginPath(); oc2.moveTo(0, y); oc2.lineTo(S, y); oc2.stroke();
+      }
+      break;
+    }
+    default: {
+      // Sparse 45° diagonal
+      oc2.lineWidth = 0.5;
+      for (let x = -S; x < S * 2; x += 6) {
+        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S); oc2.stroke();
+      }
+    }
+  }
+
+  const pattern = ctx.createPattern(oc, 'repeat');
+  if (pattern) {
+    _hatchCache.set(key, pattern);
+    return pattern;
+  }
+  return null;
+}
 
 const LIGHT_THEME = {
   background: '#fafaf8',          // drafting-paper off-white
@@ -521,6 +673,19 @@ export function useViewport() {
       const props = element.properties as Record<string, { value: unknown }>;
       const type = element.type;
 
+      // Apply material hatch pattern as fill for solid shapes when not selected
+      if (!isSelected) {
+        const appliedMatName = props['Material']?.value as string | undefined;
+        if (appliedMatName) {
+          const appliedMat = BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName);
+          if (appliedMat) {
+            const pattern = _getHatchPattern(ctx, appliedMat.category, appliedMat.color);
+            if (pattern) ctx.fillStyle = pattern;
+            ctx.strokeStyle = appliedMat.color;
+          }
+        }
+      }
+
       if (type === 'annotation' || type === 'wall' || type === 'dimension') {
         if (props['StartX'] && props['EndX']) {
           const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
@@ -760,6 +925,11 @@ export function useViewport() {
       }
     }
   }, [doc, selectedIds, drawingState, activeTool, currentSnap]);
+
+  // Stable ref so the ResizeObserver (which has [] deps) can always call the
+  // latest draw() without capturing a stale closure.
+  const drawRef = useRef(draw);
+  useLayoutEffect(() => { drawRef.current = draw; });
 
   // ─── Wheel: zoom centred on cursor ────────────────────────────────────────
 
@@ -1275,7 +1445,10 @@ export function useViewport() {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width;
         canvas.height = entry.contentRect.height;
-        dirtyRef.current = true;
+        // Redraw immediately — setting canvas.width/height clears it, so waiting
+        // for the next rAF produces a one-frame blank flash on every resize tick.
+        drawRef.current();
+        dirtyRef.current = false;
       }
     });
     ro.observe(container);

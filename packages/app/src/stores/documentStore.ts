@@ -7,21 +7,45 @@ import {
   loadProject as idbLoadProject,
   saveProject as idbSaveProject,
 } from '@opencad/document';
-import { isTauri, tauriLoadProject } from '../hooks/useTauri';
+import { isTauri, tauriLoadProject, tauriSaveProject } from '../hooks/useTauri';
+import { broadcastDocumentUpdate } from '../sync/localSyncClient';
+import { documentsApi } from '../lib/serverApi';
 
 const MAX_HISTORY = 50;
 
-// Unified debounced save — writes to localStorage AND IndexedDB on every mutation.
-// Using a single debounce timer means rapid changes (dragging, typing) coalesce
-// into one write 500 ms after the last change.
+// Unified debounced save — writes to localStorage, IndexedDB, Tauri SQLite (when
+// running as desktop), and broadcasts to the local sync server so the other
+// environment (browser ↔ desktop) picks up the change.
+// Using a single debounce timer means rapid changes coalesce into one write 500 ms
+// after the last user action.
 let _saveTimer: ReturnType<typeof setTimeout> | null = null;
 function debouncedSave(projectId: string | null, doc: DocumentSchema): void {
   if (_saveTimer) clearTimeout(_saveTimer);
   _saveTimer = setTimeout(() => {
     const key = projectId ? `opencad-doc-${projectId}` : 'opencad-document';
-    try { localStorage.setItem(key, JSON.stringify(doc)); } catch { /* storage quota exceeded */ }
-    // IndexedDB is authoritative on load — keep it in sync too
-    void idbSaveProject(doc).catch(() => { /* IDB unavailable; localStorage already saved */ });
+    const json = JSON.stringify(doc);
+
+    // 1. localStorage (fast read on refresh)
+    try { localStorage.setItem(key, json); } catch { /* quota exceeded */ }
+
+    // 2. IndexedDB (authoritative browser store)
+    void idbSaveProject(doc).catch(() => {});
+
+    // 3. Tauri SQLite (authoritative desktop store when running in Tauri)
+    if (isTauri() && projectId) {
+      void tauriSaveProject(projectId, doc.name, json).catch(() => {});
+    }
+
+    // 4. Broadcast to local sync server — no-op when disconnected
+    if (projectId) {
+      broadcastDocumentUpdate(projectId, json);
+    }
+
+    // 5. Persist to REST API server (fire-and-forget)
+    if (projectId) {
+      void documentsApi.save(projectId, json).catch(() => {});
+    }
+
     _saveTimer = null;
   }, 500);
 }
@@ -85,6 +109,13 @@ interface DocumentState {
   updateLevel: (levelId: string, updates: { name?: string; elevation?: number; height?: number }) => void;
   deleteLevel: (levelId: string) => void;
   renameLevel: (levelId: string, name: string) => void;
+
+  /**
+   * Apply a document schema received from the remote sync server.
+   * This saves locally (IDB + localStorage) but does NOT broadcast back,
+   * preventing infinite echo loops.
+   */
+  applyRemoteDocument: (schema: DocumentSchema) => void;
 }
 
 export const useDocumentStore = create<DocumentState>()(
@@ -459,6 +490,28 @@ export const useDocumentStore = create<DocumentState>()(
         const newDoc = { ...model.documentData };
         set({ document: newDoc });
         debouncedSave(currentProjectId, newDoc);
+      },
+
+      applyRemoteDocument: (schema) => {
+        const existing = get().model;
+        const userId = existing ? existing.documentData.metadata.createdBy : 'user-1';
+        const newModel = new DocumentModel(schema.id, userId);
+        newModel.loadDocument(schema);
+        const newDoc = { ...newModel.documentData };
+        set({
+          document: newDoc,
+          model: newModel,
+          currentProjectId: schema.id,
+          lastSaved: Date.now(),
+          history: [],
+          historyIndex: -1,
+          canUndo: false,
+          canRedo: false,
+        });
+        // Save locally without broadcasting (avoids echo loop).
+        const key = `opencad-doc-${schema.id}`;
+        try { localStorage.setItem(key, JSON.stringify(newDoc)); } catch { /* quota */ }
+        void idbSaveProject(newDoc).catch(() => {});
       },
     }),
     {

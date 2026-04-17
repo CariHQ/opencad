@@ -1,7 +1,8 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { PresenceOverlay, type CollaboratorPresence } from './PresenceOverlay';
+expect.extend(jestDomMatchers);
 
 describe('T-COL-010: PresenceOverlay', () => {
   beforeEach(() => { vi.clearAllMocks(); });

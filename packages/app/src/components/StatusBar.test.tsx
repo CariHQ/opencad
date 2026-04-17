@@ -3,11 +3,12 @@
  *
  * Verifies: online/offline indicator, save state, selection count.
  */
-import '@testing-library/jest-dom/vitest';
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { StatusBar } from './StatusBar';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 describe('T-UI-003: StatusBar', () => {
   beforeEach(() => {

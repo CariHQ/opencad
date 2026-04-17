@@ -23,33 +23,33 @@ describe('Document Store', () => {
   });
 });
 
-describe('T-DOC-007: Undo history has no entry cap', () => {
+describe('T-DOC-007: Undo history is capped at MAX_HISTORY (50)', () => {
   beforeEach(() => {
     useDocumentStore.getState().loadProject('test-project', 'user-001');
   });
 
-  it('pushHistory 60 times → history.length === 60', () => {
+  it('pushHistory 60 times → history.length capped at 50', () => {
     const store = useDocumentStore.getState();
     for (let i = 0; i < 60; i++) {
       store.pushHistory(`step ${i}`);
     }
-    expect(useDocumentStore.getState().history.length).toBe(60);
+    expect(useDocumentStore.getState().history.length).toBe(50);
   });
 
-  it('pushHistory 100 times → history.length === 100', () => {
+  it('pushHistory 100 times → history.length capped at 50', () => {
     const store = useDocumentStore.getState();
     for (let i = 0; i < 100; i++) {
       store.pushHistory(`step ${i}`);
     }
-    expect(useDocumentStore.getState().history.length).toBe(100);
+    expect(useDocumentStore.getState().history.length).toBe(50);
   });
 
-  it('pushHistory 51 times → history.length === 51', () => {
+  it('pushHistory 51 times → history.length capped at 50', () => {
     const store = useDocumentStore.getState();
     for (let i = 0; i < 51; i++) {
       store.pushHistory(`step ${i}`);
     }
-    expect(useDocumentStore.getState().history.length).toBe(51);
+    expect(useDocumentStore.getState().history.length).toBe(50);
   });
 });
 

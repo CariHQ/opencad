@@ -1,108 +1,46 @@
-* {
+/*
+ * index.css — base reset and global icon fix only.
+ *
+ * CSS design tokens (--bg-*, --text-*, --accent-*, etc.) are defined in
+ * app.css, which is loaded by AppLayout and wins the cascade.  Do NOT
+ * redefine them here — competing :root blocks caused visible hover/active
+ * backgrounds in the Tauri WKWebView because its CSS injection order differs
+ * from Chrome's.
+ */
+
+/* ─── Box-model reset ────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* ─── Design tokens — light theme (default) ─────────────────────── */
-:root {
-  /* Backgrounds */
-  --bg-primary:   #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary:  #f1f5f9;
-  --bg-elevated:  #e8edf3;   /* raised cards, hover targets */
-  --bg-surface:   #ffffff;   /* input/field surfaces */
-  --bg-hover:     #edf2f7;   /* hover state overlay */
-  --bg-canvas:    #f7f8fa;   /* drafting canvas */
-
-  /* Borders */
-  --border-color:   #e2e8f0;
-  --border-default: #d1d9e0;
-  --border-subtle:  #edf2f7;
-  --border:         #d1d9e0;
-  --separator-color: #e2e8f0;
-
-  /* Text */
-  --text-primary:   #1e293b;
-  --text-secondary: #64748b;
-  --text-muted:     #94a3b8;
-
-  /* Accents */
-  --accent-primary:       #4f46e5;
-  --accent-secondary:     #818cf8;
-  --accent-primary-muted: rgba(79, 70, 229, 0.12);
-  --accent-hover:         #4338ca;
-  --accent-success:       #16a34a;
-  --accent-warning:       #d97706;
-  --accent-danger:        #dc2626;
-  --danger-color:         #dc2626;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.14);
-
-  /* Motion */
-  --panel-transition: 0.2s ease;
+/* ─── Canvas reset ───────────────────────────────────────────────── */
+/* Canvases manage their own interaction; browser focus rings appear as
+   rendering artifacts at canvas edges. display:block removes the small
+   inline baseline gap that browsers add to inline elements. */
+canvas {
+  display: block;
+  outline: none;
 }
 
-/* ─── Dark theme overrides ─────────────────────────────────────── */
-[data-theme='dark'] {
-  /* Backgrounds */
-  --bg-primary:   #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-tertiary:  #0f0f23;
-  --bg-elevated:  #1e2a40;
-  --bg-surface:   #1a2236;
-  --bg-hover:     #243050;
-  --bg-canvas:    #141827;
-
-  /* Borders */
-  --border-color:   #374151;
-  --border-default: #4b5563;
-  --border-subtle:  #2d3748;
-  --border:         #4b5563;
-  --separator-color: #374151;
-
-  /* Text */
-  --text-primary:   #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted:     #6b7280;
-
-  /* Accents */
-  --accent-primary:       #3b82f6;
-  --accent-secondary:     #60a5fa;
-  --accent-primary-muted: rgba(59, 130, 246, 0.15);
-  --accent-hover:         #2563eb;
-  --accent-success:       #22c55e;
-  --accent-warning:       #f59e0b;
-  --accent-danger:        #ef4444;
-  --danger-color:         #ef4444;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
-  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
-}
-
-/* ─── Base styles ─────────────────────────────────────────────── */
+/* ─── Base body ──────────────────────────────────────────────────── */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
   line-height: 1.6;
 }
 
-/* ─── Global icon fix ─────────────────────────────────────────── */
+/* ─── Global button + SVG icon fix ──────────────────────────────── */
 /*
  * Lucide (and other SVG icon sets) use stroke="currentColor".
- * Buttons in browsers inherit `color` from the cascade, but some
- * browser UA stylesheets reset it to ButtonText (often opaque black),
- * and our own components sometimes set backgrounds without a matching
- * foreground color, making icons disappear.
+ * Buttons in some browser UA stylesheets reset `color` to ButtonText (black),
+ * making icons disappear on tinted/dark backgrounds.
  *
- * These rules guarantee every SVG inside an interactive element
- * always picks up the correct foreground color.
+ * `color: inherit` guarantees every button inherits the cascade foreground.
+ * `stroke: currentColor` on SVGs inside interactive elements makes them
+ * honour the inherited color regardless of which icon library is used.
  */
 button {
   color: inherit;
@@ -115,166 +53,4 @@ label svg,
   display: block;       /* prevents inline baseline gap */
   stroke: currentColor; /* explicit — don't rely solely on attribute */
   flex-shrink: 0;       /* never squash inside flex rows */
-}
-
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.header {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  text-align: center;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.header p {
-  color: var(--text-muted);
-  margin-top: 0.5rem;
-}
-
-.main {
-  flex: 1;
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-section {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
-}
-
-section h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.input-group {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.input-group input {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-size: 1rem;
-}
-
-.input-group input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-}
-
-button {
-  padding: 0.75rem 1.25rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-button.primary {
-  background: var(--accent-primary);
-  color: #ffffff;
-}
-
-button.primary:hover {
-  background: var(--accent-secondary);
-}
-
-.add-btn {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-.add-btn:hover {
-  background: var(--accent-primary);
-  color: #ffffff;
-  border-color: var(--accent-primary);
-}
-
-.project-info {
-  background: var(--bg-tertiary);
-  padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-}
-
-.project-info p {
-  margin-bottom: 0.5rem;
-}
-
-.project-info strong {
-  color: var(--text-muted);
-}
-
-.item-list {
-  list-style: none;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.item {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.item:last-child {
-  border-bottom: none;
-}
-
-.color-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.footer {
-  background: var(--bg-secondary);
-  padding: 1.5rem;
-  text-align: center;
-  border-top: 1px solid var(--border-color);
-  color: var(--text-muted);
-}
-
-@media (max-width: 768px) {
-  .main {
-    grid-template-columns: 1fr;
-  }
 }

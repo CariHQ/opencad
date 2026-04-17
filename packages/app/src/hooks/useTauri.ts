@@ -18,6 +18,17 @@ export function isTauri(): boolean {
   return typeof window !== 'undefined' && window.__TAURI__ !== undefined;
 }
 
+/**
+ * Programmatically start a window drag gesture.
+ * Called from mousedown handlers so the drag works even when the pointer
+ * lands on a child element of the drag region (Tauri v2's data-tauri-drag-region
+ * only fires when e.target IS the attributed element, not a descendant).
+ */
+export function tauriStartDragging(): void {
+  if (!isTauri()) return;
+  window.__TAURI__!.core.invoke('plugin:window|start_dragging').catch(() => {});
+}
+
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) {
     throw new Error(`Tauri not available (running in browser). Command: ${cmd}`);

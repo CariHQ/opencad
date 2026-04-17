@@ -85,6 +85,21 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Ensure buttons always inherit the cascade foreground color so SVG icons
+   remain visible on tinted/dark backgrounds (WKWebView & some UA resets). */
+button {
+  color: inherit;
+}
+
+button svg,
+a svg,
+label svg,
+[role='button'] svg {
+  display: block;
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
 .app-container {
   display: flex;
   flex-direction: column;
@@ -100,9 +115,40 @@ body {
   height: 40px;
   padding: 0 8px;
   background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
   border-bottom: 1px solid var(--border-color);
   gap: 8px;
   flex-shrink: 0;
+}
+
+/* ── Tauri desktop: overlay title bar ─────────────────────────────────────
+ * When titleBarStyle is "overlay", the web content extends into the macOS
+ * native title bar row.  The traffic-light buttons (⚫🔴🟡🟢) float in the
+ * top-left at approximately x=12px.  We clear them with padding-left.
+ *
+ * Dragging is handled by data-tauri-drag-region on the <header> element
+ * (Tauri v2 API).  -webkit-app-region is a Tauri v1/Electron API and is
+ * not honoured by Tauri v2's WKWebView on macOS.
+ * ───────────────────────────────────────────────────────────────────────── */
+.tauri-window .app-toolbar {
+  padding-left: 80px;          /* clear the three traffic-light buttons */
+  -webkit-user-select: none;   /* prevent text-select mode on non-interactive areas */
+  user-select: none;
+  cursor: default;
+}
+
+/* Interactive controls inside the toolbar restore normal selection/cursor. */
+.tauri-window .app-toolbar button,
+.tauri-window .app-toolbar input,
+.tauri-window .app-toolbar a,
+.tauri-window .app-toolbar select,
+.tauri-window .app-toolbar [role='button'] {
+  -webkit-user-select: auto;
+  user-select: auto;
+  cursor: pointer;
+}
+.tauri-window .app-toolbar input {
+  cursor: text;
 }
 
 .toolbar-left,
@@ -395,15 +441,20 @@ body {
   border: none;
   cursor: pointer;
   color: var(--text-muted);
-  padding: 2px;
+  padding: 0;
+  width: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
+  flex-shrink: 0;
   opacity: 0;
-  transition: opacity 0.1s;
+  transition: width 0.1s, padding 0.1s, opacity 0.1s;
 }
 
 .nav-item:hover .nav-icon-btn {
   opacity: 1;
+  width: 18px;
+  padding: 2px;
 }
 
 .layer-color-dot {
@@ -2252,17 +2303,22 @@ body {
 }
 
 .search-input {
-  padding: 6px 12px;
+  padding: 0 12px;
+  height: 32px;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--bg-tertiary);
   color: var(--text-primary);
   font-size: 13px;
   width: 220px;
+  line-height: normal;
 }
 
 .sort-select {
-  padding: 6px 10px;
+  padding: 0 10px;
+  height: 32px;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--bg-tertiary);
@@ -2272,7 +2328,9 @@ body {
 }
 
 .view-toggle-btn {
-  padding: 6px;
+  padding: 0 6px;
+  height: 32px;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: transparent;
@@ -2369,12 +2427,58 @@ body {
 }
 
 .dashboard-empty {
-  flex: 1;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  color: var(--text-muted);
+  padding: 48px 32px 40px;
+  gap: 48px;
+  overflow-y: auto;
+}
+
+.empty-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.empty-title {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.empty-subtitle {
   font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.empty-templates-section {
+  width: 100%;
+  max-width: 960px;
+}
+
+.empty-templates-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0 0 4px 16px;
+}
+
+/* In the empty state, suppress the duplicate "Project Templates" panel header
+   since we have our own label above it */
+.empty-templates-section .panel-header {
+  display: none;
+}
+
+/* Wider columns for the full-width empty-state template grid */
+.empty-templates-section .templates-grid {
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
 }
 
 .sr-only {
@@ -2705,6 +2809,116 @@ body {
   text-decoration: underline;
 }
 
+/* ── Auth extras ──────────────────────────────────────── */
+.auth-subtitle {
+  font-size: 13px;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: -12px;
+  margin-bottom: 20px;
+}
+
+.auth-msg {
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 12px;
+  line-height: 1.45;
+}
+
+.auth-msg--error {
+  background: rgba(242, 72, 34, 0.1);
+  border: 1px solid rgba(242, 72, 34, 0.3);
+  color: var(--accent-danger);
+}
+
+.auth-msg--success {
+  background: rgba(27, 196, 125, 0.1);
+  border: 1px solid rgba(27, 196, 125, 0.3);
+  color: var(--accent-success);
+}
+
+.auth-switch {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.btn-auth-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+.auth-spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255,255,255,0.35);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: auth-spin 0.65s linear infinite;
+  vertical-align: middle;
+}
+
+/* ── Trial-expired gate ──────────────────────────────── */
+.trial-gate-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.82);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(6px);
+}
+
+.trial-gate-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  padding: 40px 36px;
+  width: 400px;
+  max-width: 90vw;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trial-gate-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+
+.trial-gate-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.trial-gate-body {
+  font-size: 14px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.btn-upgrade {
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  font-family: inherit;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-upgrade:hover { opacity: 0.88; }
+
 /* ── Settings Modal ─────────────────────────────────── */
 .settings-overlay {
   position: fixed;
@@ -2867,6 +3081,23 @@ body {
   align-items: center;
   gap: 12px;
   padding: 24px 32px 16px;
+}
+
+/* Tauri overlay title bar: clear traffic lights, enable drag, no text-select */
+.tauri-window .dashboard-header {
+  padding-left: 96px;           /* 80px traffic-light clearance + original offset */
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+.tauri-window .dashboard-header button,
+.tauri-window .dashboard-header input,
+.tauri-window .dashboard-header a,
+.tauri-window .dashboard-header select,
+.tauri-window .dashboard-header [role='button'] {
+  -webkit-user-select: auto;
+  user-select: auto;
+  cursor: pointer;
 }
 
 .dashboard-title {
@@ -4683,6 +4914,32 @@ body {
   height: 100%;
 }
 
+.material-selection-status {
+  padding: 6px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.material-status-hint {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.material-status-ready {
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+
+.material-status-success {
+  color: var(--accent-success);
+  font-weight: 500;
+}
+
+.material-card--active {
+  border-color: var(--accent-success) !important;
+  background: rgba(27, 196, 125, 0.06) !important;
+}
+
 .material-library-controls {
   display: flex;
   gap: 6px;
@@ -4806,11 +5063,22 @@ body {
   transition: background 0.12s ease, border-color 0.12s ease;
 }
 
-.btn-select-material:hover,
+.btn-select-material:hover:not(:disabled),
 .btn-insert:hover {
   background: var(--bg-elevated);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
+}
+
+.btn-select-material.applied {
+  background: var(--accent-success);
+  border-color: var(--accent-success);
+  color: #fff;
+}
+
+.btn-select-material:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .material-library-footer {

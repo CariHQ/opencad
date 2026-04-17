@@ -1,5 +1,6 @@
-import '@testing-library/jest-dom/vitest';
-import { vi } from 'vitest';
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
+import { expect, vi } from 'vitest';
+expect.extend(jestDomMatchers);
 
 vi.mock('uuid', () => ({
   v4: () => crypto.randomUUID(),

@@ -1,7 +1,8 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { CostPanel, type CostItem } from './CostPanel';
+expect.extend(jestDomMatchers);
 
 describe('T-COST-001: CostPanel', () => {
   const onExport = vi.fn();

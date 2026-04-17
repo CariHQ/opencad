@@ -4,10 +4,11 @@
  * Verifies: 2D canvas renders in floor-plan mode, 3D container renders in 3d mode,
  * view controls render, overlay labels are correct.
  */
-import '@testing-library/jest-dom/vitest';
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Viewport } from './Viewport';
+expect.extend(jestDomMatchers);
 
 // Mock Three.js viewport hook — we don't test WebGL in jsdom
 vi.mock('../hooks/useThreeViewport', () => ({
@@ -30,6 +31,8 @@ vi.mock('../hooks/useViewport', () => ({
     handleCanvasMouseDown: vi.fn(),
     handleCanvasMouseMove: vi.fn(),
     handleCanvasMouseUp: vi.fn(),
+    handleCanvasDoubleClick: vi.fn(),
+    handleCanvasWheel: vi.fn(),
     activeTool: 'select',
     drawingState: null,
   }),
@@ -64,17 +67,17 @@ describe('T-UI-005: Viewport', () => {
     expect(screen.getByText('Section')).toBeInTheDocument();
   });
 
-  it('shows T/F/R/3D view preset buttons in 3d mode', () => {
+  it('shows ViewCube orientation buttons in 3d mode', () => {
     render(<Viewport viewType="3d" />);
-    expect(screen.getByTitle('Top View (1)')).toBeInTheDocument();
-    expect(screen.getByTitle('Front View (2)')).toBeInTheDocument();
-    expect(screen.getByTitle('Right View (3)')).toBeInTheDocument();
-    expect(screen.getByTitle('3D View (4)')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set view to top' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set view to front' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set view to right' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Set view to 3d' })).toBeInTheDocument();
   });
 
-  it('does not show view preset buttons in 2D mode', () => {
+  it('does not show ViewCube in 2D mode', () => {
     render(<Viewport viewType="floor-plan" />);
-    expect(screen.queryByTitle('Top View (1)')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Set view to top' })).not.toBeInTheDocument();
   });
 
   it('shows keyboard shortcut hints in 3d mode', () => {
@@ -84,6 +87,6 @@ describe('T-UI-005: Viewport', () => {
 
   it('shows 2D shortcut hints in floor-plan mode', () => {
     render(<Viewport viewType="floor-plan" />);
-    expect(screen.getByText(/Draw/)).toBeInTheDocument();
+    expect(screen.getByText(/Zoom: scroll/)).toBeInTheDocument();
   });
 });

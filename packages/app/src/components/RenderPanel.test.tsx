@@ -1,7 +1,8 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { RenderPanel } from './RenderPanel';
+expect.extend(jestDomMatchers);
 
 describe('T-RENDER-001: RenderPanel', () => {
   it('renders Render Settings header', () => {

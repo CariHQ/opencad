@@ -4,11 +4,12 @@
  * Verifies: tool categories render, tool buttons activate on click,
  * active tool is reflected in store and UI.
  */
-import '@testing-library/jest-dom/vitest';
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ToolShelf } from './ToolShelf';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 describe('T-UI-001: ToolShelf', () => {
   beforeEach(() => {

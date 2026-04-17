@@ -117,6 +117,140 @@ async function createRenderer(): Promise<GenericRenderer> {
   return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
 }
 
+// ─── Procedural texture generator (Phase II) ─────────────────────────────────
+// Generates DataTexture tiles procedurally for each material category.
+// No external assets required — textures are computed once and cached.
+// Each tile is 128×128 RGBA.
+
+const _texCache = new Map<string, THREE.Texture>();
+const _TEX_SIZE = 128;
+
+function _hexToRgb3(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+/** Simple deterministic pseudo-noise — no external library needed. */
+function _noise(x: number, y: number): number {
+  const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453;
+  return n - Math.floor(n);
+}
+
+function _getProceduralTexture(materialId: string, category: string, color: string): THREE.Texture {
+  const cached = _texCache.get(materialId);
+  if (cached) return cached;
+
+  const S = _TEX_SIZE;
+  const data = new Uint8Array(S * S * 4);
+  const [br, bg, bb] = _hexToRgb3(color);
+
+  const set = (x: number, y: number, r: number, g: number, b: number, a = 255) => {
+    const i = (y * S + x) * 4;
+    data[i]     = r;
+    data[i + 1] = g;
+    data[i + 2] = b;
+    data[i + 3] = a;
+  };
+
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      // Base color
+      let nr = br, ng = bg, nb = bb;
+      let variation = 0;
+
+      switch (category) {
+        case 'Concrete': {
+          // Rough grey surface — coarse noise
+          const n1 = _noise(x / 8,  y / 8);
+          const n2 = _noise(x / 16, y / 16);
+          variation = (n1 * 0.6 + n2 * 0.4 - 0.5) * 40;
+          break;
+        }
+        case 'Masonry': {
+          // Brick pattern: mortar joints every 32×16 px
+          const bx = x % 64, by = y % 32;
+          const rowOffset = Math.floor(y / 32) % 2 === 0 ? 0 : 32;
+          const brickX = (bx + rowOffset) % 64;
+          const isMortar = brickX < 2 || brickX > 61 || by < 2 || by > 29;
+          const surfNoise = (_noise(x / 4, y / 4) - 0.5) * 20;
+          variation = isMortar ? -30 : surfNoise;
+          break;
+        }
+        case 'Timber': {
+          // Wood grain — anisotropic noise along grain direction
+          const grain = Math.sin((x + _noise(x / 20, y / 4) * 8) * 0.3) * 25;
+          const fiber = _noise(x / 3, y / 2) * 10;
+          variation = grain + fiber - 18;
+          break;
+        }
+        case 'Metal': {
+          // Brushed metal — directional scratch lines
+          const scratch = _noise(x / 2, y * 12) * 0.3 + _noise(x / 3, y * 8) * 0.7;
+          variation = (scratch - 0.5) * 30;
+          break;
+        }
+        case 'Glass': {
+          // Subtle surface shimmer
+          const shimmer = _noise(x / 20, y / 20) * 15 - 5;
+          variation = shimmer;
+          // Slight transparency modulation already handled by opacity in material
+          break;
+        }
+        case 'Flooring': {
+          const grain = Math.sin((x + _noise(x / 16, y / 3) * 6) * 0.25) * 20;
+          variation = grain + _noise(x / 4, y / 4) * 8 - 14;
+          break;
+        }
+        case 'Tile': {
+          // Grout grid every 32 px
+          const tileX = x % 32, tileY = y % 32;
+          const isGrout = tileX < 2 || tileY < 2;
+          variation = isGrout ? -25 : (_noise(x / 6, y / 6) - 0.5) * 12;
+          break;
+        }
+        case 'Insulation': {
+          // Fibrous texture — cross-hatch noise
+          const fib = _noise(x * 0.5, y * 0.2) * 0.5 + _noise(x * 0.2, y * 0.5) * 0.5;
+          variation = (fib - 0.5) * 35;
+          break;
+        }
+        case 'Plaster':
+        case 'Paint': {
+          // Fine stipple
+          variation = (_noise(x / 2, y / 2) - 0.5) * 15;
+          break;
+        }
+        case 'Roofing': {
+          // Scale texture — overlapping half-ellipses
+          const ry2 = y % 24, rx2 = (x + Math.floor(y / 24) % 2 * 12) % 24;
+          const edgeDist = Math.sqrt((rx2 - 12) ** 2 + Math.max(0, ry2 - 18) ** 2);
+          variation = edgeDist < 6 ? -20 : (_noise(x / 5, y / 5) - 0.5) * 10;
+          break;
+        }
+        default: {
+          variation = (_noise(x / 8, y / 8) - 0.5) * 20;
+          break;
+        }
+      }
+
+      nr = Math.min(255, Math.max(0, br + variation));
+      ng = Math.min(255, Math.max(0, bg + variation));
+      nb = Math.min(255, Math.max(0, bb + variation));
+      set(x, y, nr, ng, nb);
+    }
+  }
+
+  const tex = new THREE.DataTexture(data, S, S, THREE.RGBAFormat);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  // Scale: repeat every 1000 world units (1 metre in mm space)
+  tex.repeat.set(1 / 1000, 1 / 1000);
+  tex.needsUpdate = true;
+
+  _texCache.set(materialId, tex);
+  return tex;
+}
+
 // ─── Module-level geometry helpers ───────────────────────────────────────────
 
 /** Recursively dispose buffer geometries in a scene object (materials are cached — never disposed here). */
@@ -322,10 +456,23 @@ export function useThreeViewport() {
   const tcInitPosRef         = useRef<THREE.Vector3 | null>(null);
 
   const createMaterial = useCallback(
-    (color: string, opacity = 0.8, roughness = 0.8, metalness = 0.0): THREE.MeshStandardMaterial => {
-      const key = `${color}:${opacity}:${roughness}:${metalness}`;
+    (
+      color: string,
+      opacity = 0.8,
+      roughness = 0.8,
+      metalness = 0.0,
+      materialId?: string,  // built-in material id for procedural texture
+      category?: string,
+    ): THREE.MeshStandardMaterial => {
+      const key = `${color}:${opacity}:${roughness}:${metalness}:${materialId ?? ''}`;
       const cached = materialCacheRef.current.get(key);
       if (cached) return cached;
+
+      // Phase II: apply procedural texture when a built-in material is in use
+      const tex = (materialId && category)
+        ? _getProceduralTexture(materialId, category, color)
+        : undefined;
+
       const mat = new THREE.MeshStandardMaterial({
         color: new THREE.Color(color),
         transparent: true,
@@ -333,6 +480,7 @@ export function useThreeViewport() {
         roughness,
         metalness,
         side: THREE.DoubleSide,
+        ...(tex ? { map: tex } : {}),
       });
       materialCacheRef.current.set(key, mat);
       return mat;
@@ -353,17 +501,19 @@ export function useThreeViewport() {
         ? BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName)
         : undefined;
 
-      const color = appliedMat?.color ?? ELEMENT_COLORS[type] ?? '#8888aa';
-      const pbr   = appliedMat
+      const color    = appliedMat?.color    ?? ELEMENT_COLORS[type] ?? '#8888aa';
+      const pbr      = appliedMat
         ? { roughness: appliedMat.roughness, metalness: appliedMat.metalness }
         : ELEMENT_MATERIAL_PROPS[type] ?? DEFAULT_MATERIAL_PROPS;
+      const matId    = appliedMat?.id;
+      const matCat   = appliedMat?.category;
 
       let geometry: THREE.BufferGeometry;
       let posX = 0, posY = 0, posZ = 0, ry = 0;
 
       if (type === 'wall') {
         // Walls handled by buildWallMesh (supports openings)
-        return buildWallMesh(element, allElements, createMaterial(color, 0.85, pbr.roughness, pbr.metalness));
+        return buildWallMesh(element, allElements, createMaterial(color, 0.85, pbr.roughness, pbr.metalness, matId, matCat));
       }
 
       if (type === 'annotation' || type === 'beam') {
@@ -423,7 +573,7 @@ export function useThreeViewport() {
       }
 
       const opacity = type === 'window' ? 0.35 : 0.85;
-      const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness);
+      const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness, matId, matCat);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(posX, posY, posZ);
       if (ry !== 0) mesh.rotation.y = ry;
@@ -611,7 +761,7 @@ export function useThreeViewport() {
           const restoreRoughness = appliedMat?.roughness ?? ELEMENT_MATERIAL_PROPS[elType]?.roughness ?? 0.8;
           const restoreMetalness = appliedMat?.metalness ?? ELEMENT_MATERIAL_PROPS[elType]?.metalness ?? 0.0;
           const restoreOpacity  = elType === 'window' ? 0.35 : elType === 'space' ? 0.3 : 0.85;
-          mesh.material = createMaterial(restoreColor, restoreOpacity, restoreRoughness, restoreMetalness);
+          mesh.material = createMaterial(restoreColor, restoreOpacity, restoreRoughness, restoreMetalness, appliedMat?.id, appliedMat?.category);
           // Reset the cached selection material so it re-clones with the updated color next time
           mesh.userData.selectionMat = null;
         }
@@ -939,8 +1089,15 @@ export function useThreeViewport() {
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
         const { renderer: r } = stateRef.current;
-        if (r) r.setSize(width, height);
-        needsRenderRef.current = true;
+        if (r) {
+          r.setSize(width, height);
+          // Render immediately — setSize clears the WebGL canvas, so waiting
+          // for the next rAF produces a one-frame blank flash on every resize tick.
+          r.render(scene, camera);
+          needsRenderRef.current = false;
+        } else {
+          needsRenderRef.current = true;
+        }
       }
     });
     ro.observe(container);

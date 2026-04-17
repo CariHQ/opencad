@@ -2,11 +2,12 @@
  * T-UI-003: Properties panel inline editing tests
  * T-BIM-009: IFC Property Sets (Psets) display and editing
  */
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { PropertiesPanel } from './PropertiesPanel';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 vi.mock('../stores/documentStore');
 
