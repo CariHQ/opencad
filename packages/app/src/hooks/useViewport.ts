@@ -569,6 +569,21 @@ export function useViewport() {
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
           ctx.stroke();
         }
+      } else if (type === 'space') {
+        if (props['StartX'] && props['EndX']) {
+          const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
+          const x2 = props['EndX'].value as number, y2 = props['EndY']!.value as number;
+          const rx = Math.min(x1, x2), ry = Math.min(y1, y2);
+          const rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
+          ctx.fillStyle = isSelected ? theme.selectedFill : 'rgba(99,179,237,0.10)';
+          ctx.strokeStyle = isSelected ? theme.selected : 'rgba(99,179,237,0.70)';
+          ctx.lineWidth = (isSelected ? 2 : 1) * v.scale;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.rect(rx, ry, rw, rh);
+          ctx.fill();
+          ctx.stroke();
+        }
       } else {
         // Fallback: bounding box in world space
         const bb = element.boundingBox;
@@ -697,6 +712,28 @@ export function useViewport() {
         const p2s = worldToScreen(x2, y2, cw, ch, v);
         ctx.fillStyle = selectedIds.includes(typedEl.id) ? theme.selected : theme.element;
         ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
+      }
+      if (type === 'space' && props['StartX'] && props['Name']) {
+        const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
+        const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+        const roomName = props['Name'].value as string;
+        const areaSqft = props['AreaSqft']?.value as number | undefined;
+        const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+        const cs = worldToScreen(cx, cy, cw, ch, v);
+        const isRoomSelected = selectedIds.includes(typedEl.id);
+        ctx.fillStyle = isRoomSelected ? theme.selected : theme.element;
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(roomName, cs.x, cy < y1 ? cs.y : cs.y - (areaSqft ? 7 : 0));
+        if (areaSqft) {
+          ctx.font = '9px sans-serif';
+          ctx.fillStyle = isRoomSelected ? theme.selected : theme.element;
+          ctx.globalAlpha = 0.6;
+          ctx.fillText(`${Math.round(areaSqft)} sqft`, cs.x, cs.y + 7);
+          ctx.globalAlpha = 1.0;
+        }
+        ctx.textAlign = 'left';
+        ctx.font = '10px sans-serif';
       }
     }
 

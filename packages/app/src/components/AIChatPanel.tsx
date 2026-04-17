@@ -12,6 +12,39 @@ import { useDocumentStore } from '../stores/documentStore';
 const AI_CONFIG_KEY = 'opencad-ai-config';
 const CHAT_HISTORY_KEY = 'opencad-chat-history';
 
+const FT_TO_MM = 304.8; // 1 foot in millimetres (canvas world units)
+
+interface FloorPlanRoom {
+  name: string;
+  x?: number;
+  y?: number;
+  width_ft?: number;
+  depth_ft?: number;
+  area_sqft?: number;
+}
+
+/** Extract a floor plan JSON object (with a "rooms" array) from AI response text. */
+function extractFloorPlan(content: string): { rooms: FloorPlanRoom[] } | null {
+  // Strategy 1: fenced ```json ... ``` block
+  const fencedRe = /```(?:json)?\s*\n([\s\S]*?)\n\s*```/g;
+  let m: RegExpExecArray | null;
+  while ((m = fencedRe.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(m[1]!);
+      if (parsed && Array.isArray(parsed.rooms) && parsed.rooms.length > 0) return parsed;
+    } catch { /* try next */ }
+  }
+  // Strategy 2: bare JSON object containing "rooms" key
+  const bareRe = /\{\s*"rooms"\s*:[\s\S]*?"total_area_sqft"[\s\S]*?\}/g;
+  while ((m = bareRe.exec(content)) !== null) {
+    try {
+      const parsed = JSON.parse(m[0]);
+      if (parsed && Array.isArray(parsed.rooms) && parsed.rooms.length > 0) return parsed;
+    } catch { /* try next */ }
+  }
+  return null;
+}
+
 interface AIConfig {
   baseUrl: string;
   apiKey: string;
@@ -269,7 +302,7 @@ const suggestedPrompts = [
 ];
 
 export function AIChatPanel({ onClose }: AIChatPanelProps) {
-  const { document: doc } = useDocumentStore();
+  const { document: doc, addElement: storeAddElement, pushHistory } = useDocumentStore();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -337,6 +370,49 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     const levels = doc.organization.levels ? Object.values(doc.organization.levels) : [];
     return `\n\nCurrent project context:\n- Project: ${doc.name}\n- Levels: ${levels.map((l) => l.name).join(', ') || 'none'}\n- Layers: ${layers.map((l) => l.name).join(', ') || 'none'}\n- Elements: ${elements.length} total (${Object.entries(elements.reduce<Record<string,number>>((acc, e) => { acc[e.type] = (acc[e.type] ?? 0) + 1; return acc; }, {})).map(([t, c]) => `${c} ${t}s`).join(', ') || 'none'})`;
   }, [doc]);
+
+  /** Parse any floor plan JSON out of an AI response and add space elements to the canvas. */
+  const applyFloorPlan = useCallback((content: string): number => {
+    const state = useDocumentStore.getState();
+    if (!state.document) return 0;
+
+    const plan = extractFloorPlan(content);
+    if (!plan || plan.rooms.length === 0) return 0;
+
+    const layerIds = Object.keys(state.document.organization.layers);
+    if (layerIds.length === 0) return 0;
+    const layerId = layerIds[0]!;
+
+    // Push pre-change state so the floor plan import is undoable
+    state.pushHistory('Before AI floor plan');
+
+    let added = 0;
+    for (const room of plan.rooms) {
+      const x = (room.x ?? 0) * FT_TO_MM;
+      const y = (room.y ?? 0) * FT_TO_MM;
+      const w = (room.width_ft ?? 10) * FT_TO_MM;
+      const h = (room.depth_ft ?? 10) * FT_TO_MM;
+      const areaSqft = room.area_sqft ?? Math.round((w / FT_TO_MM) * (h / FT_TO_MM));
+
+      state.addElement({
+        type: 'space',
+        layerId,
+        properties: {
+          StartX: { type: 'number', value: x },
+          StartY: { type: 'number', value: y },
+          EndX: { type: 'number', value: x + w },
+          EndY: { type: 'number', value: y + h },
+          Name: { type: 'string', value: room.name ?? 'Room' },
+          AreaSqft: { type: 'number', value: areaSqft },
+        },
+      });
+      added++;
+    }
+
+    state.pushHistory('AI floor plan applied');
+    return added;
+  // storeAddElement / pushHistory in deps just to satisfy linter — actual reads go through getState()
+  }, [storeAddElement, pushHistory]);
 
   const handleSend = useCallback(async () => {
     if (!input.trim() || isLoading) return;
@@ -407,15 +483,21 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
           break;
         }
       }
+      // Bridge: apply any floor plan JSON to the canvas
+      const roomsAdded = applyFloorPlan(accumulated);
+      const finalContent = roomsAdded > 0
+        ? `${accumulated}\n\n---\n_${roomsAdded} room${roomsAdded !== 1 ? 's' : ''} applied to the canvas. Use Undo (Ctrl+Z) to revert._`
+        : accumulated || '(no response)';
+
       setMessages((prev) =>
         prev.map((m) =>
-          m.id === assistantId ? { ...m, content: accumulated || '(no response)', streaming: false } : m
+          m.id === assistantId ? { ...m, content: finalContent, streaming: false } : m
         )
       );
       client.saveHistory([
         ...history,
         { id: userMessage.id, role: 'user', content: userText, timestamp: userMessage.timestamp },
-        { id: assistantId, role: 'assistant', content: accumulated, timestamp: Date.now() },
+        { id: assistantId, role: 'assistant', content: finalContent, timestamp: Date.now() },
       ]);
     } catch (err) {
       setMessages((prev) =>
@@ -429,7 +511,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       setIsLoading(false);
       abortRef.current = null;
     }
-  }, [input, isLoading, isConfigured, messages, buildClient, buildContext]);
+  }, [input, isLoading, isConfigured, messages, buildClient, buildContext, applyFloorPlan]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
