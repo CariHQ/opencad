@@ -801,8 +801,12 @@ export function useThreeViewport() {
 
     scene.add(new THREE.AxesHelper(1000));
 
-    updateCamera();
+    // Set scene + camera synchronously so updateScene can add meshes
+    // immediately — renderer slot is filled once the async promise resolves.
+    stateRef.current = { camera, renderer: null, scene };
     hasAutoZoomedRef.current = false;
+
+    updateCamera();
 
     let cancelled = false;
 
@@ -816,8 +820,9 @@ export function useThreeViewport() {
       renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
       container.appendChild(renderer.domElement);
 
-      stateRef.current = { camera, renderer, scene };
-      rendererReadyRef.current = true;
+      stateRef.current.renderer = renderer;
+      rendererReadyRef.current  = true;
+      needsRenderRef.current    = true; // render all meshes already in the scene
 
       const animate = () => {
         if (!rendererReadyRef.current) return;

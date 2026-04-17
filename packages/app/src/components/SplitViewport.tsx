@@ -41,9 +41,11 @@ function FloorPlanCanvas() {
 interface ThreeDViewProps {
   viewType: 'floor-plan' | '3d' | 'section';
   label: string;
+  isSplit: boolean;
+  onToggleSplit: () => void;
 }
 
-function ThreeDView({ viewType, label }: ThreeDViewProps) {
+function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps) {
   const {
     containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraTarget,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
@@ -101,6 +103,13 @@ function ThreeDView({ viewType, label }: ThreeDViewProps) {
         <button className="viewport-control-btn" onClick={zoomIn}                          title="Zoom in (+)"><ZoomIn    size={12} /></button>
         <button className="viewport-control-btn" onClick={zoomOut}                         title="Zoom out (-)"><ZoomOut   size={12} /></button>
         <button className="viewport-control-btn" onClick={() => zoomToFitRef.current()}    title="Reset camera"><RotateCcw size={12} /></button>
+        <button
+          className={`viewport-control-btn${isSplit ? ' active' : ''}`}
+          title="Split view: floor plan + 3D"
+          onClick={onToggleSplit}
+        >
+          <Columns size={12} />
+        </button>
       </div>
 
       {/* Section cut controls — visible only in section view */}
@@ -245,18 +254,13 @@ export function SplitViewport({ viewType = '3d' }: SplitViewportProps) {
           zIndex: threeVisible ? 1 : 0,
         }}
       >
-        <ThreeDView viewType={viewType} label={threeLabel} />
+        <ThreeDView
+          viewType={viewType}
+          label={threeLabel}
+          isSplit={isSplit}
+          onToggleSplit={() => setIsSplit((v) => !v)}
+        />
       </div>
-
-      {/* ── Split toggle ── */}
-      <button
-        className={`viewport-control-btn split-toggle${isSplit ? ' active' : ''}`}
-        title="Split view: floor plan + 3D"
-        onClick={() => setIsSplit((v) => !v)}
-        style={{ position: 'absolute', top: 8, right: 8, zIndex: 30 }}
-      >
-        <Columns size={14} />
-      </button>
     </div>
   );
 }
