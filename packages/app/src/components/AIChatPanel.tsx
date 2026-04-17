@@ -473,10 +473,10 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     return [rooms, wallEdges.length];
   }, [storeAddElement, pushHistory]);
 
-  const handleSend = useCallback(async () => {
-    if (!input.trim() || isLoading) return;
-
-    const userText = input.trim();
+  const handleSend = useCallback(async (overrideText?: string) => {
+    const userText = (overrideText ?? input).trim();
+    if (!userText || isLoading) return;
+    if (!overrideText) setInput('');
     const userMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -485,7 +485,6 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
-    setInput('');
     setIsLoading(true);
 
     if (!isConfigured) {
@@ -854,7 +853,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
 
       <div className="chat-suggestions">
         {suggestedPrompts.map((prompt) => (
-          <button key={prompt} className="suggestion-btn" onClick={() => setInput(prompt)}>
+          <button key={prompt} className="suggestion-btn" onClick={() => void handleSend(prompt)}>
             {prompt}
           </button>
         ))}

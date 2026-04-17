@@ -38,6 +38,7 @@ const tools: Tool[] = [
   { id: 'rectangle', name: 'Rectangle', icon: Square, shortcut: 'R', category: 'draw' },
   { id: 'circle', name: 'Circle', icon: Circle, shortcut: 'C', category: 'draw' },
   { id: 'arc', name: 'Arc', icon: Spline, shortcut: 'A', category: 'draw' },
+  { id: 'spline', name: 'Spline', icon: Spline, shortcut: 'U', category: 'draw' },
   { id: 'polygon', name: 'Polygon', icon: Pentagon, shortcut: 'P', category: 'draw' },
   { id: 'wall', name: 'Wall', icon: RectangleVertical, shortcut: 'W', category: 'structure' },
   { id: 'column', name: 'Column', icon: Hexagon, shortcut: 'K', category: 'structure' },

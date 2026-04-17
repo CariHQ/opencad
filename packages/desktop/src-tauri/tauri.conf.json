@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "identifier": "com.opencad.app",
   "build": {
-    "beforeBuildCommand": "cd ../../../ && pnpm build:browser",
-    "beforeDevCommand": "cd ../../../ && pnpm dev:browser",
+    "beforeBuildCommand": "cd ../../ && pnpm build:browser",
+    "beforeDevCommand": "cd ../../ && pnpm dev:browser",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../../app/dist"
   },
@@ -48,10 +48,7 @@
       "open": true
     },
     "fs": {
-      "scope": {
-        "allow": ["$HOME/**", "$APPDATA/**", "$LOCALAPPDATA/**"],
-        "deny": []
-      }
+      "requireLiteralLeadingDot": false
     }
   }
 }
