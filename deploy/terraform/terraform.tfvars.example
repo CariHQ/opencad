@@ -1,0 +1,30 @@
+# Copy this to terraform.tfvars and fill in the real values.
+# terraform.tfvars is gitignored — never commit it.
+
+project = "opencad-prod"
+region  = "us-central1"
+domain  = "opencad.archi"
+
+# ── Deployment ────────────────────────────────────────────────────────────────
+# Set these via CLI or environment variables on each deploy; these are just
+# placeholder defaults.
+
+server_image  = "us-central1-docker.pkg.dev/opencad-prod/opencad/opencad-server:latest"
+app_dist_path = "../../packages/app/dist"
+landing_dir   = "../../packages/landing"
+app_version   = "latest"
+
+# ── Firebase ──────────────────────────────────────────────────────────────────
+firebase_api_key              = "your-firebase-api-key"
+firebase_auth_domain          = "your-project.firebaseapp.com"
+firebase_project_id           = "opencad-prod"
+firebase_storage_bucket       = "your-project.appspot.com"
+firebase_messaging_sender_id  = "123456789012"
+firebase_app_id               = "1:123456789012:web:abc123"
+
+# ── Server secrets ────────────────────────────────────────────────────────────
+database_url = "postgresql://opencad:password@/opencad?host=/cloudsql/opencad-prod:us-central1:opencad-db"
+jwt_secret   = "change-me-to-a-secure-random-value"
+
+# ── CORS ──────────────────────────────────────────────────────────────────────
+cors_origins = "https://opencad.archi,https://app.opencad.archi"

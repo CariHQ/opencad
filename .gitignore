@@ -96,10 +96,12 @@ package-lock.json
 docs/.vitepress/cache/
 docs/.vitepress/dist/
 
-# Self-hosted deployment
-deploy/terraform.tfstate
-deploy/terraform.tfstate.backup
-deploy/.terraform/
+# Terraform
+deploy/terraform/.terraform/
+deploy/terraform/terraform.tfvars
+deploy/terraform/*.tfstate
+deploy/terraform/*.tfstate.backup
+deploy/terraform/crash.log
 
 # Generated
 *.generated.ts
