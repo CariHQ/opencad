@@ -1,30 +1,14 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Square, Columns, LayoutGrid, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
+import { Columns, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
 import { ContextMenu } from './contextMenu/ContextMenu';
 import { useDocumentStore } from '../stores/documentStore';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-type LayoutMode = 'single' | 'split' | 'quad';
-
-interface PaneDefinition {
-  type: 'floor-plan' | '3d' | 'section';
-  label: string;
-}
-
-interface SplitViewportProps {
-  viewType: 'floor-plan' | '3d' | 'section';
-}
-
 // ─── Floor Plan pane ──────────────────────────────────────────────────────────
+// Always mounted — CSS visibility controls show/hide so canvas state is never lost.
 
-interface FloorPlanCanvasProps {
-  isViewOnly?: boolean;
-}
-
-function FloorPlanCanvas({ isViewOnly = false }: FloorPlanCanvasProps) {
+function FloorPlanCanvas() {
   const {
     canvasRef,
     containerRef,
@@ -39,36 +23,33 @@ function FloorPlanCanvas({ isViewOnly = false }: FloorPlanCanvasProps) {
       <canvas
         ref={canvasRef}
         style={{ display: 'block', width: '100%', height: '100%' }}
-        onMouseDown={isViewOnly ? undefined : handleCanvasMouseDown}
-        onMouseMove={isViewOnly ? undefined : handleCanvasMouseMove}
-        onMouseUp={isViewOnly ? undefined : handleCanvasMouseUp}
-        onMouseLeave={isViewOnly ? undefined : handleCanvasMouseUp}
-        onDoubleClick={isViewOnly ? undefined : handleCanvasDoubleClick}
+        onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
+        onMouseLeave={handleCanvasMouseUp}
+        onDoubleClick={handleCanvasDoubleClick}
       />
       <div className="viewport-corner bottom-left">
-        <span className="viewport-info">
-          {isViewOnly ? 'View only' : 'Draw: drag · Pan: middle-drag · Zoom: scroll'}
-        </span>
+        <span className="viewport-info">Draw: drag · Pan: middle-drag · Zoom: scroll</span>
       </div>
     </div>
   );
 }
 
 // ─── 3D / Section pane ────────────────────────────────────────────────────────
+// Always mounted so the Three.js scene persists across view switches.
+// `viewType` drives camera preset changes only — component never remounts.
 
 interface ThreeDViewProps {
   viewType: 'floor-plan' | '3d' | 'section';
   label: string;
-  isViewOnly?: boolean;
 }
 
-function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
+function ThreeDView({ viewType, label }: ThreeDViewProps) {
   const {
-    containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit,
+    containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraTarget,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
-    contextMenuState, closeContextMenu,
-  } = useThreeViewport({ isViewOnly });
-  const { setActiveTool, deleteElement, setSelectedIds, selectedIds } = useDocumentStore();
+  } = useThreeViewport();
 
   const zoomToFitRef = useRef(zoomToFit);
   zoomToFitRef.current = zoomToFit;
@@ -84,9 +65,9 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
   useEffect(() => {
     if (viewType === 'section') {
       setSectionBox(true);
-      // Default the horizontal cut to mid-wall height (~1.5 m) so a typical
-      // building shows an interior cutaway rather than being fully clipped.
-      setSectionPosition(1500);
+      // Default cut at camera target — put the slice through the model centre
+      const t = getCameraTarget();
+      setSectionPosition(Math.round(t.z));
     } else {
       setSectionBox(false);
     }
@@ -108,91 +89,172 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
 
       <div className="viewport-corner top-left" style={{ zIndex: 5, pointerEvents: 'none' }}>{label}</div>
 
-      {/* Camera preset + zoom controls (always top-right) */}
-      {!isViewOnly && (
-        <div className="viewport-corner top-right" style={{ zIndex: 5, display: 'flex', gap: 4, alignItems: 'center' }}>
-          {/* View presets — hidden in section view */}
-          {viewType !== 'section' && (
-            <>
-              <button className="viewport-control-btn" onClick={() => setViewPreset('top')}   title="Top view (1)">T</button>
-              <button className="viewport-control-btn" onClick={() => setViewPreset('front')} title="Front view (2)">F</button>
-              <button className="viewport-control-btn" onClick={() => setViewPreset('right')} title="Right view (3)">R</button>
-              <button className="viewport-control-btn" onClick={() => setViewPreset('3d')}    title="Perspective (4)">3D</button>
-              <span className="viewport-control-sep" />
-            </>
-          )}
-          <button className="viewport-control-btn" onClick={zoomToFit}                       title="Zoom to fit (0)"><Maximize  size={12} /></button>
-          <button className="viewport-control-btn" onClick={zoomIn}                          title="Zoom in (+)"><ZoomIn    size={12} /></button>
-          <button className="viewport-control-btn" onClick={zoomOut}                         title="Zoom out (-)"><ZoomOut   size={12} /></button>
-          <button className="viewport-control-btn" onClick={() => zoomToFitRef.current()}    title="Reset camera"><RotateCcw size={12} /></button>
-          {/* Section axis selector — shown only in section view, right of zoom buttons */}
-          {viewType === 'section' && (
-            <>
-              <span className="viewport-control-sep" />
-              {(['x', 'z', 'y'] as const).map((dir) => (
-                <button
-                  key={dir}
-                  className={`viewport-control-btn${sectionDirection === dir ? ' active' : ''}`}
-                  onClick={() => setSectionDirection(dir)}
-                  title={`Cut along ${dir.toUpperCase()} axis`}
-                >
-                  {dir.toUpperCase()}
-                </button>
-              ))}
-              <span className="section-cut-pos">{Math.round(sectionPosition)} mm</span>
-            </>
-          )}
-        </div>
-      )}
+      {/* Camera preset + zoom controls */}
+      <div className="viewport-corner top-right" style={{ zIndex: 5, display: 'flex', gap: 4 }}>
+        {viewType !== 'section' && (
+          <>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('top')}   title="Top view (1)">T</button>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('front')} title="Front view (2)">F</button>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('right')} title="Right view (3)">R</button>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('3d')}    title="Perspective (4)">3D</button>
+          </>
+        )}
+        <button className="viewport-control-btn" onClick={zoomToFit}                       title="Zoom to fit (0)"><Maximize  size={12} /></button>
+        <button className="viewport-control-btn" onClick={zoomIn}                          title="Zoom in (+)"><ZoomIn    size={12} /></button>
+        <button className="viewport-control-btn" onClick={zoomOut}                         title="Zoom out (-)"><ZoomOut   size={12} /></button>
+        <button className="viewport-control-btn" onClick={() => zoomToFitRef.current()}    title="Reset camera"><RotateCcw size={12} /></button>
+      </div>
 
-      {/* Section slider — slim bar at bottom, full width, no header row */}
-      {viewType === 'section' && !isViewOnly && (
-        <div className="section-cut-bar">
+      {/* Section cut controls — visible only in section view */}
+      {viewType === 'section' && (
+        <div style={{
+          position: 'absolute', bottom: 32, left: 12, right: 12, zIndex: 10,
+          background: 'var(--panel-bg, rgba(20,20,40,0.82))',
+          borderRadius: 6, padding: '8px 10px',
+        }}>
+          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+            {(['x', 'z', 'y'] as const).map((dir) => (
+              <button
+                key={dir}
+                className={`viewport-control-btn${sectionDirection === dir ? ' active' : ''}`}
+                onClick={() => setSectionDirection(dir)}
+                title={`Cut along ${dir.toUpperCase()} axis`}
+              >
+                {dir.toUpperCase()}
+              </button>
+            ))}
+            <span style={{ flex: 1 }} />
+            <span style={{ fontSize: 10, opacity: 0.6, alignSelf: 'center' }}>
+              {Math.round(sectionPosition)} mm
+            </span>
+          </div>
           <input
-            className="section-cut-slider"
             type="range"
             min={-20000}
             max={20000}
             step={100}
             value={sectionPosition}
             onChange={(e) => setSectionPosition(Number(e.target.value))}
-            title="Drag to move the section cut plane"
+            style={{ width: '100%', cursor: 'pointer' }}
           />
         </div>
       )}
 
       <div className="viewport-corner bottom-left" style={{ zIndex: 5, pointerEvents: 'none' }}>
         <span className="viewport-info">
-          {isViewOnly
-            ? 'View only'
-            : viewType === 'section'
-              ? 'Section: drag slider · Orbit: drag · Pan: middle-drag · Zoom: scroll/pinch'
-              : 'Orbit: drag · Pan: middle/right-drag · Zoom: scroll/pinch · Arrows: pan · Fit: 0'}
+          {viewType === 'section'
+            ? 'Section: drag slider to move cut plane · Orbit: drag · Zoom: scroll'
+            : 'Orbit: drag · Pan: middle-drag · Zoom: scroll · Fit: 0'}
         </span>
       </div>
+    </div>
+  );
+}
 
-      {/* Context menu — shown on right-click */}
-      {contextMenuState && (
-        <ContextMenu
-          x={contextMenuState.x}
-          y={contextMenuState.y}
-          viewportW={window.innerWidth}
-          viewportH={window.innerHeight}
-          items={contextMenuState.items}
-          onClose={closeContextMenu}
-          onAction={(action) => {
-            closeContextMenu();
-            if (action === 'delete') {
-              selectedIds.forEach((id) => deleteElement(id));
-              setSelectedIds([]);
-            } else if (action === 'select') {
-              setActiveTool('select');
-            } else if (action === 'deselect') {
-              setSelectedIds([]);
-            }
+// ─── SplitViewport ────────────────────────────────────────────────────────────
+
+interface SplitViewportProps {
+  viewType: 'floor-plan' | '3d' | 'section';
+}
+
+// ─── Floor Plan pane ──────────────────────────────────────────────────────────
+
+  const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    isDragging.current = true;
+
+    const onMove = (ev: MouseEvent) => {
+      if (!isDragging.current || !containerRef.current) return;
+      const rect = containerRef.current.getBoundingClientRect();
+      setSplitRatio(Math.max(0.2, Math.min(0.8, (ev.clientX - rect.left) / rect.width)));
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+  }, []);
+
+  // Pane visibility: always mounted, only CSS visibility/pointer-events change.
+  // This keeps Three.js alive and prevents canvas re-initialization on view switch.
+  const floorVisible = isSplit || viewType === 'floor-plan';
+  const threeVisible = isSplit || viewType === '3d' || viewType === 'section';
+
+  const threeLabel = isSplit
+    ? '3D View'
+    : viewType === 'section'
+      ? 'Section'
+      : '3D View';
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
+
+      {/* ── Floor Plan layer ── always mounted; CSS-hidden when inactive */}
+      <div
+        data-testid={floorVisible ? 'viewport-pane' : undefined}
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: isSplit ? `calc(${splitRatio * 100}% - 2px)` : '100%',
+          height: '100%',
+          visibility: floorVisible ? 'visible' : 'hidden',
+          pointerEvents: floorVisible ? 'auto' : 'none',
+          zIndex: floorVisible ? 1 : 0,
+        }}
+      >
+        {isSplit && (
+          <div className="viewport-corner top-left" style={{ zIndex: 5, pointerEvents: 'none' }}>Floor Plan</div>
+        )}
+        <FloorPlanCanvas />
+      </div>
+
+      {/* ── Split divider ── */}
+      {isSplit && (
+        <div
+          data-testid="split-divider"
+          style={{
+            position: 'absolute',
+            left: `${splitRatio * 100}%`,
+            top: 0,
+            width: 4,
+            height: '100%',
+            cursor: 'col-resize',
+            background: 'var(--border-color, #334)',
+            zIndex: 20,
           }}
+          onMouseDown={handleDividerMouseDown}
         />
       )}
+
+      {/* ── 3D / Section layer ── always mounted; CSS-hidden when inactive */}
+      <div
+        data-testid={threeVisible ? 'viewport-pane' : undefined}
+        style={{
+          position: 'absolute',
+          top: 0,
+          right: 0,
+          width: isSplit ? `calc(${(1 - splitRatio) * 100}% - 2px)` : '100%',
+          height: '100%',
+          visibility: threeVisible ? 'visible' : 'hidden',
+          pointerEvents: threeVisible ? 'auto' : 'none',
+          zIndex: threeVisible ? 1 : 0,
+        }}
+      >
+        <ThreeDView viewType={viewType} label={threeLabel} />
+      </div>
+
+      {/* ── Split toggle ── */}
+      <button
+        className={`viewport-control-btn split-toggle${isSplit ? ' active' : ''}`}
+        title="Split view: floor plan + 3D"
+        onClick={() => setIsSplit((v) => !v)}
+        style={{ position: 'absolute', top: 8, right: 8, zIndex: 30 }}
+      >
+        <Columns size={14} />
+      </button>
     </div>
   );
 }

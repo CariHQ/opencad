@@ -1,164 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
-import { ElementSchema } from '@opencad/document';
+import { computeBoundingBox, ElementSchema, PropertyValue } from '@opencad/document';
 import { SpatialGrid } from '../utils/spatialIndex';
-import {
-  getHandles, hitHandle, hitTestElement,
-  moveElementProps, resizeElementProps,
-  type HandleKind,
-} from '../utils/elementMath';
-import { BUILT_IN_MATERIALS } from '../lib/materials';
-
-// ─── 2D material hatch patterns ───────────────────────────────────────────────
-// Patterns are cached after first creation (keyed by "category:color").
-// Each is a 16×16 px tile drawn on an offscreen canvas.
-
-const _hatchCache = new Map<string, CanvasPattern>();
-
-function _hexToRgb(hex: string): [number, number, number] {
-  const n = parseInt(hex.replace('#', ''), 16);
-  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
-}
-
-function _getHatchPattern(
-  ctx: CanvasRenderingContext2D,
-  category: string,
-  color: string,
-): CanvasPattern | null {
-  const key = `${category}:${color}`;
-  const cached = _hatchCache.get(key);
-  if (cached) return cached;
-
-  const S = 16;
-  const oc = document.createElement('canvas');
-  oc.width = S; oc.height = S;
-  const oc2 = oc.getContext('2d');
-  if (!oc2) return null;
-
-  const [r, g, b] = _hexToRgb(color);
-  oc2.fillStyle = `rgba(${r},${g},${b},0.14)`;
-  oc2.fillRect(0, 0, S, S);
-  oc2.strokeStyle = `rgba(${r},${g},${b},0.55)`;
-
-  switch (category) {
-    case 'Concrete':
-    case 'Waterproofing': {
-      // Diagonal lines at 45°, 4px pitch
-      oc2.lineWidth = 0.8;
-      for (let x = -S; x < S * 2; x += 4) {
-        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S); oc2.stroke();
-      }
-      break;
-    }
-    case 'Masonry': {
-      // Brick coursing — horizontal mortar + offset vertical joints
-      oc2.lineWidth = 0.7;
-      // mortar bed
-      oc2.beginPath(); oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2); oc2.stroke();
-      // joints — bottom course offset by half-brick
-      oc2.beginPath();
-      oc2.moveTo(S / 4,     0); oc2.lineTo(S / 4,     S / 2);
-      oc2.moveTo(3 * S / 4, 0); oc2.lineTo(3 * S / 4, S / 2);
-      oc2.moveTo(0,         S / 2); oc2.lineTo(0,       S);
-      oc2.moveTo(S / 2,     S / 2); oc2.lineTo(S / 2,   S);
-      oc2.stroke();
-      break;
-    }
-    case 'Timber': {
-      // Parallel horizontal grain lines
-      oc2.lineWidth = 0.5;
-      const offsets = [2, 5, 8, 11, 14]; // fixed offsets — no random
-      for (const y of offsets) {
-        oc2.beginPath(); oc2.moveTo(0, y); oc2.lineTo(S, y); oc2.stroke();
-      }
-      break;
-    }
-    case 'Metal': {
-      // Cross-hatch at 45° and 135°, fine pitch
-      oc2.lineWidth = 0.55;
-      for (let x = -S; x < S * 2; x += 4) {
-        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S);  oc2.stroke();
-        oc2.beginPath(); oc2.moveTo(x, S); oc2.lineTo(x + S, 0);  oc2.stroke();
-      }
-      break;
-    }
-    case 'Glass': {
-      // Sparse single diagonal
-      oc2.lineWidth = 0.4;
-      oc2.strokeStyle = `rgba(${r},${g},${b},0.3)`;
-      oc2.beginPath(); oc2.moveTo(0, 0); oc2.lineTo(S, S); oc2.stroke();
-      oc2.beginPath(); oc2.moveTo(S, 0); oc2.lineTo(0, S); oc2.stroke();
-      break;
-    }
-    case 'Insulation': {
-      // Zigzag across the tile
-      oc2.lineWidth = 0.8;
-      oc2.beginPath();
-      oc2.moveTo(0, S / 2);
-      for (let x = 0; x <= S; x += 4) {
-        oc2.lineTo(x, x % 8 === 0 ? S * 0.25 : S * 0.75);
-      }
-      oc2.stroke();
-      break;
-    }
-    case 'Plaster':
-    case 'Paint': {
-      // Very sparse horizontal lines
-      oc2.lineWidth = 0.4;
-      oc2.strokeStyle = `rgba(${r},${g},${b},0.25)`;
-      oc2.beginPath(); oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2); oc2.stroke();
-      break;
-    }
-    case 'Roofing': {
-      // Arc-scales (roof tile silhouette)
-      oc2.lineWidth = 0.7;
-      oc2.beginPath();
-      oc2.arc(0,     S,     S / 2, Math.PI, 0);
-      oc2.arc(S / 2, S / 2, S / 2, Math.PI, 0);
-      oc2.stroke();
-      break;
-    }
-    case 'Flooring':
-    case 'Tile': {
-      // Grid — tile joints
-      oc2.lineWidth = 0.6;
-      oc2.beginPath();
-      oc2.moveTo(S / 2, 0); oc2.lineTo(S / 2, S);
-      oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2);
-      oc2.stroke();
-      break;
-    }
-    case 'Acoustic': {
-      // Diagonal dots (perforation pattern)
-      oc2.fillStyle = `rgba(${r},${g},${b},0.45)`;
-      oc2.beginPath(); oc2.arc(S / 4, S / 4, 1.2, 0, Math.PI * 2); oc2.fill();
-      oc2.beginPath(); oc2.arc(3 * S / 4, 3 * S / 4, 1.2, 0, Math.PI * 2); oc2.fill();
-      break;
-    }
-    case 'Cladding': {
-      // Horizontal laps
-      oc2.lineWidth = 0.7;
-      for (let y = 2; y < S; y += 4) {
-        oc2.beginPath(); oc2.moveTo(0, y); oc2.lineTo(S, y); oc2.stroke();
-      }
-      break;
-    }
-    default: {
-      // Sparse 45° diagonal
-      oc2.lineWidth = 0.5;
-      for (let x = -S; x < S * 2; x += 6) {
-        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S); oc2.stroke();
-      }
-    }
-  }
-
-  const pattern = ctx.createPattern(oc, 'repeat');
-  if (pattern) {
-    _hatchCache.set(key, pattern);
-    return pattern;
-  }
-  return null;
-}
 
 const LIGHT_THEME = {
   background: '#fafaf8',          // drafting-paper off-white
@@ -250,23 +93,15 @@ function dist(p1: Point, p2: Point): number {
 }
 
 
-// ─── Select-tool interaction state machine ─────────────────────────────────────
-
-type SelectInteraction =
-  | { mode: 'idle' }
-  | { mode: 'drag-pending'; startScreen: Point; elementIds: string[] }
-  | { mode: 'dragging';     lastWorld: Point;   elementIds: string[] }
-  | { mode: 'resizing';     handle: HandleKind; elementId: string }
-  | { mode: 'rubber-band';  startWorld: Point;  currentWorld: Point };
-
-const DRAG_THRESHOLD_PX = 4;  // pixels before a click becomes a drag
-const HANDLE_SIZE_PX    = 5;  // half-size of handle square in screen pixels
-const PASTE_OFFSET      = 500; // world-unit offset applied per paste cycle
-
 export function useViewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams, updateElement, pushHistory, deleteElement } = useDocumentStore();
+
+  // Spatial index for O(1) average-case snap candidate lookup.
+  // Cell size matches GRID_SIZE (500 world units) so each cell covers roughly
+  // one grid square — a good balance between cell count and bucket size.
+  const snapIndexRef = useRef(new SpatialGrid(GRID_SIZE));
 
   // Spatial index for O(1) average-case snap candidate lookup.
   // Cell size matches GRID_SIZE (500 world units) so each cell covers roughly
@@ -878,28 +713,6 @@ export function useViewport() {
         ctx.fillStyle = selectedIds.includes(typedEl.id) ? theme.selected : theme.element;
         ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
       }
-      if (type === 'space' && props['StartX'] && props['Name']) {
-        const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
-        const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
-        const roomName = props['Name'].value as string;
-        const areaSqft = props['AreaSqft']?.value as number | undefined;
-        const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
-        const cs = worldToScreen(cx, cy, cw, ch, v);
-        const isRoomSelected = selectedIds.includes(typedEl.id);
-        ctx.fillStyle = isRoomSelected ? theme.selected : theme.element;
-        ctx.textAlign = 'center';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.fillText(roomName, cs.x, cy < y1 ? cs.y : cs.y - (areaSqft ? 7 : 0));
-        if (areaSqft) {
-          ctx.font = '9px sans-serif';
-          ctx.fillStyle = isRoomSelected ? theme.selected : theme.element;
-          ctx.globalAlpha = 0.6;
-          ctx.fillText(`${Math.round(areaSqft)} sqft`, cs.x, cs.y + 7);
-          ctx.globalAlpha = 1.0;
-        }
-        ctx.textAlign = 'left';
-        ctx.font = '10px sans-serif';
-      }
     }
 
     // Preview text labels (screen space)
@@ -979,22 +792,24 @@ export function useViewport() {
 
     if (activeTool === 'select') {
       if (!doc) return;
-      const HIT  = 8  * v.scale;  // hit tolerance in world units
-      const HNDL = HANDLE_SIZE_PX * v.scale; // handle half-size in world units
-      const elements = Object.values(doc.content.elements) as ElementSchema[];
-      const currentSelected = getStoreActions().selectedIds;
-
-      // 1. Check if clicking a resize handle on a currently-selected element
-      for (const id of currentSelected) {
-        const el = doc.content.elements[id];
-        if (!el) continue;
-        const handles = getHandles(el as ElementSchema);
-        const hit = hitHandle(rawWp, handles, HNDL * 1.5);
-        if (hit) {
-          interactionRef.current = { mode: 'resizing', handle: hit.kind, elementId: id };
-          dirtyRef.current = true;
-          return;
+      // Add a hit tolerance of 8 screen pixels converted to world units so thin elements (lines, arcs) are clickable
+      const hitTolerance = 8 * v.scale;
+      const elements = Object.values(doc.content.elements);
+      const clicked = elements.filter((el) => {
+        let bb = el.boundingBox;
+        // If bbox is degenerate (all zeros), compute from properties on the fly
+        // — handles elements saved before bounding box computation was introduced
+        if (bb.min.x === 0 && bb.min.y === 0 && bb.max.x === 0 && bb.max.y === 0) {
+          bb = computeBoundingBox(el.type, el.properties as Record<string, PropertyValue>);
         }
+        return rawWp.x >= bb.min.x - hitTolerance && rawWp.x <= bb.max.x + hitTolerance &&
+               rawWp.y >= bb.min.y - hitTolerance && rawWp.y <= bb.max.y + hitTolerance;
+      });
+      if (clicked.length > 0) {
+        const currentSelected = getStoreActions().selectedIds;
+        setSelectedIds(event.shiftKey ? [...currentSelected, clicked[0]!.id] : [clicked[0]!.id]);
+      } else {
+        setSelectedIds([]);
       }
 
       // 2. Check if clicking any element
@@ -1230,7 +1045,7 @@ export function useViewport() {
       setActiveTool('select');
     }
     // Multi-click tools don't commit on mouseUp, only on next click or double-click
-  }, [activeTool, drawingState, applySnapping, commitShape, setActiveTool, pushHistory, setSelectedIds]);
+  }, [activeTool, drawingState, applySnapping, commitShape, setActiveTool]);
 
   // Double-click finishes polyline
   const handleCanvasDoubleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1263,9 +1078,7 @@ export function useViewport() {
 
     if (event.key === 'Escape') {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
-      interactionRef.current = { mode: 'idle' };
       setActiveTool('select');
-      dirtyRef.current = true;
     }
 
     // ── Undo / redo / save ──────────────────────────────────────────────────

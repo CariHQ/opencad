@@ -167,9 +167,9 @@ describe('SpatialGrid — large-scale and performance', () => {
     expect(results.length).toBeLessThan(N);
   });
 
-  it('spatial query is significantly faster than a linear scan over 60,000+ points', () => {
+  it('spatial query is significantly faster than a linear scan over 10,000 points', () => {
     const CELL = 500;
-    const SIDE = 250;   // 250×250 = 62,500 points — large enough that O(n) dominates
+    const SIDE = 100;
     const STEP = 1000;
 
     // Build the spatial index
@@ -184,10 +184,10 @@ describe('SpatialGrid — large-scale and performance', () => {
       }
     }
 
-    const qx = 125_000;
-    const qy = 125_000;
-    const radius = 600;  // small radius → spatial visits ~16 cells; linear scans all 62,500
-    const REPS = 200;
+    const qx = 50_000;
+    const qy = 50_000;
+    const radius = 600;
+    const REPS = 500;
 
     // Time the spatial query
     const t0 = performance.now();
@@ -203,9 +203,9 @@ describe('SpatialGrid — large-scale and performance', () => {
     }
     const linearMs = performance.now() - t1;
 
-    // At 62,500 points the spatial grid visits ~16 cells vs 62,500 for linear.
-    // Require a modest 3× speedup — reliable even under test-runner noise.
-    expect(spatialMs).toBeLessThan(linearMs / 3);
+    // The spatial query should be at least 5× faster than linear
+    // (in practice it's typically 20–100× faster for small radii)
+    expect(spatialMs).toBeLessThan(linearMs / 5);
   });
 });
 

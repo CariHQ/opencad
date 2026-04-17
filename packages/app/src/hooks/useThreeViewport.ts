@@ -70,15 +70,20 @@ const DARK_THEME = {
   selectionEmissive: 0x0066cc,
 };
 
-const getTheme = () => {
-  if (typeof window === 'undefined') return DARK_THEME;
-  const theme = localStorage.getItem('opencad-theme');
-  return theme === 'light' ? LIGHT_THEME : DARK_THEME;
-};
+let _cachedTheme = typeof window !== 'undefined' && localStorage.getItem('opencad-theme') === 'light'
+  ? LIGHT_THEME : DARK_THEME;
+const getTheme = () => _cachedTheme;
+if (typeof window !== 'undefined') {
+  const _updateThemeCache = () => {
+    _cachedTheme = localStorage.getItem('opencad-theme') === 'light' ? LIGHT_THEME : DARK_THEME;
+  };
+  window.addEventListener('storage', _updateThemeCache);
+  window.addEventListener('theme-change', _updateThemeCache);
+}
 
 interface ViewportState {
   camera: THREE.PerspectiveCamera | null;
-  renderer: THREE.WebGLRenderer | null;
+  renderer: GenericRenderer | null;
   scene: THREE.Scene | null;
 }
 
@@ -115,298 +120,371 @@ const ELEMENT_TYPE_COLORS: Record<string, number> = {
 };
 
 const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; distance: number }> = {
-  top: { azimuth: 0, elevation: 0.01, distance: 10000 },
-  front: { azimuth: 0, elevation: Math.PI / 2, distance: 10000 },
-  right: { azimuth: Math.PI / 2, elevation: Math.PI / 2, distance: 10000 },
-  '3d': { azimuth: Math.PI / 4, elevation: Math.PI / 4, distance: 10000 },
-  perspective: { azimuth: Math.PI / 4, elevation: Math.PI / 6, distance: 8000 },
+  top:         { azimuth: 0,           elevation: 0.01,        distance: 10000 },
+  front:       { azimuth: 0,           elevation: Math.PI / 2, distance: 10000 },
+  right:       { azimuth: Math.PI / 2, elevation: Math.PI / 2, distance: 10000 },
+  '3d':        { azimuth: Math.PI / 4, elevation: Math.PI / 4, distance: 10000 },
+  perspective: { azimuth: Math.PI / 4, elevation: Math.PI / 6, distance: 8000  },
 };
 
-interface UseThreeViewportOptions {
-  isViewOnly?: boolean;
+const ELEMENT_COLORS: Record<string, string> = {
+  wall:       '#c8c8d0',
+  slab:       '#a0a8b0',
+  roof:       '#b0b8c0',
+  column:     '#d4c8a0',
+  beam:       '#8090a8',
+  door:       '#c8a878',
+  window:     '#78aac8',
+  stair:      '#b8a8d0',
+  railing:    '#90a0a8',
+  space:      '#d0e8d0',
+  annotation: '#7890a8',
+  line:       '#7890a8',
+  rectangle:  '#8898b0',
+  circle:     '#8898b0',
+  arc:        '#8898b0',
+  polygon:    '#8898b0',
+  polyline:   '#8898b0',
+  dimension:  '#a0a0b8',
+  text:       '#b0b0c0',
+};
+
+// PBR material properties per element type
+const ELEMENT_MATERIAL_PROPS: Record<string, { roughness: number; metalness: number }> = {
+  wall:    { roughness: 0.85, metalness: 0.0 },
+  slab:    { roughness: 0.9,  metalness: 0.0 },
+  column:  { roughness: 0.7,  metalness: 0.1 },
+  door:    { roughness: 0.6,  metalness: 0.0 },
+  window:  { roughness: 0.1,  metalness: 0.0 },
+  beam:    { roughness: 0.5,  metalness: 0.4 },
+  stair:   { roughness: 0.8,  metalness: 0.0 },
+  roof:    { roughness: 0.9,  metalness: 0.0 },
+  railing: { roughness: 0.4,  metalness: 0.6 },
+  space:   { roughness: 0.95, metalness: 0.0 },
+};
+const DEFAULT_MATERIAL_PROPS = { roughness: 0.8, metalness: 0.0 };
+
+// Generic renderer interface — compatible with both WebGLRenderer and WebGPURenderer
+interface GenericRenderer {
+  setSize(width: number, height: number): void;
+  setPixelRatio(value: number): void;
+  shadowMap: { enabled: boolean; type: THREE.ShadowMapType };
+  clippingPlanes: THREE.Plane[];
+  domElement: HTMLCanvasElement;
+  render(scene: THREE.Scene, camera: THREE.Camera): void;
+  dispose(): void;
 }
 
-/** Compute BVH on a geometry and return it (pure module-level helper). */
-function bvhGeom(g: THREE.BufferGeometry): THREE.BufferGeometry {
-  (g as THREE.BufferGeometry & { computeBoundsTree: () => void }).computeBoundsTree();
-  return g;
-}
-
-export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions = {}) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef<ViewportState>({
-    camera: null,
-    renderer: null,
-    scene: null,
-  });
-  const cameraStateRef = useRef<CameraState>((() => {
+async function createRenderer(): Promise<GenericRenderer> {
+  // Try WebGPU first if the browser supports it
+  if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
     try {
-      const saved = localStorage.getItem('opencad-camera-state');
-      if (saved) {
-        const p = JSON.parse(saved) as { target?: { x: number; y: number; z: number }; distance?: number; azimuth?: number; elevation?: number };
-        return {
-          target: new THREE.Vector3(p.target?.x ?? 0, p.target?.y ?? 0, p.target?.z ?? 0),
-          distance: p.distance ?? 10000,
-          azimuth: p.azimuth ?? Math.PI / 4,
-          elevation: p.elevation ?? Math.PI / 4,
-        };
-      }
-    } catch { /* ignore */ }
-    return {
-      target: new THREE.Vector3(0, 0, 0),
-      distance: 10000,
-      azimuth: Math.PI / 4,
-      elevation: Math.PI / 4,
-    };
-  })());
-  const animationFrameRef = useRef<number | null>(null);
-  // Performance: dirty flag — render only when scene changes
-  const needsRenderRef = useRef(true);
-  // FPS monitor: rolling window of frame timestamps
-  const frameTimesRef = useRef<number[]>([]);
-  const [currentFps, setCurrentFps] = useState<number>(60);
-  const [lodActive, setLodActive] = useState<boolean>(false);
-  // LOD distance (mm): elements beyond this are simplified when element count > threshold
-  const lodDistanceRef = useRef<number>(LOD_DEFAULT_DISTANCE);
+      const { WebGPURenderer } = await import('three/webgpu');
+      const r = new WebGPURenderer({ antialias: true });
+      await r.init();
+      return r as unknown as GenericRenderer;
+    } catch {
+      // Fall through to WebGL
+    }
+  }
+  return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+}
 
+// ─── Module-level geometry helpers ───────────────────────────────────────────
+
+/** Recursively dispose buffer geometries in a scene object (materials are cached — never disposed here). */
+function disposeObject(obj: THREE.Object3D): void {
+  obj.traverse((child) => {
+    if (child instanceof THREE.Mesh) child.geometry.dispose();
+  });
+}
+
+/** Find door/window openings hosted by a wall, returning wall-local t positions. */
+function findWallOpenings(
+  wall: ElementSchema,
+  allElements: Record<string, ElementSchema>
+): Array<{ t: number; width: number; height: number; sillH: number }> {
+  const props = wall.properties as Record<string, { value: unknown }>;
+  const pv = (k: string, fb: number) =>
+    typeof props[k]?.value === 'number' ? (props[k]!.value as number) : fb;
+
+  const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+  const x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
+  const wallLen = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1;
+  const wallT   = pv('Width', 200);
+  const uX = (x2 - x1) / wallLen;
+  const uY = (y2 - y1) / wallLen;
+
+  const result: Array<{ t: number; width: number; height: number; sillH: number }> = [];
+
+  for (const el of Object.values(allElements)) {
+    if (el.type !== 'door' && el.type !== 'window') continue;
+
+    const ep  = el.properties as Record<string, { value: unknown }>;
+    const epv = (k: string, fb: number) =>
+      typeof ep[k]?.value === 'number' ? (ep[k]!.value as number) : fb;
+
+    const ex = epv('X', 0), ey = epv('Y', 0);
+    const dx = ex - x1, dy = ey - y1;
+    const t    = dx * uX + dy * uY;          // distance along wall
+    const perp = Math.abs(dx * uY - dy * uX); // perpendicular distance
+
+    const w     = epv('Width',  el.type === 'door' ? 900  : 1200);
+    const h     = epv('Height', el.type === 'door' ? 2100 : 1200);
+    const sillH = el.type === 'window' ? epv('SillHeight', 900) : 0;
+
+    if (t >= -w / 2 && t <= wallLen + w / 2 && perp <= wallT * 1.5) {
+      result.push({ t, width: w, height: h, sillH });
+    }
+  }
+
+  return result;
+}
+
+/** Fingerprint for a wall's current openings — used to detect when to rebuild the wall mesh. */
+function wallOpeningsFingerprint(
+  wall: ElementSchema,
+  allElements: Record<string, ElementSchema>
+): string {
+  return findWallOpenings(wall, allElements)
+    .map((o) => `${Math.round(o.t)},${o.width},${o.height},${o.sillH}`)
+    .sort()
+    .join('|');
+}
+
+/**
+ * Build a wall Object3D with openings cut out.
+ * Returns a single Mesh when there are no openings, or a Group of split segments.
+ * All segments share the supplied material (from the hook's material cache).
+ */
+function buildWallMesh(
+  element: ElementSchema,
+  allElements: Record<string, ElementSchema>,
+  mat: THREE.MeshStandardMaterial
+): THREE.Object3D {
+  const props = element.properties as Record<string, { value: unknown }>;
+  const pv = (k: string, fb: number) =>
+    typeof props[k]?.value === 'number' ? (props[k]!.value as number) : fb;
+
+  const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+  const x2 = pv('EndX',   x1 + 1000), y2 = pv('EndY', y1);
+  const wallH = pv('Height', 3000);
+  const wallT = pv('Width',  200);
+  const len   = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
+  const ry    = -Math.atan2(y2 - y1, x2 - x1);
+  const cx    = (x1 + x2) / 2;
+  const cz    = (y1 + y2) / 2;
+
+  const tag = (obj: THREE.Object3D) => {
+    obj.userData.elementId   = element.id;
+    obj.userData.elementType = 'wall';
+    obj.castShadow    = true;
+    obj.receiveShadow = true;
+  };
+
+  const openings = findWallOpenings(element, allElements);
+
+  // ── Solid wall (no openings) ──────────────────────────────────────────────
+  if (openings.length === 0) {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, wallH, wallT), mat);
+    mesh.position.set(cx, wallH / 2, cz);
+    mesh.rotation.y = ry;
+    tag(mesh);
+    return mesh;
+  }
+
+  // ── Split wall with openings ──────────────────────────────────────────────
+  // Group is positioned at the wall midpoint; all children are in wall-local space
+  // (wall runs along local X from -len/2 to +len/2, Y is up, Z is thickness).
+  const group = new THREE.Group();
+  group.position.set(cx, 0, cz);
+  group.rotation.y = ry;
+  tag(group);
+
+  const addBox = (localX: number, boxW: number, yBot: number, yTop: number) => {
+    if (boxW < 1 || yTop - yBot < 1) return;
+    const h   = yTop - yBot;
+    const m   = new THREE.Mesh(new THREE.BoxGeometry(boxW, h, wallT), mat);
+    m.position.set(localX, yBot + h / 2, 0);
+    m.castShadow    = true;
+    m.receiveShadow = true;
+    m.userData.elementId   = element.id;
+    m.userData.elementType = 'wall';
+    group.add(m);
+  };
+
+  const sorted = [...openings].sort((a, b) => a.t - b.t);
+  let cursor = 0; // right edge of last filled segment, in wall-local [0..len]
+
+  for (const op of sorted) {
+    const opLeft  = Math.max(0,   op.t - op.width / 2);
+    const opRight = Math.min(len, op.t + op.width / 2);
+    if (opRight <= opLeft) continue;
+
+    // Full-height segment before this opening
+    if (opLeft > cursor) {
+      const w = opLeft - cursor;
+      addBox(cursor + w / 2 - len / 2, w, 0, wallH);
+    }
+
+    const opW  = opRight - opLeft;
+    const opCX = opLeft + opW / 2 - len / 2; // local-X centre of this column
+
+    // Sill below window opening
+    if (op.sillH > 0) addBox(opCX, opW, 0, op.sillH);
+
+    // Lintel above opening
+    const openingTop = op.sillH + op.height;
+    if (openingTop < wallH) addBox(opCX, opW, openingTop, wallH);
+
+    cursor = opRight;
+  }
+
+  // Full-height segment after last opening
+  if (cursor < len) {
+    const w = len - cursor;
+    addBox(cursor + w / 2 - len / 2, w, 0, wallH);
+  }
+
+  return group;
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+export function useThreeViewport() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const stateRef = useRef<ViewportState>({ camera: null, renderer: null, scene: null });
+  const cameraStateRef = useRef<CameraState>({
+    target:    new THREE.Vector3(0, 0, 0),
+    distance:  10000,
+    azimuth:   Math.PI / 4,
+    elevation: Math.PI / 4,
+  });
+  const animationFrameRef = useRef<number | null>(null);
+  const rendererReadyRef  = useRef(false);
   const { document: doc, selectedIds, setSelectedIds } = useDocumentStore();
 
-  const [sectionBox, setSectionBox] = useState(false);
-  const [sectionPosition, setSectionPosition] = useState(0);
+  const [sectionBox,       setSectionBox]       = useState(false);
+  const [sectionPosition,  setSectionPosition]  = useState(0);
   const [sectionDirection, setSectionDirection] = useState<'x' | 'y' | 'z'>('z');
 
   const [contextMenuState, setContextMenuState] = useState<{ x: number; y: number; items: ContextMenuGroup } | null>(null);
   const closeContextMenu = useCallback(() => setContextMenuState(null), []);
 
   const saveSectionView = useCallback(() => {
-    // Persist the current section view settings
     try {
-      localStorage.setItem(
-        'opencad-section-view',
-        JSON.stringify({ position: sectionPosition, direction: sectionDirection })
-      );
-    } catch {
-      // ignore storage errors
-    }
+      localStorage.setItem('opencad-section-view',
+        JSON.stringify({ position: sectionPosition, direction: sectionDirection }));
+    } catch { /* ignore */ }
   }, [sectionPosition, sectionDirection]);
 
+  // Object3D (Mesh or Group) per element id
   const elementMeshesRef = useRef<Map<string, THREE.Object3D>>(new Map());
+  // Last element data snapshot — for reference-equality change detection
+  const elementDataRef   = useRef<Map<string, ElementSchema>>(new Map());
+  // Wall opening fingerprints — detect when a nearby door/window changes
+  const wallFingerprintsRef = useRef<Map<string, string>>(new Map());
 
-  const createMaterial = useCallback((colorHex: number, opts?: { transparent?: boolean; opacity?: number }) => {
-    return new THREE.MeshStandardMaterial({
-      color: colorHex,
-      transparent: opts?.transparent ?? false,
-      opacity: opts?.opacity ?? 1,
-      roughness: 0.6,
-      metalness: 0.0,
-      side: THREE.FrontSide,
-    });
-  }, []);
+  const hasAutoZoomedRef = useRef(false);
+  const needsRenderRef   = useRef(true);
+  const raycasterRef     = useRef(new THREE.Raycaster());
+  const pickVec2Ref      = useRef(new THREE.Vector2());
+  const materialCacheRef = useRef<Map<string, THREE.MeshStandardMaterial>>(new Map());
+
+  const createMaterial = useCallback(
+    (color: string, opacity = 0.8, roughness = 0.8, metalness = 0.0): THREE.MeshStandardMaterial => {
+      const key = `${color}:${opacity}:${roughness}:${metalness}`;
+      const cached = materialCacheRef.current.get(key);
+      if (cached) return cached;
+      const mat = new THREE.MeshStandardMaterial({
+        color: new THREE.Color(color),
+        transparent: true,
+        opacity,
+        roughness,
+        metalness,
+        side: THREE.DoubleSide,
+      });
+      materialCacheRef.current.set(key, mat);
+      return mat;
+    },
+    []
+  );
 
   const createMeshFromElement = useCallback(
-    (element: ElementSchema, isLod = false): THREE.Object3D | null => {
-      const bb = element.boundingBox;
-      const colorHex = ELEMENT_TYPE_COLORS[element.type] ?? 0x8888aa;
-      const mat = isLod
-        ? new THREE.MeshStandardMaterial({ color: colorHex, transparent: true, opacity: 0.5, roughness: 1, metalness: 0, side: THREE.FrontSide })
-        : createMaterial(colorHex);
+    (element: ElementSchema, allElements: Record<string, ElementSchema> = {}): THREE.Object3D | null => {
+      const props = element.properties as Record<string, { value: unknown }>;
+      const pv = (key: string, fallback: number) =>
+        typeof props[key]?.value === 'number' ? (props[key]!.value as number) : fallback;
+      const color = ELEMENT_COLORS[element.type] ?? '#8888aa';
+      const type  = element.type;
 
-      const props = element.properties;
-      const getProp = (key: string, fallback: number): number => {
-        const v = props[key];
-        return v && typeof v.value === 'number' ? v.value : fallback;
-      };
+      let geometry: THREE.BufferGeometry;
+      let posX = 0, posY = 0, posZ = 0, ry = 0;
 
-      const ud: ElementUserData = { elementId: element.id, elementType: element.type, baseColor: colorHex, isLod };
-
-      const finishMesh = (mesh: THREE.Mesh): THREE.Mesh => {
-        mesh.castShadow = !isLod;
-        mesh.receiveShadow = !isLod;
-        Object.assign(mesh.userData, ud);
-        return mesh;
-      };
-
-      const finishObj = (obj: THREE.Object3D): THREE.Object3D => {
-        Object.assign(obj.userData, ud);
-        return obj;
-      };
-
-      switch (element.type) {
-        case 'wall': {
-          const startX = getProp('StartX', bb.min.x);
-          const startY = getProp('StartY', bb.min.y);
-          const endX   = getProp('EndX', bb.max.x);
-          const endY   = getProp('EndY', bb.max.y);
-          const wThick = getProp('Thickness', 200);
-          const wH     = getProp('Height', 3000);
-          const wLen   = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
-          const mesh   = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(wLen, wThick, wH)), mat);
-          mesh.position.set((startX + endX) / 2, (startY + endY) / 2, wH / 2);
-          mesh.rotation.z = Math.atan2(endY - startY, endX - startX);
-          return finishMesh(mesh);
-        }
-
-        case 'curtain_wall': {
-          const startX = getProp('StartX', bb.min.x);
-          const startY = getProp('StartY', bb.min.y);
-          const endX   = getProp('EndX', bb.max.x);
-          const endY   = getProp('EndY', bb.max.y);
-          const cwH    = getProp('Height', 3000);
-          const cwLen  = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
-          const angle  = Math.atan2(endY - startY, endX - startX);
-          const panelW = getProp('PanelWidth', 1200);
-          const numPanels = Math.max(1, Math.round(cwLen / panelW));
-          const group = new THREE.Group();
-          // Frame
-          const frameMat = new THREE.MeshStandardMaterial({ color: 0xa0a8b0, roughness: 0.4, metalness: 0.6, side: THREE.FrontSide });
-          const frameMesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(cwLen, 50, cwH)), frameMat);
-          frameMesh.castShadow = !isLod;
-          group.add(frameMesh);
-          // Glass panels
-          const glassMat = new THREE.MeshStandardMaterial({ color: 0x80c8e8, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0.1, side: THREE.DoubleSide });
-          const pW = cwLen / numPanels - 20;
-          const pH = cwH - 40;
-          for (let i = 0; i < numPanels; i++) {
-            const px = -cwLen / 2 + (i + 0.5) * (cwLen / numPanels);
-            const glMesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(pW, 20, pH)), glassMat);
-            glMesh.position.set(px, 0, 0);
-            group.add(glMesh);
-          }
-          group.position.set((startX + endX) / 2, (startY + endY) / 2, cwH / 2);
-          group.rotation.z = angle;
-          return finishObj(group);
-        }
-
-        case 'column': {
-          const r  = getProp('Radius', 150);
-          const h  = getProp('Height', 3000);
-          const cx = (bb.min.x + bb.max.x) / 2;
-          const cy = (bb.min.y + bb.max.y) / 2;
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.CylinderGeometry(r, r, h, 24)), mat);
-          mesh.rotation.x = Math.PI / 2; // CylinderGeometry is Y-up; align to Z-up
-          mesh.position.set(cx, cy, h / 2);
-          return finishMesh(mesh);
-        }
-
-        case 'circle': {
-          const r  = getProp('Radius', 500);
-          const h  = getProp('Height', 100); // thin flat disk
-          const cx = (bb.min.x + bb.max.x) / 2;
-          const cy = (bb.min.y + bb.max.y) / 2;
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.CylinderGeometry(r, r, h, 32)), mat);
-          mesh.rotation.x = Math.PI / 2;
-          mesh.position.set(cx, cy, h / 2);
-          return finishMesh(mesh);
-        }
-
-        case 'beam': {
-          const startX = getProp('StartX', bb.min.x);
-          const startY = getProp('StartY', bb.min.y);
-          const endX   = getProp('EndX', bb.max.x);
-          const endY   = getProp('EndY', bb.max.y);
-          const bW    = getProp('Width', 200);
-          const bH    = getProp('Depth', 300);
-          const bLen  = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
-          const elev  = getProp('Elevation', 3000);
-          const mesh  = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(bLen, bW, bH)), mat);
-          mesh.position.set((startX + endX) / 2, (startY + endY) / 2, elev);
-          mesh.rotation.z = Math.atan2(endY - startY, endX - startX);
-          return finishMesh(mesh);
-        }
-
-        case 'slab':
-        case 'roof': {
-          const w = Math.max(bb.max.x - bb.min.x, 1);
-          const d = Math.max(bb.max.y - bb.min.y, 1);
-          const t = getProp('Thickness', 200);
-          const elev = bb.min.z || 0;
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, t)), mat);
-          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, elev + t / 2);
-          return finishMesh(mesh);
-        }
-
-        case 'rectangle': {
-          const w = Math.max(bb.max.x - bb.min.x, 1);
-          const d = Math.max(bb.max.y - bb.min.y, 1);
-          const t = getProp('Depth', 100);
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, t)), mat);
-          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, t / 2);
-          return finishMesh(mesh);
-        }
-
-        case 'door':
-        case 'window': {
-          const w = Math.max(bb.max.x - bb.min.x, 1);
-          const h = getProp('Height', 2100);
-          const t = getProp('Thickness', 100);
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, t, h)), mat);
-          mesh.position.set(bb.min.x + w / 2, (bb.min.y + bb.max.y) / 2, bb.min.z + h / 2);
-          return finishMesh(mesh);
-        }
-
-        case 'stair': {
-          const w     = Math.max(bb.max.x - bb.min.x, 1000);
-          const dY    = Math.max(bb.max.y - bb.min.y, 1000);
-          const tH    = Math.max(bb.max.z - bb.min.z, 3000);
-          const steps = Math.max(1, Math.round(tH / 175));
-          const group = new THREE.Group();
-          for (let i = 0; i < steps; i++) {
-            const rH  = tH / steps;
-            const rD  = dY / steps;
-            const m   = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, rD, rH)), mat);
-            m.position.set(bb.min.x + w / 2, bb.min.y + rD * (i + 0.5), bb.min.z + rH * (i + 0.5));
-            m.castShadow = !isLod;
-            m.receiveShadow = !isLod;
-            group.add(m);
-          }
-          return finishObj(group);
-        }
-
-        case 'railing': {
-          const startX = getProp('StartX', bb.min.x);
-          const startY = getProp('StartY', bb.min.y);
-          const endX   = getProp('EndX', bb.max.x);
-          const endY   = getProp('EndY', bb.max.y);
-          const rH   = getProp('Height', 900);
-          const rLen = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(rLen, 50, rH)), mat);
-          mesh.position.set((startX + endX) / 2, (startY + endY) / 2, rH / 2);
-          mesh.rotation.z = Math.atan2(endY - startY, endX - startX);
-          return finishMesh(mesh);
-        }
-
-        case 'space': {
-          const w = Math.max(bb.max.x - bb.min.x, 1);
-          const d = Math.max(bb.max.y - bb.min.y, 1);
-          const h = Math.max(bb.max.z - bb.min.z, 100);
-          const spaceMat = new THREE.MeshStandardMaterial({ color: colorHex, transparent: true, opacity: 0.2, roughness: 1, metalness: 0, side: THREE.DoubleSide });
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, h)), spaceMat);
-          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, bb.min.z + h / 2);
-          return finishMesh(mesh);
-        }
-
-        case 'polygon':
-        case 'surface': {
-          const w = Math.max(bb.max.x - bb.min.x, 1);
-          const d = Math.max(bb.max.y - bb.min.y, 1);
-          const t = getProp('Thickness', 100);
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, t)), mat);
-          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, t / 2);
-          return finishMesh(mesh);
-        }
-
-        default: {
-          let w = Math.max(bb.max.x - bb.min.x, 100);
-          let d = Math.max(bb.max.y - bb.min.y, 100);
-          let h = Math.max(bb.max.z - bb.min.z, 100);
-          if (w < 1) w = 200; if (d < 1) d = 200; if (h < 1) h = 100;
-          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, h)), mat);
-          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, bb.min.z + h / 2);
-          mesh.castShadow = !isLod;
-          mesh.receiveShadow = !isLod;
-          return finishMesh(mesh);
-        }
+      if (type === 'wall') {
+        // Walls handled by buildWallMesh (supports openings)
+        const wp = ELEMENT_MATERIAL_PROPS['wall'] ?? DEFAULT_MATERIAL_PROPS;
+        return buildWallMesh(element, allElements, createMaterial(color, 0.85, wp.roughness, wp.metalness));
       }
+
+      if (type === 'annotation' || type === 'beam') {
+        const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+        const x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
+        const h  = pv('Height', type === 'beam' ? 400 : 200);
+        const t  = pv('Width',  type === 'beam' ? 200 : 10);
+        const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
+        geometry = new THREE.BoxGeometry(len, h, t);
+        posX = (x1 + x2) / 2; posY = h / 2; posZ = (y1 + y2) / 2;
+        ry = -Math.atan2(y2 - y1, x2 - x1);
+      } else if (type === 'slab' || type === 'roof') {
+        const x = pv('X', 0), y = pv('Y', 0);
+        const w = pv('Width', 5000), d = pv('Depth', 5000), t = pv('Thickness', 250);
+        geometry = new THREE.BoxGeometry(w, t, d);
+        posX = x + w / 2; posY = -t / 2; posZ = y + d / 2;
+      } else if (type === 'column') {
+        const h   = pv('Height', 3000), dia = pv('Diameter', 300);
+        const sec = props['SectionType']?.value;
+        geometry = sec === 'Rectangular'
+          ? new THREE.BoxGeometry(dia, h, dia)
+          : new THREE.CylinderGeometry(dia / 2, dia / 2, h, 16);
+        posX = pv('X', 0); posY = h / 2; posZ = pv('Y', 0);
+      } else if (type === 'door' || type === 'window') {
+        const w    = pv('Width',  type === 'door' ? 900 : 1200);
+        const h    = pv('Height', type === 'door' ? 2100 : 1200);
+        const sill = type === 'window' ? pv('SillHeight', 900) : 0;
+        geometry = new THREE.BoxGeometry(w, h, 50);
+        posX = pv('X', 0); posY = sill + h / 2; posZ = pv('Y', 0);
+      } else if (type === 'stair') {
+        const sw = pv('Width2D', 1200), sl = pv('Length', 3000), sh = pv('TotalRise', 3000);
+        geometry = new THREE.BoxGeometry(sw, sh, sl);
+        posX = pv('X', 0) + sw / 2; posY = sh / 2; posZ = pv('Y', 0) + sl / 2;
+      } else if (type === 'rectangle') {
+        const w = pv('Width', 1000), h = pv('Height', 1000);
+        geometry = new THREE.BoxGeometry(w, 50, h);
+        posX = pv('X', 0) + w / 2; posY = 25; posZ = pv('Y', 0) + h / 2;
+      } else if (type === 'circle') {
+        const r = pv('Radius', 500);
+        geometry = new THREE.CylinderGeometry(r, r, 50, 32);
+        posX = pv('CenterX', 0); posY = 25; posZ = pv('CenterY', 0);
+      } else {
+        const bb = element.boundingBox;
+        const bw = Math.max(bb.max.x - bb.min.x, 100);
+        const bd = Math.max(bb.max.y - bb.min.y, 100);
+        geometry = new THREE.BoxGeometry(bw, 50, bd);
+        posX = bb.min.x + bw / 2; posY = 25; posZ = bb.min.y + bd / 2;
+      }
+
+      const pbr     = ELEMENT_MATERIAL_PROPS[type] ?? DEFAULT_MATERIAL_PROPS;
+      const opacity = type === 'window' ? 0.35 : type === 'space' ? 0.3 : 0.85;
+      const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness);
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(posX, posY, posZ);
+      if (ry !== 0) mesh.rotation.y = ry;
+      mesh.userData.elementId   = element.id;
+      mesh.userData.elementType = type;
+      mesh.castShadow    = true;
+      mesh.receiveShadow = true;
+      return mesh;
     },
     [createMaterial]
   );
@@ -414,66 +492,50 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
   const updateCamera = useCallback(() => {
     const { camera } = stateRef.current;
     if (!camera) return;
-
-    const cs = cameraStateRef.current;
-    const spherical = new THREE.Spherical(cs.distance, cs.elevation, cs.azimuth);
-    const offset = new THREE.Vector3().setFromSpherical(spherical);
-
-    camera.position.copy(cs.target).add(offset);
+    const cs  = cameraStateRef.current;
+    const sph = new THREE.Spherical(cs.distance, cs.elevation, cs.azimuth);
+    camera.position.copy(cs.target).add(new THREE.Vector3().setFromSpherical(sph));
     camera.lookAt(cs.target);
     needsRenderRef.current = true;
-
-    // Persist camera state across sessions
-    try {
-      localStorage.setItem('opencad-camera-state', JSON.stringify({
-        target: { x: cs.target.x, y: cs.target.y, z: cs.target.z },
-        distance: cs.distance,
-        azimuth: cs.azimuth,
-        elevation: cs.elevation,
-      }));
-    } catch { /* ignore storage errors */ }
   }, []);
 
   const setViewPreset = useCallback(
     (preset: ViewPreset) => {
       const view = VIEW_PRESETS[preset];
       if (!view) return;
-
       const cs = cameraStateRef.current;
-      cs.azimuth = view.azimuth;
+      cs.azimuth   = view.azimuth;
       cs.elevation = view.elevation;
-      cs.distance = view.distance;
-
+      cs.distance  = view.distance;
       updateCamera();
     },
     [updateCamera]
   );
 
-  const zoomIn = useCallback(() => {
-    const cs = cameraStateRef.current;
-    cs.distance = Math.max(500, cs.distance * 0.8);
+  const zoomIn  = useCallback(() => {
+    cameraStateRef.current.distance = Math.max(500, cameraStateRef.current.distance * 0.8);
     updateCamera();
   }, [updateCamera]);
 
   const zoomOut = useCallback(() => {
-    const cs = cameraStateRef.current;
-    cs.distance = Math.min(50000, cs.distance * 1.2);
+    cameraStateRef.current.distance = Math.min(50000, cameraStateRef.current.distance * 1.2);
     updateCamera();
   }, [updateCamera]);
 
   const zoomToFit = useCallback(() => {
     if (!doc) return;
+    const meshes = Array.from(elementMeshesRef.current.values());
+    if (meshes.length === 0) { setViewPreset('3d'); return; }
 
-    const elements = Object.values(doc.content.elements);
-    if (elements.length === 0) {
-      setViewPreset('3d');
-      return;
-    }
+    const box = new THREE.Box3();
+    for (const m of meshes) box.expandByObject(m);
+    if (box.isEmpty()) return;
 
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity;
+    const center = new THREE.Vector3();
+    const size   = new THREE.Vector3();
+    box.getCenter(center);
+    box.getSize(size);
+    const maxDim = Math.max(size.x, size.y, size.z, 1000);
 
     for (const element of elements) {
       const bb = element.boundingBox;
@@ -492,78 +554,147 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     updateCamera();
   }, [doc, updateCamera, setViewPreset]);
 
+  /** Return camera target — used to initialise the section cut position. */
+  const getCameraTarget = useCallback(() => ({ ...cameraStateRef.current.target }), []);
+
   const updateScene = useCallback(() => {
     const { scene, camera } = stateRef.current;
     if (!scene || !doc) return;
 
-    // Dispose existing meshes/groups
-    elementMeshesRef.current.forEach((obj) => {
-      scene.remove(obj);
-      obj.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          child.geometry.dispose();
-          if (child.material instanceof THREE.Material) {
-            child.material.dispose();
-          }
-        }
-      });
-    });
-    elementMeshesRef.current.clear();
+    const docElements = doc.content.elements;
+    const newIds  = new Set(Object.keys(docElements));
+    const oldIds  = new Set(elementMeshesRef.current.keys());
+    const hadNone = oldIds.size === 0;
 
-    const elements = Object.values(doc.content.elements);
-    const elementCount = elements.length;
-    const lodEnabled = elementCount > LOD_ELEMENT_THRESHOLD;
-    const lodDist = lodDistanceRef.current;
+    // ── Remove deleted elements ────────────────────────────────────────────
+    for (const id of oldIds) {
+      if (!newIds.has(id)) {
+        const obj = elementMeshesRef.current.get(id)!;
+        scene.remove(obj);
+        disposeObject(obj);
+        elementMeshesRef.current.delete(id);
+        elementDataRef.current.delete(id);
+        wallFingerprintsRef.current.delete(id);
+      }
+    }
 
-    for (const element of elements) {
-      // Determine whether this element is beyond LOD distance from camera
-      let isLod = false;
-      if (lodEnabled && camera) {
-        const bb = element.boundingBox;
-        const cx = (bb.min.x + bb.max.x) / 2;
-        const cy = (bb.min.y + bb.max.y) / 2;
-        const cz = (bb.min.z + bb.max.z) / 2;
-        const dx = cx - camera.position.x;
-        const dy = cy - camera.position.y;
-        const dz = cz - camera.position.z;
-        const distToCamera = Math.sqrt(dx * dx + dy * dy + dz * dz);
-        isLod = distToCamera > lodDist;
+    // ── Add / update elements ──────────────────────────────────────────────
+    for (const id of newIds) {
+      const element = docElements[id]!;
+      const prev    = elementDataRef.current.get(id);
+
+      // For walls: also check if nearby openings changed
+      let needsRebuild = !oldIds.has(id) || prev !== element;
+      if (!needsRebuild && element.type === 'wall') {
+        const fp = wallOpeningsFingerprint(element, docElements);
+        if (fp !== (wallFingerprintsRef.current.get(id) ?? '')) needsRebuild = true;
       }
 
-      const mesh = createMeshFromElement(element, isLod);
-      if (mesh) {
-        scene.add(mesh);
-        elementMeshesRef.current.set(element.id, mesh);
+      if (!oldIds.has(id)) {
+        const obj = createMeshFromElement(element, docElements);
+        if (obj) {
+          scene.add(obj);
+          elementMeshesRef.current.set(id, obj);
+        }
+        elementDataRef.current.set(id, element);
+        if (element.type === 'wall') {
+          wallFingerprintsRef.current.set(id, wallOpeningsFingerprint(element, docElements));
+        }
+      } else if (needsRebuild) {
+        const old = elementMeshesRef.current.get(id)!;
+        scene.remove(old);
+        disposeObject(old);
+        const obj = createMeshFromElement(element, docElements);
+        if (obj) {
+          scene.add(obj);
+          elementMeshesRef.current.set(id, obj);
+        } else {
+          elementMeshesRef.current.delete(id);
+        }
+        elementDataRef.current.set(id, element);
+        if (element.type === 'wall') {
+          wallFingerprintsRef.current.set(id, wallOpeningsFingerprint(element, docElements));
+        }
+      }
+    }
+
+    // ── Auto-zoom on first elements ────────────────────────────────────────
+    if (!hasAutoZoomedRef.current && hadNone && elementMeshesRef.current.size > 0) {
+      hasAutoZoomedRef.current = true;
+      const box = new THREE.Box3();
+      for (const m of elementMeshesRef.current.values()) box.expandByObject(m);
+      if (!box.isEmpty()) {
+        const center = new THREE.Vector3();
+        const size   = new THREE.Vector3();
+        box.getCenter(center);
+        box.getSize(size);
+        const maxDim = Math.max(size.x, size.y, size.z, 1000);
+        cameraStateRef.current.target.copy(center);
+        cameraStateRef.current.distance = maxDim * 2.5;
+        updateCamera();
       }
     }
 
     needsRenderRef.current = true;
-  }, [doc, createMeshFromElement]);
+  }, [doc, createMeshFromElement, updateCamera]);
 
   const updateSelection = useCallback(() => {
     const { scene } = stateRef.current;
     if (!scene) return;
+    const theme = getTheme();
 
     elementMeshesRef.current.forEach((obj, id) => {
       const isSelected = selectedIds.includes(id);
-      const baseColor = (obj.userData.baseColor as number | undefined) ?? 0x8888aa;
-      obj.traverse((child) => {
-        if (child instanceof THREE.Mesh) {
-          const material = child.material as THREE.MeshStandardMaterial;
-          if (isSelected) {
-            material.color.setHex(0x4f46e5);
-            material.emissive.setHex(0x1a1a6e);
-            material.emissiveIntensity = 0.25;
-          } else {
-            material.color.setHex(baseColor);
-            material.emissive.setHex(0x000000);
-            material.emissiveIntensity = 0;
+
+      const applyToMesh = (mesh: THREE.Mesh) => {
+        if (isSelected) {
+          if (!mesh.userData.selectionMat) {
+            mesh.userData.selectionMat =
+              (mesh.material as THREE.MeshStandardMaterial).clone();
           }
+          const sel = mesh.userData.selectionMat as THREE.MeshStandardMaterial;
+          sel.color.setHex(0x4f46e5);
+          sel.opacity = 1;
+          sel.emissive.setHex(theme.selectionEmissive);
+          sel.emissiveIntensity = 0.3;
+          mesh.material = sel;
+        } else {
+          const elType = (mesh.userData.elementType as string) || '';
+          mesh.material = createMaterial(
+            ELEMENT_COLORS[elType] ?? '#8888aa',
+            elType === 'space' ? 0.3 : 0.85
+          );
         }
-      });
+      };
+
+      if (obj instanceof THREE.Mesh) {
+        applyToMesh(obj);
+      } else {
+        obj.traverse((child) => {
+          if (child instanceof THREE.Mesh) applyToMesh(child);
+        });
+      }
     });
+
     needsRenderRef.current = true;
-  }, [selectedIds]);
+  }, [selectedIds, createMaterial]);
+
+  // ── Section clipping plane ─────────────────────────────────────────────────
+  useEffect(() => {
+    const { renderer } = stateRef.current;
+    if (!renderer) return;
+
+    if (sectionBox) {
+      const normal =
+        sectionDirection === 'x' ? new THREE.Vector3(-1,  0,  0) :
+        sectionDirection === 'y' ? new THREE.Vector3( 0, -1,  0) :
+                                   new THREE.Vector3( 0,  0, -1);
+      renderer.clippingPlanes = [new THREE.Plane(normal, sectionPosition)];
+    } else {
+      renderer.clippingPlanes = [];
+    }
+    needsRenderRef.current = true;
+  }, [sectionBox, sectionPosition, sectionDirection]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -575,47 +706,20 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
       const panStep = cs.distance * 0.05;
 
       switch (event.key) {
-        case '1': setViewPreset('top'); break;
+        case '1': setViewPreset('top');   break;
         case '2': setViewPreset('front'); break;
         case '3': setViewPreset('right'); break;
-        case '4': setViewPreset('3d'); break;
+        case '4': setViewPreset('3d');    break;
         case '0': zoomToFit(); break;
-        case '+': case '=': zoomIn(); break;
-        case '-': zoomOut(); break;
-        // Arrow key pan
-        case 'ArrowLeft':
-          cs.target.x -= panStep;
-          updateCamera();
-          event.preventDefault();
-          break;
-        case 'ArrowRight':
-          cs.target.x += panStep;
-          updateCamera();
-          event.preventDefault();
-          break;
-        case 'ArrowUp':
-          cs.target.y += panStep;
-          updateCamera();
-          event.preventDefault();
-          break;
-        case 'ArrowDown':
-          cs.target.y -= panStep;
-          updateCamera();
-          event.preventDefault();
-          break;
+        case '+': case '=': zoomIn();  break;
+        case '-':            zoomOut(); break;
       }
     },
     [setViewPreset, zoomIn, zoomOut, zoomToFit, updateCamera]
   );
 
-  // Use a ref for selectedIds so handleMouseDown never changes identity on selection change
-  const selectedIdsRef = useRef(selectedIds);
-  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
-
-  const isDragging = useRef(false);
-  // 'orbit' = left drag rotates camera; 'pan' = middle/right drag translates target
-  const dragMode = useRef<'orbit' | 'pan'>('orbit');
-  const lastMouse = useRef({ x: 0, y: 0 });
+  const isDragging   = useRef(false);
+  const lastMouse    = useRef({ x: 0, y: 0 });
 
   // Stable ref — never changes, so it won't invalidate the main setup effect
   const handleMouseDown = useCallback(
@@ -637,51 +741,58 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
         if (!camera || !scene || !renderer) return;
 
         const rect = container.getBoundingClientRect();
-        const x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-        const y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        pickVec2Ref.current.set(
+          ((event.clientX - rect.left) / rect.width)  * 2 - 1,
+          -((event.clientY - rect.top)  / rect.height) * 2 + 1
+        );
+        raycasterRef.current.setFromCamera(pickVec2Ref.current, camera);
 
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-        const objects = Array.from(elementMeshesRef.current.values());
-        const intersects = raycaster.intersectObjects(objects, true);
+        // Collect all leaf meshes (handles both Mesh and Group objects)
+        const leafMeshes: THREE.Mesh[] = [];
+        for (const obj of elementMeshesRef.current.values()) {
+          obj.traverse((child) => {
+            if (child instanceof THREE.Mesh) leafMeshes.push(child);
+          });
+        }
 
-        if (intersects.length > 0 && !isViewOnly) {
-          // Walk parent chain to find elementId (handles groups)
-          let hit: THREE.Object3D | null = intersects[0].object;
-          while (hit && !hit.userData.elementId) hit = hit.parent;
-          const elementId = hit?.userData.elementId as string | undefined;
-          if (elementId) {
-            const current = selectedIdsRef.current;
-            if (event.shiftKey) {
-              setSelectedIds(
-                current.includes(elementId)
-                  ? current.filter((id) => id !== elementId)
-                  : [...current, elementId]
-              );
-            } else {
-              setSelectedIds([elementId]);
-            }
+        const intersects = raycasterRef.current.intersectObjects(leafMeshes, false);
+
+        if (intersects.length > 0) {
+          const hit       = intersects[0].object as THREE.Mesh;
+          const elementId = hit.userData.elementId as string;
+          const current   = useDocumentStore.getState().selectedIds;
+          if (event.shiftKey) {
+            setSelectedIds(current.includes(elementId)
+              ? current.filter((i) => i !== elementId)
+              : [...current, elementId]);
+          } else {
+            setSelectedIds([elementId]);
           }
         } else {
           // Empty space → start orbit drag; deselect if not shift
           isDragging.current = true;
-          dragMode.current = 'orbit';
-          lastMouse.current = { x: event.clientX, y: event.clientY };
-          if (!event.shiftKey && !isViewOnly) {
-            setSelectedIds([]);
-          }
+          lastMouse.current  = { x: event.clientX, y: event.clientY };
         }
       }
+
+      if (event.button === 1) {
+        isDragging.current = true;
+        lastMouse.current  = { x: event.clientX, y: event.clientY };
+        event.preventDefault();
+      }
+
+      if (event.button === 2) {
+        isDragging.current = true;
+        lastMouse.current  = { x: event.clientX, y: event.clientY };
+        event.preventDefault();
+      }
     },
-    // Intentionally stable: selectedIds accessed via ref, not closure
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [isViewOnly, setSelectedIds]
+    [setSelectedIds]
   );
 
   const handleMouseMove = useCallback(
     (event: MouseEvent) => {
       if (!isDragging.current) return;
-
       const { camera } = stateRef.current;
       if (!camera) return;
 
@@ -690,23 +801,25 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
       if (dragMode.current === 'orbit') {
         const cs = cameraStateRef.current;
-        cs.azimuth -= deltaX * 0.005;
+        cs.azimuth   -= deltaX * 0.005;
         cs.elevation -= deltaY * 0.005;
-        cs.elevation = Math.max(0.01, Math.min(Math.PI - 0.01, cs.elevation));
+        cs.elevation  = Math.max(0.01, Math.min(Math.PI - 0.01, cs.elevation));
         updateCamera();
-      } else {
-        // Pan: translate target in camera-relative horizontal plane
-        const cs = cameraStateRef.current;
-        const panSpeed = cs.distance * 0.001;
-        const right = new THREE.Vector3();
-        const up = new THREE.Vector3(0, 0, 1);
-        camera.getWorldDirection(right);
-        right.z = 0;
-        right.normalize();
-        const panRight = right.clone().cross(up).normalize();
-
-        cs.target.addScaledVector(panRight, deltaX * panSpeed);
-        cs.target.addScaledVector(right, -deltaY * panSpeed);
+      } else if (event.buttons === 4) {
+        const cs      = cameraStateRef.current;
+        const forward = new THREE.Vector3();
+        camera.getWorldDirection(forward);
+        forward.y = 0;
+        forward.normalize();
+        const right = new THREE.Vector3()
+          .crossVectors(forward, new THREE.Vector3(0, 0, 1))
+          .normalize();
+        cs.target.addScaledVector(right,   -deltaX * 5);
+        cs.target.addScaledVector(forward,  deltaY * 5);
+        updateCamera();
+      } else if (event.buttons === 2) {
+        cameraStateRef.current.distance =
+          Math.max(500, cameraStateRef.current.distance - deltaY * 20);
         updateCamera();
       }
 
@@ -717,248 +830,133 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {
-      event.preventDefault();
-      const cs = cameraStateRef.current;
-
-      if (event.ctrlKey) {
-        // Trackpad pinch-to-zoom: ctrlKey is set by browser for pinch gesture
-        const zoomFactor = 1 + event.deltaY * 0.01;
-        cs.distance = Math.max(500, Math.min(50000, cs.distance * zoomFactor));
-      } else if (Math.abs(event.deltaX) > Math.abs(event.deltaY) * 0.5 && Math.abs(event.deltaX) > 3) {
-        // Trackpad horizontal scroll → pan left/right
-        const { camera } = stateRef.current;
-        if (!camera) return;
-        const panSpeed = cs.distance * 0.0008;
-        const right = new THREE.Vector3();
-        camera.getWorldDirection(right);
-        right.z = 0;
-        right.normalize();
-        const panRight = right.clone().cross(new THREE.Vector3(0, 0, 1)).normalize();
-        cs.target.addScaledVector(panRight, event.deltaX * panSpeed);
-        if (Math.abs(event.deltaY) > 3) {
-          cs.target.addScaledVector(right, -event.deltaY * panSpeed);
-        }
-      } else {
-        // Vertical scroll → zoom (mouse wheel and trackpad two-finger vertical)
-        const zoomFactor = event.deltaY > 0 ? 1.08 : 0.92;
-        cs.distance = Math.max(500, Math.min(50000, cs.distance * zoomFactor));
-      }
-
+      const factor = event.deltaY > 0 ? 1.1 : 0.9;
+      cameraStateRef.current.distance =
+        Math.max(500, Math.min(50000, cameraStateRef.current.distance * factor));
       updateCamera();
     },
     [updateCamera]
   );
 
-  const handleContextMenu = useCallback((event: Event) => {
-    event.preventDefault();
-    const me = event as MouseEvent;
-    const container = containerRef.current;
-    const { camera } = stateRef.current;
-    if (!container || !camera) return;
+  const handleContextMenu = useCallback((event: Event) => { event.preventDefault(); }, []);
 
-    const rect = container.getBoundingClientRect();
-    const nx = ((me.clientX - rect.left) / rect.width) * 2 - 1;
-    const ny = -((me.clientY - rect.top) / rect.height) * 2 + 1;
-
-    const raycaster = new THREE.Raycaster();
-    raycaster.setFromCamera(new THREE.Vector2(nx, ny), camera);
-    const objects = Array.from(elementMeshesRef.current.values());
-    const intersects = raycaster.intersectObjects(objects, true);
-
-    const ids = selectedIdsRef.current;
-    let elementContext: import('../components/contextMenu/contextMenuItems').ElementContext;
-    if (intersects.length > 0) {
-      // Walk parent chain to find elementType (handles groups)
-      let hit: THREE.Object3D | null = intersects[0].object;
-      while (hit && !hit.userData.elementType) hit = hit.parent;
-      const eType = (hit?.userData.elementType ?? '') as string;
-      if (ids.length > 1) {
-        elementContext = 'multi';
-      } else if (eType === 'wall' || eType === 'door' || eType === 'window') {
-        elementContext = eType as 'wall' | 'door' | 'window';
-      } else if (eType === 'slab' || eType === 'column' || eType === 'beam' || eType === 'stair' || eType === 'roof' || eType === 'space') {
-        elementContext = eType as ElementContext;
-      } else {
-        elementContext = 'empty';
-      }
-    } else {
-      elementContext = 'empty';
-    }
-
-    const items = getContextMenuItems('3d', elementContext);
-    // Store global clientX/clientY — ContextMenu uses position:fixed (viewport space).
-    setContextMenuState({ x: me.clientX, y: me.clientY, items });
-  }, []);
-
+  // ── Three.js init ──────────────────────────────────────────────────────────
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const theme = getTheme();
+    const rect  = container.getBoundingClientRect();
+    const initW = rect.width  > 0 ? rect.width  : container.clientWidth  || 800;
+    const initH = rect.height > 0 ? rect.height : container.clientHeight || 600;
 
-    const scene = new THREE.Scene();
+    const scene    = new THREE.Scene();
     scene.background = new THREE.Color(theme.sceneBackground);
 
-    const camera = new THREE.PerspectiveCamera(
-      50,
-      container.clientWidth / container.clientHeight,
-      1,
-      100000
-    );
+    const camera = new THREE.PerspectiveCamera(50, initW / initH, 1, 200000);
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(container.clientWidth, container.clientHeight);
-    // Cap pixel ratio at 2× to avoid GPU overload on high-DPI displays
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    container.appendChild(renderer.domElement);
+    const grid = new THREE.GridHelper(20000, 40, theme.gridColor, theme.gridColor2);
+    scene.add(grid);
 
-    stateRef.current = { camera, renderer, scene };
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-    const gridHelper = new THREE.GridHelper(20000, 40, theme.gridColor, theme.gridColor2);
-    scene.add(gridHelper);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(10000, 10000, 10000);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width  = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 100;
+    dirLight.shadow.camera.far  = 50000;
+    scene.add(dirLight);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
-    scene.add(ambientLight);
-
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
-    directionalLight.position.set(8000, 12000, 8000);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    scene.add(directionalLight);
-
-    // Fill light from below/opposite side for softer shadows
-    const fillLight = new THREE.DirectionalLight(0xcce8ff, 0.35);
-    fillLight.position.set(-6000, 2000, -6000);
-    scene.add(fillLight);
-
-    const axesHelper = new THREE.AxesHelper(1000);
-    scene.add(axesHelper);
+    scene.add(new THREE.AxesHelper(1000));
 
     updateCamera();
+    hasAutoZoomedRef.current = false;
 
-    // Throttled render loop — only renders when scene is dirty
-    const animate = (timestamp: number) => {
-      animationFrameRef.current = requestAnimationFrame(animate);
+    let cancelled = false;
 
-      // FPS monitor: track rolling window of frame times
-      frameTimesRef.current.push(timestamp);
-      if (frameTimesRef.current.length > FPS_WINDOW) {
-        frameTimesRef.current.shift();
-      }
-      if (frameTimesRef.current.length >= 2) {
-        const oldest = frameTimesRef.current[0];
-        const newest = frameTimesRef.current[frameTimesRef.current.length - 1];
-        const elapsed = newest - oldest;
-        if (elapsed > 0) {
-          const fps = ((frameTimesRef.current.length - 1) / elapsed) * 1000;
-          setCurrentFps(Math.round(fps));
-          // Auto-reduce detail when FPS drops below threshold
-          setLodActive(fps < FPS_LOW_THRESHOLD);
+    // Async renderer creation: try WebGPU, fall back to WebGL
+    void createRenderer().then((renderer) => {
+      if (cancelled) { renderer.dispose(); return; }
+
+      renderer.setSize(initW, initH);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+      container.appendChild(renderer.domElement);
+
+      stateRef.current = { camera, renderer, scene };
+      rendererReadyRef.current = true;
+
+      const animate = () => {
+        if (!rendererReadyRef.current) return;
+        animationFrameRef.current = requestAnimationFrame(animate);
+        if (needsRenderRef.current) {
+          renderer.render(scene, camera);
+          needsRenderRef.current = false;
         }
-      }
+      };
+      animate();
+    });
 
-      if (!needsRenderRef.current) return;
-      needsRenderRef.current = false;
-      renderer.render(scene, camera);
-    };
-    // Mark initial render
-    needsRenderRef.current = true;
-    animate(performance.now());
-
-    const onMouseUp = () => { isDragging.current = false; };
-    const onMouseLeave = () => { isDragging.current = false; };
-
-    container.addEventListener('mousedown', handleMouseDown);
-    container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('wheel', handleWheel, { passive: false });
-    container.addEventListener('contextmenu', handleContextMenu);
-    container.addEventListener('mouseup', onMouseUp);
-    container.addEventListener('mouseleave', onMouseLeave);
-
+    container.addEventListener('mousedown',    handleMouseDown);
+    container.addEventListener('mousemove',    handleMouseMove);
+    container.addEventListener('wheel',        handleWheel);
+    container.addEventListener('contextmenu',  handleContextMenu);
+    container.addEventListener('mouseup',   () => { isDragging.current = false; });
+    container.addEventListener('mouseleave', () => { isDragging.current = false; });
     window.addEventListener('keydown', handleKeyDown);
 
-    const resizeObserver = new ResizeObserver((entries) => {
+    const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
         const { width, height } = entry.contentRect;
+        if (width === 0 || height === 0) continue;
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(width, height);
+        const { renderer: r } = stateRef.current;
+        if (r) r.setSize(width, height);
+        needsRenderRef.current = true;
       }
     });
-    resizeObserver.observe(container);
+    ro.observe(container);
 
     return () => {
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      resizeObserver.disconnect();
-      container.removeEventListener('mousedown', handleMouseDown);
-      container.removeEventListener('mousemove', handleMouseMove);
-      container.removeEventListener('wheel', handleWheel);
+      cancelled = true;
+      rendererReadyRef.current = false;
+      if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
+      ro.disconnect();
+      container.removeEventListener('mousedown',   handleMouseDown);
+      container.removeEventListener('mousemove',   handleMouseMove);
+      container.removeEventListener('wheel',       handleWheel);
       container.removeEventListener('contextmenu', handleContextMenu);
       container.removeEventListener('mouseup', onMouseUp);
       container.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('keydown', handleKeyDown);
-      renderer.dispose();
-      if (container.contains(renderer.domElement)) {
-        container.removeChild(renderer.domElement);
+      const { renderer } = stateRef.current;
+      if (renderer) {
+        renderer.dispose();
+        if (container.contains(renderer.domElement)) container.removeChild(renderer.domElement);
       }
+      stateRef.current = { camera: null, renderer: null, scene: null };
     };
-  }, [
-    handleMouseDown,
-    handleMouseMove,
-    handleWheel,
-    handleContextMenu,
-    handleKeyDown,
-    updateCamera,
-  ]);
+  }, [handleMouseDown, handleMouseMove, handleWheel, handleContextMenu, handleKeyDown, updateCamera]);
+
+  useEffect(() => { updateScene();     }, [updateScene]);
+  useEffect(() => { updateSelection(); }, [updateSelection]);
 
   useEffect(() => {
-    updateScene();
-  }, [updateScene]);
-
-  useEffect(() => {
-    updateSelection();
-  }, [updateSelection]);
-
-  // Apply or remove clipping plane whenever section state changes
-  useEffect(() => {
-    const { renderer } = stateRef.current;
-    if (!renderer) return;
-
-    if (sectionBox) {
-      // Normal points in the negative axis direction so the plane clips
-      // elements "above" the cut position (in the selected axis direction).
-      let normal: THREE.Vector3;
-      if (sectionDirection === 'x')      normal = new THREE.Vector3(-1, 0, 0);
-      else if (sectionDirection === 'y') normal = new THREE.Vector3(0, -1, 0);
-      else                               normal = new THREE.Vector3(0, 0, -1);
-
-      renderer.clippingPlanes = [new THREE.Plane(normal, sectionPosition)];
-      renderer.localClippingEnabled = true;
-    } else {
-      renderer.clippingPlanes = [];
-      renderer.localClippingEnabled = false;
-    }
-  }, [sectionBox, sectionPosition, sectionDirection]);
-
-  useEffect(() => {
-    const handleThemeChange = () => {
+    const onChange = () => {
       const theme = getTheme();
       const { scene } = stateRef.current;
-      if (scene) {
-        scene.background = new THREE.Color(theme.sceneBackground);
-      }
+      if (scene) scene.background = new THREE.Color(theme.sceneBackground);
+      needsRenderRef.current = true;
     };
-
-    window.addEventListener('storage', handleThemeChange);
-    window.addEventListener('theme-change', handleThemeChange);
-
+    window.addEventListener('storage',      onChange);
+    window.addEventListener('theme-change', onChange);
     return () => {
-      window.removeEventListener('storage', handleThemeChange);
-      window.removeEventListener('theme-change', handleThemeChange);
+      window.removeEventListener('storage',      onChange);
+      window.removeEventListener('theme-change', onChange);
     };
   }, []);
 
@@ -1033,10 +1031,7 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     zoomIn,
     zoomOut,
     zoomToFit,
-    getCameraState,
-    simulateOrbit,
-    simulatePan,
-    simulateZoom,
+    getCameraTarget,
     sectionBox,
     setSectionBox,
     sectionPosition,
