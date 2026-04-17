@@ -397,6 +397,15 @@ export function useThreeViewport() {
         const sw = pv('Width2D', 1200), sl = pv('Length', 3000), sh = pv('TotalRise', 3000);
         geometry = new THREE.BoxGeometry(sw, sh, sl);
         posX = pv('X', 0) + sw / 2; posY = sh / 2; posZ = pv('Y', 0) + sl / 2;
+      } else if (type === 'space') {
+        // Render as a floor slab using the room's StartX/StartY/EndX/EndY coordinates.
+        // Walls are separate wall elements; this gives the room a coloured floor pad.
+        const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+        const x2 = pv('EndX', x1 + 5000), y2 = pv('EndY', y1 + 5000);
+        const rw = Math.abs(x2 - x1), rd = Math.abs(y2 - y1);
+        const floorT = 150; // 150 mm floor slab
+        geometry = new THREE.BoxGeometry(rw, floorT, rd);
+        posX = (x1 + x2) / 2; posY = -floorT / 2; posZ = (y1 + y2) / 2;
       } else if (type === 'rectangle') {
         const w = pv('Width', 1000), h = pv('Height', 1000);
         geometry = new THREE.BoxGeometry(w, 50, h);
@@ -413,7 +422,7 @@ export function useThreeViewport() {
         posX = bb.min.x + bw / 2; posY = 25; posZ = bb.min.y + bd / 2;
       }
 
-      const opacity = type === 'window' ? 0.35 : type === 'space' ? 0.3 : 0.85;
+      const opacity = type === 'window' ? 0.35 : 0.85;
       const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(posX, posY, posZ);

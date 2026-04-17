@@ -13,6 +13,8 @@ const AI_CONFIG_KEY = 'opencad-ai-config';
 const CHAT_HISTORY_KEY = 'opencad-chat-history';
 
 const FT_TO_MM = 304.8; // 1 foot in millimetres (canvas world units)
+const WALL_HEIGHT_MM = 3000; // 3 m default residential wall height
+const WALL_THICKNESS_MM = 200; // 200 mm default wall thickness
 
 interface FloorPlanRoom {
   name: string;
@@ -21,6 +23,15 @@ interface FloorPlanRoom {
   width_ft?: number;
   depth_ft?: number;
   area_sqft?: number;
+}
+
+/** Normalise a wall edge so (A→B) and (B→A) produce the same key. */
+function edgeKey(x1: number, y1: number, x2: number, y2: number): string {
+  const ax = Math.round(x1), ay = Math.round(y1);
+  const bx = Math.round(x2), by = Math.round(y2);
+  return ax < bx || (ax === bx && ay < by)
+    ? `${ax},${ay}|${bx},${by}`
+    : `${bx},${by}|${ax},${ay}`;
 }
 
 /** Extract a floor plan JSON object (with a "rooms" array) from AI response text. */
@@ -371,22 +382,55 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     return `\n\nCurrent project context:\n- Project: ${doc.name}\n- Levels: ${levels.map((l) => l.name).join(', ') || 'none'}\n- Layers: ${layers.map((l) => l.name).join(', ') || 'none'}\n- Elements: ${elements.length} total (${Object.entries(elements.reduce<Record<string,number>>((acc, e) => { acc[e.type] = (acc[e.type] ?? 0) + 1; return acc; }, {})).map(([t, c]) => `${c} ${t}s`).join(', ') || 'none'})`;
   }, [doc]);
 
-  /** Parse any floor plan JSON out of an AI response and add space elements to the canvas. */
-  const applyFloorPlan = useCallback((content: string): number => {
+  /**
+   * Parse any floor plan JSON out of an AI response and materialise it on the
+   * canvas as space + wall elements.
+   *
+   * Returns [roomCount, wallCount].
+   */
+  const applyFloorPlan = useCallback((content: string): [number, number] => {
     const state = useDocumentStore.getState();
-    if (!state.document) return 0;
+    if (!state.document) return [0, 0];
 
     const plan = extractFloorPlan(content);
-    if (!plan || plan.rooms.length === 0) return 0;
+    if (!plan || plan.rooms.length === 0) return [0, 0];
 
     const layerIds = Object.keys(state.document.organization.layers);
-    if (layerIds.length === 0) return 0;
+    if (layerIds.length === 0) return [0, 0];
     const layerId = layerIds[0]!;
 
-    // Push pre-change state so the floor plan import is undoable
     state.pushHistory('Before AI floor plan');
 
-    let added = 0;
+    // ── Pass 1: collect unique wall edges across all rooms ──────────────────
+    // Two adjacent rooms share an edge — we deduplicate by normalised key so
+    // only one wall element is created for each physical boundary.
+    const seenEdges = new Set<string>();
+    const wallEdges: Array<{ x1: number; y1: number; x2: number; y2: number }> = [];
+
+    for (const room of plan.rooms) {
+      const x = (room.x ?? 0) * FT_TO_MM;
+      const y = (room.y ?? 0) * FT_TO_MM;
+      const w = (room.width_ft ?? 10) * FT_TO_MM;
+      const h = (room.depth_ft ?? 10) * FT_TO_MM;
+
+      const roomEdges = [
+        { x1: x,     y1: y,     x2: x + w, y2: y },      // south
+        { x1: x + w, y1: y,     x2: x + w, y2: y + h },  // east
+        { x1: x,     y1: y + h, x2: x + w, y2: y + h },  // north
+        { x1: x,     y1: y,     x2: x,     y2: y + h },  // west
+      ];
+
+      for (const edge of roomEdges) {
+        const k = edgeKey(edge.x1, edge.y1, edge.x2, edge.y2);
+        if (!seenEdges.has(k)) {
+          seenEdges.add(k);
+          wallEdges.push(edge);
+        }
+      }
+    }
+
+    // ── Pass 2: add space elements (floor semantics + 2D labels) ───────────
+    let rooms = 0;
     for (const room of plan.rooms) {
       const x = (room.x ?? 0) * FT_TO_MM;
       const y = (room.y ?? 0) * FT_TO_MM;
@@ -398,20 +442,35 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
         type: 'space',
         layerId,
         properties: {
-          StartX: { type: 'number', value: x },
-          StartY: { type: 'number', value: y },
-          EndX: { type: 'number', value: x + w },
-          EndY: { type: 'number', value: y + h },
-          Name: { type: 'string', value: room.name ?? 'Room' },
+          StartX:   { type: 'number', value: x },
+          StartY:   { type: 'number', value: y },
+          EndX:     { type: 'number', value: x + w },
+          EndY:     { type: 'number', value: y + h },
+          Name:     { type: 'string', value: room.name ?? 'Room' },
           AreaSqft: { type: 'number', value: areaSqft },
         },
       });
-      added++;
+      rooms++;
+    }
+
+    // ── Pass 3: add wall elements for every unique edge ─────────────────────
+    for (const edge of wallEdges) {
+      state.addElement({
+        type: 'wall',
+        layerId,
+        properties: {
+          StartX: { type: 'number', value: edge.x1 },
+          StartY: { type: 'number', value: edge.y1 },
+          EndX:   { type: 'number', value: edge.x2 },
+          EndY:   { type: 'number', value: edge.y2 },
+          Height: { type: 'number', value: WALL_HEIGHT_MM },
+          Width:  { type: 'number', value: WALL_THICKNESS_MM },
+        },
+      });
     }
 
     state.pushHistory('AI floor plan applied');
-    return added;
-  // storeAddElement / pushHistory in deps just to satisfy linter — actual reads go through getState()
+    return [rooms, wallEdges.length];
   }, [storeAddElement, pushHistory]);
 
   const handleSend = useCallback(async () => {
@@ -484,9 +543,9 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
         }
       }
       // Bridge: apply any floor plan JSON to the canvas
-      const roomsAdded = applyFloorPlan(accumulated);
+      const [roomsAdded, wallsAdded] = applyFloorPlan(accumulated);
       const finalContent = roomsAdded > 0
-        ? `${accumulated}\n\n---\n_${roomsAdded} room${roomsAdded !== 1 ? 's' : ''} applied to the canvas. Use Undo (Ctrl+Z) to revert._`
+        ? `${accumulated}\n\n---\n_Applied to canvas: ${roomsAdded} room${roomsAdded !== 1 ? 's' : ''}, ${wallsAdded} wall${wallsAdded !== 1 ? 's' : ''}. Switch to 3D view to see the model. Use Ctrl+Z to undo._`
         : accumulated || '(no response)';
 
       setMessages((prev) =>
