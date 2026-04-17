@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Bot, User, X, Settings, Zap, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Bot, User, X, Settings, Zap, Eye, EyeOff, RefreshCw, Trash2 } from 'lucide-react';
 import {
   AIStreamClient,
   createOpenAICompatibleProvider,
@@ -10,6 +10,7 @@ import {
 import { useDocumentStore } from '../stores/documentStore';
 
 const AI_CONFIG_KEY = 'opencad-ai-config';
+const CHAT_HISTORY_KEY = 'opencad-chat-history';
 
 interface AIConfig {
   baseUrl: string;
@@ -286,6 +287,19 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
 
+  // Restore chat history from localStorage on first mount
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CHAT_HISTORY_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw) as Array<{ id: string; role: 'user' | 'assistant'; content: string; timestamp: number }>;
+      if (saved.length > 0) setMessages(saved);
+    } catch {
+      // Corrupt storage — leave default welcome message in place
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -437,6 +451,16 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     setMessages((prev) => prev.filter((m) => m.id !== lastUser.id));
     setInput(lastUser.content);
   }, [messages]);
+
+  const handleClearHistory = () => {
+    localStorage.removeItem(CHAT_HISTORY_KEY);
+    setMessages([{
+      id: '1',
+      role: 'assistant',
+      content: "Chat history cleared. How can I help you?",
+      timestamp: Date.now(),
+    }]);
+  };
 
   const handleSaveConfig = () => {
     saveConfig(configDraft);
@@ -611,6 +635,9 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
               {config.provider === 'ollama' ? 'Local AI' : config.model}
             </span>
           )}
+          <button className="chat-icon-btn" onClick={handleClearHistory} title="Clear chat history" aria-label="Clear history">
+            <Trash2 size={15} />
+          </button>
           <button className="chat-icon-btn" onClick={() => setShowConfig(true)} title="Configure AI provider" aria-label="Configure AI">
             <Settings size={15} />
           </button>
@@ -638,7 +665,11 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
               </div>
               <div className="message-content">
                 {msg.role === 'assistant'
-                  ? renderMarkdown(msg.content)
+                  ? msg.streaming
+                    // During streaming: plain text so partial markdown delimiters don't bleed through
+                    ? <span className="streaming-raw">{msg.content}</span>
+                    // After streaming: full markdown render
+                    : renderMarkdown(msg.content)
                   : msg.content.split('\n').map((line, i) => (
                       <p key={i}>{line || '\u00a0'}</p>
                     ))}

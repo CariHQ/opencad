@@ -1379,6 +1379,14 @@ body {
   margin-left: 2px;
 }
 
+/* Plain-text display during streaming — avoids partial markdown delimiters showing */
+.streaming-raw {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  line-height: 1.6;
+}
+
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50% { opacity: 0; }
