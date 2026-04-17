@@ -1,7 +1,30 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { DocumentModel, type DocumentSchema, type PropertyValue, loadProject as idbLoadProject } from '@opencad/document';
+import {
+  DocumentModel,
+  type DocumentSchema,
+  type PropertyValue,
+  loadProject as idbLoadProject,
+  saveProject as idbSaveProject,
+} from '@opencad/document';
 import { isTauri, tauriLoadProject } from '../hooks/useTauri';
+
+const MAX_HISTORY = 50;
+
+// Unified debounced save — writes to localStorage AND IndexedDB on every mutation.
+// Using a single debounce timer means rapid changes (dragging, typing) coalesce
+// into one write 500 ms after the last change.
+let _saveTimer: ReturnType<typeof setTimeout> | null = null;
+function debouncedSave(projectId: string | null, doc: DocumentSchema): void {
+  if (_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer = setTimeout(() => {
+    const key = projectId ? `opencad-doc-${projectId}` : 'opencad-document';
+    try { localStorage.setItem(key, JSON.stringify(doc)); } catch { /* storage quota exceeded */ }
+    // IndexedDB is authoritative on load — keep it in sync too
+    void idbSaveProject(doc).catch(() => { /* IDB unavailable; localStorage already saved */ });
+    _saveTimer = null;
+  }, 500);
+}
 
 interface HistoryEntry {
   document: DocumentSchema;
@@ -213,31 +236,34 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       addLayer: (params) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) throw new Error('No document loaded');
 
         const layerId = model.addLayer(params);
-        set({
-          document: { ...model.documentData },
-          lastSaved: Date.now(),
-        });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc, lastSaved: Date.now() });
+        debouncedSave(currentProjectId, newDoc);
         return layerId;
       },
 
       updateLayer: (layerId, updates) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) return;
 
         model.updateLayer(layerId, updates as Record<string, unknown>);
-        set({ document: { ...model.documentData } });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc });
+        debouncedSave(currentProjectId, newDoc);
       },
 
       deleteLayer: (layerId) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) return;
 
         model.deleteLayer(layerId);
-        set({ document: { ...model.documentData } });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc });
+        debouncedSave(currentProjectId, newDoc);
       },
 
       addElement: (params) => {
@@ -251,37 +277,37 @@ export const useDocumentStore = create<DocumentState>()(
         });
 
         const newDoc = { ...model.documentData };
-        set({
-          document: newDoc,
-          lastSaved: Date.now(),
-        });
-        try {
-          const key = currentProjectId ? `opencad-doc-${currentProjectId}` : 'opencad-document';
-          localStorage.setItem(key, JSON.stringify(newDoc));
-        } catch { /* ignore storage errors */ }
+        set({ document: newDoc, lastSaved: Date.now() });
+        debouncedSave(currentProjectId, newDoc);
         return elementId;
       },
 
       updateElement: (elementId, updates) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) return;
 
         const element = model.getElementById(elementId);
         if (element) {
-          Object.assign(element, updates);
-          set({ document: { ...model.documentData } });
+          const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
+          const safeUpdates = Object.fromEntries(
+            Object.entries(updates as Record<string, unknown>).filter(([k]) => !FORBIDDEN.has(k))
+          );
+          const updatedElement = { ...element, ...safeUpdates };
+          model.documentData.content.elements[elementId] = updatedElement as typeof element;
+          const newDoc = { ...model.documentData };
+          set({ document: newDoc });
+          debouncedSave(currentProjectId, newDoc);
         }
       },
 
       deleteElement: (elementId) => {
-        const { model, document } = get();
+        const { model, document, currentProjectId } = get();
         if (!model || !document) return;
 
         delete document.content.elements[elementId];
-        set({
-          document: { ...document },
-          lastSaved: Date.now(),
-        });
+        const newDoc = { ...document };
+        set({ document: newDoc, lastSaved: Date.now() });
+        debouncedSave(currentProjectId, newDoc);
       },
 
       setToolParam: (tool, key, value) => {
@@ -293,12 +319,16 @@ export const useDocumentStore = create<DocumentState>()(
         const { document, history, historyIndex } = get();
         if (!document) return;
 
-        const newHistory = history.slice(0, historyIndex + 1);
+        let newHistory = history.slice(0, historyIndex + 1);
         newHistory.push({
           document: JSON.parse(JSON.stringify(document)),
           timestamp: Date.now(),
           description,
         });
+        // Cap history depth to avoid unbounded memory growth
+        if (newHistory.length > MAX_HISTORY) {
+          newHistory = newHistory.slice(newHistory.length - MAX_HISTORY);
+        }
 
         set({
           history: newHistory,
@@ -309,45 +339,43 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       undo: () => {
-        const { history, historyIndex } = get();
+        const { history, historyIndex, currentProjectId } = get();
         if (historyIndex <= 0) return;
 
         const newIndex = historyIndex - 1;
-        set({
-          document: JSON.parse(JSON.stringify(history[newIndex].document)),
-          historyIndex: newIndex,
-          canUndo: newIndex > 0,
-          canRedo: true,
-        });
+        const restoredDoc = JSON.parse(JSON.stringify(history[newIndex].document)) as DocumentSchema;
+        set({ document: restoredDoc, historyIndex: newIndex, canUndo: newIndex > 0, canRedo: true });
+        debouncedSave(currentProjectId, restoredDoc);
       },
 
       redo: () => {
-        const { history, historyIndex } = get();
+        const { history, historyIndex, currentProjectId } = get();
         if (historyIndex >= history.length - 1) return;
 
         const newIndex = historyIndex + 1;
-        set({
-          document: JSON.parse(JSON.stringify(history[newIndex].document)),
-          historyIndex: newIndex,
-          canUndo: true,
-          canRedo: newIndex < history.length - 1,
-        });
+        const restoredDoc = JSON.parse(JSON.stringify(history[newIndex].document)) as DocumentSchema;
+        set({ document: restoredDoc, historyIndex: newIndex, canUndo: true, canRedo: newIndex < history.length - 1 });
+        debouncedSave(currentProjectId, restoredDoc);
       },
 
       createVersion: (message) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) return;
 
         model.createVersion(message);
-        set({ document: { ...model.documentData } });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc });
+        debouncedSave(currentProjectId, newDoc);
       },
 
       restoreVersion: (versionNumber) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) return;
 
         model.restoreVersion(versionNumber);
-        set({ document: { ...model.documentData } });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc });
+        debouncedSave(currentProjectId, newDoc);
       },
 
       getVersionList: () => {
@@ -360,8 +388,9 @@ export const useDocumentStore = create<DocumentState>()(
         const userId = existing ? existing.documentData.metadata.createdBy : 'user-1';
         const newModel = new DocumentModel(schema.id, userId);
         newModel.loadDocument(schema);
+        const newDoc = { ...newModel.documentData };
         set({
-          document: { ...newModel.documentData },
+          document: newDoc,
           model: newModel,
           currentProjectId: schema.id,
           lastSaved: Date.now(),
@@ -370,6 +399,7 @@ export const useDocumentStore = create<DocumentState>()(
           canUndo: false,
           canRedo: false,
         });
+        debouncedSave(schema.id, newDoc);
       },
 
       setActiveLevel: (levelId) => {
@@ -377,37 +407,35 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       addLevel: (params) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) throw new Error('No document loaded');
 
         const levelId = model.addLevel({ name: params.name, elevation: params.elevation, height: params.height });
-        set({
-          document: { ...model.documentData },
-          selectedLevelId: levelId,
-          lastSaved: Date.now(),
-        });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc, selectedLevelId: levelId, lastSaved: Date.now() });
+        debouncedSave(currentProjectId, newDoc);
         return levelId;
       },
 
       updateLevel: (levelId, updates) => {
-        const { document } = get();
+        const { document, currentProjectId } = get();
         if (!document) return;
         const level = document.organization.levels[levelId];
         if (!level) return;
         Object.assign(level, updates);
-        set({
-          document: {
-            ...document,
-            organization: {
-              ...document.organization,
-              levels: { ...document.organization.levels, [levelId]: { ...level } },
-            },
+        const newDoc = {
+          ...document,
+          organization: {
+            ...document.organization,
+            levels: { ...document.organization.levels, [levelId]: { ...level } },
           },
-        });
+        };
+        set({ document: newDoc });
+        debouncedSave(currentProjectId, newDoc);
       },
 
       deleteLevel: (levelId) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) return;
 
         const levels = model.documentData.organization.levels;
@@ -415,22 +443,22 @@ export const useDocumentStore = create<DocumentState>()(
 
         delete levels[levelId];
         const remainingIds = Object.keys(levels);
-        set({
-          document: { ...model.documentData },
-          selectedLevelId: remainingIds[0] ?? null,
-          lastSaved: Date.now(),
-        });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc, selectedLevelId: remainingIds[0] ?? null, lastSaved: Date.now() });
+        debouncedSave(currentProjectId, newDoc);
       },
 
       renameLevel: (levelId, name) => {
-        const { model } = get();
+        const { model, currentProjectId } = get();
         if (!model) return;
 
         const level = model.documentData.organization.levels[levelId];
         if (!level) return;
         level.name = name;
         model.documentData.metadata.updatedAt = Date.now();
-        set({ document: { ...model.documentData } });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc });
+        debouncedSave(currentProjectId, newDoc);
       },
     }),
     {
