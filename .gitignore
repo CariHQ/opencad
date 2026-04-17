@@ -18,6 +18,8 @@ packages/geometry/pkg/
 **/*.rs.bk
 *.pdb
 Cargo.lock
+# Binaries ship their lockfile for reproducible builds
+!server/Cargo.lock
 
 # Tauri
 apps/desktop/src-tauri/target/
