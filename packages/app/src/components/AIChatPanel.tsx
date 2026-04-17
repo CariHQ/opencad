@@ -38,15 +38,214 @@ function saveConfig(c: AIConfig): void {
   localStorage.setItem(AI_CONFIG_KEY, JSON.stringify(c));
 }
 
-const BIM_SYSTEM_PROMPT = `You are OpenCAD AI, an expert architectural design assistant embedded in a browser-native BIM platform. You help architects and designers with:
-- Building layout and floor plan design
-- IBC code compliance checking
-- Wall, door, window, slab, column, beam, stair, and railing placement
-- Material selection and cost estimation
-- Section views and documentation
-- IFC file handling and interoperability
+const BIM_SYSTEM_PROMPT = `You are OpenCAD AI, an expert architectural design assistant embedded in a professional browser-native BIM platform.
 
-Keep responses concise and actionable. When suggesting design changes, be specific about element types and dimensions. Use metric units (mm, m) by default.`;
+## Your Capabilities
+You help architects and designers with:
+- **Floor plan generation** — create room layouts from natural language descriptions
+- **IBC/ADA code compliance** — check against IBC 2024, IRC, ADA Standards; cite specific sections
+- **BIM element placement** — walls, doors, windows, slabs, columns, beams, stairs, railings, spaces
+- **Design modifications** — move, resize, or remove elements based on natural language
+- **Material & cost guidance** — suggest materials, estimate costs, recommend specifications
+- **Documentation** — generate specs, construction notes, quantity takeoffs
+- **IFC interoperability** — explain import/export workflows and data mapping
+
+## OpenCAD Element Types
+The platform uses these element types: \`wall\`, \`door\`, \`window\`, \`slab\`, \`column\`, \`beam\`, \`stair\`, \`railing\`, \`space\`, \`roof\`, \`curtain_wall\`, \`opening\`, \`furniture\`, \`mep\`.
+
+## IBC Code Quick Reference
+Key sections you should cite accurately:
+- IBC §1208.1 — Minimum room area (habitable ≥ 70 sqft, bedrooms ≥ 120 sqft)
+- IBC §1010.1.1 / §1008.1.1 — Egress door clear width ≥ 32" (32.5" net with 34" nominal door)
+- IBC §1018.1 — Corridor width ≥ 44" (36" in R-3 single family)
+- IBC §1011.5 — Stair rise 4–7", run ≥ 11" (IRC: 4–7.75" / ≥ 10")
+- IBC §1205.2 — Natural light ≥ 8% of floor area for habitable rooms
+- IBC §1203.4 — Ventilation ≥ 4% of floor area or mechanical equivalent
+- IBC §1030 — Emergency egress windows (bedrooms): net clear ≥ 5.7 sqft, sill ≤ 44" AFF
+- IBC §302 — Occupancy classification required before applying most code requirements
+- ADA §404 — Accessible door clear width ≥ 32" (36" preferred)
+
+## Project Context
+Each user message may include a JSON block labelled [OpenCAD Project Context] showing the current model state. Use it to give specific, contextual answers — reference actual element counts, layer names, and level names from the context rather than speaking generically.
+
+## Response Guidelines
+- For **analysis and compliance questions**: respond conversationally with clear structure (headers, bullet points, tables). Use emojis sparingly: 🔴 errors, 🟡 warnings, ✅ passing. Keep answers under 400 words unless a detailed breakdown was requested.
+- For **design generation requests**: describe the plan first in plain language, then provide a JSON floor plan object using this schema:
+\`\`\`json
+{
+  "rooms": [{ "name": "", "area_sqft": 0, "width_ft": 0, "depth_ft": 0, "x": 0, "y": 0 }],
+  "circulation": [{ "from": "", "to": "", "type": "direct|corridor" }],
+  "total_area_sqft": 0
+}
+\`\`\`
+- For **element placement commands**: include a structured command block:
+\`\`\`json
+{ "command": "add_element", "type": "wall", "properties": {} }
+\`\`\`
+- **Units**: accept both metric (mm, m) and imperial (in, ft). Default to imperial for IBC checks, metric for IFC/BIM data. When mixing, always state the unit explicitly.
+- **Accuracy**: Never hallucinate code references. If unsure of a specific IBC section, say so and recommend the architect verify with the local AHJ.`;
+
+// ─── Inline Markdown Renderer ──────────────────────────────────────────────
+// Renders the subset of Markdown that Claude commonly outputs in BIM context:
+// headings (h1–h4), bold, italic, inline code, code blocks, tables,
+// ordered and unordered lists, horizontal rules, and plain paragraphs.
+function renderMarkdown(text: string): React.ReactNode {
+  const lines = text.split('\n');
+  const nodes: React.ReactNode[] = [];
+  let i = 0;
+
+  // Inline formatting: **bold**, *italic*, `code`, ~~strike~~
+  function renderInline(raw: string, key: string): React.ReactNode {
+    const parts: React.ReactNode[] = [];
+    let cur = raw;
+    let partIdx = 0;
+    while (cur.length) {
+      const bold = cur.match(/^\*\*(.+?)\*\*/s);
+      const italic = cur.match(/^\*(.+?)\*/s);
+      const code = cur.match(/^`(.+?)`/s);
+      const strike = cur.match(/^~~(.+?)~~/s);
+      if (bold) {
+        parts.push(<strong key={`${key}-b-${partIdx++}`}>{bold[1]}</strong>);
+        cur = cur.slice(bold[0].length);
+      } else if (italic) {
+        parts.push(<em key={`${key}-i-${partIdx++}`}>{italic[1]}</em>);
+        cur = cur.slice(italic[0].length);
+      } else if (code) {
+        parts.push(<code key={`${key}-c-${partIdx++}`}>{code[1]}</code>);
+        cur = cur.slice(code[0].length);
+      } else if (strike) {
+        parts.push(<s key={`${key}-s-${partIdx++}`}>{strike[1]}</s>);
+        cur = cur.slice(strike[0].length);
+      } else {
+        // advance one char
+        parts.push(cur[0]);
+        cur = cur.slice(1);
+      }
+    }
+    return <>{parts}</>;
+  }
+
+  while (i < lines.length) {
+    const line = lines[i];
+
+    // Fenced code block
+    if (line.trimStart().startsWith('```')) {
+      const lang = line.trim().slice(3).trim();
+      const codeLines: string[] = [];
+      i++;
+      while (i < lines.length && !lines[i].trimStart().startsWith('```')) {
+        codeLines.push(lines[i]);
+        i++;
+      }
+      nodes.push(
+        <pre key={`pre-${i}`} className="md-code-block" data-lang={lang || undefined}>
+          <code>{codeLines.join('\n')}</code>
+        </pre>
+      );
+      i++;
+      continue;
+    }
+
+    // Horizontal rule
+    if (/^---+$|^\*\*\*+$/.test(line.trim())) {
+      nodes.push(<hr key={`hr-${i}`} className="md-hr" />);
+      i++;
+      continue;
+    }
+
+    // Headings h1–h4
+    const hMatch = line.match(/^(#{1,4})\s+(.+)/);
+    if (hMatch) {
+      const level = Math.min(hMatch[1].length, 4) as 1 | 2 | 3 | 4;
+      const Tag = `h${level}` as keyof React.JSX.IntrinsicElements;
+      nodes.push(
+        <Tag key={`h-${i}`} className={`md-h${level}`}>
+          {renderInline(hMatch[2], `h-${i}`)}
+        </Tag>
+      );
+      i++;
+      continue;
+    }
+
+    // Table (detect by | at start after trimming)
+    if (line.trim().startsWith('|')) {
+      const tableLines: string[] = [];
+      while (i < lines.length && lines[i].trim().startsWith('|')) {
+        tableLines.push(lines[i]);
+        i++;
+      }
+      // Skip separator row (---|---)
+      const headerRow = tableLines[0];
+      const dataRows = tableLines.slice(2); // skip separator
+      const parseRow = (row: string) =>
+        row.split('|').slice(1, -1).map((c) => c.trim());
+
+      nodes.push(
+        <div key={`tbl-${i}`} className="md-table-wrap">
+          <table className="md-table">
+            <thead>
+              <tr>
+                {parseRow(headerRow).map((cell, ci) => (
+                  <th key={ci}>{renderInline(cell, `th-${i}-${ci}`)}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {dataRows.map((row, ri) => (
+                <tr key={ri}>
+                  {parseRow(row).map((cell, ci) => (
+                    <td key={ci}>{renderInline(cell, `td-${i}-${ri}-${ci}`)}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
+
+    // Unordered list
+    if (/^[\s]*[-*+]\s/.test(line)) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length && /^[\s]*[-*+]\s/.test(lines[i])) {
+        const content = lines[i].replace(/^[\s]*[-*+]\s/, '');
+        items.push(<li key={i}>{renderInline(content, `li-${i}`)}</li>);
+        i++;
+      }
+      nodes.push(<ul key={`ul-${i}`} className="md-ul">{items}</ul>);
+      continue;
+    }
+
+    // Ordered list
+    if (/^\d+\.\s/.test(line)) {
+      const items: React.ReactNode[] = [];
+      while (i < lines.length && /^\d+\.\s/.test(lines[i])) {
+        const content = lines[i].replace(/^\d+\.\s/, '');
+        items.push(<li key={i}>{renderInline(content, `oli-${i}`)}</li>);
+        i++;
+      }
+      nodes.push(<ol key={`ol-${i}`} className="md-ol">{items}</ol>);
+      continue;
+    }
+
+    // Blank line — skip (paragraph spacing handled by margins)
+    if (line.trim() === '') {
+      i++;
+      continue;
+    }
+
+    // Plain paragraph
+    nodes.push(
+      <p key={`p-${i}`} className="md-p">
+        {renderInline(line, `p-${i}`)}
+      </p>
+    );
+    i++;
+  }
+
+  return <>{nodes}</>;
+}
 
 interface Message {
   id: string;
@@ -165,7 +364,13 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       .filter((m) => !m.streaming)
       .map((m) => ({ id: m.id, role: m.role, content: m.content, timestamp: m.timestamp }));
 
-    const systemAugmentedPrompt = BIM_SYSTEM_PROMPT + buildContext() + '\n\nUser: ' + userText;
+    // Append live project context to the user message so Claude can give
+    // specific answers about the current model. BIM_SYSTEM_PROMPT is already
+    // passed as the Anthropic `system` param — do NOT duplicate it here.
+    const ctx = buildContext();
+    const systemAugmentedPrompt = ctx
+      ? `${userText}\n\n[OpenCAD Project Context]\n${ctx}`
+      : userText;
 
     let cancelled = false;
     abortRef.current = () => { cancelled = true; };
@@ -432,9 +637,11 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
                 {msg.role === 'assistant' ? <Bot size={16} /> : <User size={16} />}
               </div>
               <div className="message-content">
-                {msg.content.split('\n').map((line, i) => (
-                  <p key={i}>{line || '\u00a0'}</p>
-                ))}
+                {msg.role === 'assistant'
+                  ? renderMarkdown(msg.content)
+                  : msg.content.split('\n').map((line, i) => (
+                      <p key={i}>{line || '\u00a0'}</p>
+                    ))}
                 {msg.streaming && <span className="streaming-cursor">▌</span>}
                 {isError && (
                   <div className="message-error-actions">

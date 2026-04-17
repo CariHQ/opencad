@@ -39,7 +39,7 @@ export interface AIConfig {
 
 export class AIOrchestrator {
   private configs: Map<AIProvider, AIConfig> = new Map();
-  private currentProvider: AIProvider = 'openai';
+  private currentProvider: AIProvider = 'anthropic';
 
   configure(config: AIConfig): void {
     this.configs.set(config.provider, config);
@@ -126,6 +126,8 @@ export class AIOrchestrator {
     switch (provider) {
       case 'openai':
         return this.streamOpenAI(request, onChunk);
+      case 'anthropic':
+        return this.streamAnthropic(request, onChunk);
       case 'ollama':
         return this.streamOllama(request, onChunk);
       default:
@@ -188,7 +190,7 @@ export class AIOrchestrator {
         system: systemPrompt?.content,
         messages: otherMessages,
         temperature: request.temperature,
-        max_tokens: request.maxTokens || 1024,
+        max_tokens: request.maxTokens || 4096,
       }),
     });
 
@@ -315,6 +317,90 @@ export class AIOrchestrator {
         promptTokens: 0,
         completionTokens: 0,
         totalTokens: 0,
+      },
+      finishReason: 'stop',
+    };
+  }
+
+  private async streamAnthropic(
+    request: AIRequest,
+    onChunk: (chunk: string) => void
+  ): Promise<AIResponse> {
+    const config = this.configs.get('anthropic');
+    const url = config?.baseUrl || 'https://api.anthropic.com/v1/messages';
+
+    const systemPrompt = request.messages.find((m) => m.role === 'system');
+    const otherMessages = request.messages.filter((m) => m.role !== 'system');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': config?.apiKey || '',
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: request.model,
+        system: systemPrompt?.content,
+        messages: otherMessages,
+        temperature: request.temperature,
+        max_tokens: request.maxTokens || 4096,
+        stream: true,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Anthropic API error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No response body');
+    }
+
+    const decoder = new TextDecoder();
+    let content = '';
+    let inputTokens = 0;
+    let outputTokens = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (!line.startsWith('data: ')) continue;
+        const data = line.slice(6).trim();
+        if (!data) continue;
+
+        try {
+          const parsed = JSON.parse(data);
+          if (parsed.type === 'content_block_delta') {
+            const text = parsed.delta?.text;
+            if (text) {
+              content += text;
+              onChunk(text);
+            }
+          } else if (parsed.type === 'message_delta' && parsed.usage) {
+            outputTokens = parsed.usage.output_tokens || 0;
+          } else if (parsed.type === 'message_start' && parsed.message?.usage) {
+            inputTokens = parsed.message.usage.input_tokens || 0;
+          }
+        } catch {
+          // Skip invalid JSON lines
+        }
+      }
+    }
+
+    return {
+      content,
+      model: request.model,
+      usage: {
+        promptTokens: inputTokens,
+        completionTokens: outputTokens,
+        totalTokens: inputTokens + outputTokens,
       },
       finishReason: 'stop',
     };

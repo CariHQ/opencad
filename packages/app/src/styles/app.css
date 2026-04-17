@@ -1384,6 +1384,156 @@ body {
   50% { opacity: 0; }
 }
 
+/* ─── Markdown renderer styles (AI chat messages) ──────────────────────── */
+.message-content .md-h1 {
+  font-size: 1.05em;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 12px 0 6px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.message-content .md-h2 {
+  font-size: 0.98em;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 10px 0 4px;
+}
+
+.message-content .md-h3 {
+  font-size: 0.93em;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 8px 0 4px;
+}
+
+.message-content .md-h4 {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 6px 0 3px;
+}
+
+/* First heading at top of message gets no top margin */
+.message-content > :first-child.md-h1,
+.message-content > :first-child.md-h2,
+.message-content > :first-child.md-h3 {
+  margin-top: 0;
+}
+
+.message-content .md-p {
+  margin: 0 0 6px;
+  line-height: 1.55;
+}
+
+.message-content .md-p:last-child {
+  margin-bottom: 0;
+}
+
+.message-content .md-hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 10px 0;
+}
+
+.message-content .md-ul,
+.message-content .md-ol {
+  margin: 4px 0 8px 16px;
+  padding: 0;
+}
+
+.message-content .md-ul li,
+.message-content .md-ol li {
+  margin: 2px 0;
+  line-height: 1.5;
+}
+
+.message-content code {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-size: 0.85em;
+  color: var(--accent-primary);
+}
+
+.message-content .md-code-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 8px 0;
+  overflow-x: auto;
+  font-size: 0.8em;
+}
+
+.message-content .md-code-block code {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: inherit;
+  color: var(--text-primary);
+  white-space: pre;
+}
+
+/* Markdown tables */
+.message-content .md-table-wrap {
+  overflow-x: auto;
+  margin: 8px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.message-content .md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82em;
+  min-width: 300px;
+}
+
+.message-content .md-table th {
+  background: var(--bg-elevated);
+  padding: 6px 12px;
+  text-align: left;
+  font-weight: 600;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.message-content .md-table td {
+  padding: 5px 12px;
+  border-bottom: 1px solid var(--separator-color);
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.message-content .md-table tr:last-child td {
+  border-bottom: none;
+}
+
+.message-content .md-table tr:nth-child(even) {
+  background: var(--bg-hover);
+}
+
+/* Inline formatting inside markdown */
+.message-content strong {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.message-content em {
+  font-style: italic;
+  color: var(--text-secondary);
+}
+
+.message-content s {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+
 /* Version History Panel */
 .version-history-panel {
   display: flex;
