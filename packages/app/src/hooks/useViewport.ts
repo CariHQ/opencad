@@ -1,37 +1,45 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
+import { computeBoundingBox, ElementSchema, PropertyValue } from '@opencad/document';
+import { SpatialGrid } from '../utils/spatialIndex';
 
 const LIGHT_THEME = {
-  background: '#e8e8e8',
-  grid: '#d0d0d0',
-  gridMajor: '#c0c0c0',
-  axis: '#a0a0a0',
-  element: '#6b6b6b',
-  elementFill: 'rgba(107, 107, 107, 0.1)',
+  background: '#fafaf8',          // drafting-paper off-white
+  grid: 'rgba(0,0,0,0.06)',       // barely-there minor grid
+  gridMajor: 'rgba(0,0,0,0.11)',  // subtle major grid
+  axis: 'rgba(0,0,0,0.18)',       // axis slightly more present
+  element: '#3a3a3a',             // dark ink on white paper
+  elementFill: 'rgba(0,0,0,0.04)',
   selected: '#0d99ff',
-  selectedFill: 'rgba(13, 153, 255, 0.2)',
+  selectedFill: 'rgba(13,153,255,0.12)',
   accent: '#0d99ff',
   snap: '#0d99ff',
 };
 
 const DARK_THEME = {
-  background: '#2c2c2c',
-  grid: '#383838',
-  gridMajor: '#444444',
-  axis: '#555555',
-  element: '#a0a0a0',
-  elementFill: 'rgba(160, 160, 160, 0.1)',
+  background: '#141414',          // true CAD dark — like AutoCAD Model Space
+  grid: 'rgba(255,255,255,0.05)', // barely-there minor grid
+  gridMajor: 'rgba(255,255,255,0.09)', // subtle major grid
+  axis: 'rgba(255,255,255,0.15)', // axis readable but not glowing
+  element: '#c8c8c8',             // bright enough on near-black
+  elementFill: 'rgba(255,255,255,0.05)',
   selected: '#18a0fb',
-  selectedFill: 'rgba(24, 160, 251, 0.2)',
-  accent: '#4f46e5',
-  snap: '#4f46e5',
+  selectedFill: 'rgba(24,160,251,0.15)',
+  accent: '#18a0fb',
+  snap: '#18a0fb',
 };
 
-const getTheme = () => {
-  if (typeof window === 'undefined') return DARK_THEME;
-  const theme = localStorage.getItem('opencad-theme');
-  return theme === 'light' ? LIGHT_THEME : DARK_THEME;
-};
+// Module-level theme cache — avoids localStorage read on every rAF frame
+let _cachedTheme = typeof window !== 'undefined' && localStorage.getItem('opencad-theme') === 'light'
+  ? LIGHT_THEME : DARK_THEME;
+const getTheme = () => _cachedTheme;
+if (typeof window !== 'undefined') {
+  const _updateThemeCache = () => {
+    _cachedTheme = localStorage.getItem('opencad-theme') === 'light' ? LIGHT_THEME : DARK_THEME;
+  };
+  window.addEventListener('storage', _updateThemeCache);
+  window.addEventListener('theme-change', _updateThemeCache);
+}
 
 const getStoreActions = () => useDocumentStore.getState();
 
@@ -84,32 +92,16 @@ function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
 }
 
-function findSnapPoints(elements: unknown[], currentPoint: Point, scale: number, tolerance: number = SNAP_TOLERANCE): SnapResult[] {
-  const snaps: SnapResult[] = [];
-  const snapDistWorld = tolerance * scale;
-  for (const element of elements) {
-    const el = element as { boundingBox: { min: Point; max: Point } };
-    const bb = el.boundingBox;
-    const corners: Point[] = [
-      { x: bb.min.x, y: bb.min.y }, { x: bb.max.x, y: bb.min.y },
-      { x: bb.min.x, y: bb.max.y }, { x: bb.max.x, y: bb.max.y },
-    ];
-    for (const corner of corners) {
-      if (dist(corner, currentPoint) < snapDistWorld) snaps.push({ point: corner, type: 'endpoint' });
-    }
-    const midX = (bb.min.x + bb.max.x) / 2;
-    const midY = (bb.min.y + bb.max.y) / 2;
-    for (const mp of [{ x: midX, y: bb.min.y }, { x: midX, y: bb.max.y }, { x: bb.min.x, y: midY }, { x: bb.max.x, y: midY }]) {
-      if (dist(mp, currentPoint) < snapDistWorld) snaps.push({ point: mp, type: 'midpoint' });
-    }
-  }
-  return snaps;
-}
 
 export function useViewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams } = useDocumentStore();
+
+  // Spatial index for O(1) average-case snap candidate lookup.
+  // Cell size matches GRID_SIZE (500 world units) so each cell covers roughly
+  // one grid square — a good balance between cell count and bucket size.
+  const snapIndexRef = useRef(new SpatialGrid(GRID_SIZE));
 
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false, startPoint: null, currentPoint: null, points: [],
@@ -124,6 +116,9 @@ export function useViewport() {
   // Dirty flag: only redraw when something actually changed
   const dirtyRef = useRef(true);
 
+  // Cached elements array — recomputed only when doc changes, not on every rAF frame / mousemove
+  const elementsRef = useRef<ElementSchema[]>([]);
+
   // Pan state (middle-mouse drag) — tracked via ref to avoid re-renders mid-drag
   const panRef = useRef({ active: false, lastX: 0, lastY: 0 });
 
@@ -134,18 +129,56 @@ export function useViewport() {
     setViewTransform(v);
   }, []);
 
+  // Keep elementsRef in sync with doc — O(n) allocation only when doc changes
+  useEffect(() => {
+    elementsRef.current = doc ? Object.values(doc.content.elements) : [];
+  }, [doc]);
+
+  // Rebuild snap spatial index on document change — O(n) once, then O(1) queries
+  useEffect(() => {
+    const idx = snapIndexRef.current;
+    idx.clear();
+    if (!doc) return;
+    for (const element of Object.values(doc.content.elements)) {
+      const el = element as { boundingBox: { min: Point; max: Point } };
+      const bb = el.boundingBox;
+      const corners: Point[] = [
+        { x: bb.min.x, y: bb.min.y }, { x: bb.max.x, y: bb.min.y },
+        { x: bb.min.x, y: bb.max.y }, { x: bb.max.x, y: bb.max.y },
+      ];
+      for (const corner of corners) {
+        idx.insert(corner.x, corner.y, { point: corner, type: 'endpoint' } satisfies SnapResult);
+      }
+      const midX = (bb.min.x + bb.max.x) / 2;
+      const midY = (bb.min.y + bb.max.y) / 2;
+      for (const mp of [
+        { x: midX, y: bb.min.y }, { x: midX, y: bb.max.y },
+        { x: bb.min.x, y: midY }, { x: bb.max.x, y: midY },
+      ]) {
+        idx.insert(mp.x, mp.y, { point: mp, type: 'midpoint' } satisfies SnapResult);
+      }
+    }
+  }, [doc]);
+
   const applySnapping = useCallback((point: Point): Point => {
     const scale = viewTransformRef.current.scale;
     if (!doc || !snapEnabled) return point;
-    const elements = Object.values(doc.content.elements);
-    const snaps = findSnapPoints(elements, point, scale);
-    if (snaps.length > 0) {
-      const closest = snaps.reduce((a, b) => dist(point, a.point) < dist(point, b.point) ? a : b);
-      setCurrentSnap(closest);
-      return closest.point;
+    const snapRadius = SNAP_TOLERANCE * scale;
+    const candidates = snapIndexRef.current.query(point.x, point.y, snapRadius);
+    if (candidates.length > 0) {
+      let best = candidates[0]!;
+      let bestDist2 = (best.x - point.x) ** 2 + (best.y - point.y) ** 2;
+      for (let i = 1; i < candidates.length; i++) {
+        const c = candidates[i]!;
+        const d2 = (c.x - point.x) ** 2 + (c.y - point.y) ** 2;
+        if (d2 < bestDist2) { bestDist2 = d2; best = c; }
+      }
+      const snapResult = best.payload as SnapResult;
+      setCurrentSnap(snapResult);
+      return snapResult.point;
     }
     const snapped = snapToGrid(point);
-    if (dist(point, snapped) < SNAP_TOLERANCE * scale) {
+    if (dist(point, snapped) < snapRadius) {
       setCurrentSnap({ point: snapped, type: 'grid' });
       return snapped;
     }
@@ -176,16 +209,15 @@ export function useViewport() {
     }
 
     if (tool === 'wall') {
-      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
-      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
-      if (maxX - minX < 100 && maxY - minY < 100) return;
+      const dx = end.x - start.x, dy = end.y - start.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 100) return;
       const wp = (toolParams?.['wall'] ?? {}) as Record<string, unknown>;
       addElement({
         type: 'wall', layerId,
         properties: {
           Name: { type: 'string', value: 'Wall' },
-          StartX: { type: 'number', value: minX }, StartY: { type: 'number', value: minY },
-          EndX: { type: 'number', value: maxX }, EndY: { type: 'number', value: maxY },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX: { type: 'number', value: end.x }, EndY: { type: 'number', value: end.y },
           Height: { type: 'number', value: wp['height'] ?? 3000 },
           Width: { type: 'number', value: wp['thickness'] ?? 200 },
           Material: { type: 'string', value: wp['material'] ?? 'Concrete' },
@@ -447,7 +479,14 @@ export function useViewport() {
     if (!doc) { ctx.restore(); return; }
 
     // ── Render existing elements in world space ──
-    for (const element of Object.values(doc.content.elements)) {
+    const visibleLabelTargets: { element: ElementSchema }[] = [];
+    for (const element of elementsRef.current) {
+      // Viewport culling — skip elements entirely outside visible area
+      const ebb = element.boundingBox;
+      if (ebb.max.x < worldMinX || ebb.min.x > worldMaxX || ebb.max.y < worldMinY || ebb.min.y > worldMaxY) continue;
+      // Collect visible elements for the text label pass (avoids a second full iteration)
+      visibleLabelTargets.push({ element });
+
       const isSelected = selectedIds.includes(element.id);
       const color = isSelected ? theme.selected : theme.element;
       const fillColor = isSelected ? theme.selectedFill : theme.elementFill;
@@ -494,8 +533,12 @@ export function useViewport() {
         }
       } else if (type === 'polygon' || type === 'polyline') {
         if (props['Points']) {
-          const pts = JSON.parse(props['Points'].value as string) as Point[];
-          if (pts.length < 2) continue;
+          let pts: Point[];
+          try {
+            const parsed = JSON.parse(props['Points'].value as string);
+            if (!Array.isArray(parsed) || parsed.length < 2) continue;
+            pts = parsed as Point[];
+          } catch { continue; }
           ctx.beginPath();
           ctx.moveTo(pts[0]!.x, pts[0]!.y);
           for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
@@ -576,30 +619,28 @@ export function useViewport() {
 
     ctx.restore();
 
-    // ── Screen-space text labels (drawn after restoring transform) ──
+    // ── Screen-space text labels — uses pre-collected visible elements from first pass ──
     ctx.font = '10px sans-serif';
-    if (doc) {
-      for (const element of Object.values(doc.content.elements)) {
-        const props = element.properties as Record<string, { value: unknown }>;
-        const type = element.type;
-        if (type === 'wall' && props['StartX']) {
-          const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
-          const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
-          const p1s = worldToScreen(x1, y1, cw, ch, v);
-          const p2s = worldToScreen(x2, y2, cw, ch, v);
-          ctx.fillStyle = element.properties['Name'] ? theme.element : theme.element;
-          ctx.fillText('Wall', Math.min(p1s.x, p2s.x) + 4, Math.min(p1s.y, p2s.y) + 12);
-        }
-        if (type === 'dimension' && props['Value']) {
-          const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
-          const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
-          const d = props['Value'].value as number;
-          const p1s = worldToScreen(x1, y1, cw, ch, v);
-          const p2s = worldToScreen(x2, y2, cw, ch, v);
-          const selectedEl = selectedIds.includes(element.id);
-          ctx.fillStyle = selectedEl ? theme.selected : theme.element;
-          ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
-        }
+    for (const { element: el } of visibleLabelTargets) {
+      const typedEl = el as { id: string; type: string; properties: Record<string, { value: unknown }> };
+      const props = typedEl.properties;
+      const type = typedEl.type;
+      if (type === 'wall' && props['StartX']) {
+        const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
+        const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+        const p1s = worldToScreen(x1, y1, cw, ch, v);
+        const p2s = worldToScreen(x2, y2, cw, ch, v);
+        ctx.fillStyle = theme.element;
+        ctx.fillText('Wall', Math.min(p1s.x, p2s.x) + 4, Math.min(p1s.y, p2s.y) + 12);
+      }
+      if (type === 'dimension' && props['Value']) {
+        const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
+        const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+        const d = props['Value']!.value as number;
+        const p1s = worldToScreen(x1, y1, cw, ch, v);
+        const p2s = worldToScreen(x2, y2, cw, ch, v);
+        ctx.fillStyle = selectedIds.includes(typedEl.id) ? theme.selected : theme.element;
+        ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
       }
     }
 
@@ -670,26 +711,39 @@ export function useViewport() {
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const v = viewTransformRef.current;
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
-    wp = applySnapping(wp);
+    // Raw world point — no snapping applied here; snapping only makes sense for drawing, not selection
+    const rawWp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
 
     if (activeTool === 'select') {
       if (!doc) return;
+      // Add a hit tolerance of 8 screen pixels converted to world units so thin elements (lines, arcs) are clickable
+      const hitTolerance = 8 * v.scale;
       const elements = Object.values(doc.content.elements);
       const clicked = elements.filter((el) => {
-        const bb = el.boundingBox;
-        return wp.x >= bb.min.x && wp.x <= bb.max.x && wp.y >= bb.min.y && wp.y <= bb.max.y;
+        let bb = el.boundingBox;
+        // If bbox is degenerate (all zeros), compute from properties on the fly
+        // — handles elements saved before bounding box computation was introduced
+        if (bb.min.x === 0 && bb.min.y === 0 && bb.max.x === 0 && bb.max.y === 0) {
+          bb = computeBoundingBox(el.type, el.properties as Record<string, PropertyValue>);
+        }
+        return rawWp.x >= bb.min.x - hitTolerance && rawWp.x <= bb.max.x + hitTolerance &&
+               rawWp.y >= bb.min.y - hitTolerance && rawWp.y <= bb.max.y + hitTolerance;
       });
       if (clicked.length > 0) {
-        setSelectedIds(event.shiftKey ? [...selectedIds, clicked[0]!.id] : [clicked[0]!.id]);
+        const currentSelected = getStoreActions().selectedIds;
+        setSelectedIds(event.shiftKey ? [...currentSelected, clicked[0]!.id] : [clicked[0]!.id]);
       } else {
         setSelectedIds([]);
       }
       return;
     }
 
+    let wp = rawWp;
+    wp = applySnapping(wp);
+
     if (activeTool === 'column') {
       commitShape('column', wp, wp);
+      setActiveTool('select');
       return;
     }
 
@@ -710,7 +764,7 @@ export function useViewport() {
         return { isDrawing: true, startPoint: newPoints[0]!, currentPoint: wp, points: newPoints };
       });
     }
-  }, [activeTool, doc, selectedIds, setSelectedIds, applySnapping, commitShape]);
+  }, [activeTool, doc, setSelectedIds, setActiveTool, applySnapping, commitShape]);
 
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     // Pan via middle mouse drag
@@ -758,9 +812,10 @@ export function useViewport() {
     if (DRAG_TOOLS.has(activeTool)) {
       commitShape(activeTool, drawingState.startPoint, wp);
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
+      setActiveTool('select');
     }
     // Multi-click tools don't commit on mouseUp, only on next click or double-click
-  }, [activeTool, drawingState, applySnapping, commitShape]);
+  }, [activeTool, drawingState, applySnapping, commitShape, setActiveTool]);
 
   // Double-click finishes polyline
   const handleCanvasDoubleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -779,13 +834,15 @@ export function useViewport() {
       }
       return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
     });
-  }, [activeTool, applySnapping, commitShape]);
+    setActiveTool('select');
+  }, [activeTool, applySnapping, commitShape, setActiveTool]);
 
   // ─── Keyboard shortcuts ───────────────────────────────────────────────────
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Escape') {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
+      setActiveTool('select');
     }
     if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) { event.preventDefault(); getStoreActions().undo(); return; }
     if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) { event.preventDefault(); getStoreActions().redo(); return; }
