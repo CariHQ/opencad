@@ -466,9 +466,7 @@ fn main() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(AppState {
-            db: db_for_state,
-        })
+        .manage(AppState { db: db_for_state })
         .invoke_handler(tauri::generate_handler![
             save_project,
             load_project,

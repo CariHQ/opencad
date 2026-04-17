@@ -11,6 +11,12 @@ export default defineConfig({
     ['json', { outputFile: 'playwright-results.json' }],
     ['list'],
   ],
+  webServer: {
+    command: 'pnpm --filter=@opencad/app exec vite preview --port 5173',
+    port: 5173,
+    reuseExistingServer: !process.env.CI,
+    timeout: 60000,
+  },
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',

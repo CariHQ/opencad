@@ -17,7 +17,6 @@
  *     { "type": "ack",         "projectId": "<id>" }
  *     { "type": "projectList", "projects": [{ "id", "name", "updatedAt" }] }
  */
-
 use futures_util::{SinkExt, StreamExt};
 use log::{error, info, warn};
 use rusqlite::Connection;
@@ -272,11 +271,14 @@ async fn recv_broadcast(rx: &mut Option<broadcast::Receiver<String>>) -> Option<
 // ─── Database helpers ─────────────────────────────────────────────────────────
 
 fn load_project(db: &DbRef, project_id: &str) -> Option<String> {
-    db.lock().ok()?.query_row(
-        "SELECT data FROM projects WHERE id = ?1",
-        rusqlite::params![project_id],
-        |row| row.get(0),
-    ).ok()
+    db.lock()
+        .ok()?
+        .query_row(
+            "SELECT data FROM projects WHERE id = ?1",
+            rusqlite::params![project_id],
+            |row| row.get(0),
+        )
+        .ok()
 }
 
 fn save_project(db: &DbRef, project_id: &str, data: &str) -> rusqlite::Result<()> {
@@ -319,12 +321,11 @@ fn list_projects(db: &DbRef) -> Vec<ProjectItem> {
         Ok(c) => c,
         Err(_) => return vec![],
     };
-    let mut stmt = match conn.prepare(
-        "SELECT id, name, updated_at FROM projects ORDER BY updated_at DESC",
-    ) {
-        Ok(s) => s,
-        Err(_) => return vec![],
-    };
+    let mut stmt =
+        match conn.prepare("SELECT id, name, updated_at FROM projects ORDER BY updated_at DESC") {
+            Ok(s) => s,
+            Err(_) => return vec![],
+        };
     stmt.query_map([], |row| {
         Ok(ProjectItem {
             id: row.get(0)?,
