@@ -49,8 +49,8 @@ jobs:
       - name: Build and push server image
         run: |
           IMAGE="${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/opencad/${{ env.SERVICE }}:${{ github.sha }}"
-          docker build --file Dockerfile --tag "$IMAGE" \
-            --tag "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/opencad/${{ env.SERVICE }}:latest" .
+          docker build --file server/Dockerfile --tag "$IMAGE" \
+            --tag "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/opencad/${{ env.SERVICE }}:latest" server/
           docker push "$IMAGE"
           docker push "${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/opencad/${{ env.SERVICE }}:latest"
           echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
@@ -163,8 +163,6 @@ jobs:
           echo "APP_BUCKET=$(sm opencad-app-bucket)"                                    >> "$GITHUB_ENV"
 
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
