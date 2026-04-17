@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react';
 import {
   FolderOpen,
   FileDown,
@@ -31,6 +31,7 @@ import {
   User,
   Settings,
   History,
+  Package,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from './stores/projectStore';
@@ -39,49 +40,58 @@ import { Navigator } from './components/Navigator';
 
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { StatusBar } from './components/StatusBar';
-import { AIChatPanel } from './components/AIChatPanel';
 import { LevelSelector } from './components/LevelSelector';
 import { LevelManager } from './components/LevelManager';
-import { ImportExportModal } from './components/ImportExportModal';
-import { ColumnBeamPanel } from './components/ColumnBeamPanel';
-import { StairRailingPanel } from './components/StairRailingPanel';
 import { useDocumentStore } from './stores/documentStore';
+import { useShallow } from 'zustand/react/shallow';
 import { useLocalStorage } from './hooks/useLocalStorage';
-import { WallToolPanel } from './components/WallToolPanel';
-import { SlabToolPanel } from './components/SlabToolPanel';
-import { DoorWindowPanel } from './components/DoorWindowPanel';
 import { useUndoRedo } from './hooks/useUndoRedo';
 import { useAutoSave } from './hooks/useAutoSave';
 import { PanelErrorBoundary } from './components/ErrorBoundary';
-import { SchedulePanel } from './components/SchedulePanel';
-import { SpacePanel } from './components/SpacePanel';
-import { ClashDetectionPanel } from './components/ClashDetectionPanel';
-import { RenderPanel } from './components/RenderPanel';
-import { SheetPanel } from './components/SheetPanel';
-import { BCFPanel } from './components/BCFPanel';
-import { MaterialLibrary } from './components/MaterialLibrary';
 import { PresenceOverlay } from './components/PresenceOverlay';
-import { CommandPalette } from './components/CommandPalette';
-import { CommentsPanel } from './components/CommentsPanel';
-import { CarbonPanel } from './components/CarbonPanel';
-import { CostPanel } from './components/CostPanel';
-import { HatchPanel } from './components/HatchPanel';
-import { SymbolLibrary } from './components/SymbolLibrary';
-import { ShadowAnalysisPanel } from './components/ShadowAnalysisPanel';
-import { SectionBoxPanel } from './components/SectionBoxPanel';
-import { SiteImportPanel } from './components/SiteImportPanel';
-import { SpecWritingPanel } from './components/SpecWritingPanel';
-import { PhotoToModelPanel } from './components/PhotoToModelPanel';
-import { MarketplacePanel } from './components/MarketplacePanel';
-import { WindAnalysisPanel } from './components/WindAnalysisPanel';
 import { SplitViewport } from './components/SplitViewport';
-import { PlacementPanel } from './components/PlacementPanel';
-import { AuthModal } from './components/AuthModal';
-import { APIKeyPanel } from './components/APIKeyPanel';
-import { PermissionsPanel } from './components/PermissionsPanel';
-import { SSOSettingsPanel } from './components/SSOSettingsPanel';
-import { MobileViewer } from './components/MobileViewer';
-import { VersionHistoryPanel } from './components/VersionHistoryPanel';
+import type { Material } from './lib/materials';
+
+// Tool panels — lazy-loaded since only one is active at a time
+const WallToolPanel = lazy(() => import('./components/WallToolPanel').then((m) => ({ default: m.WallToolPanel })));
+const SlabToolPanel = lazy(() => import('./components/SlabToolPanel').then((m) => ({ default: m.SlabToolPanel })));
+const DoorWindowPanel = lazy(() => import('./components/DoorWindowPanel').then((m) => ({ default: m.DoorWindowPanel })));
+const ColumnBeamPanel = lazy(() => import('./components/ColumnBeamPanel').then((m) => ({ default: m.ColumnBeamPanel })));
+const StairRailingPanel = lazy(() => import('./components/StairRailingPanel').then((m) => ({ default: m.StairRailingPanel })));
+const PlacementPanel = lazy(() => import('./components/PlacementPanel').then((m) => ({ default: m.PlacementPanel })));
+
+// Right-panel tabs — lazy-loaded since only one tab is visible at a time
+const SchedulePanel = lazy(() => import('./components/SchedulePanel').then((m) => ({ default: m.SchedulePanel })));
+const SpacePanel = lazy(() => import('./components/SpacePanel').then((m) => ({ default: m.SpacePanel })));
+const ClashDetectionPanel = lazy(() => import('./components/ClashDetectionPanel').then((m) => ({ default: m.ClashDetectionPanel })));
+const RenderPanel = lazy(() => import('./components/RenderPanel').then((m) => ({ default: m.RenderPanel })));
+const SheetPanel = lazy(() => import('./components/SheetPanel').then((m) => ({ default: m.SheetPanel })));
+const BCFPanel = lazy(() => import('./components/BCFPanel').then((m) => ({ default: m.BCFPanel })));
+const MaterialLibrary = lazy(() => import('./components/MaterialLibrary').then((m) => ({ default: m.MaterialLibrary })));
+const CommentsPanel = lazy(() => import('./components/CommentsPanel').then((m) => ({ default: m.CommentsPanel })));
+const CarbonPanel = lazy(() => import('./components/CarbonPanel').then((m) => ({ default: m.CarbonPanel })));
+const CostPanel = lazy(() => import('./components/CostPanel').then((m) => ({ default: m.CostPanel })));
+const HatchPanel = lazy(() => import('./components/HatchPanel').then((m) => ({ default: m.HatchPanel })));
+const SymbolLibrary = lazy(() => import('./components/SymbolLibrary').then((m) => ({ default: m.SymbolLibrary })));
+const ShadowAnalysisPanel = lazy(() => import('./components/ShadowAnalysisPanel').then((m) => ({ default: m.ShadowAnalysisPanel })));
+const SectionBoxPanel = lazy(() => import('./components/SectionBoxPanel').then((m) => ({ default: m.SectionBoxPanel })));
+const SiteImportPanel = lazy(() => import('./components/SiteImportPanel').then((m) => ({ default: m.SiteImportPanel })));
+const SpecWritingPanel = lazy(() => import('./components/SpecWritingPanel').then((m) => ({ default: m.SpecWritingPanel })));
+const PhotoToModelPanel = lazy(() => import('./components/PhotoToModelPanel').then((m) => ({ default: m.PhotoToModelPanel })));
+const MarketplacePanel = lazy(() => import('./components/MarketplacePanel').then((m) => ({ default: m.MarketplacePanel })));
+const WindAnalysisPanel = lazy(() => import('./components/WindAnalysisPanel').then((m) => ({ default: m.WindAnalysisPanel })));
+const VersionHistoryPanel = lazy(() => import('./components/VersionHistoryPanel').then((m) => ({ default: m.VersionHistoryPanel })));
+const ObjectLibraryPanel = lazy(() => import('./components/ObjectLibraryPanel').then((m) => ({ default: m.ObjectLibraryPanel })));
+
+// On-demand modals / overlays — lazy-loaded since they are hidden by default
+const CommandPalette = lazy(() => import('./components/CommandPalette').then((m) => ({ default: m.CommandPalette })));
+const AIChatPanel = lazy(() => import('./components/AIChatPanel').then((m) => ({ default: m.AIChatPanel })));
+const ImportExportModal = lazy(() => import('./components/ImportExportModal').then((m) => ({ default: m.ImportExportModal })));
+const AuthModal = lazy(() => import('./components/AuthModal').then((m) => ({ default: m.AuthModal })));
+const APIKeyPanel = lazy(() => import('./components/APIKeyPanel').then((m) => ({ default: m.APIKeyPanel })));
+const PermissionsPanel = lazy(() => import('./components/PermissionsPanel').then((m) => ({ default: m.PermissionsPanel })));
+const SSOSettingsPanel = lazy(() => import('./components/SSOSettingsPanel').then((m) => ({ default: m.SSOSettingsPanel })));
+const MobileViewer = lazy(() => import('./components/MobileViewer').then((m) => ({ default: m.MobileViewer })));
 import { usePresence } from './hooks/usePresence';
 import './styles/app.css';
 
@@ -106,7 +116,8 @@ type RightPanelTab =
   | 'photo'
   | 'marketplace'
   | 'wind'
-  | 'history';
+  | 'history'
+  | 'objects';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
@@ -130,12 +141,27 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'marketplace', title: 'Marketplace', icon: <Store size={16} strokeWidth={2} /> },
   { id: 'wind', title: 'Wind Analysis', icon: <Wind size={16} strokeWidth={2} /> },
   { id: 'history', title: 'History', icon: <History size={16} strokeWidth={2} /> },
+  { id: 'objects', title: 'Objects', icon: <Package size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo } = useDocumentStore();
+  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, updateElement, pushHistory } = useDocumentStore(
+    useShallow((s) => ({
+      document: s.document,
+      initProject: s.initProject,
+      activeTool: s.activeTool,
+      selectedIds: s.selectedIds,
+      setActiveTool: s.setActiveTool,
+      undo: s.undo,
+      redo: s.redo,
+      canUndo: s.canUndo,
+      canRedo: s.canRedo,
+      updateElement: s.updateElement,
+      pushHistory: s.pushHistory,
+    }))
+  );
   const { projects, renameProject } = useProjectStore();
   const currentProject = projects.find((p) => p.id === projectId);
   const [editingName, setEditingName] = useState(false);
@@ -224,12 +250,37 @@ export function AppLayout() {
   const rightVisible = showRightPanel && !focusMode;
   const chromeVisible = !focusMode;
 
-  // Auto-switch to properties tab when an element is selected
+  // Auto-switch to properties tab on first selection (0 → 1+).
+  // Does NOT switch if the user has already navigated to an element-contextual panel
+  // (e.g. materials) so they can apply a material to the newly-selected element.
+  const prevSelectedLenRef = useRef(selectedIds.length);
   useEffect(() => {
-    if (selectedIds.length > 0) {
+    const prev = prevSelectedLenRef.current;
+    prevSelectedLenRef.current = selectedIds.length;
+    const STICKY_TABS: RightPanelTab[] = ['materials', 'properties'];
+    if (prev === 0 && selectedIds.length > 0 && !STICKY_TABS.includes(rightPanelTab)) {
       setRightPanelTab('properties');
     }
-  }, [selectedIds, setRightPanelTab]);
+  }, [selectedIds, rightPanelTab, setRightPanelTab]);
+
+  // Apply a material to all currently-selected elements
+  const handleMaterialSelect = useCallback(
+    (mat: Material) => {
+      if (!doc || selectedIds.length === 0) return;
+      for (const id of selectedIds) {
+        const el = doc.content.elements[id];
+        if (!el) continue;
+        updateElement(id, {
+          properties: {
+            ...el.properties,
+            Material: { type: 'string' as const, value: mat.name },
+          },
+        });
+      }
+      pushHistory('Apply material');
+    },
+    [selectedIds, doc, updateElement, pushHistory]
+  );
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -347,11 +398,13 @@ export function AppLayout() {
       : [];
     const elementCount = doc?.content.elements ? Object.keys(doc.content.elements).length : undefined;
     return (
-      <MobileViewer
-        projectName={doc?.name ?? 'Project'}
-        levels={levels}
-        elementCount={elementCount}
-      />
+      <Suspense fallback={null}>
+        <MobileViewer
+          projectName={doc?.name ?? 'Project'}
+          levels={levels}
+          elementCount={elementCount}
+        />
+      </Suspense>
     );
   }
 
@@ -530,12 +583,14 @@ export function AppLayout() {
                 </div>
               )}
               {(activeTool === 'door' || activeTool === 'window') && (
-                <div className="floating-placement-panel">
-                  <PlacementPanel
-                    elementType={activeTool as 'door' | 'window'}
-                    onClose={() => setActiveTool('select')}
-                  />
-                </div>
+                <Suspense fallback={null}>
+                  <div className="floating-placement-panel">
+                    <PlacementPanel
+                      elementType={activeTool as 'door' | 'window'}
+                      onClose={() => setActiveTool('select')}
+                    />
+                  </div>
+                </Suspense>
               )}
               {focusMode && (
                 <div className="focus-hint">
@@ -573,76 +628,85 @@ export function AppLayout() {
 
           <div className="right-panel-content">
             <PanelErrorBoundary>
-              {rightPanelTab === 'properties' && (
-                <>
-                  {activeTool === 'wall' && <WallToolPanel />}
-                  {activeTool === 'slab' && <SlabToolPanel />}
-                  {(activeTool === 'door' || activeTool === 'window') && <DoorWindowPanel />}
-                  {(activeTool === 'column' || activeTool === 'beam') && <ColumnBeamPanel />}
-                  {(activeTool === 'stair' || activeTool === 'railing') && <StairRailingPanel />}
-                  <PropertiesPanel />
-                </>
-              )}
+              <Suspense fallback={<div className="panel-loading" />}>
+                {rightPanelTab === 'properties' && (
+                  <>
+                    {activeTool === 'wall' && <WallToolPanel />}
+                    {activeTool === 'slab' && <SlabToolPanel />}
+                    {(activeTool === 'door' || activeTool === 'window') && <DoorWindowPanel />}
+                    {(activeTool === 'column' || activeTool === 'beam') && <ColumnBeamPanel />}
+                    {(activeTool === 'stair' || activeTool === 'railing') && <StairRailingPanel />}
+                    <PropertiesPanel />
+                  </>
+                )}
 
-              {rightPanelTab === 'schedule' && <SchedulePanel />}
-              {rightPanelTab === 'spaces' && <SpacePanel />}
-              {rightPanelTab === 'clash' && <ClashDetectionPanel />}
-              {rightPanelTab === 'render' && <RenderPanel />}
-              {rightPanelTab === 'sheets' && <SheetPanel />}
-              {rightPanelTab === 'bcf' && <BCFPanel />}
-              {rightPanelTab === 'materials' && (
-                <MaterialLibrary
-                  onSelect={() => {
-                    /* material selection is a no-op at layout level */
-                  }}
-                />
-              )}
-              {rightPanelTab === 'comments' && <CommentsPanel />}
-              {rightPanelTab === 'carbon' && <CarbonPanel />}
-              {rightPanelTab === 'cost' && <CostPanel />}
-              {rightPanelTab === 'hatch' && <HatchPanel />}
-              {rightPanelTab === 'symbols' && <SymbolLibrary />}
-              {rightPanelTab === 'shadow' && <ShadowAnalysisPanel />}
-              {rightPanelTab === 'section' && <SectionBoxPanel />}
-              {rightPanelTab === 'site' && <SiteImportPanel />}
-              {rightPanelTab === 'specs' && <SpecWritingPanel />}
-              {rightPanelTab === 'photo' && <PhotoToModelPanel />}
-              {rightPanelTab === 'marketplace' && <MarketplacePanel />}
-              {rightPanelTab === 'wind' && <WindAnalysisPanel />}
-              {rightPanelTab === 'history' && <VersionHistoryPanel />}
+                {rightPanelTab === 'schedule' && <SchedulePanel />}
+                {rightPanelTab === 'spaces' && <SpacePanel />}
+                {rightPanelTab === 'clash' && <ClashDetectionPanel />}
+                {rightPanelTab === 'render' && <RenderPanel />}
+                {rightPanelTab === 'sheets' && <SheetPanel />}
+                {rightPanelTab === 'bcf' && <BCFPanel />}
+                {rightPanelTab === 'materials' && (
+                  <MaterialLibrary onSelect={handleMaterialSelect} />
+                )}
+                {rightPanelTab === 'comments' && <CommentsPanel />}
+                {rightPanelTab === 'carbon' && <CarbonPanel />}
+                {rightPanelTab === 'cost' && <CostPanel />}
+                {rightPanelTab === 'hatch' && <HatchPanel />}
+                {rightPanelTab === 'symbols' && <SymbolLibrary />}
+                {rightPanelTab === 'shadow' && <ShadowAnalysisPanel />}
+                {rightPanelTab === 'section' && <SectionBoxPanel />}
+                {rightPanelTab === 'site' && <SiteImportPanel />}
+                {rightPanelTab === 'specs' && <SpecWritingPanel />}
+                {rightPanelTab === 'photo' && <PhotoToModelPanel />}
+                {rightPanelTab === 'marketplace' && <MarketplacePanel />}
+                {rightPanelTab === 'wind' && <WindAnalysisPanel />}
+                {rightPanelTab === 'history' && <VersionHistoryPanel />}
+                {rightPanelTab === 'objects' && <ObjectLibraryPanel />}
+              </Suspense>
             </PanelErrorBoundary>
           </div>
         </aside>
 
         {showAIChat && (
           <aside className={`app-ai-panel${chromeVisible ? '' : ' panel-collapsed'}`}>
-            <AIChatPanel onClose={() => setShowAIChat(false)} />
+            <Suspense fallback={null}>
+              <AIChatPanel onClose={() => setShowAIChat(false)} />
+            </Suspense>
           </aside>
         )}
       </div>
 
       {chromeVisible && <StatusBar />}
 
-      {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
+      {showModal && (
+        <Suspense fallback={null}>
+          <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />
+        </Suspense>
+      )}
 
       {showCommandPalette && (
-        <div className="command-palette-overlay" onClick={() => setShowCommandPalette(false)}>
-          <div onClick={(e) => e.stopPropagation()}>
-            <CommandPalette
-              onClose={() => setShowCommandPalette(false)}
-              onExecute={handleCommandExecute}
-            />
+        <Suspense fallback={null}>
+          <div className="command-palette-overlay" onClick={() => setShowCommandPalette(false)}>
+            <div onClick={(e) => e.stopPropagation()}>
+              <CommandPalette
+                onClose={() => setShowCommandPalette(false)}
+                onExecute={handleCommandExecute}
+              />
+            </div>
           </div>
-        </div>
+        </Suspense>
       )}
 
       {showAuth && (
-        <AuthModal
-          mode={showAuth}
-          onClose={() => setShowAuth(null)}
-          onLogin={() => setShowAuth(null)}
-          onRegister={() => setShowAuth(null)}
-        />
+        <Suspense fallback={null}>
+          <AuthModal
+            mode={showAuth}
+            onClose={() => setShowAuth(null)}
+            onLogin={() => setShowAuth(null)}
+            onRegister={() => setShowAuth(null)}
+          />
+        </Suspense>
       )}
 
       {showSettings && (
@@ -679,9 +743,11 @@ export function AppLayout() {
               </button>
             </div>
             <div className="settings-content">
-              {settingsTab === 'apikeys' && <APIKeyPanel />}
-              {settingsTab === 'permissions' && <PermissionsPanel />}
-              {settingsTab === 'sso' && <SSOSettingsPanel />}
+              <Suspense fallback={null}>
+                {settingsTab === 'apikeys' && <APIKeyPanel />}
+                {settingsTab === 'permissions' && <PermissionsPanel />}
+                {settingsTab === 'sso' && <SSOSettingsPanel />}
+              </Suspense>
             </div>
           </div>
         </div>
