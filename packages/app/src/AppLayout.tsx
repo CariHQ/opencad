@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, lazy, Suspense } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo, lazy, Suspense } from 'react';
 import {
   FolderOpen,
   FileDown,
@@ -93,6 +93,12 @@ const PermissionsPanel = lazy(() => import('./components/PermissionsPanel').then
 const SSOSettingsPanel = lazy(() => import('./components/SSOSettingsPanel').then((m) => ({ default: m.SSOSettingsPanel })));
 const MobileViewer = lazy(() => import('./components/MobileViewer').then((m) => ({ default: m.MobileViewer })));
 import { usePresence } from './hooks/usePresence';
+import {
+  connectToLocalSync,
+  disconnectLocalSync,
+  setRemoteUpdateHandler,
+} from './sync/localSyncClient';
+import { isTauri, tauriStartDragging } from './hooks/useTauri';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -147,13 +153,14 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, updateElement, pushHistory } = useDocumentStore(
+  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, setSelectedIds, undo, redo, canUndo, canRedo, updateElement, pushHistory } = useDocumentStore(
     useShallow((s) => ({
       document: s.document,
       initProject: s.initProject,
       activeTool: s.activeTool,
       selectedIds: s.selectedIds,
       setActiveTool: s.setActiveTool,
+      setSelectedIds: s.setSelectedIds,
       undo: s.undo,
       redo: s.redo,
       canUndo: s.canUndo,
@@ -263,7 +270,18 @@ export function AppLayout() {
     }
   }, [selectedIds, rightPanelTab, setRightPanelTab]);
 
-  // Apply a material to all currently-selected elements
+  // Material currently applied to the first selected element (used by MaterialLibrary
+  // to highlight the current material and show it in the status area).
+  const currentMaterialName = useMemo(() => {
+    if (!doc || selectedIds.length === 0) return undefined;
+    const firstEl = doc.content.elements[selectedIds[0]!];
+    const matProp = firstEl?.properties['Material'] as { value: string } | undefined;
+    return matProp?.value;
+  }, [doc, selectedIds]);
+
+  // Apply a material to all currently-selected elements then clear selection so the
+  // hatch pattern is immediately visible in the viewport (patterns only render when
+  // the element is not selected).
   const handleMaterialSelect = useCallback(
     (mat: Material) => {
       if (!doc || selectedIds.length === 0) return;
@@ -278,8 +296,10 @@ export function AppLayout() {
         });
       }
       pushHistory('Apply material');
+      // Deselect so the user immediately sees the hatch / texture
+      setSelectedIds([]);
     },
-    [selectedIds, doc, updateElement, pushHistory]
+    [selectedIds, doc, updateElement, pushHistory, setSelectedIds]
   );
 
   useEffect(() => {
@@ -298,6 +318,27 @@ export function AppLayout() {
       initProject(projectId, 'user-1');
     }
   }, [projectId, initProject]);
+
+  // Wire up the local sync client so edits in the browser and desktop stay in sync.
+  // applyRemoteDocument saves locally without re-broadcasting (prevents echo loops).
+  useEffect(() => {
+    if (!projectId) return;
+
+    setRemoteUpdateHandler((data) => {
+      try {
+        const schema = JSON.parse(data) as import('@opencad/document').DocumentSchema;
+        useDocumentStore.getState().applyRemoteDocument(schema);
+      } catch {
+        // malformed data from server — ignore
+      }
+    });
+
+    connectToLocalSync(projectId);
+
+    return () => {
+      disconnectLocalSync();
+    };
+  }, [projectId]);
 
   useEffect(() => {
     if (doc?.organization.levels && Object.keys(doc.organization.levels).length > 0 && !selectedLevel) {
@@ -357,6 +398,13 @@ export function AppLayout() {
 
   const toggleAIChat = () => setShowAIChat(!showAIChat);
 
+  const handleToolbarMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
+    if (e.button !== 0) return;
+    if (!(e.target as HTMLElement).closest('button, input, a, select, [role="button"]')) {
+      if (isTauri()) tauriStartDragging();
+    }
+  }, []);
+
   function handleCommandExecute(command: {
     id: string;
     label: string;
@@ -411,7 +459,7 @@ export function AppLayout() {
   return (
     <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
       {chromeVisible && (
-        <header className="app-toolbar">
+        <header className="app-toolbar" data-tauri-drag-region onMouseDown={handleToolbarMouseDown}>
           <div className="toolbar-left">
             <button
               className={`toolbar-btn panel-toggle-btn${leftVisible ? ' panel-on' : ''}`}
@@ -647,7 +695,11 @@ export function AppLayout() {
                 {rightPanelTab === 'sheets' && <SheetPanel />}
                 {rightPanelTab === 'bcf' && <BCFPanel />}
                 {rightPanelTab === 'materials' && (
-                  <MaterialLibrary onSelect={handleMaterialSelect} />
+                  <MaterialLibrary
+                    onSelect={handleMaterialSelect}
+                    selectedCount={selectedIds.length}
+                    currentMaterialName={currentMaterialName}
+                  />
                 )}
                 {rightPanelTab === 'comments' && <CommentsPanel />}
                 {rightPanelTab === 'carbon' && <CarbonPanel />}
@@ -700,12 +752,7 @@ export function AppLayout() {
 
       {showAuth && (
         <Suspense fallback={null}>
-          <AuthModal
-            mode={showAuth}
-            onClose={() => setShowAuth(null)}
-            onLogin={() => setShowAuth(null)}
-            onRegister={() => setShowAuth(null)}
-          />
+          <AuthModal onClose={() => setShowAuth(null)} />
         </Suspense>
       )}
 
