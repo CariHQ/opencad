@@ -4,35 +4,117 @@
   box-sizing: border-box;
 }
 
+/* ─── Design tokens — light theme (default) ─────────────────────── */
 :root {
-  --bg-primary: #ffffff;
+  /* Backgrounds */
+  --bg-primary:   #ffffff;
   --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --border-color: #e2e8f0;
-  --text-primary: #1e293b;
+  --bg-tertiary:  #f1f5f9;
+  --bg-elevated:  #e8edf3;   /* raised cards, hover targets */
+  --bg-surface:   #ffffff;   /* input/field surfaces */
+  --bg-hover:     #edf2f7;   /* hover state overlay */
+  --bg-canvas:    #f7f8fa;   /* drafting canvas */
+
+  /* Borders */
+  --border-color:   #e2e8f0;
+  --border-default: #d1d9e0;
+  --border-subtle:  #edf2f7;
+  --border:         #d1d9e0;
+  --separator-color: #e2e8f0;
+
+  /* Text */
+  --text-primary:   #1e293b;
   --text-secondary: #64748b;
-  --text-muted: #94a3b8;
-  --accent-primary: #4f46e5;
-  --accent-secondary: #818cf8;
+  --text-muted:     #94a3b8;
+
+  /* Accents */
+  --accent-primary:       #4f46e5;
+  --accent-secondary:     #818cf8;
+  --accent-primary-muted: rgba(79, 70, 229, 0.12);
+  --accent-hover:         #4338ca;
+  --accent-success:       #16a34a;
+  --accent-warning:       #d97706;
+  --accent-danger:        #dc2626;
+  --danger-color:         #dc2626;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.10);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.14);
+
+  /* Motion */
+  --panel-transition: 0.2s ease;
 }
 
+/* ─── Dark theme overrides ─────────────────────────────────────── */
 [data-theme='dark'] {
-  --bg-primary: #1a1a2e;
+  /* Backgrounds */
+  --bg-primary:   #1a1a2e;
   --bg-secondary: #16213e;
-  --bg-tertiary: #0f0f23;
-  --border-color: #374151;
-  --text-primary: #f9fafb;
+  --bg-tertiary:  #0f0f23;
+  --bg-elevated:  #1e2a40;
+  --bg-surface:   #1a2236;
+  --bg-hover:     #243050;
+  --bg-canvas:    #141827;
+
+  /* Borders */
+  --border-color:   #374151;
+  --border-default: #4b5563;
+  --border-subtle:  #2d3748;
+  --border:         #4b5563;
+  --separator-color: #374151;
+
+  /* Text */
+  --text-primary:   #f9fafb;
   --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
-  --accent-primary: #3b82f6;
-  --accent-secondary: #60a5fa;
+  --text-muted:     #6b7280;
+
+  /* Accents */
+  --accent-primary:       #3b82f6;
+  --accent-secondary:     #60a5fa;
+  --accent-primary-muted: rgba(59, 130, 246, 0.15);
+  --accent-hover:         #2563eb;
+  --accent-success:       #22c55e;
+  --accent-warning:       #f59e0b;
+  --accent-danger:        #ef4444;
+  --danger-color:         #ef4444;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.4);
+  --shadow-lg: 0 8px 24px rgba(0,0,0,0.5);
 }
 
+/* ─── Base styles ─────────────────────────────────────────────── */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   line-height: 1.6;
+}
+
+/* ─── Global icon fix ─────────────────────────────────────────── */
+/*
+ * Lucide (and other SVG icon sets) use stroke="currentColor".
+ * Buttons in browsers inherit `color` from the cascade, but some
+ * browser UA stylesheets reset it to ButtonText (often opaque black),
+ * and our own components sometimes set backgrounds without a matching
+ * foreground color, making icons disappear.
+ *
+ * These rules guarantee every SVG inside an interactive element
+ * always picks up the correct foreground color.
+ */
+button {
+  color: inherit;
+}
+
+button svg,
+a svg,
+label svg,
+[role='button'] svg {
+  display: block;       /* prevents inline baseline gap */
+  stroke: currentColor; /* explicit — don't rely solely on attribute */
+  flex-shrink: 0;       /* never squash inside flex rows */
 }
 
 .app {
