@@ -10,23 +10,41 @@ export interface ProjectMember {
 }
 
 interface PermissionsPanelProps {
-  members: ProjectMember[];
-  onUpdateRole: (userId: string, role: ProjectRole) => void;
-  onInvite: (params: { email: string; role: ProjectRole }) => void;
-  onRemove: (userId: string) => void;
+  members?: ProjectMember[];
+  onUpdateRole?: (userId: string, role: ProjectRole) => void;
+  onInvite?: (params: { email: string; role: ProjectRole }) => void;
+  onRemove?: (userId: string) => void;
 }
 
 const ROLES: ProjectRole[] = ['owner', 'editor', 'viewer'];
 
-export function PermissionsPanel({ members, onUpdateRole, onInvite, onRemove }: PermissionsPanelProps) {
+export function PermissionsPanel({ members: propMembers = [], onUpdateRole, onInvite, onRemove }: PermissionsPanelProps = {}) {
+  const [members, setMembers] = useState<ProjectMember[]>(propMembers);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<ProjectRole>('viewer');
+
+  const handleUpdateRole = (userId: string, role: ProjectRole) => {
+    setMembers((prev) => prev.map((m) => m.userId === userId ? { ...m, role } : m));
+    onUpdateRole?.(userId, role);
+  };
 
   const handleInvite = () => {
     const email = inviteEmail.trim();
     if (!email) return;
-    onInvite({ email, role: inviteRole });
+    const newMember: ProjectMember = {
+      userId: `user-${Date.now()}`,
+      name: email.split('@')[0] ?? email,
+      email,
+      role: inviteRole,
+    };
+    setMembers((prev) => [...prev, newMember]);
+    onInvite?.({ email, role: inviteRole });
     setInviteEmail('');
+  };
+
+  const handleRemove = (userId: string) => {
+    setMembers((prev) => prev.filter((m) => m.userId !== userId));
+    onRemove?.(userId);
   };
 
   return (
@@ -49,7 +67,7 @@ export function PermissionsPanel({ members, onUpdateRole, onInvite, onRemove }: 
                 <select
                   aria-label={`Role for ${m.name}`}
                   value={m.role}
-                  onChange={(e) => onUpdateRole(m.userId, e.target.value as ProjectRole)}
+                  onChange={(e) => handleUpdateRole(m.userId, e.target.value as ProjectRole)}
                   className="role-select"
                 >
                   {ROLES.filter((r) => r !== 'owner').map((r) => (
@@ -61,7 +79,7 @@ export function PermissionsPanel({ members, onUpdateRole, onInvite, onRemove }: 
                 <button
                   aria-label={`Remove ${m.name}`}
                   className="btn-remove"
-                  onClick={() => onRemove(m.userId)}
+                  onClick={() => handleRemove(m.userId)}
                 >
                   Remove
                 </button>

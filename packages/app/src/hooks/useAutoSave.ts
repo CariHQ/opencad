@@ -2,14 +2,18 @@
  * Auto-save hook
  * Saves the current document every 2 seconds when dirty.
  * On desktop (Tauri): persists via tauriSaveProject command.
- * On browser: persists via localStorage.
+ * On browser: persists via IndexedDB (primary) + localStorage (fast fallback).
  */
 import { useEffect, useRef } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { useProjectStore } from '../stores/projectStore';
 import { isTauri, tauriSaveProject } from './useTauri';
+import { saveProject as idbSaveProject, initStorage } from '@opencad/document';
 
 const AUTO_SAVE_INTERVAL_MS = 2000;
+
+// Warm up the IndexedDB connection early so first save is fast
+void initStorage().catch(() => { /* non-fatal */ });
 
 function saveToLocalStorage(id: string, data: string): void {
   try {
@@ -45,6 +49,9 @@ export function useAutoSave(): void {
         if (isTauri()) {
           await tauriSaveProject(activeProjectId, name, serialized);
         } else {
+          // Primary: IndexedDB (survives storage quota pressure better than localStorage)
+          await idbSaveProject(document);
+          // Secondary: localStorage for fast synchronous access during page load
           saveToLocalStorage(activeProjectId, serialized);
         }
         lastSavedRef.current = serialized;
@@ -52,7 +59,13 @@ export function useAutoSave(): void {
         // Update project updatedAt timestamp
         renameProject(activeProjectId, name); // triggers updatedAt refresh
       } catch {
-        // Auto-save failure is non-fatal — next interval will retry
+        // IndexedDB failed — fall back to localStorage only
+        try {
+          saveToLocalStorage(activeProjectId, serialized);
+          lastSavedRef.current = serialized;
+        } catch {
+          // Both storage paths failed — non-fatal, retry next interval
+        }
       }
     }, AUTO_SAVE_INTERVAL_MS);
 

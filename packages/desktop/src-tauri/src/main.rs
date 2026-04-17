@@ -1,15 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod sync_server;
+
 use log::{info, warn};
 use rusqlite::{Connection, Result};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
 
 struct AppState {
-    db: Mutex<Connection>,
+    db: Arc<Mutex<Connection>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -450,13 +452,21 @@ fn main() {
 
     init_database(&conn).expect("Failed to initialize database");
 
+    let db = Arc::new(Mutex::new(conn));
+    let db_for_state = Arc::clone(&db);
+    let db_for_sync = Arc::clone(&db);
+
     tauri::Builder::default()
+        .setup(move |_app| {
+            // Spawn the local WebSocket sync server so both the Tauri webview
+            // and any browser tabs on the same machine can sync document data.
+            tauri::async_runtime::spawn(sync_server::run_sync_server(db_for_sync));
+            Ok(())
+        })
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
-        .manage(AppState {
-            db: Mutex::new(conn),
-        })
+        .manage(AppState { db: db_for_state })
         .invoke_handler(tauri::generate_handler![
             save_project,
             load_project,

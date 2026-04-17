@@ -1,7 +1,13 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
-import { parseIFC, serializeIFC } from '@opencad/document';
+import {
+  parseIFC, serializeIFC,
+  parseDXF, serializeDXF,
+  parseDWG,
+  parseRVT,
+  serializePDF,
+} from '@opencad/document';
 
 interface ImportExportModalProps {
   mode: 'import' | 'export' | 'projects';
@@ -9,7 +15,7 @@ interface ImportExportModalProps {
 }
 
 export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
-  const { document: doc, initProject } = useDocumentStore();
+  const { document: doc, loadDocumentSchema, initProject } = useDocumentStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,34 +28,57 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
     setError(null);
 
     try {
-      const content = await file.text();
+      const ext = file.name.toLowerCase().split('.').pop();
 
-      if (file.name.toLowerCase().endsWith('.ifc')) {
-        const parsed = parseIFC(content);
-        void parsed; // IFC parsed successfully
-        initProject(file.name, 'user-1');
+      if (ext === 'ifc') {
+        const content = await file.text();
+        loadDocumentSchema(parseIFC(content));
+      } else if (ext === 'dxf') {
+        const content = await file.text();
+        loadDocumentSchema(parseDXF(content));
+      } else if (ext === 'dwg') {
+        const buffer = await file.arrayBuffer();
+        loadDocumentSchema(parseDWG(buffer));
+      } else if (ext === 'rvt') {
+        const content = await file.text();
+        loadDocumentSchema(parseRVT(content));
       } else {
-        setError('Unsupported file format. Please use .ifc files.');
+        setError('Unsupported format. Supported: IFC, DXF, DWG, RVT');
+        setImporting(false);
+        return;
       }
     } catch (err) {
       setError('Failed to import file: ' + (err instanceof Error ? err.message : 'Unknown error'));
-    } finally {
       setImporting(false);
-      onClose();
+      return;
     }
+
+    setImporting(false);
+    onClose();
   };
 
-  const handleExport = () => {
-    if (!doc) return;
-
-    const content = serializeIFC(doc);
-    const blob = new Blob([content], { type: 'text/plain' });
+  const triggerDownload = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${doc.name || 'export'}.ifc`;
+    a.download = filename;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const handleExport = (format: 'ifc' | 'dxf' | 'pdf' = 'ifc') => {
+    if (!doc) return;
+    const name = doc.name || 'export';
+
+    if (format === 'ifc') {
+      triggerDownload(serializeIFC(doc), `${name}.ifc`, 'text/plain');
+    } else if (format === 'dxf') {
+      triggerDownload(serializeDXF(doc), `${name}.dxf`, 'application/dxf');
+    } else if (format === 'pdf') {
+      triggerDownload(serializePDF(doc), `${name}.pdf`, 'application/pdf');
+    }
+
     onClose();
   };
 
@@ -83,13 +112,13 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".ifc,.dxf,.dwg"
+                accept=".ifc,.dxf,.dwg,.rvt"
                 onChange={handleFileChange}
                 style={{ display: 'none' }}
               />
               <Upload size={48} className="import-icon" />
               <p className="import-text">Click to select a file</p>
-              <p className="import-formats">Supported: IFC, DXF, DWG</p>
+              <p className="import-formats">Supported: IFC, DXF, DWG, RVT (Revit)</p>
               {importing && <p className="import-status">Importing...</p>}
               {error && <p className="import-error">{error}</p>}
             </div>
@@ -97,22 +126,22 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
 
           {mode === 'export' && (
             <div className="export-options">
-              <button className="export-btn" onClick={handleExport}>
+              <button className="export-btn" onClick={() => handleExport('ifc')}>
                 <FileText size={24} />
                 <span>IFC (.ifc)</span>
                 <span className="export-desc">Industry Foundation Classes</span>
               </button>
-              <button className="export-btn" disabled>
+              <button className="export-btn" onClick={() => handleExport('dxf')}>
                 <FileText size={24} />
                 <span>DXF (.dxf)</span>
                 <span className="export-desc">Drawing Exchange Format</span>
               </button>
-              <button className="export-btn" disabled>
+              <button className="export-btn" onClick={() => handleExport('dxf')} title="DWG exports as DXF (compatible format)">
                 <FileText size={24} />
                 <span>DWG (.dwg)</span>
-                <span className="export-desc">AutoCAD Drawing</span>
+                <span className="export-desc">AutoCAD Drawing (DXF-compatible)</span>
               </button>
-              <button className="export-btn" disabled>
+              <button className="export-btn" onClick={() => handleExport('pdf')}>
                 <FileText size={24} />
                 <span>PDF (.pdf)</span>
                 <span className="export-desc">Portable Document Format</span>

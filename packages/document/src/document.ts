@@ -20,6 +20,101 @@ import {
 import { createDefaultMaterials } from './material';
 import { parseIFC, serializeIFC } from './ifc';
 
+type BoundingBox = ElementSchema['boundingBox'];
+
+export function computeBoundingBox(
+  type: ElementType | string,
+  props: Record<string, PropertyValue> = {}
+): BoundingBox {
+  const num = (key: string): number => {
+    const v = props[key];
+    return v && v.type === 'number' ? (v.value as number) : 0;
+  };
+  const str = (key: string): string => {
+    const v = props[key];
+    return v && v.type === 'string' ? (v.value as string) : '';
+  };
+
+  const bb = (minX: number, minY: number, maxX: number, maxY: number, minZ = 0, maxZ = 0): BoundingBox => ({
+    min: { x: minX, y: minY, z: minZ, _type: 'Point3D' },
+    max: { x: maxX, y: maxY, z: maxZ, _type: 'Point3D' },
+  });
+
+  // Ensure minimum 1-unit size in each dimension
+  const ensureMin = (minX: number, minY: number, maxX: number, maxY: number): BoundingBox => {
+    const padX = maxX - minX < 1 ? (1 - (maxX - minX)) / 2 : 0;
+    const padY = maxY - minY < 1 ? (1 - (maxY - minY)) / 2 : 0;
+    return bb(minX - padX, minY - padY, maxX + padX, maxY + padY);
+  };
+
+  switch (type) {
+    case 'wall': {
+      const sx = num('StartX'), sy = num('StartY'), ex = num('EndX'), ey = num('EndY');
+      return ensureMin(Math.min(sx, ex), Math.min(sy, ey), Math.max(sx, ex), Math.max(sy, ey));
+    }
+    case 'door':
+    case 'window': {
+      const x = num('X'), y = num('Y');
+      const w = num('Width') || 900, h = num('Height') || 2100;
+      return bb(x, y, x + w, y + h);
+    }
+    case 'column': {
+      const x = num('X'), y = num('Y'), r = num('Diameter') / 2;
+      return bb(x - r, y - r, x + r, y + r, 0, num('Height'));
+    }
+    case 'slab': {
+      const x = num('X'), y = num('Y'), w = num('Width'), h = num('Height');
+      return bb(x, y, x + w, y + h, 0, num('Depth') || 200);
+    }
+    case 'space': {
+      // StartX/StartY/EndX/EndY pattern (T-BIM-008)
+      const sx = num('StartX'), sy = num('StartY'), ex = num('EndX'), ey = num('EndY');
+      if (ex > 0 || ey > 0) return bb(Math.min(sx, ex), Math.min(sy, ey), Math.max(sx, ex), Math.max(sy, ey));
+      // Width/Height pattern
+      const x = num('X'), y = num('Y'), w = num('Width'), h = num('Height');
+      if (w > 0 || h > 0) return bb(x, y, x + w, y + h);
+      // Explicit min/max pattern
+      const minX = num('MinX'), minY = num('MinY'), maxX = num('MaxX'), maxY = num('MaxY');
+      if (maxX > 0 || maxY > 0) return bb(minX, minY, maxX, maxY);
+      return ensureMin(0, 0, 0, 0);
+    }
+    case 'dimension':
+    case 'line':
+    case 'annotation': {
+      const sx = num('StartX'), sy = num('StartY'), ex = num('EndX'), ey = num('EndY');
+      return bb(Math.min(sx, ex), Math.min(sy, ey), Math.max(sx, ex), Math.max(sy, ey));
+    }
+    case 'circle':
+    case 'arc': {
+      const cx = num('CenterX'), cy = num('CenterY'), r = num('Radius');
+      return bb(cx - r, cy - r, cx + r, cy + r);
+    }
+    case 'rectangle': {
+      const x = num('X'), y = num('Y'), w = num('Width'), h = num('Height');
+      return bb(x, y, x + w, y + h);
+    }
+    case 'polygon':
+    case 'polyline': {
+      const pointsStr = str('Points');
+      try {
+        const pts = JSON.parse(pointsStr) as Array<{ x: number; y: number }>;
+        if (pts.length === 0) return ensureMin(0, 0, 0, 0);
+        const xs = pts.map((p) => p.x);
+        const ys = pts.map((p) => p.y);
+        return bb(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
+      } catch {
+        return ensureMin(0, 0, 0, 0);
+      }
+    }
+    case 'text': {
+      const x = num('X'), y = num('Y');
+      return bb(x, y, x + 100, y + 20);
+    }
+    default:
+      return ensureMin(0, 0, 0, 0);
+  }
+}
+
 export interface CreateProjectOptions {
   name?: string;
   template?: 'blank' | 'residential' | 'commercial' | 'interior';
@@ -178,6 +273,13 @@ export class DocumentModel {
 
   loadDocument(saved: DocumentSchema): void {
     this.document = saved;
+    // Migrate degenerate bounding boxes from documents saved before bb computation existed
+    for (const el of Object.values(this.document.content.elements)) {
+      const bbox = el.boundingBox;
+      if (bbox.max.x === 0 && bbox.max.y === 0 && bbox.max.z === 0) {
+        el.boundingBox = computeBoundingBox(el.type, el.properties);
+      }
+    }
   }
 
   get elements(): Record<string, ElementSchema> {
@@ -299,10 +401,13 @@ export class DocumentModel {
     const elementId = crypto.randomUUID();
     const now = Date.now();
 
+    const props = params.properties || {};
+    const boundingBox = computeBoundingBox(params.type, props);
+
     const element: ElementSchema = {
       id: elementId,
       type: params.type,
-      properties: params.properties || {},
+      properties: props,
       propertySets: [],
       geometry: params.geometry || { type: 'brep', data: null },
       layerId: params.layerId,
@@ -312,10 +417,7 @@ export class DocumentModel {
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
       },
-      boundingBox: {
-        min: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-        max: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-      },
+      boundingBox,
       metadata: {
         id: elementId,
         createdBy: this.clientId,
@@ -359,6 +461,10 @@ export class DocumentModel {
     this.versionHandlers.forEach((handler) => handler(snapshot));
 
     return snapshot;
+  }
+
+  getVersionList(): Array<{ version: number; timestamp: number; message?: string }> {
+    return this.versions.map(({ version, timestamp, message }) => ({ version, timestamp, message }));
   }
 
   getVersion(versionNumber: number): DocumentSchema {

@@ -1,9 +1,10 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import '@testing-library/jest-dom/vitest';
 import { ProjectDashboard } from './ProjectDashboard';
 import { useProjectStore } from '../stores/projectStore';
+expect.extend(jestDomMatchers);
 
 vi.mock('../stores/projectStore');
 
@@ -46,6 +47,7 @@ function makeStore(overrides = {}) {
     setFilterBy: vi.fn(),
     setSearchQuery: vi.fn(),
     getFilteredProjects: vi.fn().mockReturnValue(projects),
+    syncFromServer: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }

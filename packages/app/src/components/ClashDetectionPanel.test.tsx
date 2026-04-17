@@ -1,11 +1,12 @@
 /**
  * T-MEP-002: ClashDetectionPanel component tests
  */
-import '@testing-library/jest-dom/vitest';
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ClashDetectionPanel } from './ClashDetectionPanel';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 vi.mock('../stores/documentStore');
 vi.mock('../utils/clashDetection', () => ({

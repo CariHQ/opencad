@@ -64,21 +64,39 @@ export interface CirculationPath {
   type: 'corridor' | 'direct';
 }
 
-const DESIGN_SYSTEM_PROMPT = `You are an expert residential architect. Generate floor plans following building codes and best practices.
+const DESIGN_SYSTEM_PROMPT = `You are an expert residential architect specialising in IBC-compliant design.
+When generating a floor plan, respond ONLY with a single JSON object (no markdown, no prose) matching this exact schema:
 
-Requirements:
-- All rooms must meet minimum area codes
-- Circulation paths must be logical
-- Windows should provide natural light and ventilation
-- Doors must meet egress requirements (min 32" width)
-- Kitchens should be near dining areas
-- Bathrooms should be accessible from bedrooms
-- Living areas should have good natural light
+{
+  "rooms": [
+    {
+      "name": "string",
+      "area_sqft": number,
+      "width_ft": number,
+      "depth_ft": number,
+      "x": number,
+      "y": number,
+      "windows": [{ "wall": "north|south|east|west", "position": 0.0-1.0, "width_ft": number }],
+      "doors": [{ "wall": "north|south|east|west", "position": 0.0-1.0, "type": "entry|interior|exterior", "connectsTo": "string|null" }]
+    }
+  ],
+  "circulation": [
+    { "from": "string", "to": "string", "type": "direct|corridor" }
+  ],
+  "total_area_sqft": number
+}
 
-Generate output as JSON matching the schema provided.`;
+IBC compliance rules you MUST follow:
+- Every habitable room ≥ 70 sq ft (IBC 1208.1); bedrooms ≥ 120 sq ft
+- Every room must have ≥ 1 door; egress doors ≥ 32" net clear (use 34" nominal)
+- Habitable rooms need natural light ≥ 8% of floor area (windows required)
+- Kitchen must connect to dining or living in the circulation array
+- Bathrooms must be accessible from sleeping areas
+- The sum of all room areas MUST equal total_area_sqft exactly
+- Return ONLY the JSON — no other text`;
 
 export class DesignGenerator {
-  private model: string = 'gpt-4o';
+  private model: string = 'claude-sonnet-4-6';
 
   setModel(model: string): void {
     this.model = model;
@@ -114,7 +132,7 @@ export class DesignGenerator {
       temperature: 0.3,
     });
 
-    return this.parseGeneratedLayout(response.content, JSON.stringify(brief));
+    return this.parseGeneratedLayout(response.content, JSON.stringify(brief), brief.totalArea);
   }
 
   private buildPrompt(userPrompt: string): string {
@@ -127,23 +145,28 @@ Return the floor plan as JSON with the following structure:
   "rooms": [
     {
       "name": "Living Room",
-      "area": 400,
-      "width": 20,
-      "depth": 20,
+      "area_sqft": 400,
+      "width_ft": 20,
+      "depth_ft": 20,
       "x": 0,
       "y": 0,
-      "windows": [{"wall": "south", "position": 0.5, "width": 6}],
+      "windows": [{"wall": "south", "position": 0.5, "width_ft": 6}],
       "doors": [{"wall": "east", "position": 0.5, "type": "interior"}]
     }
   ],
   "circulation": [
     {"from": "Living Room", "to": "Kitchen", "type": "direct"}
-  ]
+  ],
+  "total_area_sqft": 400
 }`;
   }
 
-  private parseGeneratedLayout(content: string, _prompt: string): GeneratedLayout {
-    let data: { rooms?: unknown[]; circulation?: unknown[] };
+  private parseGeneratedLayout(
+    content: string,
+    _prompt: string,
+    targetArea?: number,
+  ): GeneratedLayout {
+    let data: { rooms?: unknown[]; circulation?: unknown[]; total_area_sqft?: number };
 
     try {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -156,21 +179,31 @@ Return the floor plan as JSON with the following structure:
       data = { rooms: [], circulation: [] };
     }
 
-    const rooms = (data.rooms || []).map((room: unknown, index: number) => {
+    let rooms = (data.rooms || []).map((room: unknown, index: number) => {
       const r = room as Record<string, unknown>;
+      // Support both new field names (area_sqft, width_ft, depth_ft) and legacy names
+      const area = (r.area_sqft as number) ?? (r.area as number) ?? 200;
+      const width = (r.width_ft as number) ?? (r.width as number) ?? 15;
+      const depth = (r.depth_ft as number) ?? (r.depth as number) ?? 15;
       return {
         id: `room-${index + 1}`,
         name: (r.name as string) || `Room ${index + 1}`,
-        area: (r.area as number) || 200,
+        area,
         x: (r.x as number) || 0,
         y: (r.y as number) || 0,
-        width: (r.width as number) || 15,
-        depth: (r.depth as number) || 15,
+        width,
+        depth,
         height: 9 * 12, // Default 9ft in inches
         windows: (r.windows as WindowPlacement[]) || [],
         doors: (r.doors as DoorPlacement[]) || [],
       };
     });
+
+    // Scale rooms proportionally to hit target area if provided
+    const effectiveTarget = targetArea ?? data.total_area_sqft;
+    if (effectiveTarget && effectiveTarget > 0 && rooms.length > 0) {
+      rooms = this.scaleRoomsToTargetArea(rooms, effectiveTarget);
+    }
 
     const circulation = (data.circulation || []).map((c: unknown, _index: number) => {
       const path = c as Record<string, unknown>;
@@ -200,6 +233,19 @@ Return the floor plan as JSON with the following structure:
       generatedAt: new Date(),
       quality: this.assessQuality(rooms, circulation),
     };
+  }
+
+  private scaleRoomsToTargetArea(rooms: GeneratedRoom[], targetArea: number): GeneratedRoom[] {
+    const actualTotal = rooms.reduce((sum, r) => sum + r.area, 0);
+    if (actualTotal === 0) return rooms;
+    const scaleFactor = targetArea / actualTotal;
+    const linearScale = Math.sqrt(scaleFactor);
+    return rooms.map((r) => ({
+      ...r,
+      area: r.area * scaleFactor,
+      width: r.width * linearScale,
+      depth: r.depth * linearScale,
+    }));
   }
 
   private assessQuality(rooms: GeneratedRoom[], circulation: CirculationPath[]): number {

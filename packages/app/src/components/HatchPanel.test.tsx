@@ -1,7 +1,8 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { HatchPanel } from './HatchPanel';
+expect.extend(jestDomMatchers);
 
 describe('T-2D-009: HatchPanel', () => {
   const defaultProps = { onApply: vi.fn() };

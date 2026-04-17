@@ -13,12 +13,23 @@ export interface SSOConfig {
   oidcDiscoveryUrl: string;
 }
 
+const DEFAULT_SSO_CONFIG: SSOConfig = {
+  enabled: false,
+  provider: 'saml',
+  entityId: '',
+  ssoUrl: '',
+  certificate: '',
+  oidcClientId: '',
+  oidcClientSecret: '',
+  oidcDiscoveryUrl: '',
+};
+
 interface SSOSettingsPanelProps {
-  config: SSOConfig;
-  onSave: (config: SSOConfig) => void;
+  config?: SSOConfig;
+  onSave?: (config: SSOConfig) => void;
 }
 
-export function SSOSettingsPanel({ config: initialConfig, onSave }: SSOSettingsPanelProps) {
+export function SSOSettingsPanel({ config: initialConfig = DEFAULT_SSO_CONFIG, onSave }: SSOSettingsPanelProps = {}) {
   const [config, setConfig] = useState<SSOConfig>(initialConfig);
 
   const update = (patch: Partial<SSOConfig>) => setConfig((prev) => ({ ...prev, ...patch }));
@@ -126,7 +137,7 @@ export function SSOSettingsPanel({ config: initialConfig, onSave }: SSOSettingsP
       <button
         aria-label="Save SSO settings"
         className="btn-save"
-        onClick={() => onSave(config)}
+        onClick={() => onSave?.(config)}
       >
         Save Settings
       </button>

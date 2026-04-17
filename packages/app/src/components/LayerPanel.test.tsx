@@ -3,15 +3,16 @@
  *
  * Verifies: layers render from store, add layer works, visibility toggle works.
  */
-import '@testing-library/jest-dom/vitest';
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { LayersPanel } from './LayerPanel';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 describe('T-UI-002: LayersPanel', () => {
   beforeEach(() => {
-    useDocumentStore.getState().initProject('test-project', 'test-user');
+    useDocumentStore.getState().loadProject('test-project', 'test-user');
   });
 
   it('renders the Layers header', () => {

@@ -1,11 +1,13 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { MaterialLibrary } from './MaterialLibrary';
+expect.extend(jestDomMatchers);
 
 describe('T-MAT-001: MaterialLibrary', () => {
   const defaultProps = {
     onSelect: vi.fn(),
+    selectedCount: 0,
   };
 
   beforeEach(() => {
@@ -69,10 +71,12 @@ describe('T-MAT-001: MaterialLibrary', () => {
     expect(cards.length).toBeGreaterThan(0);
   });
 
-  it('calls onSelect when a material is clicked', () => {
-    render(<MaterialLibrary {...defaultProps} />);
-    const firstSelect = screen.getAllByRole('button', { name: /select/i })[0];
-    fireEvent.click(firstSelect!);
+  it('calls onSelect when Apply is clicked with elements selected', () => {
+    render(<MaterialLibrary {...defaultProps} selectedCount={1} />);
+    // Each material card has aria-label "Apply <name> to selected elements"
+    const applyBtns = screen.getAllByRole('button', { name: /apply .+ to selected elements/i });
+    expect(applyBtns.length).toBeGreaterThan(0);
+    fireEvent.click(applyBtns[0]!);
     expect(defaultProps.onSelect).toHaveBeenCalledWith(
       expect.objectContaining({
         name: expect.any(String),

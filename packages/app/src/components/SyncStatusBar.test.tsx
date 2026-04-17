@@ -1,7 +1,8 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { SyncStatusBar } from './SyncStatusBar';
+expect.extend(jestDomMatchers);
 
 describe('T-SYNC-012: SyncStatusBar', () => {
   beforeEach(() => { vi.clearAllMocks(); });

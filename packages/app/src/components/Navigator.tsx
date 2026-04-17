@@ -167,7 +167,6 @@ export function Navigator() {
               <Layers size={14} />
             </span>
             <span className="item-name">Layers</span>
-            <span className="item-count">{layers.length}</span>
             <button
               className="nav-icon-btn"
               title="Add layer"
@@ -179,6 +178,7 @@ export function Navigator() {
             >
               <Plus size={11} />
             </button>
+            <span className="item-count">{layers.length}</span>
           </div>
           {expanded.layers && (
             <div className="nav-children">
@@ -201,7 +201,6 @@ export function Navigator() {
                           style={{ background: layer.color }}
                         />
                         <span className="item-name">{layer.name}</span>
-                        <span className="item-count">{layerElements.length}</span>
                         <button
                           className="nav-icon-btn"
                           title={layer.visible ? 'Hide layer (toggle visibility)' : 'Show layer (toggle visibility)'}
@@ -222,6 +221,7 @@ export function Navigator() {
                         >
                           {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
                         </button>
+                        <span className="item-count">{layerElements.length}</span>
                       </div>
                       {layerExpanded && layerElements.slice(0, 50).map((element) => (
                         <div

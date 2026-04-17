@@ -4,12 +4,13 @@
  * Verifies: the full layout renders without crash, toolbar tabs switch views,
  * theme toggle works, AI panel toggle works, panel collapse/focus mode.
  */
-import '@testing-library/jest-dom/vitest';
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppLayout } from './AppLayout';
 import { useDocumentStore } from './stores/documentStore';
+expect.extend(jestDomMatchers);
 
 // jsdom doesn't implement scrollIntoView or matchMedia
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -46,6 +47,7 @@ vi.mock('./hooks/useViewport', () => ({
     handleCanvasMouseDown: vi.fn(),
     handleCanvasMouseMove: vi.fn(),
     handleCanvasMouseUp: vi.fn(),
+    handleCanvasDoubleClick: vi.fn(),
     activeTool: 'select',
     drawingState: null,
   }),
@@ -96,25 +98,24 @@ describe('T-UI-006: AppLayout', () => {
     expect(floorPlanTab).toHaveClass('active');
   });
 
-  it('shows AI chat panel when Bot button is clicked', () => {
-    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
-    const aiBtn = screen.getByTitle('AI Assistant');
-    fireEvent.click(aiBtn);
-    expect(screen.getByText('AI Assistant')).toBeInTheDocument();
-  });
-
-  it('closes AI chat panel when close button is clicked', () => {
+  it('shows AI chat panel when Bot button is clicked', async () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('AI Assistant'));
-    const closeBtn = screen.getByRole('button', { name: 'Close AI chat' });
-    fireEvent.click(closeBtn);
-    expect(screen.queryByText('AI Assistant')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('AI Assistant')).toBeInTheDocument());
   });
 
-  it('opens import modal when import button is clicked', () => {
+  it('closes AI chat panel when close button is clicked', async () => {
+    render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
+    fireEvent.click(screen.getByTitle('AI Assistant'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Close AI chat' })).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: 'Close AI chat' }));
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Close AI chat' })).not.toBeInTheDocument());
+  });
+
+  it('opens import modal when import button is clicked', async () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('Import IFC'));
-    expect(screen.getByText(/Import/)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getAllByText(/Import/).length).toBeGreaterThan(0));
   });
 
   // Panel collapse

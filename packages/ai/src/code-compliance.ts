@@ -312,3 +312,82 @@ export class CodeComplianceEngine {
 }
 
 export const codeComplianceEngine = new CodeComplianceEngine();
+
+export interface ExplainedViolation extends CodeViolation {
+  plainLanguageExplanation: string;
+  priorityRank: number;
+}
+
+export class CodeComplianceAIExplainer {
+  private apiKey: string;
+  private model: string;
+
+  constructor(apiKey: string, model: string = 'claude-sonnet-4-6') {
+    this.apiKey = apiKey;
+    this.model = model;
+  }
+
+  async explainViolations(violations: CodeViolation[]): Promise<ExplainedViolation[]> {
+    if (violations.length === 0) return [];
+
+    const prompt = `You are a building code expert. For each violation below, provide:
+1. A plain-language explanation a non-expert homeowner would understand (1-2 sentences)
+2. A priority rank (1=most urgent, higher=less urgent) based on safety impact
+
+Violations:
+${JSON.stringify(violations, null, 2)}
+
+Respond ONLY with a JSON array matching this schema:
+[
+  {
+    "id": "same id as input",
+    "plainLanguageExplanation": "string",
+    "priorityRank": number
+  }
+]`;
+
+    try {
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': this.apiKey,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: this.model,
+          system: 'You are a building code compliance expert. Respond only with valid JSON.',
+          messages: [{ role: 'user', content: prompt }],
+          temperature: 0.2,
+          max_tokens: 2048,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Anthropic API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const content = data.content?.[0]?.text || '[]';
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      const explanations: Array<{ id: string; plainLanguageExplanation: string; priorityRank: number }> =
+        jsonMatch ? JSON.parse(jsonMatch[0]) : [];
+
+      return violations.map((v) => {
+        const explanation = explanations.find((e) => e.id === v.id);
+        return {
+          ...v,
+          plainLanguageExplanation: explanation?.plainLanguageExplanation ?? v.description,
+          priorityRank: explanation?.priorityRank ?? 999,
+        };
+      });
+    } catch {
+      // Fall back to violations with default explanations
+      return violations.map((v, i) => ({
+        ...v,
+        plainLanguageExplanation: v.description,
+        priorityRank: i + 1,
+      }));
+    }
+  }
+}

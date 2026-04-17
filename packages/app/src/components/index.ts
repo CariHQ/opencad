@@ -8,3 +8,4 @@ export { StatusBar } from './StatusBar';
 export { LevelSelector } from './LevelSelector';
 export { AIChatPanel } from './AIChatPanel';
 export { ImportExportModal } from './ImportExportModal';
+export { VersionHistoryPanel } from './VersionHistoryPanel';

@@ -1,198 +1,56 @@
-* {
+/*
+ * index.css — base reset and global icon fix only.
+ *
+ * CSS design tokens (--bg-*, --text-*, --accent-*, etc.) are defined in
+ * app.css, which is loaded by AppLayout and wins the cascade.  Do NOT
+ * redefine them here — competing :root blocks caused visible hover/active
+ * backgrounds in the Tauri WKWebView because its CSS injection order differs
+ * from Chrome's.
+ */
+
+/* ─── Box-model reset ────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-:root {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f8fafc;
-  --bg-tertiary: #f1f5f9;
-  --border-color: #e2e8f0;
-  --text-primary: #1e293b;
-  --text-secondary: #64748b;
-  --text-muted: #94a3b8;
-  --accent-primary: #4f46e5;
-  --accent-secondary: #818cf8;
+/* ─── Canvas reset ───────────────────────────────────────────────── */
+/* Canvases manage their own interaction; browser focus rings appear as
+   rendering artifacts at canvas edges. display:block removes the small
+   inline baseline gap that browsers add to inline elements. */
+canvas {
+  display: block;
+  outline: none;
 }
 
-[data-theme='dark'] {
-  --bg-primary: #1a1a2e;
-  --bg-secondary: #16213e;
-  --bg-tertiary: #0f0f23;
-  --border-color: #374151;
-  --text-primary: #f9fafb;
-  --text-secondary: #9ca3af;
-  --text-muted: #6b7280;
-  --accent-primary: #3b82f6;
-  --accent-secondary: #60a5fa;
-}
-
+/* ─── Base body ──────────────────────────────────────────────────── */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
   line-height: 1.6;
 }
 
-.app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
-
-.header {
-  background: var(--bg-secondary);
-  padding: 2rem;
-  text-align: center;
-  border-bottom: 1px solid var(--border-color);
-}
-
-.header h1 {
-  font-size: 2.5rem;
-  font-weight: 700;
-  background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.header p {
-  color: var(--text-muted);
-  margin-top: 0.5rem;
-}
-
-.main {
-  flex: 1;
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1.5rem;
-}
-
-section {
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  padding: 1.5rem;
-  border: 1px solid var(--border-color);
-}
-
-section h2 {
-  font-size: 1.25rem;
-  margin-bottom: 1rem;
-  color: var(--text-primary);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.input-group {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-.input-group input {
-  flex: 1;
-  padding: 0.75rem 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  font-size: 1rem;
-}
-
-.input-group input:focus {
-  outline: none;
-  border-color: var(--accent-primary);
-}
-
+/* ─── Global button + SVG icon fix ──────────────────────────────── */
+/*
+ * Lucide (and other SVG icon sets) use stroke="currentColor".
+ * Buttons in some browser UA stylesheets reset `color` to ButtonText (black),
+ * making icons disappear on tinted/dark backgrounds.
+ *
+ * `color: inherit` guarantees every button inherits the cascade foreground.
+ * `stroke: currentColor` on SVGs inside interactive elements makes them
+ * honour the inherited color regardless of which icon library is used.
+ */
 button {
-  padding: 0.75rem 1.25rem;
-  border: none;
-  border-radius: 8px;
-  font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
+  color: inherit;
 }
 
-button.primary {
-  background: var(--accent-primary);
-  color: #ffffff;
-}
-
-button.primary:hover {
-  background: var(--accent-secondary);
-}
-
-.add-btn {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-  border: 1px solid var(--border-color);
-  width: 100%;
-  margin-bottom: 1rem;
-}
-
-.add-btn:hover {
-  background: var(--accent-primary);
-  color: #ffffff;
-  border-color: var(--accent-primary);
-}
-
-.project-info {
-  background: var(--bg-tertiary);
-  padding: 1rem;
-  border-radius: 8px;
-  font-size: 0.875rem;
-}
-
-.project-info p {
-  margin-bottom: 0.5rem;
-}
-
-.project-info strong {
-  color: var(--text-muted);
-}
-
-.item-list {
-  list-style: none;
-  max-height: 200px;
-  overflow-y: auto;
-}
-
-.item {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--border-color);
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.item:last-child {
-  border-bottom: none;
-}
-
-.color-dot {
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.footer {
-  background: var(--bg-secondary);
-  padding: 1.5rem;
-  text-align: center;
-  border-top: 1px solid var(--border-color);
-  color: var(--text-muted);
-}
-
-@media (max-width: 768px) {
-  .main {
-    grid-template-columns: 1fr;
-  }
+button svg,
+a svg,
+label svg,
+[role='button'] svg {
+  display: block;       /* prevents inline baseline gap */
+  stroke: currentColor; /* explicit — don't rely solely on attribute */
+  flex-shrink: 0;       /* never squash inside flex rows */
 }

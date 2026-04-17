@@ -24,9 +24,7 @@ export function PropertiesPanel() {
           <span className="panel-title">Properties</span>
         </div>
         <div className="properties-content empty">
-          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px' }}>
-            Select an element to view properties
-          </p>
+          <p className="properties-empty-hint">Select an element to view its properties</p>
         </div>
       </div>
     );
@@ -38,10 +36,8 @@ export function PropertiesPanel() {
         <div className="panel-header">
           <span className="panel-title">Properties</span>
         </div>
-        <div className="properties-content">
-          <p style={{ color: 'var(--text-muted)', textAlign: 'center', marginTop: '40px' }}>
-            {selectedIds.length} elements selected
-          </p>
+        <div className="properties-content empty">
+          <p className="properties-empty-hint">{selectedIds.length} elements selected</p>
         </div>
       </div>
     );

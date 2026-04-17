@@ -1,7 +1,8 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { CarbonPanel, type CarbonEntry } from './CarbonPanel';
+expect.extend(jestDomMatchers);
 
 describe('T-COST-002: CarbonPanel', () => {
   const onExport = vi.fn();

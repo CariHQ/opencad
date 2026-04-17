@@ -1,11 +1,12 @@
 /**
  * T-BIM-003: Door & window tool panel tests
  */
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { DoorWindowPanel } from './DoorWindowPanel';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 vi.mock('../stores/documentStore');
 

@@ -1,11 +1,12 @@
 /**
  * T-BIM-001: Wall tool panel tests
  */
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { WallToolPanel } from './WallToolPanel';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 vi.mock('../stores/documentStore');
 

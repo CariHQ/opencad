@@ -70,6 +70,9 @@ playwright-report/
 test-results/
 blob-report/
 
+# Generated demo screenshots (produced by scripts/capture-demo-screenshots.mjs)
+packages/landing/screenshots/
+
 # Benchmarks
 benchmark-results/
 

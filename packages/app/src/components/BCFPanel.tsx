@@ -53,22 +53,22 @@ export function BCFPanel({ initialTopics = [], onImport, onExport, onSelectTopic
     <div className="bcf-panel">
       <div className="panel-header">
         <span className="panel-title">BCF Issues</span>
-        <div className="bcf-actions">
-          <button
-            aria-label="Import BCF"
-            className="btn-import-bcf"
-            onClick={handleImportClick}
-          >
-            Import BCF
-          </button>
-          <button
-            aria-label="Export BCF"
-            className="btn-export-bcf"
-            onClick={() => onExport?.(topics)}
-          >
-            Export BCF
-          </button>
-        </div>
+      </div>
+      <div className="bcf-actions">
+        <button
+          aria-label="Import BCF"
+          className="btn-import-bcf"
+          onClick={handleImportClick}
+        >
+          Import BCF
+        </button>
+        <button
+          aria-label="Export BCF"
+          className="btn-export-bcf"
+          onClick={() => onExport?.(topics)}
+        >
+          Export BCF
+        </button>
       </div>
 
       {topics.length === 0 ? (

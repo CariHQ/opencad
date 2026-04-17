@@ -1,11 +1,12 @@
 /**
  * T-UI-001: Multi-viewport split layout tests
  */
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import '@testing-library/jest-dom/vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SplitViewport } from './SplitViewport';
 import { useDocumentStore } from '../stores/documentStore';
+expect.extend(jestDomMatchers);
 
 vi.mock('../stores/documentStore');
 vi.mock('../hooks/useViewport', () => ({

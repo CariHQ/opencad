@@ -318,8 +318,17 @@ export class IFCSerializer {
       ellipse: 'IFCANNOTATION',
       rectangle: 'IFCANNOTATION',
       polygon: 'IFCANNOTATION',
+      spline: 'IFCANNOTATION',
       component: 'IFCGROUP',
       group: 'IFCGROUP',
+      plumbing_fixture: 'IFCFLOWFITTING',
+      electrical_equipment: 'IFCELECTRICAPPLIANCE',
+      mechanical_equipment: 'IFCMECHANICALFASTENER',
+      duct: 'IFCDUCTFITTING',
+      pipe: 'IFCPIPEFITTING',
+      cable_tray: 'IFCPIPEFITTING',
+      conduit: 'IFCPIPEFITTING',
+      structural_member: 'IFCMEMBER',
     };
 
     return map[elementType] || 'IFCANNOTATION';

@@ -100,8 +100,17 @@ export type ElementType =
   | 'ellipse'
   | 'rectangle'
   | 'polygon'
+  | 'spline'
   | 'component'
-  | 'group';
+  | 'group'
+  | 'plumbing_fixture'
+  | 'electrical_equipment'
+  | 'mechanical_equipment'
+  | 'duct'
+  | 'pipe'
+  | 'cable_tray'
+  | 'conduit'
+  | 'structural_member';
 
 export interface LayerSchema {
   id: string;

@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenCAD — Browser-native BIM</title>
+  <meta name="description" content="AI-powered, open-source BIM platform. Design buildings in your browser, collaborate in real time, deploy anywhere." />
+  <meta property="og:title" content="OpenCAD — Browser-native BIM" />
+  <meta property="og:description" content="AI-powered, open-source BIM platform. Design buildings in your browser." />
+  <meta property="og:image" content="https://opencad.archi/og.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0a0a'/><rect x='5' y='5' width='10' height='22' fill='white'/><rect x='5' y='5' width='22' height='10' fill='white'/><rect x='10' y='10' width='3' height='14' fill='%230052ff'/><rect x='10' y='10' width='14' height='3' fill='%230052ff'/><circle cx='11' cy='11' r='3' fill='%230052ff'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;1,14..32,400&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0a;
+      --gray-900: #111;
+      --gray-600: #555;
+      --gray-400: #999;
+      --gray-200: #e5e5e5;
+      --gray-100: #f5f5f5;
+      --gray-50:  #fafafa;
+      --white: #fff;
+      --blue: #0052ff;
+      --blue-light: #e8efff;
+    }
+
+    html { scroll-behavior: smooth; font-size: 16px; }
+
+    body {
+      background: var(--white);
+      color: var(--black);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+    /* ─── Nav ──────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo {
+      font-weight: 600;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      color: var(--black);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .nav-link {
+      font-size: 14px;
+      color: var(--gray-600);
+      transition: color 0.15s;
+    }
+    .nav-link:hover { color: var(--black); }
+
+    .btn-nav {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--white);
+      background: var(--black);
+      padding: 8px 20px;
+      border-radius: 100px;
+      transition: opacity 0.15s;
+    }
+    .btn-nav:hover { opacity: 0.75; }
+
+    /* ─── Sections ─────────────────────────────────────────────────────── */
+    .section {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 40px;
+    }
+
+    /* ─── Hero ─────────────────────────────────────────────────────────── */
+    .hero {
+      padding-top: 120px;
+      padding-bottom: 100px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-600);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      margin-bottom: 28px;
+    }
+
+    .eyebrow-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--blue);
+      flex-shrink: 0;
+    }
+
+    .hero-title {
+      font-size: clamp(48px, 7vw, 88px);
+      font-weight: 600;
+      line-height: 1.04;
+      letter-spacing: -0.04em;
+      color: var(--black);
+      max-width: 820px;
+      margin: 0 auto 28px;
+    }
+
+    .hero-title em {
+      font-style: normal;
+      color: var(--blue);
+    }
+
+    .hero-sub {
+      font-size: clamp(16px, 2vw, 19px);
+      color: var(--gray-600);
+      font-weight: 400;
+      max-width: 540px;
+      margin: 0 auto 48px;
+      line-height: 1.65;
+    }
+
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--white);
+      background: var(--black);
+      padding: 14px 28px;
+      border-radius: 100px;
+      transition: opacity 0.15s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .btn-primary:hover { opacity: 0.78; transform: translateY(-1px); }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--black);
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      padding: 14px 28px;
+      border-radius: 100px;
+      transition: border-color 0.15s, transform 0.15s;
+      white-space: nowrap;
+    }
+    .btn-secondary:hover { border-color: var(--gray-400); transform: translateY(-1px); }
+
+    .hero-note {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+
+    /* ─── App preview ──────────────────────────────────────────────────── */
+    .preview-wrap {
+      margin: 0 auto;
+      max-width: 1120px;
+      padding: 0 40px 140px;
+    }
+
+    .preview-window {
+      background: var(--gray-100);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid var(--gray-200);
+      box-shadow:
+        0 2px 4px rgba(0,0,0,0.04),
+        0 8px 24px rgba(0,0,0,0.06),
+        0 32px 64px rgba(0,0,0,0.06);
+    }
+
+    .preview-bar {
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      height: 44px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 8px;
+    }
+
+    .traffic { width: 12px; height: 12px; border-radius: 50%; }
+    .traffic-r { background: #ff5f57; }
+    .traffic-y { background: #febc2e; }
+    .traffic-g { background: #28c840; }
+
+    .preview-url {
+      margin: 0 auto;
+      font-size: 12px;
+      color: var(--gray-400);
+      background: var(--gray-100);
+      padding: 4px 12px;
+      border-radius: 6px;
+      letter-spacing: 0.01em;
+    }
+
+    .preview-img {
+      display: block;
+      width: 100%;
+      height: 480px;
+      object-fit: cover;
+      object-position: top left;
+    }
+
+    /* ─── Divider ──────────────────────────────────────────────────────── */
+    .divider {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 40px;
+      border: none;
+      border-top: 1px solid var(--gray-200);
+    }
+
+    /* ─── Features ─────────────────────────────────────────────────────── */
+    .features {
+      padding: 140px 40px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .features-header {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: end;
+      margin-bottom: 80px;
+    }
+
+    .section-label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 20px;
+    }
+
+    .features-heading {
+      font-size: clamp(32px, 4vw, 48px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--black);
+    }
+
+    .features-sub {
+      font-size: 17px;
+      color: var(--gray-600);
+      line-height: 1.65;
+      max-width: 380px;
+      align-self: end;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--gray-200);
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .feature-cell {
+      background: var(--white);
+      padding: 44px 40px;
+      transition: background 0.2s;
+    }
+    .feature-cell:hover { background: var(--gray-50); }
+
+    .feature-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 24px;
+      color: var(--black);
+    }
+
+    .feature-name {
+      font-size: 17px;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      color: var(--black);
+      margin-bottom: 10px;
+    }
+
+    .feature-desc {
+      font-size: 15px;
+      color: var(--gray-600);
+      line-height: 1.6;
+    }
+
+    /* ─── Stats ─────────────────────────────────────────────────────────── */
+    .stats {
+      padding: 0 40px 140px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--gray-200);
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .stat-cell {
+      background: var(--white);
+      padding: 48px 44px;
+    }
+
+    .stat-number {
+      font-size: clamp(40px, 5vw, 60px);
+      font-weight: 600;
+      letter-spacing: -0.04em;
+      color: var(--black);
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-label {
+      font-size: 15px;
+      color: var(--gray-600);
+    }
+
+    /* ─── CTA / Auth ──────────────────────────────────────────────────── */
+    .cta-section {
+      padding: 0 40px 160px;
+      max-width: 1120px;
+      margin: 0 auto;
+    }
+
+    .cta-inner {
+      background-color: #07080f;
+      background-image:
+        radial-gradient(ellipse 70% 80% at 75% 50%, rgba(0,82,255,0.16) 0%, transparent 65%),
+        radial-gradient(ellipse 50% 40% at 15% 80%, rgba(0,82,255,0.09) 0%, transparent 60%),
+        url("data:image/svg+xml,%3Csvg width='64' height='64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 64 0 L 0 0 0 64' fill='none' stroke='rgba(255,255,255,0.04)' stroke-width='1'/%3E%3C/svg%3E");
+      background-size: 100% 100%, 100% 100%, 64px 64px;
+      border-radius: 24px;
+      padding: 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 80px;
+      align-items: center;
+    }
+
+    .cta-copy {}
+
+    .cta-heading {
+      font-size: clamp(30px, 4vw, 44px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--white);
+      line-height: 1.1;
+      margin-bottom: 16px;
+    }
+
+    .cta-sub {
+      font-size: 16px;
+      color: rgba(255,255,255,0.55);
+      line-height: 1.6;
+    }
+
+    /* ─── Auth form ────────────────────────────────────────────────────── */
+    .auth-card {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 40px;
+    }
+
+    .auth-tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--gray-200);
+      margin-bottom: 32px;
+    }
+
+    .auth-tab {
+      flex: 1;
+      padding: 10px 0;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--gray-400);
+      background: none;
+      border: none;
+      border-bottom: 2px solid transparent;
+      cursor: pointer;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+      font-family: inherit;
+    }
+    .auth-tab.active {
+      color: var(--black);
+      border-bottom-color: var(--black);
+    }
+
+    .auth-form { display: flex; flex-direction: column; gap: 16px; }
+
+    .form-field { display: flex; flex-direction: column; gap: 6px; }
+
+    .form-field label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--gray-600);
+    }
+
+    .form-field input {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 10px;
+      color: var(--black);
+      font-size: 15px;
+      padding: 11px 14px;
+      width: 100%;
+      outline: none;
+      transition: border-color 0.15s;
+      font-family: inherit;
+    }
+    .form-field input:focus { border-color: var(--black); }
+    .form-field input::placeholder { color: var(--gray-400); }
+
+    .btn-auth-submit {
+      width: 100%;
+      background: var(--black);
+      color: var(--white);
+      border: none;
+      padding: 13px;
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      font-family: inherit;
+      margin-top: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    .btn-auth-submit:hover { opacity: 0.75; }
+    .btn-auth-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .auth-msg {
+      font-size: 13px;
+      padding: 10px 14px;
+      border-radius: 8px;
+    }
+    .auth-msg.error {
+      background: #fff0f0;
+      border: 1px solid #ffd0d0;
+      color: #c00;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .auth-msg.success { background: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; }
+
+    .btn-switch-inline {
+      color: var(--black);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    .auth-footer {
+      margin-top: 20px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+    .auth-footer button {
+      color: var(--black);
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: underline;
+    }
+
+    /* ─── Footer ────────────────────────────────────────────────────────── */
+    footer {
+      padding: 40px;
+    }
+
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .footer-copy {
+      font-size: 13px;
+      color: var(--gray-400);
+    }
+
+    .footer-links {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+    }
+
+    .footer-links a {
+      font-size: 13px;
+      color: var(--gray-400);
+      transition: color 0.15s;
+    }
+    .footer-links a:hover { color: var(--black); }
+
+    /* ─── Spinner ────────────────────────────────────────────────────────── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border: 2px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+
+    /* ─── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      .nav-inner { padding: 0 20px; }
+      .nav-links .nav-link { display: none; }
+      .hero { padding-top: 80px; padding-bottom: 72px; }
+      .section { padding: 0 20px; }
+      .preview-wrap { padding: 0 20px 100px; }
+      .features { padding: 100px 20px; }
+      .features-header { grid-template-columns: 1fr; gap: 16px; }
+      .features-sub { max-width: none; }
+      .features-grid { grid-template-columns: 1fr; }
+      .stats { padding: 0 20px 100px; }
+      .stats-grid { grid-template-columns: 1fr; }
+      .cta-section { padding: 0 20px 100px; }
+      .cta-inner { grid-template-columns: 1fr; gap: 48px; padding: 48px 32px; }
+      .preview-img { height: 280px; }
+      footer { padding: 32px 20px; }
+      .divider { padding: 0 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">OpenCAD</a>
+    <div class="nav-links">
+      <a href="#features" class="nav-link">Features</a>
+      <a href="https://github.com/CariHQ/opencad" class="nav-link" target="_blank" rel="noopener">GitHub</a>
+      <a href="#get-started" class="btn-nav">Get started</a>
+    </div>
+  </div>
+</nav>
+
+<!-- Hero -->
+<section class="section hero">
+  <div class="hero-eyebrow">
+    <span class="eyebrow-dot"></span>
+    Open Beta &mdash; 14-day free trial
+  </div>
+
+  <h1 class="hero-title">
+    BIM for the<br/><em>open web.</em>
+  </h1>
+
+  <p class="hero-sub">
+    Design buildings, collaborate in real time, and ship faster &mdash;
+    entirely in your browser. No install. No lock-in.
+  </p>
+
+  <div class="hero-actions">
+    <a href="#get-started" class="btn-primary">
+      Start free trial
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+        <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </a>
+    <a href="/app" class="btn-secondary">
+      Open app
+    </a>
+  </div>
+
+  <p class="hero-note">No credit card required</p>
+</section>
+
+<!-- App preview -->
+<div class="preview-wrap">
+  <div class="preview-window">
+    <div class="preview-bar">
+      <span class="traffic traffic-r"></span>
+      <span class="traffic traffic-y"></span>
+      <span class="traffic traffic-g"></span>
+      <span class="preview-url">opencad.archi/app</span>
+    </div>
+    <img class="preview-img" src="screenshots/02-editor-floorplan.png" alt="OpenCAD floor plan editor" />
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- Features -->
+<section class="features" id="features">
+  <div class="features-header">
+    <div>
+      <p class="section-label">Capabilities</p>
+      <h2 class="features-heading">Everything a BIM<br/>tool should be.</h2>
+    </div>
+    <p class="features-sub">
+      Built from the ground up for the browser. Runs offline,
+      syncs in real time, and integrates with every format your team uses.
+    </p>
+  </div>
+
+  <div class="features-grid">
+
+    <div class="feature-cell">
+      <svg class="feature-icon" viewBox="0 0 40 40" fill="none">
+        <rect x="4" y="4" width="32" height="32" rx="4" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M12 20h16M12 14h10M12 26h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p class="feature-name">2D &amp; 3D drafting</p>
+      <p class="feature-desc">Full-featured drafting tools — walls, doors, windows, slabs, roofs — with snap, trim, and parametric constraints.</p>
+    </div>
+
+    <div class="feature-cell">
+      <svg class="feature-icon" viewBox="0 0 40 40" fill="none">
+        <circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M20 4v32M4 20h32" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+        <circle cx="28" cy="14" r="3" fill="currentColor"/>
+        <circle cx="13" cy="26" r="3" fill="currentColor"/>
+      </svg>
+      <p class="feature-name">Real-time collaboration</p>
+      <p class="feature-desc">CRDT-backed multiplayer editing. Every cursor, every change, live — with conflict-free merging and version history.</p>
+    </div>
+
+    <div class="feature-cell">
+      <svg class="feature-icon" viewBox="0 0 40 40" fill="none">
+        <path d="M8 32L20 8l12 24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M11.5 25h17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p class="feature-name">AI design assistant</p>
+      <p class="feature-desc">Describe a floor plan in natural language. The AI generates geometry, assigns materials, and checks building codes automatically.</p>
+    </div>
+
+    <div class="feature-cell">
+      <svg class="feature-icon" viewBox="0 0 40 40" fill="none">
+        <rect x="6" y="10" width="28" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M14 10V8M26 10V8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <path d="M6 17h28" stroke="currentColor" stroke-width="1.5"/>
+      </svg>
+      <p class="feature-name">IFC native</p>
+      <p class="feature-desc">Import and export IFC 2x3 and IFC4. Full round-trip fidelity — properties, type hierarchies, and spatial structure intact.</p>
+    </div>
+
+    <div class="feature-cell">
+      <svg class="feature-icon" viewBox="0 0 40 40" fill="none">
+        <path d="M20 6v8M20 26v8M6 20h8M26 20h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="20" cy="20" r="6" stroke="currentColor" stroke-width="1.5"/>
+        <circle cx="20" cy="20" r="2" fill="currentColor"/>
+      </svg>
+      <p class="feature-name">Offline-first</p>
+      <p class="feature-desc">Works entirely offline with IndexedDB persistence. Sync resumes automatically when your connection returns — zero data loss.</p>
+    </div>
+
+    <div class="feature-cell">
+      <svg class="feature-icon" viewBox="0 0 40 40" fill="none">
+        <rect x="10" y="6" width="20" height="28" rx="3" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M15 13h10M15 19h10M15 25h6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+      <p class="feature-name">Open source</p>
+      <p class="feature-desc">MIT-licensed core. Self-host on your own infra, extend the API, or contribute. No vendor lock-in, ever.</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stats-grid">
+    <div class="stat-cell">
+      <p class="stat-number">14</p>
+      <p class="stat-label">Days free, no card needed</p>
+    </div>
+    <div class="stat-cell">
+      <p class="stat-number">IFC4</p>
+      <p class="stat-label">Native import &amp; export</p>
+    </div>
+    <div class="stat-cell">
+      <p class="stat-number">MIT</p>
+      <p class="stat-label">Open-source license</p>
+    </div>
+  </div>
+</div>
+
+<!-- CTA + Auth -->
+<div class="cta-section" id="get-started">
+  <div class="cta-inner">
+    <div class="cta-copy">
+      <h2 class="cta-heading">Start designing<br/>in minutes.</h2>
+      <p class="cta-sub">Create your account and get 14 days free. No credit card. Cancel any time.</p>
+    </div>
+
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="tab-signup" onclick="switchTab('signup')">Create account</button>
+        <button class="auth-tab" id="tab-login" onclick="switchTab('login')">Sign in</button>
+      </div>
+
+      <div id="auth-message"></div>
+
+      <form class="auth-form" id="auth-form" onsubmit="handleAuth(event)" novalidate>
+        <div class="form-field" id="field-name">
+          <label for="auth-name">Full name</label>
+          <input id="auth-name" type="text" placeholder="Alex Johnson" autocomplete="name" />
+        </div>
+        <div class="form-field">
+          <label for="auth-email">Email address</label>
+          <input id="auth-email" type="email" placeholder="you@example.com" autocomplete="email" required />
+        </div>
+        <div class="form-field">
+          <label for="auth-password">Password</label>
+          <input id="auth-password" type="password" placeholder="••••••••" minlength="8" required />
+        </div>
+        <button type="submit" class="btn-auth-submit" id="auth-submit">
+          Create free account
+        </button>
+      </form>
+
+      <div class="auth-footer" id="auth-footer">
+        Already have an account?
+        <button onclick="switchTab('login')">Sign in</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <p class="footer-copy">&copy; 2026 OpenCAD by <a href="https://cari.global" target="_blank" rel="noopener" style="color:inherit">CariHQ</a>. All rights reserved.</p>
+    <div class="footer-links">
+      <a href="https://github.com/CariHQ/opencad" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hello@opencad.archi">Contact</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Firebase SDK -->
+<script type="module">
+  import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+  import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+  import { getFirestore, doc, setDoc, getDoc, serverTimestamp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+  const cfg = {
+    apiKey:            window.FIREBASE_API_KEY            || 'REPLACE_WITH_YOUR_API_KEY',
+    authDomain:        window.FIREBASE_AUTH_DOMAIN        || 'REPLACE_WITH_PROJECT.firebaseapp.com',
+    projectId:         window.FIREBASE_PROJECT_ID         || 'REPLACE_WITH_PROJECT_ID',
+    storageBucket:     window.FIREBASE_STORAGE_BUCKET     || 'REPLACE_WITH_PROJECT.appspot.com',
+    messagingSenderId: window.FIREBASE_MESSAGING_SENDER_ID|| 'REPLACE_WITH_SENDER_ID',
+    appId:             window.FIREBASE_APP_ID             || 'REPLACE_WITH_APP_ID',
+  };
+
+  const configured = !cfg.apiKey.startsWith('REPLACE');
+
+  let auth, db;
+  if (configured) {
+    const app = initializeApp(cfg);
+    auth = getAuth(app);
+    db   = getFirestore(app);
+  }
+
+  const ERRORS = {
+    'auth/email-already-in-use': 'email-in-use',
+    'auth/invalid-email':        'Please enter a valid email address.',
+    'auth/weak-password':        'Password must be at least 8 characters.',
+    'auth/wrong-password':       'Incorrect password. Try again.',
+    'auth/user-not-found':       'No account found for this email.',
+    'auth/invalid-credential':   'Invalid email or password.',
+    'auth/too-many-requests':    'Too many attempts — wait a moment and retry.',
+    'auth/network-request-failed': 'Network error. Check your connection.',
+  };
+
+  window.switchTab = function(tab) {
+    const isSignup = tab === 'signup';
+    document.getElementById('tab-signup').classList.toggle('active', isSignup);
+    document.getElementById('tab-login').classList.toggle('active', !isSignup);
+    document.getElementById('field-name').style.display = isSignup ? '' : 'none';
+    document.getElementById('auth-submit').textContent  = isSignup ? 'Create free account' : 'Sign in';
+    document.getElementById('auth-footer').innerHTML    = isSignup
+      ? 'Already have an account? <button onclick="switchTab(\'login\')">Sign in</button>'
+      : "No account? <button onclick=\"switchTab('signup')\">Create one free</button>";
+    document.getElementById('auth-message').innerHTML  = '';
+    document.getElementById('auth-form').dataset.mode  = tab;
+  };
+
+  document.getElementById('auth-form').dataset.mode = 'signup';
+
+  function showMsg(html, type) {
+    const el = document.getElementById('auth-message');
+    el.innerHTML = `<div class="auth-msg ${type}">${html}</div>`;
+  }
+
+  window.handleAuth = async function(e) {
+    e.preventDefault();
+    if (!configured) { showMsg('Firebase not configured.', 'error'); return; }
+
+    const mode     = document.getElementById('auth-form').dataset.mode;
+    const email    = document.getElementById('auth-email').value.trim();
+    const password = document.getElementById('auth-password').value;
+    const name     = document.getElementById('auth-name').value.trim();
+    const btn      = document.getElementById('auth-submit');
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+    document.getElementById('auth-message').innerHTML = '';
+
+    try {
+      if (mode === 'signup') {
+        if (!name) { showMsg('Please enter your name.', 'error'); return; }
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await updateProfile(cred.user, { displayName: name });
+        const expires = new Date(); expires.setDate(expires.getDate() + 14);
+        await setDoc(doc(db, 'users', cred.user.uid), {
+          email, name, plan: 'trial',
+          trialExpiresAt: expires,
+          createdAt: serverTimestamp(),
+        });
+        showMsg('Account created! Redirecting&hellip;', 'success');
+        setTimeout(() => { window.location.href = '/app'; }, 1200);
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        showMsg('Signed in. Redirecting&hellip;', 'success');
+        setTimeout(() => { window.location.href = '/app'; }, 1000);
+      }
+    } catch (err) {
+      const code = err.code || '';
+      if (code === 'auth/email-already-in-use') {
+        showMsg(
+          'An account with this email already exists. ' +
+          '<button class="btn-switch-inline" onclick="switchTab(\'login\')">Log in instead</button>',
+          'error'
+        );
+      } else {
+        showMsg(ERRORS[code] || err.message || 'Something went wrong.', 'error');
+      }
+    } finally {
+      btn.disabled = false;
+      const isSignup = document.getElementById('auth-form').dataset.mode === 'signup';
+      btn.textContent = isSignup ? 'Create free account' : 'Sign in';
+    }
+  };
+</script>
+
+
+</body>
+</html>

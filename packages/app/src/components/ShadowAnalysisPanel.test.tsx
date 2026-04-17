@@ -1,7 +1,8 @@
+import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import '@testing-library/jest-dom/vitest';
 import { ShadowAnalysisPanel } from './ShadowAnalysisPanel';
+expect.extend(jestDomMatchers);
 
 describe('T-GIS-002: ShadowAnalysisPanel', () => {
   const onRun = vi.fn();

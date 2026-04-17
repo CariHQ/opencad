@@ -1,6 +1,7 @@
 import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
-import { useThreeViewport, ViewPreset } from '../hooks/useThreeViewport';
+import { useThreeViewport } from '../hooks/useThreeViewport';
+import { ViewCube } from './ViewCube';
 
 interface ViewportProps {
   viewType?: 'floor-plan' | '3d' | 'section';
@@ -17,6 +18,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     handleCanvasMouseMove,
     handleCanvasMouseUp,
     handleCanvasDoubleClick,
+    handleCanvasWheel,
     activeTool,
   } = useViewport();
   const {
@@ -28,12 +30,6 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     sectionBox,
     setSectionBox,
   } = useThreeViewport();
-
-  const handleViewChange = (preset: ViewPreset) => {
-    if (show3D) {
-      setViewPreset(preset);
-    }
-  };
 
   return (
     <div className="viewport-container" ref={containerRef}>
@@ -52,6 +48,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           onMouseUp={handleCanvasMouseUp}
           onMouseLeave={handleCanvasMouseUp}
           onDoubleClick={handleCanvasDoubleClick}
+          onWheel={handleCanvasWheel}
         />
       )}
       <div className="viewport-overlay">
@@ -69,39 +66,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
         </div>
         <div className="viewport-corner top-right">
           <div className="viewport-controls">
-            {show3D && (
-              <>
-                <button
-                  className="viewport-control-btn"
-                  onClick={() => handleViewChange('top')}
-                  title="Top View (1)"
-                >
-                  T
-                </button>
-                <button
-                  className="viewport-control-btn"
-                  onClick={() => handleViewChange('front')}
-                  title="Front View (2)"
-                >
-                  F
-                </button>
-                <button
-                  className="viewport-control-btn"
-                  onClick={() => handleViewChange('right')}
-                  title="Right View (3)"
-                >
-                  R
-                </button>
-                <button
-                  className="viewport-control-btn"
-                  onClick={() => handleViewChange('3d')}
-                  title="3D View (4)"
-                >
-                  3D
-                </button>
-                <span style={{ width: 8 }} />
-              </>
-            )}
+            {show3D && <ViewCube setViewPreset={setViewPreset} />}
             <button className="view-toggle" onClick={toggleView}>
               {show3D ? '2D' : '3D'}
             </button>
@@ -112,7 +77,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
             {show3D ? (
               <span>Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0</span>
             ) : (
-              <span>Draw: W L M | Ctrl+Z/Y undo | Ctrl snap</span>
+              <span>Zoom: scroll | Pan: middle-drag | Ctrl: snap off</span>
             )}
           </div>
         </div>

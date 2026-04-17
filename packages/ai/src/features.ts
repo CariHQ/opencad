@@ -53,6 +53,10 @@ class AIProvider {
       return this.localComplete(messages);
     }
 
+    if (this.config.provider === 'anthropic') {
+      return this.anthropicComplete(messages);
+    }
+
     try {
       const response = await fetch(
         this.config.baseUrl || 'https://api.openai.com/v1/chat/completions',
@@ -72,6 +76,39 @@ class AIProvider {
 
       const data = await response.json();
       return { content: data.choices?.[0]?.message?.content || '' };
+    } catch {
+      return { content: '' };
+    }
+  }
+
+  private async anthropicComplete(
+    messages: Array<{ role: string; content: string }>
+  ): Promise<{ content: string }> {
+    try {
+      const systemMsg = messages.find((m) => m.role === 'system');
+      const otherMessages = messages.filter((m) => m.role !== 'system');
+
+      const response = await fetch(
+        this.config.baseUrl || 'https://api.anthropic.com/v1/messages',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': this.config.apiKey || '',
+            'anthropic-version': '2023-06-01',
+          },
+          body: JSON.stringify({
+            model: this.config.model,
+            system: systemMsg?.content,
+            messages: otherMessages,
+            temperature: 0.3,
+            max_tokens: 4096,
+          }),
+        }
+      );
+
+      const data = await response.json();
+      return { content: data.content?.[0]?.text || '' };
     } catch {
       return { content: '' };
     }
@@ -251,8 +288,8 @@ export class SmartPlacement {
 }
 
 let globalConfig: AIConfig = {
-  provider: 'local',
-  model: 'gpt-4o',
+  provider: 'anthropic',
+  model: 'claude-sonnet-4-6',
 };
 
 export function configureAI(config: Partial<AIConfig>): void {
