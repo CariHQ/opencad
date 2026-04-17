@@ -2694,11 +2694,17 @@ label svg,
 .auth-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  /* Dark base + architectural grid + blue accent glows */
+  background-color: #07080f;
+  background-image:
+    radial-gradient(ellipse 80% 60% at 65% 35%, rgba(0, 82, 255, 0.14) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 40% at 20% 75%, rgba(0, 82, 255, 0.08) 0%, transparent 60%),
+    url("data:image/svg+xml,%3Csvg width='64' height='64' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M 64 0 L 0 0 0 64' fill='none' stroke='rgba(255,255,255,0.035)' stroke-width='1'/%3E%3C/svg%3E");
+  background-size: 100% 100%, 100% 100%, 64px 64px;
 }
 
 .auth-modal {
