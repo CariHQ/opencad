@@ -1,7 +1,10 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { useDocumentStore } from '../stores/documentStore';
 import { type ElementSchema } from '@opencad/document';
+import { BUILT_IN_MATERIALS } from '../lib/materials';
+import { moveElementProps } from '../utils/elementMath';
 
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
@@ -312,6 +315,12 @@ export function useThreeViewport() {
   const pickVec2Ref      = useRef(new THREE.Vector2());
   const materialCacheRef = useRef<Map<string, THREE.MeshStandardMaterial>>(new Map());
 
+  // TransformControls — 3D gizmo for move/rotate/scale of selected elements
+  const transformControlsRef = useRef<TransformControls | null>(null);
+  const tcDraggingRef        = useRef(false);
+  const tcElementIdRef       = useRef<string | null>(null);
+  const tcInitPosRef         = useRef<THREE.Vector3 | null>(null);
+
   const createMaterial = useCallback(
     (color: string, opacity = 0.8, roughness = 0.8, metalness = 0.0): THREE.MeshStandardMaterial => {
       const key = `${color}:${opacity}:${roughness}:${metalness}`;
@@ -336,16 +345,25 @@ export function useThreeViewport() {
       const props = element.properties as Record<string, { value: unknown }>;
       const pv = (key: string, fallback: number) =>
         typeof props[key]?.value === 'number' ? (props[key]!.value as number) : fallback;
-      const color = ELEMENT_COLORS[element.type] ?? '#8888aa';
-      const type  = element.type;
+      const type = element.type;
+
+      // Resolve applied material (overrides the type defaults when set)
+      const appliedMatName = props['Material']?.value as string | undefined;
+      const appliedMat = appliedMatName
+        ? BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName)
+        : undefined;
+
+      const color = appliedMat?.color ?? ELEMENT_COLORS[type] ?? '#8888aa';
+      const pbr   = appliedMat
+        ? { roughness: appliedMat.roughness, metalness: appliedMat.metalness }
+        : ELEMENT_MATERIAL_PROPS[type] ?? DEFAULT_MATERIAL_PROPS;
 
       let geometry: THREE.BufferGeometry;
       let posX = 0, posY = 0, posZ = 0, ry = 0;
 
       if (type === 'wall') {
         // Walls handled by buildWallMesh (supports openings)
-        const wp = ELEMENT_MATERIAL_PROPS['wall'] ?? DEFAULT_MATERIAL_PROPS;
-        return buildWallMesh(element, allElements, createMaterial(color, 0.85, wp.roughness, wp.metalness));
+        return buildWallMesh(element, allElements, createMaterial(color, 0.85, pbr.roughness, pbr.metalness));
       }
 
       if (type === 'annotation' || type === 'beam') {
@@ -395,7 +413,6 @@ export function useThreeViewport() {
         posX = bb.min.x + bw / 2; posY = 25; posZ = bb.min.y + bd / 2;
       }
 
-      const pbr     = ELEMENT_MATERIAL_PROPS[type] ?? DEFAULT_MATERIAL_PROPS;
       const opacity = type === 'window' ? 0.35 : type === 'space' ? 0.3 : 0.85;
       const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness);
       const mesh = new THREE.Mesh(geometry, material);
@@ -489,6 +506,9 @@ export function useThreeViewport() {
 
     // ── Add / update elements ──────────────────────────────────────────────
     for (const id of newIds) {
+      // Don't rebuild the mesh while TC is actively dragging it — let TC finish
+      if (tcDraggingRef.current && id === tcElementIdRef.current) continue;
+
       const element = docElements[id]!;
       const prev    = elementDataRef.current.get(id);
 
@@ -568,11 +588,23 @@ export function useThreeViewport() {
           sel.emissiveIntensity = 0.3;
           mesh.material = sel;
         } else {
-          const elType = (mesh.userData.elementType as string) || '';
-          mesh.material = createMaterial(
-            ELEMENT_COLORS[elType] ?? '#8888aa',
-            elType === 'space' ? 0.3 : 0.85
-          );
+          // Restore the mesh's own material, respecting any applied material property
+          const elType  = (mesh.userData.elementType as string) || '';
+          const elId    = (mesh.userData.elementId   as string) || '';
+          const freshEl = useDocumentStore.getState().document?.content.elements[elId];
+          const appliedMatName = freshEl
+            ? (freshEl.properties as Record<string, { value: unknown }>)['Material']?.value as string | undefined
+            : undefined;
+          const appliedMat = appliedMatName
+            ? BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName)
+            : undefined;
+          const restoreColor    = appliedMat?.color    ?? ELEMENT_COLORS[elType] ?? '#8888aa';
+          const restoreRoughness = appliedMat?.roughness ?? ELEMENT_MATERIAL_PROPS[elType]?.roughness ?? 0.8;
+          const restoreMetalness = appliedMat?.metalness ?? ELEMENT_MATERIAL_PROPS[elType]?.metalness ?? 0.0;
+          const restoreOpacity  = elType === 'window' ? 0.35 : elType === 'space' ? 0.3 : 0.85;
+          mesh.material = createMaterial(restoreColor, restoreOpacity, restoreRoughness, restoreMetalness);
+          // Reset the cached selection material so it re-clones with the updated color next time
+          mesh.userData.selectionMat = null;
         }
       };
 
@@ -584,6 +616,24 @@ export function useThreeViewport() {
         });
       }
     });
+
+    // Attach / detach TransformControls gizmo
+    const tc = transformControlsRef.current;
+    if (tc) {
+      if (selectedIds.length === 1) {
+        const obj = elementMeshesRef.current.get(selectedIds[0]!);
+        if (obj) {
+          tc.attach(obj);
+          tcElementIdRef.current = selectedIds[0]!;
+        } else {
+          tc.detach();
+          tcElementIdRef.current = null;
+        }
+      } else {
+        tc.detach();
+        tcElementIdRef.current = null;
+      }
+    }
 
     needsRenderRef.current = true;
   }, [selectedIds, createMaterial]);
@@ -615,6 +665,23 @@ export function useThreeViewport() {
         case '0': zoomToFit(); break;
         case '+': case '=': zoomIn();  break;
         case '-':            zoomOut(); break;
+        case 'g': case 'G': {
+          // Cycle TransformControls mode: translate → rotate → scale
+          const tc = transformControlsRef.current;
+          if (tc) {
+            const modes = ['translate', 'rotate', 'scale'] as const;
+            const idx = modes.indexOf(tc.mode as (typeof modes)[number]);
+            tc.setMode(modes[(idx + 1) % modes.length]!);
+            needsRenderRef.current = true;
+          }
+          break;
+        }
+        case 'Escape': {
+          // Reset TC to translate mode on escape
+          const tc = transformControlsRef.current;
+          if (tc) { tc.setMode('translate'); needsRenderRef.current = true; }
+          break;
+        }
       }
     },
     [setViewPreset, zoomIn, zoomOut, zoomToFit]
@@ -629,6 +696,10 @@ export function useThreeViewport() {
       if (!container) return;
 
       if (event.button === 0) {
+        // Let TransformControls handle drags on its own gizmo handles
+        const tc = transformControlsRef.current;
+        if (tc && tc.axis !== null) return;
+
         const { camera, scene, renderer } = stateRef.current;
         if (!camera || !scene || !renderer) return;
 
@@ -787,6 +858,52 @@ export function useThreeViewport() {
       rendererReadyRef.current  = true;
       needsRenderRef.current    = true; // render all meshes already in the scene
 
+      // ── TransformControls gizmo ──────────────────────────────────────────
+      const tc = new TransformControls(camera, renderer.domElement);
+      tc.setSize(0.8);
+
+      tc.addEventListener('dragging-changed', (event) => {
+        const isNowDragging = (event as unknown as { value: boolean }).value;
+        tcDraggingRef.current = isNowDragging;
+
+        if (isNowDragging) {
+          // Capture position before the drag so we can compute delta on finish
+          const obj = tc.object;
+          if (obj) tcInitPosRef.current = obj.position.clone();
+        } else {
+          // Drag finished — commit the displacement to the document
+          const id   = tcElementIdRef.current;
+          const obj  = tc.object;
+          const init = tcInitPosRef.current;
+          if (id && obj && init) {
+            const dx = obj.position.x - init.x;
+            const dz = obj.position.z - init.z; // 3D z == document y
+            if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
+              const st = useDocumentStore.getState();
+              const el = st.document?.content.elements[id];
+              if (el) {
+                const propsUpdate = moveElementProps(el, dx, dz);
+                if (Object.keys(propsUpdate).length > 0) {
+                  st.updateElement(id, {
+                    properties: { ...el.properties, ...propsUpdate },
+                  });
+                  st.pushHistory('Move element');
+                }
+              }
+            }
+          }
+          tcInitPosRef.current = null;
+          // Detach so updateSelection re-attaches to the freshly rebuilt mesh
+          tc.detach();
+          tcElementIdRef.current = null;
+        }
+      });
+
+      tc.addEventListener('change', () => { needsRenderRef.current = true; });
+
+      scene.add(tc as unknown as THREE.Object3D);
+      transformControlsRef.current = tc;
+
       const animate = () => {
         if (!rendererReadyRef.current) return;
         animationFrameRef.current = requestAnimationFrame(animate);
@@ -829,6 +946,10 @@ export function useThreeViewport() {
       container.removeEventListener('wheel',       handleWheel);
       container.removeEventListener('contextmenu', handleContextMenu);
       window.removeEventListener('keydown', handleKeyDown);
+      if (transformControlsRef.current) {
+        transformControlsRef.current.dispose();
+        transformControlsRef.current = null;
+      }
       const { renderer } = stateRef.current;
       if (renderer) {
         renderer.dispose();
