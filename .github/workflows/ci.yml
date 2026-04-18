@@ -50,8 +50,8 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           WASM_BINDGEN_VERSION="0.2.93"
-          curl -sSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz --strip-components=1 -C /tmp
+          curl -sSL -o /tmp/wasm-bindgen.tar.gz "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/wasm-bindgen.tar.gz --strip-components=1 -C /tmp
           sudo mv /tmp/wasm-bindgen /usr/local/bin/wasm-bindgen
 
       - name: Install dependencies
@@ -93,8 +93,8 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           WASM_BINDGEN_VERSION="0.2.93"
-          curl -sSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz --strip-components=1 -C /tmp
+          curl -sSL -o /tmp/wasm-bindgen.tar.gz "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/wasm-bindgen.tar.gz --strip-components=1 -C /tmp
           sudo mv /tmp/wasm-bindgen /usr/local/bin/wasm-bindgen
 
       - name: Install dependencies
@@ -144,8 +144,8 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           WASM_BINDGEN_VERSION="0.2.93"
-          curl -sSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz --strip-components=1 -C /tmp
+          curl -sSL -o /tmp/wasm-bindgen.tar.gz "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/wasm-bindgen.tar.gz --strip-components=1 -C /tmp
           sudo mv /tmp/wasm-bindgen /usr/local/bin/wasm-bindgen
 
       - name: Install system dependencies (Tauri)
@@ -200,8 +200,8 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           WASM_BINDGEN_VERSION="0.2.93"
-          curl -sSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz --strip-components=1 -C /tmp
+          curl -sSL -o /tmp/wasm-bindgen.tar.gz "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/wasm-bindgen.tar.gz --strip-components=1 -C /tmp
           sudo mv /tmp/wasm-bindgen /usr/local/bin/wasm-bindgen
 
       - name: Install dependencies
@@ -261,8 +261,8 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           WASM_BINDGEN_VERSION="0.2.93"
-          curl -sSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz --strip-components=1 -C /tmp
+          curl -sSL -o /tmp/wasm-bindgen.tar.gz "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/wasm-bindgen.tar.gz --strip-components=1 -C /tmp
           sudo mv /tmp/wasm-bindgen /usr/local/bin/wasm-bindgen
 
       - name: Install dependencies
@@ -318,8 +318,8 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           WASM_BINDGEN_VERSION="0.2.93"
-          curl -sSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz --strip-components=1 -C /tmp
+          curl -sSL -o /tmp/wasm-bindgen.tar.gz "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/wasm-bindgen.tar.gz --strip-components=1 -C /tmp
           sudo mv /tmp/wasm-bindgen /usr/local/bin/wasm-bindgen
 
       - name: Install dependencies
@@ -382,8 +382,8 @@ jobs:
         run: |
           curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
           WASM_BINDGEN_VERSION="0.2.93"
-          curl -sSL "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz" \
-            | tar -xz --strip-components=1 -C /tmp
+          curl -sSL -o /tmp/wasm-bindgen.tar.gz "https://github.com/rustwasm/wasm-bindgen/releases/download/${WASM_BINDGEN_VERSION}/wasm-bindgen-${WASM_BINDGEN_VERSION}-x86_64-unknown-linux-musl.tar.gz"
+          tar -xzf /tmp/wasm-bindgen.tar.gz --strip-components=1 -C /tmp
           sudo mv /tmp/wasm-bindgen /usr/local/bin/wasm-bindgen
 
       - name: Install system dependencies (Tauri)
