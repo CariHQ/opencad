@@ -15,16 +15,16 @@ const LIGHT_THEME = {
 };
 
 const DARK_THEME = {
-  background: '#2c2c2c',
-  grid: '#383838',
-  gridMajor: '#444444',
-  axis: '#555555',
-  element: '#a0a0a0',
-  elementFill: 'rgba(160, 160, 160, 0.1)',
+  background: '#1a1b1f',
+  grid: '#25262c',
+  gridMajor: '#2e2f36',
+  axis: '#3a3b44',
+  element: '#9899aa',
+  elementFill: 'rgba(152, 153, 170, 0.08)',
   selected: '#18a0fb',
-  selectedFill: 'rgba(24, 160, 251, 0.2)',
-  accent: '#4f46e5',
-  snap: '#4f46e5',
+  selectedFill: 'rgba(24, 160, 251, 0.15)',
+  accent: '#18a0fb',
+  snap: '#18a0fb',
 };
 
 const getTheme = () => {

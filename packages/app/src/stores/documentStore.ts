@@ -109,12 +109,14 @@ export const useDocumentStore = create<DocumentState>()(
           const saved = localStorage.getItem('opencad-document');
           if (saved) {
             const docData = JSON.parse(saved);
-            // Guard against pre-refactor schema (no content/organization groups)
-            if (docData?.content && docData?.organization) {
+            // Only restore if the saved doc belongs to THIS project and has valid schema
+            const savedProjectId = docData?.id as string | undefined;
+            if (docData?.content && docData?.organization && savedProjectId === projectId) {
               model = new DocumentModel(projectId, userId);
               model.loadDocument(docData);
             } else {
-              localStorage.removeItem('opencad-document');
+              // Different project or stale schema — start fresh, don't clear storage
+              // (other projects' saves should not be wiped)
               model = new DocumentModel(projectId, userId);
             }
           } else {

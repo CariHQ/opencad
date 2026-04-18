@@ -12,10 +12,10 @@ const LIGHT_THEME = {
 };
 
 const DARK_THEME = {
-  sceneBackground: 0x1a1a2e,
-  gridColor: 0x444466,
-  gridColor2: 0x333355,
-  selectionEmissive: 0x1a1a2e,
+  sceneBackground: 0x1a1b1f,
+  gridColor: 0x2e2f38,
+  gridColor2: 0x232429,
+  selectionEmissive: 0x0066cc,
 };
 
 const getTheme = () => {
