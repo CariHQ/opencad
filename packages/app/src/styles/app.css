@@ -653,10 +653,13 @@ input, textarea, [contenteditable], .selectable {
   display: flex;
   align-items: center;
   gap: 4px;
+  min-width: 0;
+  width: 100%;
 }
 
 .level-name-input {
   flex: 1;
+  min-width: 0;
   height: 26px;
   padding: 0 8px;
   background: var(--bg-primary);
@@ -674,7 +677,9 @@ input, textarea, [contenteditable], .selectable {
 }
 
 .level-elev-input {
-  width: 64px;
+  width: 44px;
+  min-width: 32px;
+  flex-shrink: 1;
   height: 26px;
   padding: 0 4px;
   background: var(--bg-primary);
