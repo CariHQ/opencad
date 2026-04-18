@@ -12,6 +12,11 @@ import {
   crdtApplyProperty,
   crdtDeleteElement,
   crdtFlushOfflineQueue,
+  connectToProject,
+  setOnDocumentSync,
+  setOnRemoteDelta,
+  isApplyingRemote,
+  type RemoteDelta,
 } from '../lib/syncAdapter';
 import { type RoleId } from '../config/roles';
 
@@ -121,8 +126,6 @@ export const useDocumentStore = create<DocumentState>()(
               model = new DocumentModel(projectId, userId);
               model.loadDocument(docData);
             } else {
-              // Different project or stale schema — start fresh, don't clear storage
-              // (other projects' saves should not be wiped)
               model = new DocumentModel(projectId, userId);
             }
           } else {
@@ -142,6 +145,9 @@ export const useDocumentStore = create<DocumentState>()(
           canUndo: false,
           canRedo: false,
         });
+
+        // Connect to the real-time sync relay for this project.
+        connectToProject(projectId);
       },
 
       loadProject: (projectId, userId) => {
@@ -157,6 +163,9 @@ export const useDocumentStore = create<DocumentState>()(
           canUndo: false,
           canRedo: false,
         });
+
+        // Connect to the real-time sync relay for this project.
+        connectToProject(projectId);
       },
 
       setSelectedIds: (ids) => set({ selectedIds: ids }),
@@ -226,8 +235,8 @@ export const useDocumentStore = create<DocumentState>()(
 
         const newDoc = { ...model.documentData };
         const element = newDoc.content.elements[elementId];
-        // Record in Rust CRDT for collaborative sync
-        if (element) crdtApplyLocal(elementId, element);
+        // Record in Rust CRDT for collaborative sync (skip when replaying remote)
+        if (element && !isApplyingRemote()) crdtApplyLocal(elementId, element);
 
         const newDocJson = JSON.stringify(newDoc);
         set({
@@ -249,9 +258,11 @@ export const useDocumentStore = create<DocumentState>()(
         const element = model.getElementById(elementId);
         if (element) {
           Object.assign(element, updates);
-          // Record each property change as a property-level CRDT op
-          for (const [prop, val] of Object.entries(updates)) {
-            crdtApplyProperty(elementId, prop, val);
+          // Record each property change as a property-level CRDT op (skip when replaying remote)
+          if (!isApplyingRemote()) {
+            for (const [prop, val] of Object.entries(updates)) {
+              crdtApplyProperty(elementId, prop, val);
+            }
           }
           set({ document: { ...model.documentData } });
         }
@@ -262,8 +273,8 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model || !document) return;
 
         delete document.content.elements[elementId];
-        // Record tombstone in Rust CRDT
-        crdtDeleteElement(elementId);
+        // Record tombstone in Rust CRDT (skip when replaying remote)
+        if (!isApplyingRemote()) crdtDeleteElement(elementId);
         set({
           document: { ...document },
           lastSaved: Date.now(),
@@ -434,6 +445,52 @@ export const useDocumentStore = create<DocumentState>()(
     }
   )
 );
+
+// ── Rust CRDT remote callbacks ────────────────────────────────────────────────
+// Register once at module load time so no component needs to wire these up.
+// The callbacks apply incoming remote changes to Zustand WITHOUT re-emitting
+// to the CRDT (isApplyingRemote() guards that).
+
+setOnDocumentSync((data: string) => {
+  try {
+    const schema = JSON.parse(data) as DocumentSchema;
+    // Only load server state when the local document is empty (fresh join).
+    const { document } = useDocumentStore.getState();
+    const hasLocalContent = document && Object.keys(document.content?.elements ?? {}).length > 0;
+    if (!hasLocalContent) {
+      useDocumentStore.getState().loadDocumentSchema(schema);
+    }
+  } catch { /* ignore malformed sync payload */ }
+});
+
+setOnRemoteDelta((delta: RemoteDelta) => {
+  const store = useDocumentStore.getState();
+  const { document, model } = store;
+  if (!document) return;
+
+  if (delta.op === 'set') {
+    // Incoming element create or full replace.
+    const incoming = delta.value as Record<string, unknown>;
+    const existing = document.content.elements[delta.elementId];
+    if (existing) {
+      // Update in place.
+      store.updateElement(delta.elementId, incoming);
+    } else if (model && incoming.type && incoming.layerId) {
+      // New element — add directly to the document to preserve the remote ID.
+      document.content.elements[delta.elementId] = {
+        id: delta.elementId,
+        ...(incoming as object),
+      } as typeof existing;
+      useDocumentStore.setState({ document: { ...document } });
+    }
+  } else if (delta.op === 'setprop') {
+    // Property-level update.
+    store.updateElement(delta.elementId, { [delta.prop]: delta.value });
+  } else if (delta.op === 'delete') {
+    // Remote delete.
+    store.deleteElement(delta.elementId);
+  }
+});
 
 // ── Auto-save subscription ────────────────────────────────────────────────────
 // Saves to IndexedDB 2s after any document change. Runs outside React so it

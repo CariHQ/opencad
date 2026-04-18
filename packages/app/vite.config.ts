@@ -85,6 +85,19 @@ export default defineConfig({
   server: {
     port: 5173,
     strictPort: false,  // fall through to next port if 5173 is busy
+    proxy: {
+      // Proxy REST calls to the Rust server (port 3000 by default).
+      '/api': {
+        target: process.env['VITE_API_URL'] ?? 'http://localhost:3000',
+        changeOrigin: true,
+      },
+      // Proxy WebSocket upgrade to the same server.
+      '/ws': {
+        target: (process.env['VITE_API_URL'] ?? 'http://localhost:3000').replace(/^http/, 'ws'),
+        ws: true,
+        changeOrigin: true,
+      },
+    },
   },
   test: {
     globals: true,

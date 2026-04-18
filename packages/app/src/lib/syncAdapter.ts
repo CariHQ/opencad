@@ -1,11 +1,6 @@
 /**
  * syncAdapter — Rust WASM CRDT integration layer.
  *
- * This module owns the singleton DocumentCrdt instance and exposes thin
- * wrappers that documentStore calls on every mutation.  The adapter queues
- * outgoing deltas for broadcast and is ready to connect to a WebSocket relay
- * when one is configured.
- *
  * Architecture
  * ────────────
  *  documentStore mutation
@@ -14,16 +9,40 @@
  *  crdtApplyLocal / crdtApplyProperty / crdtDeleteElement
  *       │  returns delta JSON
  *       ▼
- *  _outbox (in-memory queue)  →  persisted to IndexedDB via _persistQueue()
+ *  _enqueue → localStorage + immediate WS send if connected
  *       │
  *       ▼
- *  WebSocket relay  (no-op until WS_URL env var is set)
+ *  WebSocket relay  /ws/:projectId?token=...
  *       │
- *       ▼
- *  remote peers call mergeRemote() via incoming WS messages
+ *       ▼  incoming messages
+ *  ┌────────────────────────────────────────────┐
+ *  │ type:"sync"   → onDocumentSync callback     │
+ *  │ type:"delta"  → crdtMergeRemote + onRemote  │
+ *  │ type:"presence" → crdt.merge_presence       │
+ *  └────────────────────────────────────────────┘
  */
 
-// ── Types mirroring the WASM DocumentCrdt API ─────────────────────────────────
+// ── CRDT delta wire format (mirrors Rust Delta enum) ──────────────────────────
+
+interface LwwEntry {
+  value: unknown;
+  lamport: number;
+  peer_id: string;
+}
+
+type CrdtDelta =
+  | { op: 'Set';     element_id: string; entry: LwwEntry }
+  | { op: 'SetProp'; element_id: string; prop: string; entry: LwwEntry }
+  | { op: 'Delete';  element_id: string; lamport: number; peer_id: string }
+  | { op: 'Batch';   deltas: CrdtDelta[] };
+
+/** Decoded form passed to the onRemoteDelta callback. */
+export type RemoteDelta =
+  | { op: 'set';     elementId: string; value: unknown }
+  | { op: 'setprop'; elementId: string; prop: string; value: unknown }
+  | { op: 'delete';  elementId: string };
+
+// ── WASM DocumentCrdt type ────────────────────────────────────────────────────
 
 interface DocumentCrdtInstance {
   apply_local(element_id: string, value_json: string): string;
@@ -45,44 +64,105 @@ interface DocumentCrdtInstance {
 
 let _crdt: DocumentCrdtInstance | null = null;
 let _peerId = '';
-let _outbox: string[] = [];        // deltas waiting to be sent
+let _outbox: string[] = [];
 let _ws: WebSocket | null = null;
+let _wsProjectId = '';
+let _wsGetToken: (() => Promise<string | null>) | null = null;
+let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+/** When true, incoming-remote callbacks are suppressed to break echo loops. */
+let _applyingRemote = false;
 
-const QUEUE_IDB_KEY = 'crdt-delta-queue';
-const WS_URL: string = (import.meta.env['VITE_SYNC_WS_URL'] as string | undefined) ?? '';
+// Callbacks registered by documentStore (avoids circular import)
+let _onDocumentSync: ((data: string) => void) | null = null;
+let _onRemoteDelta: ((delta: RemoteDelta) => void) | null = null;
+
+const QUEUE_LS_KEY = 'crdt-delta-queue';
+
+// ── Callback registration ─────────────────────────────────────────────────────
+
+/**
+ * Register a callback that fires when the server sends a full document sync
+ * on initial WebSocket connection.
+ */
+export function setOnDocumentSync(fn: (data: string) => void): void {
+  _onDocumentSync = fn;
+}
+
+/**
+ * Register a callback that fires for each remote mutation received from a
+ * connected peer.  The callback should apply the change to the document store
+ * WITHOUT re-emitting to the CRDT (use `isApplyingRemote()` to guard).
+ */
+export function setOnRemoteDelta(fn: (delta: RemoteDelta) => void): void {
+  _onRemoteDelta = fn;
+}
+
+/**
+ * Returns true while a remote delta is being applied.
+ * documentStore uses this to skip re-broadcasting an incoming change.
+ */
+export function isApplyingRemote(): boolean {
+  return _applyingRemote;
+}
 
 // ── WASM initialisation ───────────────────────────────────────────────────────
 
 /**
  * Load the Rust CRDT WASM module and create the singleton DocumentCrdt.
  * Safe to call multiple times — subsequent calls are no-ops.
- *
- * @param peerId  Globally-unique client ID (defaults to a random UUID).
  */
 export async function initSyncCrdt(peerId?: string): Promise<void> {
   if (_crdt) return;
   _peerId = peerId ?? (typeof crypto !== 'undefined' ? crypto.randomUUID() : `peer-${Date.now()}`);
 
   try {
-    // Same pattern as useGeometryBuilder — indirect import to avoid bundler
-    // static analysis from choking on the WASM URL at build time.
+    // Indirect import so bundler static analysis doesn't choke on the WASM URL.
     const wasmPkg = '@opencad/sync-rs/pkg';
     type WasmMod = {
-      default: (input?: unknown) => Promise<void>;
+      default: (input?: unknown) => Promise<unknown>;
       DocumentCrdt: new (peerId: string) => DocumentCrdtInstance;
     };
     const mod = await (Function('s', 'return import(s)')(wasmPkg) as Promise<WasmMod>);
     await mod.default();
     _crdt = new mod.DocumentCrdt(_peerId);
 
-    // Restore any persisted offline queue
+    // Restore any deltas queued while offline before WASM was loaded.
     _outbox = _loadPersistedQueue();
-
-    // Connect WebSocket if a relay URL is configured
-    if (WS_URL) _connectWs();
   } catch (err) {
     console.warn('[sync] CRDT WASM failed to load — running without sync:', err);
   }
+}
+
+// ── Project connection ────────────────────────────────────────────────────────
+
+/**
+ * Connect (or reconnect) the WebSocket relay to a specific project room.
+ *
+ * Call this after `initSyncCrdt()` resolves and a project is opened.
+ * Safe to call multiple times — an existing connection is closed first.
+ *
+ * @param projectId  The project UUID.
+ * @param getToken   Optional async function returning a Firebase ID token.
+ *                   The token is appended as `?token=` for the auth middleware.
+ */
+export function connectToProject(
+  projectId: string,
+  getToken?: () => Promise<string | null>,
+): void {
+  // Close existing connection to the old project (if any).
+  if (_ws) {
+    _ws.onclose = null; // prevent auto-reconnect on intentional close
+    _ws.close();
+    _ws = null;
+  }
+  if (_reconnectTimer !== null) {
+    clearTimeout(_reconnectTimer);
+    _reconnectTimer = null;
+  }
+
+  _wsProjectId = projectId;
+  _wsGetToken = getToken ?? null;
+  void _openWs();
 }
 
 // ── Outgoing mutations ────────────────────────────────────────────────────────
@@ -93,7 +173,7 @@ export function crdtApplyLocal(elementId: string, value: unknown): void {
   try {
     const delta = _crdt.apply_local(elementId, JSON.stringify(value));
     _enqueue(delta);
-  } catch { /* ignore — CRDT errors must not break the main document path */ }
+  } catch { /* CRDT errors must never break the document write path */ }
 }
 
 /** Record a single property update (property-level LWW). */
@@ -126,7 +206,7 @@ export function crdtApplyBatch(batchJson: string): void {
   _crdt?.apply_batch(batchJson);
 }
 
-/** Full serialised state for sending to a newly connecting peer. */
+/** Full serialised state — send to a newly connecting peer. */
 export function crdtFullStateDelta(): string | null {
   return _crdt?.full_state_delta_json() ?? null;
 }
@@ -134,36 +214,28 @@ export function crdtFullStateDelta(): string | null {
 /** Merged element state as a parsed object, or null if CRDT not ready. */
 export function crdtGetState(): Record<string, unknown> | null {
   if (!_crdt) return null;
-  try {
-    return JSON.parse(_crdt.state_json()) as Record<string, unknown>;
-  } catch {
-    return null;
-  }
+  try { return JSON.parse(_crdt.state_json()) as Record<string, unknown>; }
+  catch { return null; }
 }
 
-/** Vector clock JSON for conflict detection. */
 export function crdtVectorClock(): string | null {
   return _crdt?.vector_clock() ?? null;
 }
 
-/** Number of live (non-deleted) elements tracked by the CRDT. */
 export function crdtElementCount(): number {
   return _crdt?.element_count() ?? 0;
 }
 
-/** Number of deltas waiting to be sent. */
 export function crdtOutboxSize(): number {
   return _outbox.length;
 }
 
-/** True once the WASM module has been loaded and the CRDT is ready. */
 export function crdtIsReady(): boolean {
   return _crdt !== null;
 }
 
 // ── Presence ──────────────────────────────────────────────────────────────────
 
-/** Broadcast local cursor position to peers. */
 export function crdtUpdatePresence(x: number, y: number, elementId = ''): void {
   if (!_crdt || !_ws || _ws.readyState !== WebSocket.OPEN) return;
   try {
@@ -172,22 +244,15 @@ export function crdtUpdatePresence(x: number, y: number, elementId = ''): void {
   } catch { /* ignore */ }
 }
 
-/** Current peer cursors as parsed JSON (for rendering collaborator cursors). */
 export function crdtCursors(): unknown {
   if (!_crdt) return {};
-  try {
-    return JSON.parse(_crdt.cursors_json());
-  } catch {
-    return {};
-  }
+  try { return JSON.parse(_crdt.cursors_json()); }
+  catch { return {}; }
 }
 
 // ── Offline flush ─────────────────────────────────────────────────────────────
 
-/**
- * Attempt to send all queued deltas over the WebSocket.
- * Call this when `isOnline` transitions false → true.
- */
+/** Send all queued deltas. Call when `isOnline` transitions false → true. */
 export function crdtFlushOfflineQueue(): void {
   if (!_ws || _ws.readyState !== WebSocket.OPEN || _outbox.length === 0) return;
   const batch = [..._outbox];
@@ -195,61 +260,143 @@ export function crdtFlushOfflineQueue(): void {
   _persistQueue([]);
   for (const delta of batch) {
     try { _ws.send(JSON.stringify({ type: 'delta', payload: delta })); }
-    catch { _outbox.unshift(delta); break; } // re-queue on send failure
+    catch { _outbox.unshift(delta); break; }
   }
 }
 
 // ── WebSocket transport ───────────────────────────────────────────────────────
 
-function _connectWs(): void {
-  if (!WS_URL) return;
+async function _openWs(): Promise<void> {
+  if (!_wsProjectId) return;
+
+  const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  let url = `${proto}//${window.location.host}/ws/${_wsProjectId}`;
+
+  if (_wsGetToken) {
+    try {
+      const token = await _wsGetToken();
+      if (token) url += `?token=${encodeURIComponent(token)}`;
+    } catch { /* proceed without token (dev mode) */ }
+  }
+
   try {
-    _ws = new WebSocket(WS_URL);
-    _ws.onopen = () => { crdtFlushOfflineQueue(); };
+    _ws = new WebSocket(url);
+
+    _ws.onopen = () => {
+      console.info(`[sync] connected to project ${_wsProjectId}`);
+      crdtFlushOfflineQueue();
+    };
+
     _ws.onmessage = (evt) => {
       try {
-        const msg = JSON.parse(evt.data as string) as { type: string; payload: string };
-        if (msg.type === 'delta') crdtMergeRemote(msg.payload);
-        else if (msg.type === 'batch') crdtApplyBatch(msg.payload);
-        else if (msg.type === 'presence' && _crdt) _crdt.merge_presence(msg.payload);
+        const msg = JSON.parse(evt.data as string) as {
+          type: string;
+          data?: string;
+          version?: number;
+          payload?: string;
+        };
+
+        if (msg.type === 'sync' && msg.data) {
+          // Initial full document sent by the server on connect.
+          _onDocumentSync?.(msg.data);
+          return;
+        }
+
+        if (msg.type === 'delta' && msg.payload) {
+          // Apply the CRDT delta, then notify the document store.
+          _handleRemoteDelta(msg.payload);
+          return;
+        }
+
+        if (msg.type === 'presence' && msg.payload && _crdt) {
+          _crdt.merge_presence(msg.payload);
+          return;
+        }
       } catch { /* ignore malformed messages */ }
     };
-    _ws.onclose = () => {
+
+    _ws.onclose = (evt) => {
       _ws = null;
-      // Reconnect after 5 s
-      setTimeout(_connectWs, 5000);
+      if (evt.code !== 1000 && _wsProjectId) {
+        // Not a clean close — schedule reconnect.
+        _reconnectTimer = setTimeout(() => { void _openWs(); }, 5000);
+      }
     };
+
     _ws.onerror = () => { _ws?.close(); };
+
   } catch {
     _ws = null;
   }
 }
 
-// ── Queue persistence (localStorage) ─────────────────────────────────────────
+function _handleRemoteDelta(payload: string): void {
+  // Apply to CRDT first (idempotent for own echoes).
+  crdtMergeRemote(payload);
+
+  // Parse to determine the operation and originating peer.
+  let delta: CrdtDelta;
+  try { delta = JSON.parse(payload) as CrdtDelta; }
+  catch { return; }
+
+  // Skip own echoes — the server broadcasts back to the sender too.
+  const originPeer =
+    delta.op === 'Delete' ? delta.peer_id :
+    delta.op === 'Batch'  ? null :
+    delta.entry.peer_id;
+  if (originPeer === _peerId) return;
+
+  // Translate to RemoteDelta and dispatch.
+  if (!_onRemoteDelta) return;
+  _applyingRemote = true;
+  try {
+    _dispatchDelta(delta);
+  } finally {
+    _applyingRemote = false;
+  }
+}
+
+function _dispatchDelta(delta: CrdtDelta): void {
+  if (!_onRemoteDelta) return;
+  switch (delta.op) {
+    case 'Set':
+      _onRemoteDelta({ op: 'set', elementId: delta.element_id, value: delta.entry.value });
+      break;
+    case 'SetProp':
+      _onRemoteDelta({ op: 'setprop', elementId: delta.element_id, prop: delta.prop, value: delta.entry.value });
+      break;
+    case 'Delete':
+      _onRemoteDelta({ op: 'delete', elementId: delta.element_id });
+      break;
+    case 'Batch':
+      for (const d of delta.deltas) _dispatchDelta(d);
+      break;
+  }
+}
+
+// ── Queue persistence ─────────────────────────────────────────────────────────
 
 function _enqueue(delta: string): void {
   _outbox.push(delta);
-  if (_outbox.length > 500) _outbox.shift(); // cap to prevent unbounded growth
+  if (_outbox.length > 500) _outbox.shift();
   _persistQueue(_outbox);
-  // Attempt immediate send if connected
   if (_ws?.readyState === WebSocket.OPEN) {
-    try { _ws.send(JSON.stringify({ type: 'delta', payload: delta })); _outbox.pop(); }
-    catch { /* stay queued */ }
+    try {
+      _ws.send(JSON.stringify({ type: 'delta', payload: delta }));
+      _outbox.pop();
+      _persistQueue(_outbox);
+    } catch { /* stay queued */ }
   }
 }
 
 function _persistQueue(queue: string[]): void {
-  try {
-    localStorage.setItem(QUEUE_IDB_KEY, JSON.stringify(queue));
-  } catch { /* ignore storage quota errors */ }
+  try { localStorage.setItem(QUEUE_LS_KEY, JSON.stringify(queue)); }
+  catch { /* ignore quota errors */ }
 }
 
 function _loadPersistedQueue(): string[] {
   try {
-    const raw = localStorage.getItem(QUEUE_IDB_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) as string[];
-  } catch {
-    return [];
-  }
+    const raw = localStorage.getItem(QUEUE_LS_KEY);
+    return raw ? (JSON.parse(raw) as string[]) : [];
+  } catch { return []; }
 }
