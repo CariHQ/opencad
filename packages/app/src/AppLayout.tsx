@@ -55,7 +55,7 @@ import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import { MobileViewer } from './components/MobileViewer';
 import { FeedbackWidget } from './components/FeedbackWidget';
-import { isTauri, openFile, saveFile, saveFileDialog, openFileDialog, onFileDrop } from './hooks/useTauri';
+import { isTauri, openFile, saveFile, saveFileDialog, openFileDialog, onFileDrop, tauriToggleMaximize } from './hooks/useTauri';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -225,7 +225,23 @@ export function AppLayout() {
   return (
     <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
       {chromeVisible && (
-        <header className={`app-toolbar${isTauri() && navigator.platform.includes('Mac') ? ' tauri-macos' : ''}`}>
+        <header
+          className={`app-toolbar${isTauri() && navigator.platform.includes('Mac') ? ' tauri-macos' : ''}`}
+          onDoubleClick={(e) => {
+            // Only trigger on the drag region — not on buttons/inputs
+            if ((e.target as HTMLElement).closest('button, a, input, select')) return;
+            if (isTauri()) {
+              tauriToggleMaximize();
+            } else {
+              // Browser: toggle fullscreen
+              if (!document.fullscreenElement) {
+                void document.documentElement.requestFullscreen().catch(() => {});
+              } else {
+                void document.exitFullscreen().catch(() => {});
+              }
+            }
+          }}
+        >
           <div className="toolbar-left">
             <button className={`toolbar-btn panel-toggle-btn${leftVisible ? ' panel-on' : ''}`} onClick={() => setShowLeftPanel((v) => !v)} title="Toggle navigator (⌘[)">
               <PanelLeft size={16} strokeWidth={2} color={leftVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')} />

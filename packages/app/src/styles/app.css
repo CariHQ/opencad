@@ -77,6 +77,18 @@ body {
   flex-direction: column;
   height: 100vh;
   width: 100vw;
+  /* Prevent accidental text selection across the UI chrome */
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Re-enable text selection in actual text inputs and editable areas */
+.app-container input,
+.app-container textarea,
+.app-container [contenteditable],
+.app-container .selectable {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 /* Toolbar */
@@ -1160,9 +1172,8 @@ body {
 }
 
 .view-toggle:hover {
-  background: var(--accent-primary);
   border-color: var(--accent-primary);
-  color: white;
+  color: var(--accent-primary);
 }
 
 .active-tool-indicator {
@@ -1192,15 +1203,15 @@ body {
 }
 
 .viewport-control-btn:hover {
-  background: var(--accent-primary);
+  background: var(--bg-elevated);
   border-color: var(--accent-primary);
-  color: white;
+  color: var(--text-primary);
 }
 
 .viewport-control-btn.active {
-  background: var(--accent-primary);
+  background: var(--bg-elevated);
   border-color: var(--accent-primary);
-  color: white;
+  color: var(--accent-primary);
 }
 
 /* Modal */

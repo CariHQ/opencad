@@ -32,6 +32,14 @@ export function tauriStartDragging(): void {
   window.__TAURI__!.core.invoke('plugin:window|start_dragging').catch(() => {});
 }
 
+/**
+ * Toggle window maximized state (Tauri only).
+ */
+export function tauriToggleMaximize(): void {
+  if (!isTauri()) return;
+  window.__TAURI__!.core.invoke('plugin:window|toggle_maximize').catch(() => {});
+}
+
 async function invoke<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
   if (!isTauri()) {
     throw new Error(`Tauri not available (running in browser). Command: ${cmd}`);
