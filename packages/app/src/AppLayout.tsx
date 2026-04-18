@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { FolderOpen, FileDown, Bot, Plus, Sun, Moon, PanelLeft, PanelRight } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -19,12 +19,20 @@ import { WallToolPanel } from './components/WallToolPanel';
 import { SlabToolPanel } from './components/SlabToolPanel';
 import { DoorWindowPanel } from './components/DoorWindowPanel';
 import { useUndoRedo } from './hooks/useUndoRedo';
+import {
+  isTauri,
+  openFile,
+  saveFile,
+  saveFileDialog,
+  openFileDialog,
+  onFileDrop,
+} from './hooks/useTauri';
 import './styles/app.css';
 
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, undo, redo, canUndo, canRedo } = useDocumentStore();
+  const { document: doc, initProject, activeTool, undo, redo, canUndo, canRedo, loadDocumentSchema } = useDocumentStore();
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
@@ -44,6 +52,26 @@ export function AppLayout() {
   const [showRightPanel, setShowRightPanel] = useLocalStorage('opencad-showRightPanel', true);
   const [focusMode, setFocusMode] = useState(false);
   const [showModal, setShowModal] = useState<'import' | 'export' | null>(null);
+  const [currentFilePath, setCurrentFilePath] = useLocalStorage<string | null>(
+    'opencad-currentFilePath',
+    null
+  );
+
+  const handleNativeSave = useCallback(async (): Promise<void> => {
+    if (!doc) return;
+    const path = currentFilePath ?? await saveFileDialog(`${(doc as { name?: string }).name ?? 'untitled'}.opencad`);
+    if (!path) return;
+    setCurrentFilePath(path);
+    await saveFile(path, JSON.stringify(doc));
+  }, [doc, currentFilePath, setCurrentFilePath]);
+
+  const handleNativeOpen = useCallback(async (): Promise<void> => {
+    const path = await openFileDialog();
+    if (!path) return;
+    const schema = await openFile(path);
+    loadDocumentSchema(schema);
+    setCurrentFilePath(path);
+  }, [loadDocumentSchema, setCurrentFilePath]);
 
   const leftVisible = showLeftPanel && !focusMode;
   const rightVisible = showRightPanel && !focusMode;
@@ -73,6 +101,20 @@ export function AppLayout() {
     }
   }, [doc, selectedLevel, setSelectedLevel]);
 
+  // T-DSK-005: OS file-drop handler
+  useEffect(() => {
+    if (!isTauri()) return;
+    const unlisten = onFileDrop((paths) => {
+      const first = paths[0];
+      if (!first) return;
+      void openFile(first).then((schema) => {
+        loadDocumentSchema(schema);
+        setCurrentFilePath(first);
+      }).catch(() => {});
+    });
+    return unlisten;
+  }, [loadDocumentSchema, setCurrentFilePath]);
+
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
@@ -90,10 +132,18 @@ export function AppLayout() {
         e.preventDefault();
         setShowRightPanel((v) => !v);
       }
+      if ((e.metaKey || e.ctrlKey) && e.key === 's' && isTauri()) {
+        e.preventDefault();
+        void handleNativeSave();
+      }
+      if ((e.metaKey || e.ctrlKey) && e.key === 'o' && isTauri()) {
+        e.preventDefault();
+        void handleNativeOpen();
+      }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [setShowLeftPanel, setShowRightPanel]);
+  }, [setShowLeftPanel, setShowRightPanel, handleNativeSave, handleNativeOpen]);
 
   const toggleAIChat = () => setShowAIChat(!showAIChat);
 
@@ -148,8 +198,8 @@ export function AppLayout() {
             </button>
             <button
               className="toolbar-btn"
-              onClick={() => setShowModal('import')}
-              title="Import IFC"
+              onClick={isTauri() ? () => void handleNativeOpen() : () => setShowModal('import')}
+              title={isTauri() ? 'Open file (⌘O)' : 'Import IFC'}
             >
               <span className="tool-icon">
                 <FolderOpen size={15} />
@@ -157,8 +207,8 @@ export function AppLayout() {
             </button>
             <button
               className="toolbar-btn"
-              onClick={() => setShowModal('export')}
-              title="Export IFC"
+              onClick={isTauri() ? () => void handleNativeSave() : () => setShowModal('export')}
+              title={isTauri() ? 'Save file (⌘S)' : 'Export IFC'}
             >
               <span className="tool-icon">
                 <FileDown size={15} />
