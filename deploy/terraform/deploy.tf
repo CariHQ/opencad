@@ -9,6 +9,15 @@ locals {
     "privacy.html" = "${var.landing_dir}/privacy.html"
     "terms.html"   = "${var.landing_dir}/terms.html"
   }
+
+  # Role-specific landing pages under /for/<role>/
+  landing_for_files = {
+    "for/architects/index.html"          = "${var.landing_dir}/for/architects/index.html"
+    "for/structural-engineers/index.html" = "${var.landing_dir}/for/structural-engineers/index.html"
+    "for/mep-engineers/index.html"       = "${var.landing_dir}/for/mep-engineers/index.html"
+    "for/contractors/index.html"         = "${var.landing_dir}/for/contractors/index.html"
+    "for/project-owners/index.html"      = "${var.landing_dir}/for/project-owners/index.html"
+  }
 }
 
 # Landing page files — uploaded individually so Cache-Control can be set.
@@ -51,6 +60,22 @@ resource "null_resource" "deploy_landing" {
             --content-type="text/html; charset=utf-8"
         fi
       done
+
+      # Upload role-specific landing pages (/for/<role>/)
+      for role in architects structural-engineers mep-engineers contractors project-owners; do
+        src="${var.landing_dir}/for/$role/index.html"
+        if [ -f "$src" ]; then
+          gcloud storage cp "$src" "gs://$BUCKET/for/$role/index.html" \
+            --cache-control="no-cache, no-store" \
+            --content-type="text/html; charset=utf-8"
+        fi
+      done
+
+      # Upload OG social images
+      if ls ${var.landing_dir}/og*.png 2>/dev/null | head -1 | grep -q .; then
+        gcloud storage cp "${var.landing_dir}/og*.png" "gs://$BUCKET/" \
+          --cache-control="public, max-age=604800"
+      fi
 
       # Upload screenshots if they exist
       if ls ${var.landing_dir}/screenshots/*.png 2>/dev/null | head -1 | grep -q .; then
