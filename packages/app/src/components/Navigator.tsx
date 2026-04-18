@@ -22,7 +22,7 @@ import {
 import { useDocumentStore } from '../stores/documentStore';
 
 export function Navigator() {
-  const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer } = useDocumentStore();
+  const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer, renameProject } = useDocumentStore();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     views: true,
     levels: true,
@@ -31,9 +31,22 @@ export function Navigator() {
   });
   const [expandedLayers, setExpandedLayers] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
+  const [editingName, setEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState('');
 
   const toggleExpanded = (id: string) => {
     setExpanded((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const startEditingName = () => {
+    setNameInput(doc?.name ?? 'Untitled Project');
+    setEditingName(true);
+  };
+
+  const commitName = () => {
+    const trimmed = nameInput.trim();
+    if (trimmed) renameProject(trimmed);
+    setEditingName(false);
   };
 
   const levels = doc?.organization.levels ? Object.values(doc.organization.levels) : [];
@@ -70,6 +83,23 @@ export function Navigator() {
   return (
     <div className="navigator">
       <div className="navigator-header">
+        {editingName ? (
+          <input
+            className="project-name-input"
+            value={nameInput}
+            autoFocus
+            onChange={(e) => setNameInput(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitName();
+              if (e.key === 'Escape') setEditingName(false);
+            }}
+          />
+        ) : (
+          <span className="navigator-project-name" title="Double-click to rename" onDoubleClick={startEditingName}>
+            {doc?.name ?? 'Untitled Project'}
+          </span>
+        )}
         <span className="navigator-title">Navigator</span>
       </div>
 

@@ -12,7 +12,6 @@ import { LayersPanel } from './components/LayerPanel';
 import { PropertiesPanel } from './components/PropertiesPanel';
 import { StatusBar } from './components/StatusBar';
 import { AIChatPanel } from './components/AIChatPanel';
-import { LevelSelector } from './components/LevelSelector';
 import { LevelManager } from './components/LevelManager';
 import { ImportExportModal } from './components/ImportExportModal';
 import { ColumnBeamPanel } from './components/ColumnBeamPanel';
@@ -300,11 +299,6 @@ export function AppLayout() {
             <div className="viewport-wrapper">
               <SplitViewport viewType={activeView} />
               <PresenceOverlay collaborators={[]} />
-              {chromeVisible && (
-                <div className="floating-level-selector">
-                  <LevelSelector levels={doc?.organization.levels || {}} selectedLevel={selectedLevel} onSelectLevel={setSelectedLevel} />
-                </div>
-              )}
               {(activeTool === 'door' || activeTool === 'window') && (
                 <div className="floating-placement-panel">
                   <PlacementPanel elementType={activeTool as 'door' | 'window'} onClose={() => setActiveTool('select')} />

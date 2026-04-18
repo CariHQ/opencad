@@ -279,8 +279,11 @@ body {
 }
 
 .navigator-header {
-  padding: 12px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .navigator-title {
@@ -476,16 +479,25 @@ body {
   position: relative;
 }
 
-/* Thin left-edge accent bar shows the active tool without a gray background */
-.tool-btn.active::before {
+/* Symmetric accent bars on both sides of the active tool */
+.tool-btn.active::before,
+.tool-btn.active::after {
   content: '';
   position: absolute;
-  left: 0;
   top: 25%;
   height: 50%;
   width: 2px;
   background: var(--accent-primary);
+}
+
+.tool-btn.active::before {
+  left: 0;
   border-radius: 0 2px 2px 0;
+}
+
+.tool-btn.active::after {
+  right: 0;
+  border-radius: 2px 0 0 2px;
 }
 
 /* Main Viewport */
@@ -2589,7 +2601,7 @@ body {
 
 .split-viewport-layout-picker {
   position: absolute;
-  bottom: 40px;
+  bottom: 8px;
   right: 8px;
   z-index: 30;
   display: flex;
@@ -2905,5 +2917,338 @@ body {
   background: rgba(13,153,255,0.1);
   color: var(--accent-primary);
   border-color: rgba(13,153,255,0.25);
+}
+
+/* ── Project name in Navigator ──────────────────────────────── */
+.navigator-project-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
+}
+
+.navigator-project-name:hover {
+  background: var(--bg-tertiary);
+}
+
+.project-name-input {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--accent-primary);
+  border-radius: 3px;
+  padding: 2px 6px;
+  outline: none;
+  width: 100%;
+  font-family: inherit;
+}
+
+/* ── Material Library ───────────────────────────────────────── */
+.material-library {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.material-selection-status {
+  padding: 6px 12px;
+  font-size: 11px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+}
+
+.material-status-hint { color: var(--text-muted); }
+.material-status-ready { color: var(--text-secondary); }
+.material-status-success { color: var(--accent-success); font-weight: 500; }
+
+.material-library-controls {
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.material-search {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.material-search:focus {
+  border-color: var(--accent-primary);
+}
+
+.material-category-select {
+  width: 100%;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+}
+
+.material-category-select:focus {
+  border-color: var(--accent-primary);
+}
+
+.material-grid {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 0;
+}
+
+.material-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.1s;
+}
+
+.material-card:hover {
+  background: var(--bg-tertiary);
+}
+
+.material-card--active {
+  background: rgba(13, 153, 255, 0.06);
+}
+
+.material-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  flex-shrink: 0;
+  border: 1px solid rgba(0,0,0,0.1);
+}
+
+.material-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.material-name {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.material-category-tag {
+  font-size: 10px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.material-roughness,
+.material-cost {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.btn-select-material {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.btn-select-material:hover:not(:disabled) {
+  background: var(--accent-primary);
+  color: #fff;
+  border-color: var(--accent-primary);
+}
+
+.btn-select-material.applied {
+  background: var(--accent-success);
+  color: #fff;
+  border-color: var(--accent-success);
+}
+
+.btn-select-material:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.material-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.material-library-footer {
+  padding: 8px 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* ── Schedule Panel ─────────────────────────────────────────── */
+.schedule-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.schedule-controls {
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  flex-wrap: wrap;
+}
+
+.schedule-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+.schedule-type-select {
+  flex: 1;
+  min-width: 80px;
+  padding: 5px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+  outline: none;
+}
+
+.schedule-qty-summary {
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-tertiary);
+}
+
+.schedule-qty-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.schedule-qty-table th {
+  text-align: left;
+  padding: 4px 6px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.schedule-qty-table td {
+  padding: 4px 6px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.schedule-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.schedule-table-wrapper {
+  flex: 1;
+  overflow: auto;
+}
+
+.schedule-total {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+  padding: 6px 8px;
+}
+
+/* ── Quantity Takeoff Tab ───────────────────────────────────── */
+.quantity-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.quantity-empty {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.quantity-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.quantity-table th {
+  text-align: left;
+  padding: 6px 8px;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.quantity-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-primary);
+}
+
+.quantity-table tr:last-child td {
+  border-bottom: none;
 }
 

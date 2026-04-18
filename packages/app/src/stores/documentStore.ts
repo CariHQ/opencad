@@ -72,6 +72,7 @@ interface DocumentState {
   updateLevel: (levelId: string, updates: { name?: string; elevation?: number; height?: number }) => void;
   deleteLevel: (levelId: string) => void;
   renameLevel: (levelId: string, name: string) => void;
+  renameProject: (name: string) => void;
 }
 
 const MAX_HISTORY = 50;
@@ -395,6 +396,14 @@ export const useDocumentStore = create<DocumentState>()(
         const level = model.documentData.organization.levels[levelId];
         if (!level) return;
         level.name = name;
+        model.documentData.metadata.updatedAt = Date.now();
+        set({ document: { ...model.documentData } });
+      },
+
+      renameProject: (name) => {
+        const { model } = get();
+        if (!model) return;
+        model.documentData.name = name;
         model.documentData.metadata.updatedAt = Date.now();
         set({ document: { ...model.documentData } });
       },

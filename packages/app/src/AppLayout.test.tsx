@@ -191,12 +191,13 @@ describe('T-UI-006: AppLayout', () => {
     expect(document.querySelector('.app-toolbar')).not.toBeNull();
   });
 
-  // Floating level selector
-  it('renders level selector inside viewport-wrapper', () => {
+  // Level manager lives in the left panel, not the viewport
+  it('renders level manager in left panel (not floating in viewport)', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
-    const floatingSelector = document.querySelector('.floating-level-selector');
-    expect(floatingSelector).not.toBeNull();
-    const wrapper = document.querySelector('.viewport-wrapper');
-    expect(wrapper).toContainElement(floatingSelector as HTMLElement);
+    // Floating level selector was removed — levels are shown in LevelManager (left panel)
+    expect(document.querySelector('.floating-level-selector')).toBeNull();
+    expect(document.querySelector('.level-manager')).not.toBeNull();
+    const leftPanel = document.querySelector('.app-left-panel');
+    expect(leftPanel).toContainElement(document.querySelector('.level-manager') as HTMLElement);
   });
 });
