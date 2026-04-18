@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Download OpenCAD — Desktop App for macOS, Windows &amp; Linux</title>
+  <meta name="description" content="Download OpenCAD desktop app for macOS (Apple Silicon &amp; Intel), Windows, and Linux. Native performance, offline-first, AI-powered BIM." />
+  <link rel="canonical" href="https://opencad.archi/download" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0a0a'/><rect x='5' y='5' width='10' height='22' fill='white'/><rect x='5' y='5' width='22' height='10' fill='white'/><rect x='10' y='10' width='3' height='14' fill='%230052ff'/><rect x='10' y='10' width='14' height='3' fill='%230052ff'/><circle cx='11' cy='11' r='3' fill='%230052ff'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;1,14..32,400&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --black: #0a0a0a;
+      --gray-900: #111;
+      --gray-600: #555;
+      --gray-400: #999;
+      --gray-200: #e5e5e5;
+      --gray-100: #f5f5f5;
+      --gray-50:  #fafafa;
+      --white: #fff;
+      --blue: #0052ff;
+      --blue-light: #e8efff;
+    }
+
+    html { scroll-behavior: smooth; font-size: 16px; }
+
+    body {
+      background: var(--white);
+      color: var(--black);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: inherit; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; border: none; background: none; }
+
+    /* ─── Nav ─────────────────────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background: rgba(255,255,255,0.92);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--gray-200);
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0 40px;
+      height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .nav-logo { font-weight: 600; font-size: 15px; letter-spacing: -0.02em; color: var(--black); }
+
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+
+    .nav-link { font-size: 14px; color: var(--gray-600); transition: color 0.15s; }
+    .nav-link:hover { color: var(--black); }
+    .nav-link.active { color: var(--black); font-weight: 500; }
+
+    .btn-nav {
+      font-size: 14px; font-weight: 500; color: var(--white);
+      background: var(--black); padding: 8px 20px;
+      border-radius: 100px; transition: opacity 0.15s;
+    }
+    .btn-nav:hover { opacity: 0.75; }
+
+    /* ─── Hero ─────────────────────────────────────────────────────────── */
+    .hero {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 96px 40px 72px;
+      text-align: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--blue);
+      margin-bottom: 20px;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 52px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--black);
+      line-height: 1.1;
+      margin-bottom: 20px;
+    }
+
+    .hero-sub {
+      font-size: 18px;
+      color: var(--gray-600);
+      max-width: 520px;
+      margin: 0 auto 16px;
+    }
+
+    .version-badge {
+      display: inline-block;
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-bottom: 48px;
+    }
+
+    .version-badge a {
+      color: var(--blue);
+      border-bottom: 1px solid var(--blue-light);
+      transition: border-color 0.15s;
+    }
+    .version-badge a:hover { border-color: var(--blue); }
+
+    /* ─── Platform cards ────────────────────────────────────────────────── */
+    .platforms {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 40px 80px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .platform-card {
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      padding: 32px 28px;
+      background: var(--white);
+      transition: box-shadow 0.2s, border-color 0.2s;
+      position: relative;
+    }
+
+    .platform-card:hover {
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+      border-color: var(--gray-400);
+    }
+
+    .platform-card.featured {
+      border-color: var(--black);
+    }
+
+    .platform-card.featured::before {
+      content: 'Your platform';
+      position: absolute;
+      top: -1px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--black);
+      color: var(--white);
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      padding: 3px 12px;
+      border-radius: 0 0 8px 8px;
+    }
+
+    .platform-icon {
+      width: 40px;
+      height: 40px;
+      margin-bottom: 20px;
+      color: var(--black);
+    }
+
+    .platform-name {
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--black);
+      margin-bottom: 6px;
+    }
+
+    .platform-meta {
+      font-size: 13px;
+      color: var(--gray-400);
+      margin-bottom: 24px;
+      min-height: 36px;
+    }
+
+    .download-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 20px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 500;
+      background: var(--black);
+      color: var(--white);
+      transition: opacity 0.15s;
+      text-decoration: none;
+      margin-bottom: 8px;
+    }
+
+    .download-btn:hover { opacity: 0.75; }
+
+    .download-btn.secondary {
+      background: var(--gray-100);
+      color: var(--gray-900);
+      border: 1px solid var(--gray-200);
+    }
+
+    .download-btn.secondary:hover { background: var(--gray-200); opacity: 1; }
+
+    .download-btn.disabled {
+      opacity: 0.4;
+      pointer-events: none;
+      cursor: default;
+    }
+
+    /* ─── Alt download strip ────────────────────────────────────────────── */
+    .alt-downloads {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 0 40px 48px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .alt-link {
+      font-size: 13px;
+      color: var(--gray-600);
+      border: 1px solid var(--gray-200);
+      border-radius: 8px;
+      padding: 8px 16px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+
+    .alt-link:hover { border-color: var(--gray-400); color: var(--black); }
+
+    /* ─── Requirements ───────────────────────────────────────────────────── */
+    .requirements {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 48px 40px 96px;
+      border-top: 1px solid var(--gray-100);
+    }
+
+    .req-title {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .req-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+    }
+
+    .req-cell h4 { font-size: 14px; font-weight: 500; color: var(--black); margin-bottom: 8px; }
+    .req-cell p  { font-size: 13px; color: var(--gray-600); line-height: 1.5; }
+
+    /* ─── Footer ─────────────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--gray-200);
+      padding: 32px 40px;
+    }
+
+    .footer-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-copy { font-size: 13px; color: var(--gray-400); }
+    .footer-links { display: flex; gap: 24px; }
+    .footer-link { font-size: 13px; color: var(--gray-400); }
+    .footer-link:hover { color: var(--black); }
+
+    /* ─── Loading state ───────────────────────────────────────────────────── */
+    .loading-msg {
+      text-align: center;
+      font-size: 14px;
+      color: var(--gray-400);
+      padding: 24px 0;
+      grid-column: 1 / -1;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid var(--gray-200);
+      border-top-color: var(--gray-400);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 8px;
+    }
+
+    @media (max-width: 768px) {
+      .nav-inner { padding: 0 20px; }
+      .nav-links .nav-link { display: none; }
+      .hero { padding: 64px 20px 48px; }
+      .platforms { grid-template-columns: 1fr; padding: 0 20px 60px; }
+      .alt-downloads { padding: 0 20px 32px; }
+      .req-grid { grid-template-columns: 1fr; }
+      .requirements { padding: 32px 20px 64px; }
+      .footer-inner { flex-direction: column; gap: 16px; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">OpenCAD</a>
+    <div class="nav-links">
+      <a href="/#features" class="nav-link">Features</a>
+      <a href="/for/architects" class="nav-link">For Architects</a>
+      <a href="/#pricing" class="nav-link">Pricing</a>
+      <a href="/download" class="nav-link active">Download</a>
+      <a href="https://github.com/CariHQ/opencad" class="nav-link" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <a href="https://app.opencad.archi/signup" class="btn-nav">Start free trial</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <p class="hero-eyebrow">Desktop App</p>
+  <h1>OpenCAD for your desktop</h1>
+  <p class="hero-sub">Native performance, offline-first, AI-powered BIM — packaged for every platform.</p>
+  <p class="version-badge" id="version-text">
+    <span class="spinner"></span> Fetching latest release…
+  </p>
+</div>
+
+<!-- Platform cards -->
+<div class="platforms" id="platforms">
+  <!-- Populated by JS -->
+  <p class="loading-msg"><span class="spinner"></span> Loading downloads…</p>
+</div>
+
+<!-- Alternative downloads -->
+<div class="alt-downloads" id="alt-downloads" style="display:none">
+  <!-- Populated by JS -->
+</div>
+
+<!-- System requirements -->
+<section class="requirements">
+  <p class="req-title">System requirements</p>
+  <div class="req-grid">
+    <div class="req-cell">
+      <h4>macOS</h4>
+      <p>macOS 12 Monterey or later<br>Apple Silicon (M1+) or Intel<br>4 GB RAM minimum</p>
+    </div>
+    <div class="req-cell">
+      <h4>Windows</h4>
+      <p>Windows 10 (64-bit) or later<br>WebView2 runtime (included)<br>4 GB RAM minimum</p>
+    </div>
+    <div class="req-cell">
+      <h4>Linux</h4>
+      <p>Ubuntu 20.04+ / Debian 11+<br>WebKit2GTK 4.1 required<br>4 GB RAM minimum</p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<footer>
+  <div class="footer-inner">
+    <p class="footer-copy">&copy; 2025 OpenCAD. All rights reserved.</p>
+    <div class="footer-links">
+      <a href="/privacy" class="footer-link">Privacy</a>
+      <a href="/terms" class="footer-link">Terms</a>
+      <a href="https://github.com/CariHQ/opencad" class="footer-link" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+  const REPO = 'CariHQ/opencad';
+  const GH_RELEASES = `https://github.com/${REPO}/releases`;
+
+  // Detect OS for "featured" card
+  function detectOS() {
+    const ua = navigator.userAgent;
+    if (/Mac/.test(ua)) return /arm|aarch64/i.test(navigator.platform || '') ? 'mac-arm' : 'mac-x64';
+    if (/Win/.test(ua)) return 'windows';
+    if (/Linux/.test(ua)) return 'linux';
+    return null;
+  }
+
+  // Map a release asset filename to a platform key
+  function assetPlatform(name) {
+    const n = name.toLowerCase();
+    if (n.endsWith('.dmg')) {
+      if (n.includes('aarch64') || n.includes('arm64')) return 'mac-arm';
+      if (n.includes('x64') || n.includes('x86_64') || n.includes('intel')) return 'mac-x64';
+      return 'mac-arm'; // default DMG to Apple Silicon
+    }
+    if (n.endsWith('.exe') || n.endsWith('.msi')) return 'windows';
+    if (n.endsWith('.deb')) return 'linux-deb';
+    if (n.endsWith('.appimage')) return 'linux-appimage';
+    if (n.endsWith('.rpm')) return 'linux-rpm';
+    return null;
+  }
+
+  const PLATFORM_META = {
+    'mac-arm': {
+      label: 'macOS',
+      sub: 'Apple Silicon (M1, M2, M3…)',
+      icon: `<svg class="platform-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 6C14 6 10 10.5 10 16c0 2.5.8 4.8 2.2 6.6L8 34h24l-4.2-11.4C29.2 20.8 30 18.5 30 16c0-5.5-4-10-10-10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M16 6c0-2 1.8-3 4-3s4 1 4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>`,
+      ext: '.dmg',
+    },
+    'mac-x64': {
+      label: 'macOS',
+      sub: 'Intel (x86-64)',
+      icon: `<svg class="platform-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M20 6C14 6 10 10.5 10 16c0 2.5.8 4.8 2.2 6.6L8 34h24l-4.2-11.4C29.2 20.8 30 18.5 30 16c0-5.5-4-10-10-10z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+        <path d="M16 6c0-2 1.8-3 4-3s4 1 4 3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>`,
+      ext: '.dmg',
+    },
+    'windows': {
+      label: 'Windows',
+      sub: 'Windows 10 / 11 (64-bit)',
+      icon: `<svg class="platform-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect x="6" y="6" width="13" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="21" y="6" width="13" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="6" y="21" width="13" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
+        <rect x="21" y="21" width="13" height="13" rx="1" stroke="currentColor" stroke-width="1.5"/>
+      </svg>`,
+      ext: '.exe',
+    },
+    'linux-deb': {
+      label: 'Linux',
+      sub: 'Ubuntu / Debian (.deb)',
+      icon: `<svg class="platform-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M20 7v26M7 20h26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+        <path d="M10.5 10.5c5 3 14 3 19 0M10.5 29.5c5-3 14-3 19 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      </svg>`,
+      ext: '.deb',
+    },
+    'linux-appimage': {
+      label: 'Linux',
+      sub: 'AppImage (universal)',
+      icon: `<svg class="platform-icon" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="20" r="13" stroke="currentColor" stroke-width="1.5"/>
+        <path d="M20 7v26M7 20h26" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+        <path d="M10.5 10.5c5 3 14 3 19 0M10.5 29.5c5-3 14-3 19 0" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      </svg>`,
+      ext: '.AppImage',
+    },
+  };
+
+  // Preferred order for display
+  const DISPLAY_ORDER = ['mac-arm', 'windows', 'linux-deb', 'mac-x64', 'linux-appimage', 'linux-rpm'];
+
+  async function loadRelease() {
+    let release = null;
+    let version = null;
+
+    try {
+      const res = await fetch(`https://api.github.com/repos/${REPO}/releases/latest`);
+      if (res.ok) {
+        release = await res.json();
+        version = release.tag_name;
+      }
+    } catch (_) { /* network error — fall through */ }
+
+    const versionEl = document.getElementById('version-text');
+
+    if (release && release.assets && release.assets.length > 0) {
+      versionEl.innerHTML = `Version <a href="${release.html_url}" target="_blank" rel="noopener">${version}</a> · <a href="${GH_RELEASES}" target="_blank" rel="noopener">All releases</a>`;
+      renderCards(release.assets, version, release.html_url);
+    } else {
+      // No published release yet — show placeholder cards with GitHub fallback
+      versionEl.innerHTML = `<a href="${GH_RELEASES}" target="_blank" rel="noopener">View all releases on GitHub →</a>`;
+      renderPlaceholderCards();
+    }
+  }
+
+  function renderCards(assets, version, releaseUrl) {
+    const os = detectOS();
+    const byPlatform = {};
+
+    for (const asset of assets) {
+      const p = assetPlatform(asset.name);
+      if (p && !byPlatform[p]) byPlatform[p] = asset;
+    }
+
+    const container = document.getElementById('platforms');
+    const altContainer = document.getElementById('alt-downloads');
+    container.innerHTML = '';
+
+    // Primary platforms: mac-arm, windows, linux-deb
+    const primary = ['mac-arm', 'windows', 'linux-deb'];
+    for (const key of primary) {
+      const meta = PLATFORM_META[key];
+      const asset = byPlatform[key];
+      const isFeatured = (key === os) || (key === 'mac-arm' && os === 'mac-x64' && !byPlatform['mac-x64']);
+      const card = buildCard(meta, asset, isFeatured, version);
+      container.appendChild(card);
+    }
+
+    // Alt downloads: mac intel, appimage, etc.
+    const alts = DISPLAY_ORDER.filter(k => !primary.includes(k) && byPlatform[k]);
+    if (alts.length > 0) {
+      altContainer.style.display = 'flex';
+      altContainer.innerHTML = '<span style="font-size:13px;color:var(--gray-400);align-self:center;">Also available:</span>';
+      for (const key of alts) {
+        const meta = PLATFORM_META[key];
+        const asset = byPlatform[key];
+        if (!meta || !asset) continue;
+        const a = document.createElement('a');
+        a.href = asset.browser_download_url;
+        a.className = 'alt-link';
+        a.textContent = `${meta.label} ${meta.ext}`;
+        altContainer.appendChild(a);
+      }
+      // GitHub releases fallback
+      const a = document.createElement('a');
+      a.href = releaseUrl;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      a.className = 'alt-link';
+      a.textContent = 'All formats on GitHub →';
+      altContainer.appendChild(a);
+    }
+  }
+
+  function buildCard(meta, asset, isFeatured, version) {
+    const div = document.createElement('div');
+    div.className = 'platform-card' + (isFeatured ? ' featured' : '');
+    const sizeStr = asset ? `${(asset.size / 1024 / 1024).toFixed(0)} MB` : '';
+    const dlCount = asset && asset.download_count > 0 ? ` · ${asset.download_count.toLocaleString()} downloads` : '';
+    div.innerHTML = `
+      ${meta.icon}
+      <p class="platform-name">${meta.label}</p>
+      <p class="platform-meta">${meta.sub}${version ? `<br><span style="color:var(--gray-400)">${sizeStr}${dlCount}</span>` : ''}</p>
+      ${asset
+        ? `<a href="${asset.browser_download_url}" class="download-btn">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1v8M3.5 6l3.5 3.5L10.5 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M1 11h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            Download ${meta.ext}
+           </a>`
+        : `<span class="download-btn disabled">Not yet available</span>`
+      }
+    `;
+    return div;
+  }
+
+  function renderPlaceholderCards() {
+    const os = detectOS();
+    const container = document.getElementById('platforms');
+    container.innerHTML = '';
+    const primary = ['mac-arm', 'windows', 'linux-deb'];
+    for (const key of primary) {
+      const meta = PLATFORM_META[key];
+      const isFeatured = key === os;
+      const div = document.createElement('div');
+      div.className = 'platform-card' + (isFeatured ? ' featured' : '');
+      div.innerHTML = `
+        ${meta.icon}
+        <p class="platform-name">${meta.label}</p>
+        <p class="platform-meta">${meta.sub}</p>
+        <a href="https://github.com/${REPO}/releases" target="_blank" rel="noopener" class="download-btn secondary">
+          View on GitHub
+        </a>
+      `;
+      container.appendChild(div);
+    }
+  }
+
+  loadRelease();
+</script>
+</body>
+</html>

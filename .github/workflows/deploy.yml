@@ -111,6 +111,8 @@ jobs:
           # Legal pages
           cp packages/landing/privacy.html packages/app/dist/privacy.html
           cp packages/landing/terms.html packages/app/dist/terms.html
+          # Download page
+          cp packages/landing/download.html packages/app/dist/download.html
           # Marketing root — served as the homepage (replaces the SPA catch-all at /)
           cp packages/landing/index.html packages/app/dist/landing.html
           # OG social images
