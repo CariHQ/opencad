@@ -108,42 +108,46 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
 
       <div className="viewport-corner top-left" style={{ zIndex: 5, pointerEvents: 'none' }}>{label}</div>
 
-      {/* Camera preset + zoom controls */}
+      {/* Camera preset + zoom controls (always top-right) */}
       {!isViewOnly && (
-        <div className="viewport-corner top-right" style={{ zIndex: 5, display: 'flex', gap: 4 }}>
+        <div className="viewport-corner top-right" style={{ zIndex: 5, display: 'flex', gap: 4, alignItems: 'center' }}>
+          {/* View presets — hidden in section view */}
           {viewType !== 'section' && (
             <>
               <button className="viewport-control-btn" onClick={() => setViewPreset('top')}   title="Top view (1)">T</button>
               <button className="viewport-control-btn" onClick={() => setViewPreset('front')} title="Front view (2)">F</button>
               <button className="viewport-control-btn" onClick={() => setViewPreset('right')} title="Right view (3)">R</button>
               <button className="viewport-control-btn" onClick={() => setViewPreset('3d')}    title="Perspective (4)">3D</button>
+              <span className="viewport-control-sep" />
             </>
           )}
           <button className="viewport-control-btn" onClick={zoomToFit}                       title="Zoom to fit (0)"><Maximize  size={12} /></button>
           <button className="viewport-control-btn" onClick={zoomIn}                          title="Zoom in (+)"><ZoomIn    size={12} /></button>
           <button className="viewport-control-btn" onClick={zoomOut}                         title="Zoom out (-)"><ZoomOut   size={12} /></button>
           <button className="viewport-control-btn" onClick={() => zoomToFitRef.current()}    title="Reset camera"><RotateCcw size={12} /></button>
+          {/* Section axis selector — shown only in section view, right of zoom buttons */}
+          {viewType === 'section' && (
+            <>
+              <span className="viewport-control-sep" />
+              {(['x', 'z', 'y'] as const).map((dir) => (
+                <button
+                  key={dir}
+                  className={`viewport-control-btn${sectionDirection === dir ? ' active' : ''}`}
+                  onClick={() => setSectionDirection(dir)}
+                  title={`Cut along ${dir.toUpperCase()} axis`}
+                >
+                  {dir.toUpperCase()}
+                </button>
+              ))}
+              <span className="section-cut-pos">{Math.round(sectionPosition)} mm</span>
+            </>
+          )}
         </div>
       )}
 
-      {/* Section cut controls — clips the 3D model along the chosen axis */}
+      {/* Section slider — slim bar at bottom, full width, no header row */}
       {viewType === 'section' && !isViewOnly && (
         <div className="section-cut-bar">
-          <div className="section-cut-axis">
-            {(['x', 'z', 'y'] as const).map((dir) => (
-              <button
-                key={dir}
-                className={`viewport-control-btn${sectionDirection === dir ? ' active' : ''}`}
-                onClick={() => setSectionDirection(dir)}
-                title={`Cut along ${dir.toUpperCase()} axis`}
-              >
-                {dir.toUpperCase()}
-              </button>
-            ))}
-            <span className="section-cut-label">
-              Section plane &nbsp;·&nbsp; {Math.round(sectionPosition)} mm
-            </span>
-          </div>
           <input
             className="section-cut-slider"
             type="range"
