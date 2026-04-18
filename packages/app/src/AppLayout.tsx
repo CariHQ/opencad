@@ -4,6 +4,7 @@ import {
   Layers, Settings2, Table2, LayoutDashboard, AlertTriangle, Camera, Sheet,
   MessageSquareWarning, Package, MessageCircle, Leaf, DollarSign, Palette,
   Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Settings, Shield,
+  MessageCirclePlus,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -113,6 +114,7 @@ export function AppLayout() {
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>('opencad-rightPanelTab', 'layers');
   const [currentFilePath, setCurrentFilePath] = useLocalStorage<string | null>('opencad-currentFilePath', null);
@@ -273,6 +275,7 @@ export function AppLayout() {
             {can('panel:ai') && (
               <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant"><span className="tool-icon"><Bot size={15} /></span></button>
             )}
+            <button className="toolbar-btn" onClick={() => setShowFeedback(true)} title="Send feedback" style={{ color: 'var(--accent-primary)' }}><span className="tool-icon"><MessageCirclePlus size={15} /></span></button>
             <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In"><span className="tool-icon"><User size={15} /></span></button>
             <button className="toolbar-btn" onClick={() => setShowSettings(true)} title="Settings"><span className="tool-icon"><Settings size={15} /></span></button>
             <div className="toolbar-sep" />
@@ -364,7 +367,7 @@ export function AppLayout() {
       </div>
 
       {chromeVisible && <StatusBar />}
-      <FeedbackWidget />
+      <FeedbackWidget open={showFeedback} onClose={() => setShowFeedback(false)} />
 
       {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
 

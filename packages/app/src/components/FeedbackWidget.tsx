@@ -4,6 +4,12 @@ import { feedbackApi, type FeedbackCategory, type FeedbackItem } from '../lib/se
 
 type WidgetState = 'closed' | 'form' | 'submitted';
 
+interface FeedbackWidgetProps {
+  /** When provided the widget runs in controlled mode — the caller manages the trigger */
+  open?: boolean;
+  onClose?: () => void;
+}
+
 const CATEGORY_LABELS: Record<FeedbackCategory, string> = {
   bug: '🐛 Bug report',
   feature: '✨ Feature request',
@@ -16,7 +22,8 @@ const FEASIBILITY_BADGES: Record<string, { label: string; className: string }> =
   out_of_scope: { label: 'Out of scope', className: 'feedback-badge--red' },
 };
 
-export function FeedbackWidget() {
+export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }: FeedbackWidgetProps = {}) {
+  const controlled = externalOpen !== undefined;
   const [state, setState] = useState<WidgetState>('closed');
   const [category, setCategory] = useState<FeedbackCategory>('feature');
   const [title, setTitle] = useState('');
@@ -26,27 +33,45 @@ export function FeedbackWidget() {
   const [result, setResult] = useState<FeedbackItem | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
 
+  // When controlled externally, sync open→form on first open
+  useEffect(() => {
+    if (!controlled) return;
+    if (externalOpen && state === 'closed') {
+      setTitle('');
+      setDescription('');
+      setError(null);
+      setResult(null);
+      setState('form');
+    }
+    if (!externalOpen) setState('closed');
+  }, [controlled, externalOpen]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const close = () => {
+    setState('closed');
+    externalOnClose?.();
+  };
+
   // Close on Escape key
   useEffect(() => {
     if (state === 'closed') return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setState('closed');
+      if (e.key === 'Escape') close();
     };
     document.addEventListener('keydown', handler);
     return () => document.removeEventListener('keydown', handler);
-  }, [state]);
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Close on outside click
   useEffect(() => {
     if (state === 'closed') return;
     const handler = (e: MouseEvent) => {
       if (dialogRef.current && !dialogRef.current.contains(e.target as Node)) {
-        setState('closed');
+        close();
       }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
-  }, [state]);
+  }, [state]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleOpen = () => {
     setTitle('');
@@ -77,15 +102,17 @@ export function FeedbackWidget() {
 
   return (
     <>
-      {/* Floating trigger button */}
-      <button
-        className="feedback-trigger"
-        onClick={handleOpen}
-        title="Send feedback"
-        aria-label="Send feedback"
-      >
-        <MessageCirclePlus size={18} />
-      </button>
+      {/* Floating trigger — only rendered in uncontrolled mode */}
+      {!controlled && (
+        <button
+          className="feedback-trigger"
+          onClick={handleOpen}
+          title="Send feedback"
+          aria-label="Send feedback"
+        >
+          <MessageCirclePlus size={18} />
+        </button>
+      )}
 
       {/* Panel */}
       {state !== 'closed' && (
@@ -96,7 +123,7 @@ export function FeedbackWidget() {
               <span className="feedback-panel__title">
                 {state === 'submitted' ? 'Thanks for your feedback!' : 'Send feedback'}
               </span>
-              <button className="feedback-panel__close" onClick={() => setState('closed')}>
+              <button className="feedback-panel__close" onClick={close}>
                 <X size={16} />
               </button>
             </div>
@@ -213,7 +240,7 @@ export function FeedbackWidget() {
                   )}
                 </div>
 
-                <button className="feedback-submit" onClick={() => setState('closed')}>
+                <button className="feedback-submit" onClick={close}>
                   Done
                 </button>
               </div>
