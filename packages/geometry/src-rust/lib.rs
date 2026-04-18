@@ -632,6 +632,286 @@ fn snap_to_grid_inner(x: f32, y: f32, grid_size: f32) -> [f32; 2] {
     ]
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// Normal generation — flat and smooth shading for PBR rendering
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Compute per-face (flat) normals for a triangle mesh.
+///
+/// # Arguments
+/// * `vertices` — flat `[x,y,z, x,y,z, ...]` float32 triplets (groups of 9 = 1 triangle)
+///
+/// # Returns
+/// `Float32Array` of the same length as `vertices`: each group of 9 floats contains
+/// the face normal repeated three times `[nx,ny,nz, nx,ny,nz, nx,ny,nz]`.
+/// Degenerate triangles (zero area) emit `[0,0,1]`.
+#[wasm_bindgen]
+pub fn compute_face_normals(vertices: &[f32]) -> js_sys::Float32Array {
+    let normals = compute_face_normals_inner(vertices);
+    let arr = js_sys::Float32Array::new_with_length(normals.len() as u32);
+    arr.copy_from(&normals);
+    arr
+}
+
+/// Compute per-vertex (smooth) normals by averaging adjacent face normals.
+///
+/// The average is weighted by triangle area so large triangles dominate.
+/// Returns a `Float32Array` of the same length as `vertices`.
+#[wasm_bindgen]
+pub fn compute_smooth_normals(vertices: &[f32]) -> js_sys::Float32Array {
+    let normals = compute_smooth_normals_inner(vertices);
+    let arr = js_sys::Float32Array::new_with_length(normals.len() as u32);
+    arr.copy_from(&normals);
+    arr
+}
+
+// ── Pure inner functions ──────────────────────────────────────────────────────
+
+#[inline]
+fn vec3_cross(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [
+        a[1] * b[2] - a[2] * b[1],
+        a[2] * b[0] - a[0] * b[2],
+        a[0] * b[1] - a[1] * b[0],
+    ]
+}
+
+#[inline]
+fn vec3_sub(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+#[inline]
+fn vec3_normalize(v: [f32; 3]) -> [f32; 3] {
+    let len = (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt();
+    if len < 1e-10 {
+        return [0.0, 0.0, 1.0]; // degenerate → up-axis fallback
+    }
+    [v[0] / len, v[1] / len, v[2] / len]
+}
+
+#[inline]
+fn vec3_len(v: [f32; 3]) -> f32 {
+    (v[0] * v[0] + v[1] * v[1] + v[2] * v[2]).sqrt()
+}
+
+fn face_normal_and_area(tri: &[f32]) -> ([f32; 3], f32) {
+    let v0 = [tri[0], tri[1], tri[2]];
+    let v1 = [tri[3], tri[4], tri[5]];
+    let v2 = [tri[6], tri[7], tri[8]];
+    let ab = vec3_sub(v1, v0);
+    let ac = vec3_sub(v2, v0);
+    let cross = vec3_cross(ab, ac);
+    let area = vec3_len(cross) * 0.5;
+    (vec3_normalize(cross), area)
+}
+
+fn compute_face_normals_inner(vertices: &[f32]) -> Vec<f32> {
+    let tri_count = vertices.len() / 9;
+    let mut out = Vec::with_capacity(vertices.len());
+    for t in 0..tri_count {
+        let base = t * 9;
+        let (n, _) = face_normal_and_area(&vertices[base..base + 9]);
+        // Repeat normal for all 3 vertices of the triangle
+        out.extend_from_slice(&n);
+        out.extend_from_slice(&n);
+        out.extend_from_slice(&n);
+    }
+    out
+}
+
+fn compute_smooth_normals_inner(vertices: &[f32]) -> Vec<f32> {
+    let n_verts = vertices.len() / 3;
+    let tri_count = vertices.len() / 9;
+
+    // Accumulate area-weighted normals per vertex index
+    let mut accum = vec![[0.0f32; 3]; n_verts];
+
+    for t in 0..tri_count {
+        let base = t * 9;
+        let (n, area) = face_normal_and_area(&vertices[base..base + 9]);
+        // The three vertices of this triangle are at global indices t*3, t*3+1, t*3+2
+        for k in 0..3 {
+            let vi = t * 3 + k;
+            accum[vi][0] += n[0] * area;
+            accum[vi][1] += n[1] * area;
+            accum[vi][2] += n[2] * area;
+        }
+    }
+
+    // Normalise
+    let mut out = Vec::with_capacity(vertices.len());
+    for v in &accum {
+        let n = vec3_normalize(*v);
+        out.extend_from_slice(&n);
+    }
+    out
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Circle / arc triangulation for 2D canvas rendering
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Triangulate a filled circle as a fan of triangles.
+///
+/// # Arguments
+/// * `cx`, `cy` — centre in world space
+/// * `r`        — radius
+/// * `segments` — number of fan slices (clamped to ≥ 3)
+/// * `z`        — constant Z value (use 0.0 for 2D)
+///
+/// # Returns
+/// `Float32Array` of `[x,y,z]` triplets: `segments × 3 × 3` floats.
+#[wasm_bindgen]
+pub fn triangulate_circle(cx: f32, cy: f32, r: f32, segments: u32, z: f32) -> js_sys::Float32Array {
+    let verts = triangulate_circle_inner(cx, cy, r, segments, z);
+    let arr = js_sys::Float32Array::new_with_length(verts.len() as u32);
+    arr.copy_from(&verts);
+    arr
+}
+
+/// Triangulate an arc sector (filled pie slice) from `start_angle` to `end_angle` (radians).
+#[wasm_bindgen]
+pub fn triangulate_arc(
+    cx: f32, cy: f32, r: f32,
+    start_angle: f32, end_angle: f32,
+    segments: u32, z: f32,
+) -> js_sys::Float32Array {
+    let verts = triangulate_arc_inner(cx, cy, r, start_angle, end_angle, segments, z);
+    let arr = js_sys::Float32Array::new_with_length(verts.len() as u32);
+    arr.copy_from(&verts);
+    arr
+}
+
+fn triangulate_circle_inner(cx: f32, cy: f32, r: f32, segments: u32, z: f32) -> Vec<f32> {
+    let n = segments.max(3) as usize;
+    let mut verts = Vec::with_capacity(n * 9);
+    let step = 2.0 * std::f32::consts::PI / n as f32;
+    for i in 0..n {
+        let a0 = step * i as f32;
+        let a1 = step * (i + 1) as f32;
+        // Fan from centre
+        verts.extend_from_slice(&[cx, cy, z]);
+        verts.extend_from_slice(&[cx + r * a0.cos(), cy + r * a0.sin(), z]);
+        verts.extend_from_slice(&[cx + r * a1.cos(), cy + r * a1.sin(), z]);
+    }
+    verts
+}
+
+fn triangulate_arc_inner(
+    cx: f32, cy: f32, r: f32,
+    start_angle: f32, end_angle: f32,
+    segments: u32, z: f32,
+) -> Vec<f32> {
+    let n = segments.max(1) as usize;
+    let sweep = end_angle - start_angle;
+    let step = sweep / n as f32;
+    let mut verts = Vec::with_capacity(n * 9);
+    for i in 0..n {
+        let a0 = start_angle + step * i as f32;
+        let a1 = start_angle + step * (i + 1) as f32;
+        verts.extend_from_slice(&[cx, cy, z]);
+        verts.extend_from_slice(&[cx + r * a0.cos(), cy + r * a0.sin(), z]);
+        verts.extend_from_slice(&[cx + r * a1.cos(), cy + r * a1.sin(), z]);
+    }
+    verts
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// 2D element picking — hit-test a world-space point against element AABBs
+// ═══════════════════════════════════════════════════════════════════════════════
+
+impl ElementBatch {
+    /// Return the id_hash of the smallest AABB that contains `(x, y)`, or 0
+    /// if no element is hit.  Smallest AABB wins (front-most in a flat drawing).
+    pub fn pick_element(&self, x: f32, y: f32) -> u32 {
+        let mut best_id: u32 = 0;
+        let mut best_area = f32::INFINITY;
+        for (i, &id) in self.ids.iter().enumerate() {
+            let base = i * 4;
+            let min_x = self.boxes[base];
+            let min_y = self.boxes[base + 1];
+            let max_x = self.boxes[base + 2];
+            let max_y = self.boxes[base + 3];
+            if x >= min_x && x <= max_x && y >= min_y && y <= max_y {
+                let area = (max_x - min_x) * (max_y - min_y);
+                if area < best_area {
+                    best_area = area;
+                    best_id = id;
+                }
+            }
+        }
+        best_id
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Zoom-to-fit — compute scale + pan to show all elements in the viewport
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Compute the [scale, pan_x, pan_y] view transform that fits all elements in
+/// `batch` into a `canvas_w × canvas_h` viewport with `margin` pixels of padding.
+///
+/// Returns `Float32Array([scale, pan_x, pan_y])`.
+/// Returns `[1.0, 0.0, 0.0]` if the batch is empty.
+#[wasm_bindgen]
+pub fn fit_viewport(
+    batch: &ElementBatch,
+    canvas_w: f32,
+    canvas_h: f32,
+    margin: f32,
+) -> js_sys::Float32Array {
+    let result = fit_viewport_inner(&batch.boxes, canvas_w, canvas_h, margin);
+    let arr = js_sys::Float32Array::new_with_length(3);
+    arr.copy_from(&result);
+    arr
+}
+
+fn fit_viewport_inner(boxes: &[f32], canvas_w: f32, canvas_h: f32, margin: f32) -> [f32; 3] {
+    if boxes.is_empty() {
+        return [1.0, 0.0, 0.0];
+    }
+
+    let n = boxes.len() / 4;
+    let mut world_min_x = f32::INFINITY;
+    let mut world_min_y = f32::INFINITY;
+    let mut world_max_x = f32::NEG_INFINITY;
+    let mut world_max_y = f32::NEG_INFINITY;
+
+    for i in 0..n {
+        let base = i * 4;
+        world_min_x = world_min_x.min(boxes[base]);
+        world_min_y = world_min_y.min(boxes[base + 1]);
+        world_max_x = world_max_x.max(boxes[base + 2]);
+        world_max_y = world_max_y.max(boxes[base + 3]);
+    }
+
+    let world_w = world_max_x - world_min_x;
+    let world_h = world_max_y - world_min_y;
+
+    let available_w = (canvas_w - 2.0 * margin).max(1.0);
+    let available_h = (canvas_h - 2.0 * margin).max(1.0);
+
+    // Scale = how much world space fits in available screen space.
+    // Invert: scale = world_units_per_screen_pixel (a large scale zooms out).
+    let scale = if world_w < 1e-6 && world_h < 1e-6 {
+        1.0
+    } else if world_w < 1e-6 {
+        world_h / available_h
+    } else if world_h < 1e-6 {
+        world_w / available_w
+    } else {
+        // Fit both dimensions, keep aspect ratio — take the larger scale (more zoom-out).
+        (world_w / available_w).max(world_h / available_h)
+    };
+
+    // Centre of world bounding box → pan
+    let center_x = (world_min_x + world_max_x) / 2.0;
+    let center_y = (world_min_y + world_max_y) / 2.0;
+
+    [scale, center_x, center_y]
+}
+
 #[cfg(test)]
 mod canvas_tests {
     use super::*;
@@ -685,5 +965,141 @@ mod canvas_tests {
         let boxes = vec![1.0f32,1.0,2.0,2.0,  3.0,3.0,4.0,4.0,  5.0,5.0,6.0,6.0];
         let visible = cull_visible_inner(&ids, &boxes, 0.0, 0.0, 100.0, 100.0);
         assert_eq!(visible.len(), 3);
+    }
+
+    // ── Normal generation ─────────────────────────────────────────────────────
+
+    #[test]
+    fn face_normals_xy_plane_triangle_points_up_z() {
+        // Triangle in XY plane at z=0 → normal should be (0, 0, 1)
+        let verts: Vec<f32> = vec![0.0, 0.0, 0.0,  1.0, 0.0, 0.0,  0.5, 1.0, 0.0];
+        let normals = compute_face_normals_inner(&verts);
+        assert_eq!(normals.len(), 9, "3 verts × 3 components");
+        // All three vertex normals are the same face normal
+        for k in 0..3 {
+            let base = k * 3;
+            assert!((normals[base] - 0.0).abs() < 1e-5, "nx must be 0");
+            assert!((normals[base + 1] - 0.0).abs() < 1e-5, "ny must be 0");
+            assert!((normals[base + 2] - 1.0).abs() < 1e-5, "nz must be 1");
+        }
+    }
+
+    #[test]
+    fn face_normals_output_same_length_as_input() {
+        // 2 triangles = 18 floats → 18 normal floats
+        let verts: Vec<f32> = vec![
+            0.0, 0.0, 0.0,  1.0, 0.0, 0.0,  0.5, 1.0, 0.0,
+            2.0, 0.0, 0.0,  3.0, 0.0, 0.0,  2.5, 1.0, 0.0,
+        ];
+        let normals = compute_face_normals_inner(&verts);
+        assert_eq!(normals.len(), verts.len());
+    }
+
+    #[test]
+    fn smooth_normals_same_length_as_vertices() {
+        let verts: Vec<f32> = vec![0.0, 0.0, 0.0,  1.0, 0.0, 0.0,  0.5, 1.0, 0.0];
+        let normals = compute_smooth_normals_inner(&verts);
+        assert_eq!(normals.len(), verts.len());
+    }
+
+    #[test]
+    fn degenerate_triangle_face_normal_falls_back_to_z_up() {
+        // All three vertices coincident → zero area → fallback normal (0,0,1)
+        let verts: Vec<f32> = vec![1.0, 1.0, 1.0,  1.0, 1.0, 1.0,  1.0, 1.0, 1.0];
+        let normals = compute_face_normals_inner(&verts);
+        assert!((normals[2] - 1.0).abs() < 1e-5, "degenerate → fallback nz=1");
+    }
+
+    // ── Circle triangulation ──────────────────────────────────────────────────
+
+    #[test]
+    fn circle_vertex_count_is_segments_times_9() {
+        let verts = triangulate_circle_inner(0.0, 0.0, 5.0, 12, 0.0);
+        assert_eq!(verts.len(), 12 * 9, "12 segments × 9 floats per triangle");
+    }
+
+    #[test]
+    fn circle_clamps_to_minimum_3_segments() {
+        let verts = triangulate_circle_inner(0.0, 0.0, 1.0, 1, 0.0); // 1 → clamped to 3
+        assert_eq!(verts.len(), 3 * 9);
+    }
+
+    #[test]
+    fn circle_all_vertices_within_radius() {
+        let cx = 10.0f32;
+        let cy = 20.0f32;
+        let r  = 3.0f32;
+        let verts = triangulate_circle_inner(cx, cy, r, 32, 0.0);
+        for i in 0..(verts.len() / 3) {
+            let x = verts[i * 3];
+            let y = verts[i * 3 + 1];
+            let dx = x - cx;
+            let dy = y - cy;
+            let dist = (dx * dx + dy * dy).sqrt();
+            assert!(
+                dist <= r + 1e-4,
+                "vertex ({x},{y}) is outside radius {r}: dist={dist}"
+            );
+        }
+    }
+
+    #[test]
+    fn arc_vertex_count_matches_segments() {
+        let verts = triangulate_arc_inner(0.0, 0.0, 1.0, 0.0, std::f32::consts::PI, 6, 0.0);
+        assert_eq!(verts.len(), 6 * 9, "6 arc segments × 9 floats");
+    }
+
+    // ── Element picking ───────────────────────────────────────────────────────
+
+    #[test]
+    fn pick_element_returns_hit_id() {
+        let mut batch = ElementBatch::new();
+        batch.push(42, 0.0, 0.0, 10.0, 10.0);
+        batch.push(99, 20.0, 20.0, 30.0, 30.0);
+
+        assert_eq!(batch.pick_element(5.0, 5.0), 42, "point inside first box");
+        assert_eq!(batch.pick_element(25.0, 25.0), 99, "point inside second box");
+        assert_eq!(batch.pick_element(50.0, 50.0), 0, "point outside all boxes → 0");
+    }
+
+    #[test]
+    fn pick_element_smallest_aabb_wins_on_overlap() {
+        let mut batch = ElementBatch::new();
+        // Large outer box
+        batch.push(1, 0.0, 0.0, 100.0, 100.0);
+        // Smaller inner box (overlapping)
+        batch.push(2, 40.0, 40.0, 60.0, 60.0);
+
+        // Point is inside both; smaller (id=2) should win
+        assert_eq!(batch.pick_element(50.0, 50.0), 2);
+    }
+
+    // ── Fit viewport ─────────────────────────────────────────────────────────
+
+    #[test]
+    fn fit_viewport_empty_returns_identity() {
+        let result = fit_viewport_inner(&[], 800.0, 600.0, 20.0);
+        assert!((result[0] - 1.0).abs() < 1e-5, "scale should be 1 for empty batch");
+    }
+
+    #[test]
+    fn fit_viewport_single_element_centred() {
+        // Element AABB: [0, 0, 100, 100], canvas 400×400, margin 0
+        let boxes = vec![0.0f32, 0.0, 100.0, 100.0];
+        let [scale, pan_x, pan_y] = fit_viewport_inner(&boxes, 400.0, 400.0, 0.0);
+        // world_w = 100, available = 400, scale = 100/400 = 0.25
+        assert!((scale - 0.25).abs() < 1e-4, "scale should be 0.25, got {scale}");
+        // centre is (50, 50)
+        assert!((pan_x - 50.0).abs() < 1e-4, "pan_x should centre at 50");
+        assert!((pan_y - 50.0).abs() < 1e-4, "pan_y should centre at 50");
+    }
+
+    #[test]
+    fn fit_viewport_scale_fits_smaller_axis() {
+        // World 200×100, canvas 400×400, margin 0
+        // scale_x = 200/400 = 0.5, scale_y = 100/400 = 0.25 → max = 0.5
+        let boxes = vec![0.0f32, 0.0, 200.0, 100.0];
+        let [scale, _, _] = fit_viewport_inner(&boxes, 400.0, 400.0, 0.0);
+        assert!((scale - 0.5).abs() < 1e-4, "scale should be 0.5, got {scale}");
     }
 }
