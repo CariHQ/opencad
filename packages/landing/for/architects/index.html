@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BIM Software for Architects — OpenCAD | Revit & ArchiCAD Alternative</title>
+  <meta name="description" content="OpenCAD gives architects a full-featured BIM platform in the browser. AI floor plan generation, IFC4 export, real-time collaboration. Start your 14-day free trial — no credit card required." />
+  <meta name="keywords" content="BIM software for architects, Revit alternative, ArchiCAD alternative, architectural BIM platform, browser BIM architects, AI floor plan generator, IFC architect software, architectural design tool" />
+  <link rel="canonical" href="https://opencad.archi/for/architects" />
+
+  <meta property="og:site_name" content="OpenCAD" />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://opencad.archi/for/architects" />
+  <meta property="og:title" content="OpenCAD for Architects — BIM Platform in Your Browser" />
+  <meta property="og:description" content="Full-featured BIM platform built for architects. AI design assistant, IFC4 export, real-time collaboration. No install required." />
+  <meta property="og:image" content="https://opencad.archi/og-architects.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@opencad_archi" />
+  <meta name="twitter:title" content="OpenCAD for Architects — BIM Platform in Your Browser" />
+  <meta name="twitter:description" content="AI-powered BIM for architects. IFC4, DWG, real-time collaboration. Free 14-day trial." />
+  <meta name="twitter:image" content="https://opencad.archi/og-architects.png" />
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "OpenCAD for Architects",
+    "url": "https://opencad.archi/for/architects",
+    "description": "Browser-native BIM platform designed for architects. AI floor plan generation, IFC4 import/export, real-time team collaboration.",
+    "breadcrumb": {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://opencad.archi" },
+        { "@type": "ListItem", "position": 2, "name": "For Architects", "item": "https://opencad.archi/for/architects" }
+      ]
+    }
+  }
+  </script>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='7' fill='%230a0a0a'/><rect x='5' y='5' width='10' height='22' fill='white'/><rect x='5' y='5' width='22' height='10' fill='white'/><rect x='10' y='10' width='3' height='14' fill='%230052ff'/><rect x='10' y='10' width='14' height='3' fill='%230052ff'/><circle cx='11' cy='11' r='3' fill='%230052ff'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,500;14..32,600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root { --black:#0a0a0a;--gray-600:#555;--gray-200:#e5e5e5;--gray-100:#f5f5f5;--white:#fff;--blue:#0052ff; }
+    html { scroll-behavior: smooth; }
+    body { background:var(--white);color:var(--black);font-family:'Inter',-apple-system,sans-serif;font-size:1rem;line-height:1.6;-webkit-font-smoothing:antialiased; }
+    a { color:inherit;text-decoration:none; }
+
+    nav { position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--gray-200); }
+    .nav-inner { max-width:1120px;margin:0 auto;padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between; }
+    .nav-logo { font-weight:600;font-size:15px;letter-spacing:-0.02em; }
+    .breadcrumb { font-size:13px;color:var(--gray-600); }
+    .btn-cta { font-size:14px;font-weight:500;color:var(--white);background:var(--black);padding:8px 20px;border-radius:100px;transition:opacity 0.15s; }
+    .btn-cta:hover { opacity:0.75; }
+
+    .hero { max-width:1120px;margin:0 auto;padding:100px 40px 80px; }
+    .role-pill { display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--blue);background:#e8efff;padding:4px 12px;border-radius:100px;margin-bottom:32px; }
+    h1 { font-size:clamp(36px,5vw,64px);font-weight:600;letter-spacing:-0.03em;line-height:1.1;margin-bottom:24px; }
+    h1 em { color:var(--blue);font-style:normal; }
+    .hero-sub { font-size:clamp(16px,2vw,20px);color:var(--gray-600);max-width:600px;margin-bottom:44px;line-height:1.6; }
+    .hero-actions { display:flex;align-items:center;gap:16px;flex-wrap:wrap; }
+    .btn-primary { display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:var(--black);color:white;border-radius:100px;font-size:15px;font-weight:500;transition:opacity 0.15s; }
+    .btn-primary:hover { opacity:0.8; }
+    .btn-secondary { display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:1.5px solid var(--gray-200);color:var(--black);border-radius:100px;font-size:15px;font-weight:500;transition:background 0.15s; }
+    .btn-secondary:hover { background:var(--gray-100); }
+
+    .features { max-width:1120px;margin:0 auto;padding:80px 40px; }
+    .features h2 { font-size:clamp(24px,3.5vw,40px);font-weight:600;letter-spacing:-0.03em;margin-bottom:48px; }
+    .grid-3 { display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gray-200);border:1px solid var(--gray-200);border-radius:16px;overflow:hidden; }
+    .card { background:var(--white);padding:40px 36px; }
+    .card-icon { font-size:28px;margin-bottom:20px; }
+    .card h3 { font-size:17px;font-weight:600;letter-spacing:-0.02em;margin-bottom:10px; }
+    .card p { font-size:15px;color:var(--gray-600);line-height:1.6; }
+
+    .comparison { max-width:1120px;margin:0 auto;padding:0 40px 100px; }
+    .comparison h2 { font-size:clamp(24px,3.5vw,40px);font-weight:600;letter-spacing:-0.03em;margin-bottom:48px; }
+    table { width:100%;border-collapse:collapse;font-size:15px; }
+    thead th { text-align:left;padding:12px 20px;font-weight:600;font-size:13px;letter-spacing:0.04em;text-transform:uppercase;color:var(--gray-600);border-bottom:1px solid var(--gray-200); }
+    tbody td { padding:16px 20px;border-bottom:1px solid var(--gray-200); }
+    tbody tr:last-child td { border-bottom:none; }
+    .yes { color:#16a34a; } .no { color:#dc2626; } .partial { color:#d97706; }
+
+    .faq { max-width:720px;margin:0 auto;padding:0 40px 100px; }
+    .faq h2 { font-size:clamp(24px,3.5vw,36px);font-weight:600;letter-spacing:-0.03em;margin-bottom:40px;text-align:center; }
+    details { border-bottom:1px solid var(--gray-200);padding:20px 0; }
+    details summary { font-size:16px;font-weight:500;cursor:pointer;list-style:none;display:flex;justify-content:space-between;align-items:center; }
+    details summary::after { content:'＋';font-size:18px;color:var(--gray-600); }
+    details[open] summary::after { content:'－'; }
+    details p { margin-top:16px;font-size:15px;color:var(--gray-600);line-height:1.7; }
+
+    footer { border-top:1px solid var(--gray-200);padding:40px;text-align:center;font-size:14px;color:var(--gray-600); }
+    footer a { color:inherit;margin:0 12px; }
+    footer a:hover { color:var(--black); }
+
+    @media (max-width:768px) {
+      .nav-inner { padding:0 20px; }
+      .hero { padding:60px 20px 60px; }
+      .grid-3 { grid-template-columns:1fr; }
+      .comparison,.faq { padding:0 20px 60px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="nav-logo">OpenCAD</a>
+    <span class="breadcrumb">For Architects</span>
+    <a href="/#get-started" class="btn-cta">Start free trial</a>
+  </div>
+</nav>
+
+<div class="hero">
+  <div class="role-pill">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.8 3.6L13 5.3l-3 2.9.7 4.1L7 10.3l-3.7 1.9.7-4.1L1 5.3l4.2-.7L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    Designed for Architects
+  </div>
+  <h1>The BIM platform<br/>architects <em>actually</em> want.</h1>
+  <p class="hero-sub">
+    Full 2D drafting, 3D BIM, AI design assistance, and IFC4 export — all in your browser.
+    No £5,000 licence fee. No annual lock-in. Just architecture.
+  </p>
+  <div class="hero-actions">
+    <a href="/#get-started" class="btn-primary">
+      Start free 14-day trial
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+    <a href="https://app.opencad.archi" class="btn-secondary">Open app →</a>
+  </div>
+</div>
+
+<div class="features">
+  <h2>Everything you need to design buildings.</h2>
+  <div class="grid-3">
+    <div class="card">
+      <div class="card-icon">✏️</div>
+      <h3>Full 2D drafting suite</h3>
+      <p>Walls, doors, windows, roofs, slabs with snap, trim, and parametric constraints. Works exactly like your old CAD tool — except it's in Chrome.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🤖</div>
+      <h3>AI floor plan generator</h3>
+      <p>Describe a brief in natural language — "3-bedroom house, open plan kitchen, south-facing garden" — and get a complete floor plan with materials and building-code checks in seconds.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🏗️</div>
+      <h3>IFC4 native export</h3>
+      <p>Export building models as IFC4 with full property sets, spatial hierarchy, and material assignments. Passes buildingSMART certification checks.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">👥</div>
+      <h3>Real-time team editing</h3>
+      <p>CRDT-backed multiplayer — every cursor, every change, live across your practice. No more emailing IFC files back and forth.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📐</div>
+      <h3>Construction documents</h3>
+      <p>Multi-sheet layouts, title blocks, dimensions, annotations. Export as PDF or DWG for consultants and contractors.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔌</div>
+      <h3>Plugin marketplace</h3>
+      <p>Extend OpenCAD with community plugins — from structural calculations to energy analysis. Build your own with the open SDK.</p>
+    </div>
+  </div>
+</div>
+
+<div class="comparison">
+  <h2>How OpenCAD compares</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Feature</th>
+        <th>OpenCAD</th>
+        <th>Revit</th>
+        <th>ArchiCAD</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Price</td><td><strong>£0–£99/mo</strong></td><td>~£2,500/yr</td><td>~£3,000/yr</td></tr>
+      <tr><td>Browser-native</td><td class="yes">✓ Yes</td><td class="no">✗ No</td><td class="no">✗ No</td></tr>
+      <tr><td>AI design generation</td><td class="yes">✓ Yes</td><td class="no">✗ No</td><td class="partial">⚬ Plugin</td></tr>
+      <tr><td>IFC4 import/export</td><td class="yes">✓ Full round-trip</td><td class="partial">⚬ Partial</td><td class="yes">✓ Yes</td></tr>
+      <tr><td>Real-time collaboration</td><td class="yes">✓ CRDT-based</td><td class="partial">⚬ BIM 360</td><td class="partial">⚬ BIMcloud</td></tr>
+      <tr><td>Offline mode</td><td class="yes">✓ IndexedDB</td><td class="yes">✓ Yes</td><td class="yes">✓ Yes</td></tr>
+      <tr><td>Open source</td><td class="yes">✓ MIT licence</td><td class="no">✗ Proprietary</td><td class="no">✗ Proprietary</td></tr>
+      <tr><td>Self-host</td><td class="yes">✓ Yes</td><td class="no">✗ No</td><td class="no">✗ No</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="faq">
+  <h2>Frequently asked questions</h2>
+
+  <details>
+    <summary>Can OpenCAD replace Revit for a small architecture practice?</summary>
+    <p>For most small practices (1–20 people) doing residential and small commercial work, yes. OpenCAD covers 2D drafting, 3D BIM, IFC4 export, sheet layouts, and collaborative editing. Large parametric families and MEP systems in Revit are more advanced — those are on our roadmap.</p>
+  </details>
+
+  <details>
+    <summary>Does it import existing Revit (.rvt) or ArchiCAD (.pln) files?</summary>
+    <p>Yes. OpenCAD imports .rvt (Revit 2024), .pln (ArchiCAD 27), .dwg (AutoCAD 2018+), and IFC 2x3/4 files. 3D geometry renders immediately; property sets and layer mappings are preserved.</p>
+  </details>
+
+  <details>
+    <summary>What file formats can I export?</summary>
+    <p>IFC4, IFC 2x3, DWG, DXF, PDF (vector), and OpenCAD's native .opencad format. Sheet sets export as multi-page PDF.</p>
+  </details>
+
+  <details>
+    <summary>How does the trial work?</summary>
+    <p>Every new account gets a 14-day free trial with full access to all features — no credit card required. After the trial, the Starter plan (up to 3 projects) stays free. The Pro plan (£29/user/month) adds unlimited projects, AI generation, and real-time collaboration.</p>
+  </details>
+
+  <details>
+    <summary>Can I self-host OpenCAD for my practice?</summary>
+    <p>Yes. OpenCAD is MIT-licensed. The Business plan includes self-hosting support, or you can deploy the open-source version yourself using Docker and our Terraform templates.</p>
+  </details>
+</div>
+
+<footer>
+  <a href="/">Home</a>
+  <a href="/for/structural-engineers">For Structural Engineers</a>
+  <a href="/for/mep-engineers">For MEP Engineers</a>
+  <a href="/for/contractors">For Contractors</a>
+  <a href="https://github.com/CariHQ/opencad" target="_blank" rel="noopener">GitHub</a>
+  <a href="/privacy">Privacy</a>
+  <a href="/terms">Terms</a>
+  <p style="margin-top:20px;">&copy; 2026 OpenCAD by <a href="https://cari.global" target="_blank" rel="noopener">CariHQ</a></p>
+</footer>
+
+</body>
+</html>
