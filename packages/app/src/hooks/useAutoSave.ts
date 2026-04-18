@@ -8,12 +8,9 @@ import { useEffect, useRef } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { useProjectStore } from '../stores/projectStore';
 import { isTauri, tauriSaveProject } from './useTauri';
-import { saveProject as idbSaveProject, initStorage } from '@opencad/document';
+import { saveDocument as offlineSaveDocument } from '../lib/offlineStore';
 
 const AUTO_SAVE_INTERVAL_MS = 2000;
-
-// Warm up the IndexedDB connection early so first save is fast
-void initStorage().catch(() => { /* non-fatal */ });
 
 function saveToLocalStorage(id: string, data: string): void {
   try {
@@ -49,8 +46,8 @@ export function useAutoSave(): void {
         if (isTauri()) {
           await tauriSaveProject(activeProjectId, name, serialized);
         } else {
-          // Primary: IndexedDB (survives storage quota pressure better than localStorage)
-          await idbSaveProject(document);
+          // Primary: IndexedDB via offlineStore (survives storage quota pressure)
+          await offlineSaveDocument(activeProjectId, serialized);
           // Secondary: localStorage for fast synchronous access during page load
           saveToLocalStorage(activeProjectId, serialized);
         }

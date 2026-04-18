@@ -6,6 +6,9 @@ import { ProjectDashboard } from './ProjectDashboard';
 import { useProjectStore } from '../stores/projectStore';
 expect.extend(jestDomMatchers);
 
+// T-DOC-010 tests use window.confirm for delete confirmation
+vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
+
 vi.mock('../stores/projectStore');
 
 function makeStore(overrides = {}) {
@@ -184,5 +187,117 @@ describe('T-SYNC-010: ProjectDashboard', () => {
   it('applies grid-view class when viewMode is grid', () => {
     const { container } = render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
     expect(container.querySelector('.projects-grid')).toBeInTheDocument();
+  });
+});
+
+describe('T-DOC-010: ProjectDashboard', () => {
+  beforeEach(() => {
+    vi.mocked(useProjectStore).mockReturnValue(makeStore());
+  });
+
+  it('renders search input', () => {
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    expect(screen.getByPlaceholderText(/search/i)).toBeInTheDocument();
+  });
+
+  it('renders filter tabs', () => {
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    expect(screen.getByRole('button', { name: /^all$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /starred/i })).toBeInTheDocument();
+  });
+
+  it('renders sort dropdown', () => {
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    expect(screen.getByLabelText(/sort by/i)).toBeInTheDocument();
+  });
+
+  it('renders view mode toggle', () => {
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    expect(screen.getByTitle(/grid view/i)).toBeInTheDocument();
+    expect(screen.getByTitle(/list view/i)).toBeInTheDocument();
+  });
+
+  it('shows empty state when no projects', () => {
+    vi.mocked(useProjectStore).mockReturnValue(
+      makeStore({ projects: [], getFilteredProjects: vi.fn().mockReturnValue([]) })
+    );
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    expect(screen.getByText(/no projects/i)).toBeInTheDocument();
+  });
+
+  it('renders project cards for each project', () => {
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    expect(screen.getByText('My House')).toBeInTheDocument();
+    expect(screen.getByText('Office Tower')).toBeInTheDocument();
+  });
+
+  it('search input calls setSearchQuery', () => {
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    fireEvent.change(screen.getByPlaceholderText(/search/i), { target: { value: 'house' } });
+    expect(store.setSearchQuery).toHaveBeenCalledWith('house');
+  });
+
+  it('filter tab calls setFilterBy', () => {
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /starred/i }));
+    expect(store.setFilterBy).toHaveBeenCalledWith('starred');
+  });
+
+  it('sort dropdown calls setSortBy', () => {
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    fireEvent.change(screen.getByLabelText(/sort by/i), { target: { value: 'name' } });
+    expect(store.setSortBy).toHaveBeenCalledWith('name');
+  });
+
+  it('clicking a project card calls openProject', () => {
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    fireEvent.click(screen.getByText('My House'));
+    expect(store.openProject).toHaveBeenCalledWith('p1');
+  });
+
+  it('star button calls starProject', () => {
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    const starBtns = screen.getAllByTitle(/star/i);
+    fireEvent.click(starBtns[0]);
+    expect(store.starProject).toHaveBeenCalledWith('p1');
+  });
+
+  it('new project button calls createProject', () => {
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /new project/i }));
+    expect(store.createProject).toHaveBeenCalledWith('Untitled Project');
+    expect(store.openProject).toHaveBeenCalledWith('new-id');
+  });
+
+  it('delete button calls deleteProject after confirmation', () => {
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    const deleteBtns = screen.getAllByTitle(/delete/i);
+    expect(deleteBtns.length).toBeGreaterThanOrEqual(1);
+    fireEvent.click(deleteBtns[0]);
+    expect(store.deleteProject).toHaveBeenCalledWith('p1');
+  });
+
+  it('does not delete project when confirmation is cancelled', () => {
+    vi.mocked(window.confirm).mockReturnValueOnce(false);
+    const store = makeStore();
+    vi.mocked(useProjectStore).mockReturnValue(store);
+    render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
+    const deleteBtns = screen.getAllByTitle(/delete/i);
+    fireEvent.click(deleteBtns[0]);
+    expect(store.deleteProject).not.toHaveBeenCalled();
   });
 });

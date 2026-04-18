@@ -405,3 +405,24 @@ export const useDocumentStore = create<DocumentState>()(
     }
   )
 );
+
+// ── Auto-save subscription ────────────────────────────────────────────────────
+// Saves to IndexedDB 2s after any document change. Runs outside React so it
+// persists even when no component is mounted. Uses the offlineStore wrapper so
+// the path is mockable in tests.
+let _autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
+let _lastAutoSaveDoc: string | null = null;
+
+useDocumentStore.subscribe((state) => {
+  const { document } = state;
+  if (!document) return;
+  const serialized = JSON.stringify(document);
+  // Skip if unchanged
+  if (serialized === _lastAutoSaveDoc) return;
+  if (_autoSaveTimer !== null) clearTimeout(_autoSaveTimer);
+  _autoSaveTimer = setTimeout(() => {
+    _autoSaveTimer = null;
+    _lastAutoSaveDoc = serialized;
+    void offlineSaveDocument('default', serialized).catch(() => {});
+  }, 2000);
+});
