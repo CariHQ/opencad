@@ -248,4 +248,58 @@ describe('T-MEP-001: Clash Detection', () => {
       expect(uniquePairs.size).toBe(pairs.length);
     });
   });
+
+  describe('T-MEP-001: Soft clash (50mm clearance) detection', () => {
+    it('returns empty array for non-overlapping elements far apart', () => {
+      // Wall at y=0 (occupies y=-100 to +100), column at y=10000 — no soft clash
+      const wall = makeWall('w1', 0, 0, 5000, 0, 200);
+      const col = makeColumn('c1', 2500, 10000, 400);
+      const clashes = detectClashes([wall, col]);
+      expect(clashes).toHaveLength(0);
+    });
+
+    it('detects a soft clash when elements are within 50mm clearance', () => {
+      // Wall occupies y=-100 to +100. Column at y=140 (edge at y=140-200=−60 to 140+200=340).
+      // Gap between wall maxY=100 and column minY=-60 is negative — that's a hard clash.
+      // For soft: wall maxY=100, column center at y=180, column minY=180-200=−20 — still overlaps.
+      // Place column so its edge is exactly 30mm away from wall edge:
+      // wall maxY = 100 (half thickness=100), column minY = wall.maxY + 30 = 130
+      // column minY = colCenterY - 200 = 130 => colCenterY = 330
+      const wall = makeWall('w1', 0, 0, 5000, 0, 200); // thickness=200 => half=100, wall y: -100 to +100
+      const col = makeColumn('c1', 2500, 330, 400); // center 330, half=200 => y: 130 to 530 — gap = 130-100 = 30mm < 50mm
+      const clashes = detectClashes([wall, col]);
+      expect(clashes.length).toBeGreaterThan(0);
+      const softClashes = clashes.filter((c) => c.severity === ClashSeverity.Soft);
+      expect(softClashes.length).toBeGreaterThan(0);
+    });
+
+    it('does NOT detect soft clash when elements are more than 50mm apart', () => {
+      // wall y: -100 to +100, column center at y=260, half=200 => y: 60 to 460
+      // gap = 60-100 = -40mm => that would be a hard clash. Let's push column further.
+      // column center at y=360 => minY=360-200=160 => gap=160-100=60mm > 50mm => no clash
+      const wall = makeWall('w1', 0, 0, 5000, 0, 200);
+      const col = makeColumn('c1', 2500, 360, 400);
+      const clashes = detectClashes([wall, col]);
+      // Should have 0 clashes (neither hard nor soft)
+      expect(clashes).toHaveLength(0);
+    });
+
+    it('soft clash severity is "soft"', () => {
+      const wall = makeWall('w1', 0, 0, 5000, 0, 200);
+      const col = makeColumn('c1', 2500, 330, 400);
+      const clashes = detectClashes([wall, col]);
+      const soft = clashes.find((c) => c.severity === ClashSeverity.Soft);
+      expect(soft).toBeDefined();
+      expect(soft!.severity).toBe(ClashSeverity.Soft);
+    });
+
+    it('hard clash and soft clash are both reported when elements strictly overlap', () => {
+      // Strictly overlapping column+wall should produce at least a hard clash
+      const wall = makeWall('w1', 0, -100, 5000, -100, 200);
+      const col = makeColumn('c1', 2500, 0, 400);
+      const clashes = detectClashes([wall, col]);
+      const hard = clashes.filter((c) => c.severity === ClashSeverity.Hard);
+      expect(hard.length).toBeGreaterThan(0);
+    });
+  });
 });

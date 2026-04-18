@@ -9,10 +9,10 @@ interface SectionBoxPanelProps {
   onSaveView?: () => void;
 }
 
-const DIRECTION_OPTIONS: { value: SectionDirection; label: string }[] = [
-  { value: 'x', label: 'X (Left/Right)' },
-  { value: 'y', label: 'Y (Front/Back)' },
-  { value: 'z', label: 'Z (Top/Bottom)' },
+const AXIS_BUTTONS: { value: SectionDirection; label: string }[] = [
+  { value: 'x', label: 'X' },
+  { value: 'y', label: 'Y' },
+  { value: 'z', label: 'Z' },
 ];
 
 export function SectionBoxPanel({
@@ -42,11 +42,13 @@ export function SectionBoxPanel({
   };
 
   return (
-    <div className="tool-panel">
-      <div className="tool-panel-header">Section View</div>
+    <div className="section-box-panel panel">
+      <div className="panel-header">
+        <span className="panel-title">Section View</span>
+      </div>
 
-      <div className="tool-panel-group">
-        <div className="tool-panel-row">
+      <div className="panel-body">
+        <div className="panel-row">
           <label htmlFor="section-enable" className="section-toggle-label">
             Enable section cut
           </label>
@@ -59,33 +61,32 @@ export function SectionBoxPanel({
           />
         </div>
 
+        <div className="panel-row">
+          <span className="panel-label">Axis</span>
+          <div className="axis-selector">
+            {AXIS_BUTTONS.map((btn) => (
+              <button
+                key={btn.value}
+                className={`axis-btn${direction === btn.value ? ' active' : ''}`}
+                aria-pressed={direction === btn.value}
+                onClick={() => handleDirectionChange(btn.value)}
+              >
+                {btn.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {enabled && (
           <>
-            <div className="tool-panel-row">
-              <label htmlFor="section-direction">Direction</label>
-              <select
-                id="section-direction"
-                aria-label="Direction"
-                className="tool-panel-select"
-                value={direction}
-                onChange={(e) => handleDirectionChange(e.target.value as SectionDirection)}
-              >
-                {DIRECTION_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="tool-panel-row">
+            <div className="panel-row">
               <label htmlFor="section-position">Position: {position}mm</label>
               <input
                 id="section-position"
                 type="range"
                 aria-label="Position"
-                min="-10000"
-                max="10000"
+                min="0"
+                max="20000"
                 step="100"
                 value={position}
                 onChange={(e) => handlePositionChange(parseInt(e.target.value, 10))}
@@ -93,7 +94,7 @@ export function SectionBoxPanel({
               />
             </div>
 
-            <div className="tool-panel-row">
+            <div className="panel-row">
               <button
                 className="btn-secondary"
                 onClick={() => onSaveView?.()}

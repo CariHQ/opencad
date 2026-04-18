@@ -114,9 +114,31 @@ export function boxesIntersect(a: BoundingBox, b: BoundingBox): boolean {
   );
 }
 
+/** The clearance threshold in mm for soft clash detection. */
+const SOFT_CLASH_CLEARANCE = 50;
+
+/**
+ * Returns true if two AABBs are within the soft-clash clearance zone
+ * (within 50mm of each other) but do NOT strictly intersect.
+ */
+export function boxesWithinClearance(a: BoundingBox, b: BoundingBox, clearance: number = SOFT_CLASH_CLEARANCE): boolean {
+  if (boxesIntersect(a, b)) return false;
+
+  const expanded: BoundingBox = {
+    minX: a.minX - clearance,
+    maxX: a.maxX + clearance,
+    minY: a.minY - clearance,
+    maxY: a.maxY + clearance,
+    minZ: a.minZ - clearance,
+    maxZ: a.maxZ + clearance,
+  };
+
+  return boxesIntersect(expanded, b);
+}
+
 let clashCounter = 0;
 
-/** Detect all hard clashes between elements using AABB intersection. */
+/** Detect all hard and soft clashes between elements using AABB intersection. */
 export function detectClashes(elements: ElementSchema[]): ClashResult[] {
   const clashes: ClashResult[] = [];
   const boxes = elements.map((el) => ({ el, box: getBoundingBox(el) }));
@@ -130,7 +152,7 @@ export function detectClashes(elements: ElementSchema[]): ClashResult[] {
       if (!b.box) continue;
 
       if (boxesIntersect(a.box, b.box)) {
-        // Compute approximate intersection center
+        // Hard clash — physical intersection
         const cx = (Math.max(a.box.minX, b.box.minX) + Math.min(a.box.maxX, b.box.maxX)) / 2;
         const cy = (Math.max(a.box.minY, b.box.minY) + Math.min(a.box.maxY, b.box.maxY)) / 2;
         const cz = (Math.max(a.box.minZ, b.box.minZ) + Math.min(a.box.maxZ, b.box.maxZ)) / 2;
@@ -141,6 +163,20 @@ export function detectClashes(elements: ElementSchema[]): ClashResult[] {
           elementBId: b.el.id,
           severity: ClashSeverity.Hard,
           description: `Hard clash between ${a.el.type} "${a.el.id}" and ${b.el.type} "${b.el.id}"`,
+          location: { x: cx, y: cy, z: cz },
+        });
+      } else if (boxesWithinClearance(a.box, b.box)) {
+        // Soft clash — clearance violation (within 50mm)
+        const cx = (a.box.minX + a.box.maxX + b.box.minX + b.box.maxX) / 4;
+        const cy = (a.box.minY + a.box.maxY + b.box.minY + b.box.maxY) / 4;
+        const cz = (a.box.minZ + a.box.maxZ + b.box.minZ + b.box.maxZ) / 4;
+
+        clashes.push({
+          id: `clash-${++clashCounter}`,
+          elementAId: a.el.id,
+          elementBId: b.el.id,
+          severity: ClashSeverity.Soft,
+          description: `Soft clash: ${a.el.type} "${a.el.id}" and ${b.el.type} "${b.el.id}" are within ${SOFT_CLASH_CLEARANCE}mm`,
           location: { x: cx, y: cy, z: cz },
         });
       }
