@@ -94,7 +94,7 @@ export function AppLayout() {
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
-  const { can } = useRole();
+  const { can, allowedViews } = useRole();
 
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
   const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>('opencad-activeView', '3d');
@@ -133,9 +133,26 @@ export function AppLayout() {
   const rightVisible = showRightPanel && !focusMode;
   const chromeVisible = !focusMode;
 
+  // Auto-switch to first allowed view if current view is locked out by role
   useEffect(() => {
-    if (selectedIds.length > 0) setRightPanelTab('properties');
-  }, [selectedIds, setRightPanelTab]);
+    if (!allowedViews.includes(activeView)) {
+      const first = allowedViews[0] as typeof activeView | undefined;
+      if (first) setActiveView(first);
+    }
+  }, [allowedViews, activeView, setActiveView]);
+
+  // Auto-switch right panel tab to first allowed tab if current tab is locked out
+  useEffect(() => {
+    if (!can(`panel:${rightPanelTab}`)) {
+      const first = RIGHT_PANEL_TABS.find((t) => can(`panel:${t.id}`));
+      if (first) setRightPanelTab(first.id);
+    }
+  }, [can, rightPanelTab, setRightPanelTab]);
+
+  // When an element is selected, switch to properties only if the role allows it
+  useEffect(() => {
+    if (selectedIds.length > 0 && can('panel:properties')) setRightPanelTab('properties');
+  }, [selectedIds, setRightPanelTab, can]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -218,9 +235,15 @@ export function AppLayout() {
           </div>
 
           <div className="toolbar-tabs">
-            <button className={`tab-btn${activeView === 'floor-plan' ? ' active' : ''}`} onClick={() => setActiveView('floor-plan')}>Floor Plan</button>
-            <button className={`tab-btn${activeView === '3d' ? ' active' : ''}`} onClick={() => setActiveView('3d')}>3D View</button>
-            <button className={`tab-btn${activeView === 'section' ? ' active' : ''}`} onClick={() => setActiveView('section')}>Section</button>
+            {allowedViews.includes('floor-plan') && (
+              <button className={`tab-btn${activeView === 'floor-plan' ? ' active' : ''}`} onClick={() => setActiveView('floor-plan')}>Floor Plan</button>
+            )}
+            {allowedViews.includes('3d') && (
+              <button className={`tab-btn${activeView === '3d' ? ' active' : ''}`} onClick={() => setActiveView('3d')}>3D View</button>
+            )}
+            {allowedViews.includes('section') && (
+              <button className={`tab-btn${activeView === 'section' ? ' active' : ''}`} onClick={() => setActiveView('section')}>Section</button>
+            )}
           </div>
 
           <div className="toolbar-right">
@@ -242,12 +265,12 @@ export function AppLayout() {
 
       <div className="app-body">
         <aside className={`app-left-panel${leftVisible ? '' : ' panel-collapsed'}`}>
-          <Navigator />
-          <LevelManager />
+          {can('panel:navigator') && <Navigator />}
+          {can('panel:levels') && <LevelManager />}
         </aside>
 
         <div className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}>
-          <ToolShelf onToggleAI={toggleAIChat} onToggleProperties={() => setShowRightPanel((v) => !v)} propertiesVisible={rightVisible} theme={theme} />
+          <ToolShelf />
         </div>
 
         <main className="app-main">
@@ -272,7 +295,7 @@ export function AppLayout() {
 
         <aside className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}>
           <div className="right-panel-tab-bar">
-            {RIGHT_PANEL_TABS.map((tab) => (
+            {RIGHT_PANEL_TABS.filter((tab) => can(`panel:${tab.id}`)).map((tab) => (
               <button key={tab.id} className={`right-panel-tab-btn${rightPanelTab === tab.id ? ' active' : ''}`} onClick={() => setRightPanelTab(tab.id)} title={tab.title} aria-label={tab.title}>
                 {tab.icon}
               </button>
@@ -298,7 +321,7 @@ export function AppLayout() {
               {rightPanelTab === 'render' && <RenderPanel />}
               {rightPanelTab === 'sheets' && <SheetPanel />}
               {rightPanelTab === 'bcf' && <BCFPanel />}
-              {rightPanelTab === 'materials' && <MaterialLibrary onSelect={() => {}} />}
+              {rightPanelTab === 'materials' && <MaterialLibrary onSelect={() => {}} selectedCount={selectedIds.length} />}
               {rightPanelTab === 'comments' && <CommentsPanel />}
               {rightPanelTab === 'carbon' && <CarbonPanel />}
               {rightPanelTab === 'cost' && <CostPanel />}
@@ -336,7 +359,7 @@ export function AppLayout() {
       )}
 
       {showAuth && (
-        <AuthModal mode={showAuth} onClose={() => setShowAuth(null)} onLogin={() => setShowAuth(null)} onRegister={() => setShowAuth(null)} />
+        <AuthModal onClose={() => setShowAuth(null)} />
       )}
 
       {showSettings && (

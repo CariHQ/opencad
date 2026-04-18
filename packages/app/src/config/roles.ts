@@ -13,6 +13,8 @@ export interface RoleConfig {
   panels: string[];
   writableLayers: string[] | 'all';
   viewportMode: 'interactive' | 'view-only';
+  /** Which viewport views are accessible ('floor-plan' | '3d' | 'section') */
+  views: string[];
 }
 
 export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
@@ -24,59 +26,86 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
       'dimension', 'text', 'hatch', 'section', 'compliance', 'ai',
     ],
     panels: [
-      'layers', 'properties', 'ai', 'compliance', 'navigator', 'levels',
-      'schedule', 'materials', 'render', 'cost', 'carbon',
+      // core
+      'navigator', 'levels', 'layers', 'properties',
+      // design tools
+      'schedule', 'spaces', 'render', 'hatch', 'symbols', 'shadow', 'section', 'site', 'photo',
+      // analysis
+      'compliance', 'carbon', 'cost', 'wind',
+      // collaboration
+      'comments', 'bcf',
+      // materials & content
+      'materials', 'specs', 'marketplace',
+      // ai
+      'ai',
     ],
     writableLayers: 'all',
     viewportMode: 'interactive',
+    // view access
+    views: ['floor-plan', '3d', 'section'],
   },
 
   structural: {
     label: 'Structural Engineer',
     tools: ['select', 'dimension', 'section', 'compliance', 'annotation'],
-    panels: ['layers', 'properties', 'compliance', 'navigator', 'levels', 'schedule'],
+    panels: [
+      'navigator', 'levels', 'layers', 'properties',
+      'schedule', 'section', 'compliance', 'bcf', 'comments', 'specs',
+    ],
     writableLayers: ['structural', 'grids', 'foundations'],
     viewportMode: 'interactive',
+    views: ['floor-plan', '3d', 'section'],
   },
 
   mep: {
     label: 'MEP Engineer',
     tools: ['select', 'dimension', 'section', 'annotation'],
-    panels: ['layers', 'properties', 'navigator', 'levels', 'schedule'],
+    panels: [
+      'navigator', 'levels', 'layers', 'properties',
+      'schedule', 'section', 'clash', 'bcf', 'comments', 'specs',
+    ],
     writableLayers: ['mechanical', 'electrical', 'plumbing'],
     viewportMode: 'interactive',
+    views: ['floor-plan', '3d', 'section'],
   },
 
   contractor: {
     label: 'Contractor / Builder',
     tools: ['select', 'dimension', 'section', 'compliance', 'annotation'],
-    panels: ['layers', 'navigator', 'levels', 'schedule', 'compliance', 'cost'],
+    panels: [
+      'navigator', 'levels', 'layers',
+      'schedule', 'compliance', 'cost', 'bcf', 'comments', 'specs', 'marketplace',
+    ],
     writableLayers: [],
     viewportMode: 'interactive',
+    views: ['floor-plan', '3d', 'section'],
   },
 
   owner: {
     label: 'Owner / Client',
     tools: [],
-    panels: ['navigator'],
+    panels: ['navigator', 'comments', 'marketplace'],
     writableLayers: [],
     viewportMode: 'view-only',
+    views: ['3d'],
   },
 
   pm: {
     label: 'Project Manager',
     tools: ['select', 'annotation'],
-    panels: ['navigator', 'schedule', 'cost', 'comments'],
+    panels: ['navigator', 'schedule', 'cost', 'comments', 'bcf', 'marketplace'],
     writableLayers: [],
     viewportMode: 'view-only',
+    views: ['floor-plan', '3d', 'section'],
   },
 
   admin: {
     label: 'Administrator',
     tools: ['select'],
-    panels: ['navigator', 'admin'],
+    panels: ['navigator', 'schedule', 'comments', 'admin', 'marketplace'],
     writableLayers: [],
     viewportMode: 'view-only',
+    views: ['floor-plan', '3d', 'section'],
   },
 };
 

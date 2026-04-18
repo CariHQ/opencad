@@ -7,6 +7,8 @@ export interface UseRoleResult {
   config: RoleConfig;
   isViewOnly: boolean;
   can: (action: string) => boolean;
+  /** Viewport view IDs accessible to this role: 'floor-plan' | '3d' | 'section' */
+  allowedViews: string[];
 }
 
 /**
@@ -36,6 +38,8 @@ export function useRole(): UseRoleResult {
           if (config.writableLayers === 'all') return true;
           return (config.writableLayers as string[]).includes(id);
         }
+        case 'view':
+          return config.views.includes(id);
         default:
           return false;
       }
@@ -47,5 +51,6 @@ export function useRole(): UseRoleResult {
     config,
     isViewOnly: config.viewportMode === 'view-only',
     can,
+    allowedViews: config.views,
   };
 }

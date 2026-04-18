@@ -83,7 +83,7 @@ export default defineConfig({
   },
   server: {
     port: 5173,
-    strictPort: true,
+    strictPort: false,  // fall through to next port if 5173 is busy
   },
   test: {
     globals: true,
