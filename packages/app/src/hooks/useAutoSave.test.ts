@@ -195,7 +195,6 @@ describe('T-OFF-003: useAutoSave — IndexedDB auto-save', () => {
 
   it('cancels pending save on unmount', async () => {
     vi.mocked(useDocumentStore).mockReturnValue({
-      // eslint-disable-next-line @typescript-library/no-explicit-any
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       document: sampleDoc as any,
       isSaving: false,

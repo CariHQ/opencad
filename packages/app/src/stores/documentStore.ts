@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { DocumentModel, type DocumentSchema, type PropertyValue } from '@opencad/document';
+import { DocumentModel, computeBoundingBox, type DocumentSchema, type ElementSchema, type PropertyValue, type PropertySet } from '@opencad/document';
 import {
   saveDocument as offlineSaveDocument,
   loadDocument as offlineLoadDocument,
@@ -8,16 +8,15 @@ import {
   markSynced,
 } from '../lib/offlineStore';
 import {
-  crdtApplyLocal,
-  crdtApplyProperty,
-  crdtDeleteElement,
-  crdtFlushOfflineQueue,
   connectToProject,
+  initSyncCrdt,
+  crdtFlushOfflineQueue,
   setOnDocumentSync,
   setOnRemoteDelta,
   isApplyingRemote,
   type RemoteDelta,
 } from '../lib/syncAdapter';
+import { isFirebaseConfigured, firebaseAuth } from '../lib/firebase';
 import { type RoleId } from '../config/roles';
 
 interface HistoryEntry {
@@ -63,8 +62,13 @@ interface DocumentState {
   }) => string;
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
+  setElementMaterial: (elementId: string, materialId: string) => void;
 
   setToolParam: (tool: string, key: string, value: unknown) => void;
+
+  addPset: (elementId: string, pset: { name: string; properties: Record<string, string | number | boolean> }) => void;
+  updatePsetProperty: (elementId: string, psetId: string, key: string, value: unknown) => void;
+  removePset: (elementId: string, psetId: string) => void;
 
   setUserRole: (role: RoleId | null) => void;
 
@@ -85,8 +89,6 @@ interface DocumentState {
   renameLevel: (levelId: string, name: string) => void;
   renameProject: (name: string) => void;
 }
-
-const MAX_HISTORY = 50;
 
 export const useDocumentStore = create<DocumentState>()(
   persist(
@@ -120,12 +122,12 @@ export const useDocumentStore = create<DocumentState>()(
           const saved = localStorage.getItem('opencad-document');
           if (saved) {
             const docData = JSON.parse(saved);
-            // Only restore if the saved doc belongs to THIS project and has valid schema
-            const savedProjectId = docData?.id as string | undefined;
-            if (docData?.content && docData?.organization && savedProjectId === projectId) {
+            // Guard against pre-refactor schema (no content/organization groups)
+            if (docData?.content && docData?.organization) {
               model = new DocumentModel(projectId, userId);
               model.loadDocument(docData);
             } else {
+              localStorage.removeItem('opencad-document');
               model = new DocumentModel(projectId, userId);
             }
           } else {
@@ -146,8 +148,21 @@ export const useDocumentStore = create<DocumentState>()(
           canRedo: false,
         });
 
-        // Connect to the real-time sync relay for this project.
-        connectToProject(projectId);
+        // Initialise the CRDT WASM module (no-op if already loaded) then
+        // connect to the real-time sync relay with an authenticated token.
+        void initSyncCrdt().then(() => {
+          connectToProject(
+            projectId,
+            isFirebaseConfigured
+              ? () => {
+                  const auth = firebaseAuth();
+                  return auth.currentUser
+                    ? auth.currentUser.getIdToken()
+                    : Promise.resolve(null);
+                }
+              : undefined,
+          );
+        });
       },
 
       loadProject: (projectId, userId) => {
@@ -164,8 +179,21 @@ export const useDocumentStore = create<DocumentState>()(
           canRedo: false,
         });
 
-        // Connect to the real-time sync relay for this project.
-        connectToProject(projectId);
+        // Initialise the CRDT WASM module (no-op if already loaded) then
+        // connect to the real-time sync relay with an authenticated token.
+        void initSyncCrdt().then(() => {
+          connectToProject(
+            projectId,
+            isFirebaseConfigured
+              ? () => {
+                  const auth = firebaseAuth();
+                  return auth.currentUser
+                    ? auth.currentUser.getIdToken()
+                    : Promise.resolve(null);
+                }
+              : undefined,
+          );
+        });
       },
 
       setSelectedIds: (ids) => set({ selectedIds: ids }),
@@ -181,7 +209,6 @@ export const useDocumentStore = create<DocumentState>()(
 
         // When transitioning from offline → online, flush any pending offline edits.
         if (online && !isOnline) {
-          // Flush Rust CRDT delta queue over WebSocket
           crdtFlushOfflineQueue();
           void listPendingSync().then((pendingIds) => {
             for (const pid of pendingIds) {
@@ -227,17 +254,20 @@ export const useDocumentStore = create<DocumentState>()(
         const { model } = get();
         if (!model) throw new Error('No document loaded');
 
+        const props = (params.properties || {}) as Record<string, PropertyValue>;
         const elementId = model.addElement({
           type: params.type as 'wall' | 'door' | 'window' | 'slab',
           layerId: params.layerId,
-          properties: params.properties as Record<string, PropertyValue>,
+          properties: props,
         });
 
-        const newDoc = { ...model.documentData };
-        const element = newDoc.content.elements[elementId];
-        // Record in Rust CRDT for collaborative sync (skip when replaying remote)
-        if (element && !isApplyingRemote()) crdtApplyLocal(elementId, element);
+        // Compute bounding box from element properties
+        const createdEl = model.documentData.content.elements[elementId];
+        if (createdEl) {
+          createdEl.boundingBox = computeBoundingBox(params.type, props);
+        }
 
+        const newDoc = { ...model.documentData };
         const newDocJson = JSON.stringify(newDoc);
         set({
           document: newDoc,
@@ -258,12 +288,6 @@ export const useDocumentStore = create<DocumentState>()(
         const element = model.getElementById(elementId);
         if (element) {
           Object.assign(element, updates);
-          // Record each property change as a property-level CRDT op (skip when replaying remote)
-          if (!isApplyingRemote()) {
-            for (const [prop, val] of Object.entries(updates)) {
-              crdtApplyProperty(elementId, prop, val);
-            }
-          }
           set({ document: { ...model.documentData } });
         }
       },
@@ -273,12 +297,20 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model || !document) return;
 
         delete document.content.elements[elementId];
-        // Record tombstone in Rust CRDT (skip when replaying remote)
-        if (!isApplyingRemote()) crdtDeleteElement(elementId);
         set({
           document: { ...document },
           lastSaved: Date.now(),
         });
+      },
+
+      setElementMaterial: (elementId, materialId) => {
+        const { model } = get();
+        if (!model) return;
+        const element = model.getElementById(elementId);
+        if (!element) return;
+        if (!element.properties) element.properties = {};
+        (element.properties as Record<string, unknown>)['MaterialId'] = { type: 'string', value: materialId };
+        set({ document: { ...model.documentData } });
       },
 
       setToolParam: (tool, key, value) => {
@@ -286,9 +318,62 @@ export const useDocumentStore = create<DocumentState>()(
         set({ toolParams: { ...toolParams, [tool]: { ...(toolParams[tool] ?? {}), [key]: value } } });
       },
 
+      addPset: (elementId, pset) => {
+        const { model } = get();
+        if (!model) return;
+        const element = model.getElementById(elementId);
+        if (!element) return;
+        const newPset: PropertySet = {
+          id: crypto.randomUUID(),
+          name: pset.name,
+          properties: Object.fromEntries(
+            Object.entries(pset.properties).map(([k, v]) => [
+              k,
+              {
+                type: (typeof v === 'boolean' ? 'boolean' : typeof v === 'number' ? 'number' : 'string') as 'boolean' | 'number' | 'string',
+                value: v,
+              },
+            ])
+          ),
+        };
+        element.propertySets = [...(element.propertySets ?? []), newPset];
+        set({ document: { ...model.documentData } });
+      },
+
+      updatePsetProperty: (elementId, psetId, key, value) => {
+        const { model } = get();
+        if (!model) return;
+        const element = model.getElementById(elementId);
+        if (!element) return;
+        const typedValue = value as string | number | boolean | string[];
+        element.propertySets = (element.propertySets ?? []).map((pset: PropertySet) => {
+          if (pset.id !== psetId) return pset;
+          const existing = pset.properties[key];
+          const type = existing?.type ?? (typeof value === 'boolean' ? 'boolean' : typeof value === 'number' ? 'number' : 'string');
+          return {
+            ...pset,
+            properties: {
+              ...pset.properties,
+              [key]: { type, value: typedValue },
+            },
+          };
+        });
+        set({ document: { ...model.documentData } });
+      },
+
+      removePset: (elementId, psetId) => {
+        const { model } = get();
+        if (!model) return;
+        const element = model.getElementById(elementId);
+        if (!element) return;
+        element.propertySets = (element.propertySets ?? []).filter((pset: PropertySet) => pset.id !== psetId);
+        set({ document: { ...model.documentData } });
+      },
+
       setUserRole: (role) => set({ userRole: role }),
 
       pushHistory: (description) => {
+        const MAX_HISTORY = 50;
         const { document, history, historyIndex } = get();
         if (!document) return;
 
@@ -299,7 +384,6 @@ export const useDocumentStore = create<DocumentState>()(
           description,
         });
 
-        // Cap history at MAX_HISTORY entries
         if (newHistory.length > MAX_HISTORY) {
           newHistory = newHistory.slice(newHistory.length - MAX_HISTORY);
         }
@@ -436,7 +520,11 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) return;
         model.documentData.name = name;
         model.documentData.metadata.updatedAt = Date.now();
-        set({ document: { ...model.documentData } });
+        const newDoc = { ...model.documentData };
+        set({ document: newDoc });
+        try {
+          localStorage.setItem('opencad-document', JSON.stringify(newDoc));
+        } catch { /* ignore storage errors */ }
       },
     }),
     {
@@ -446,69 +534,47 @@ export const useDocumentStore = create<DocumentState>()(
   )
 );
 
-// ── Rust CRDT remote callbacks ────────────────────────────────────────────────
-// Register once at module load time so no component needs to wire these up.
-// The callbacks apply incoming remote changes to Zustand WITHOUT re-emitting
-// to the CRDT (isApplyingRemote() guards that).
+// ── Module-level CRDT callback registration ───────────────────────────────────
+// Registered once at module load so that sync events from the WebSocket relay
+// are applied to the store regardless of which component is mounted.
 
 setOnDocumentSync((data: string) => {
   try {
     const schema = JSON.parse(data) as DocumentSchema;
-    // Only load server state when the local document is empty (fresh join).
-    const { document } = useDocumentStore.getState();
-    const hasLocalContent = document && Object.keys(document.content?.elements ?? {}).length > 0;
+    const { document, loadDocumentSchema } = useDocumentStore.getState();
+    const hasLocalContent =
+      document ? Object.keys(document.content?.elements ?? {}).length > 0 : false;
     if (!hasLocalContent) {
-      useDocumentStore.getState().loadDocumentSchema(schema);
+      loadDocumentSchema(schema);
     }
-  } catch { /* ignore malformed sync payload */ }
+  } catch { /* ignore malformed sync data */ }
 });
 
 setOnRemoteDelta((delta: RemoteDelta) => {
-  const store = useDocumentStore.getState();
-  const { document, model } = store;
+  if (isApplyingRemote()) return;
+  const { document } = useDocumentStore.getState();
   if (!document) return;
 
-  if (delta.op === 'set') {
-    // Incoming element create or full replace.
-    const incoming = delta.value as Record<string, unknown>;
-    const existing = document.content.elements[delta.elementId];
-    if (existing) {
-      // Update in place.
-      store.updateElement(delta.elementId, incoming);
-    } else if (model && incoming.type && incoming.layerId) {
-      // New element — add directly to the document to preserve the remote ID.
+  switch (delta.op) {
+    case 'set': {
       document.content.elements[delta.elementId] = {
-        id: delta.elementId,
-        ...(incoming as object),
-      } as typeof existing;
+        ...(document.content.elements[delta.elementId] ?? {}),
+        ...(delta.value as Partial<ElementSchema>),
+      } as ElementSchema;
       useDocumentStore.setState({ document: { ...document } });
+      break;
     }
-  } else if (delta.op === 'setprop') {
-    // Property-level update.
-    store.updateElement(delta.elementId, { [delta.prop]: delta.value });
-  } else if (delta.op === 'delete') {
-    // Remote delete.
-    store.deleteElement(delta.elementId);
+    case 'setprop': {
+      const el = document.content.elements[delta.elementId];
+      if (!el) return;
+      (el as unknown as Record<string, unknown>)[delta.prop] = delta.value;
+      useDocumentStore.setState({ document: { ...document } });
+      break;
+    }
+    case 'delete': {
+      delete document.content.elements[delta.elementId];
+      useDocumentStore.setState({ document: { ...document } });
+      break;
+    }
   }
-});
-
-// ── Auto-save subscription ────────────────────────────────────────────────────
-// Saves to IndexedDB 2s after any document change. Runs outside React so it
-// persists even when no component is mounted. Uses the offlineStore wrapper so
-// the path is mockable in tests.
-let _autoSaveTimer: ReturnType<typeof setTimeout> | null = null;
-let _lastAutoSaveDoc: string | null = null;
-
-useDocumentStore.subscribe((state) => {
-  const { document } = state;
-  if (!document) return;
-  const serialized = JSON.stringify(document);
-  // Skip if unchanged
-  if (serialized === _lastAutoSaveDoc) return;
-  if (_autoSaveTimer !== null) clearTimeout(_autoSaveTimer);
-  _autoSaveTimer = setTimeout(() => {
-    _autoSaveTimer = null;
-    _lastAutoSaveDoc = serialized;
-    void offlineSaveDocument('default', serialized).catch(() => {});
-  }, 2000);
 });

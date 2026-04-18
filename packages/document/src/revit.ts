@@ -136,63 +136,6 @@ class RevitParser {
   }
 }
 
-// RVT magic bytes: 44 4F C8 F4 at offset 0
-const RVT_MAGIC = [0x44, 0x4f, 0xc8, 0xf4];
-
-export function detectFormat(buffer: ArrayBuffer): boolean {
-  if (buffer.byteLength < RVT_MAGIC.length) return false;
-  const view = new Uint8Array(buffer);
-  return RVT_MAGIC.every((byte, i) => view[i] === byte);
-}
-
-export function importFile(
-  _buffer: ArrayBuffer,
-  projectId: string
-): { schema: DocumentSchema; warnings: string[] } {
-  const doc = createProject(projectId, 'revit-import');
-  doc.name = 'Imported Revit';
-  doc.content.elements = {};
-
-  const elementId = crypto.randomUUID();
-  const layerId = Object.keys(doc.organization.layers)[0] || crypto.randomUUID();
-  const levelId = Object.keys(doc.organization.levels)[0] || '';
-
-  doc.content.elements[elementId] = {
-    id: elementId,
-    type: 'annotation',
-    properties: {
-      Name: { type: 'string', value: 'Imported from Revit' },
-    },
-    propertySets: [],
-    geometry: { type: 'brep', data: null },
-    layerId,
-    levelId,
-    transform: {
-      translation: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
-    },
-    boundingBox: {
-      min: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-      max: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-    },
-    metadata: {
-      id: elementId,
-      createdBy: 'revit-import',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      version: { clock: {} },
-    },
-    visible: true,
-    locked: false,
-  };
-
-  return {
-    schema: doc,
-    warnings: ['Full Revit import not yet implemented — returning stub'],
-  };
-}
-
 export function parseRVT(content: string): DocumentSchema {
   const parser = new RevitParser(content);
   const { elements, levels, families, phases } = parser.parse();
@@ -280,4 +223,52 @@ export function parseRVT(content: string): DocumentSchema {
   };
 
   return document;
+}
+
+// ── Binary format detection ────────────────────────────────────────────────────
+
+/** Returns true if the buffer starts with the RVT magic bytes: 44 4F C8 F4 */
+export function detectFormat(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < 4) return false;
+  const view = new Uint8Array(buffer);
+  return view[0] === 0x44 && view[1] === 0x4f && view[2] === 0xc8 && view[3] === 0xf4;
+}
+
+/** Stub binary import — returns a minimal schema and a stub warning. */
+export function importFile(
+  buffer: ArrayBuffer,
+  projectId: string,
+): { schema: DocumentSchema; warnings: string[] } {
+  void buffer;
+  const schema = createProject(projectId, 'imported');
+  const layerId = Object.keys(schema.organization.layers)[0]!;
+  const elementId = crypto.randomUUID();
+  schema.content.elements[elementId] = {
+    id: elementId,
+    type: 'wall',
+    layerId,
+    levelId: '',
+    visible: true,
+    locked: false,
+    properties: {},
+    propertySets: [],
+    geometry: { type: 'brep', data: null },
+    transform: {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    },
+    boundingBox: { min: { x: 0, y: 0, z: 0, _type: 'Point3D' }, max: { x: 1000, y: 200, z: 3000, _type: 'Point3D' } },
+    metadata: {
+      id: elementId,
+      createdBy: 'revit-import',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      version: { clock: {} },
+    },
+  };
+  return {
+    schema,
+    warnings: ['Revit binary format is not fully supported; geometry was stubbed. Export to IFC for full fidelity.'],
+  };
 }

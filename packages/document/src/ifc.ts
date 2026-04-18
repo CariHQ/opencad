@@ -211,10 +211,16 @@ export class IFCSerializer {
   private document: DocumentSchema;
   private schema: 'IFC2X3' | 'IFC4';
   private lineNumber: number = 1;
+  // Geometry entity counter — starts high to avoid collision with element IDs
+  private _geomId: number = 1000;
 
   constructor(document: DocumentSchema, options: SerializeOptions = {}) {
     this.document = document;
     this.schema = options.schema ?? 'IFC2X3';
+  }
+
+  private _nextId(): number {
+    return this._geomId++;
   }
 
   serialize(): string {
@@ -264,15 +270,145 @@ export class IFCSerializer {
   }
 
   private _serializeElement(element: ElementSchema): string[] {
+    if (element.type === 'wall') {
+      return this._wallToLines(element);
+    }
+    if (element.type === 'slab') {
+      return this._slabToLines(element);
+    }
+
+    // Fallback: stub with bounding-box comment for round-trip fidelity
     const lineNum = this.lineNumber++;
     const ifcType = this._getIFCType(element.type);
     const name = (element.properties['Name']?.value as string) || 'Unnamed';
     const bbox = element.boundingBox;
+    const bboxStr = `/* bbox:${bbox.min.x},${bbox.min.y},${bbox.min.z}:${bbox.max.x},${bbox.max.y},${bbox.max.z} */`;
+    return [`#${lineNum}=${ifcType}('${element.id}',$,'${name}',$,$,$,$,$,$); ${bboxStr}`];
+  }
 
-    // Embed bounding box as comment for round-trip fidelity
+  /** Emit real IFC swept-solid geometry for a wall element. */
+  private _wallToLines(element: ElementSchema): string[] {
+    const prop = (key: string, def: number): number => {
+      const v = element.properties[key];
+      return v && v.type === 'number' ? (v.value as number) : def;
+    };
+
+    const startX = prop('StartX', 0);
+    const startY = prop('StartY', 0);
+    const endX = prop('EndX', 3000);
+    const endY = prop('EndY', 0);
+    const height = prop('Height', 3000);
+    const thickness = prop('Thickness', 200);
+
+    const dx = endX - startX;
+    const dy = endY - startY;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx);
+    const cosA = parseFloat(Math.cos(angle).toFixed(10));
+    const sinA = parseFloat(Math.sin(angle).toFixed(10));
+
+    const idPlaceOrigin = this._nextId();
+    const idOriginPt = this._nextId();
+    const idDirRef = this._nextId();
+    const idDirUp = this._nextId();
+    const idExtruded = this._nextId();
+    const idProfile = this._nextId();
+    const idExtrudeDir = this._nextId();
+    const idPolyline = this._nextId();
+    const idPt0 = this._nextId();
+    const idPt1 = this._nextId();
+    const idPt2 = this._nextId();
+    const idPt3 = this._nextId();
+    const idShapeRep = this._nextId();
+    const idGeomCtx = this._nextId();
+    const idCtxPlace = this._nextId();
+    const idCtxOrigin = this._nextId();
+    const idProductShape = this._nextId();
+
+    const wallLineNum = this.lineNumber++;
+    const ifcType = this._getIFCType(element.type);
+    const name = (element.properties['Name']?.value as string) || 'Unnamed';
+    const bbox = element.boundingBox;
     const bboxStr = `/* bbox:${bbox.min.x},${bbox.min.y},${bbox.min.z}:${bbox.max.x},${bbox.max.y},${bbox.max.z} */`;
 
-    return [`#${lineNum}=${ifcType}('${element.id}',$,'${name}',$,$,$,$,$,$); ${bboxStr}`];
+    const f = (n: number): string => {
+      const s = n.toString();
+      return s.includes('.') ? s : `${s}.`;
+    };
+
+    return [
+      `#${idPlaceOrigin}=IFCAXIS2PLACEMENT3D(#${idOriginPt},#${idDirUp},#${idDirRef});`,
+      `#${idOriginPt}=IFCCARTESIANPOINT((${f(startX)},${f(startY)},0.));`,
+      `#${idDirRef}=IFCDIRECTION((${f(cosA)},${f(sinA)},0.));`,
+      `#${idDirUp}=IFCDIRECTION((0.,0.,1.));`,
+      `#${idExtruded}=IFCEXTRUDEDAREASOLID(#${idProfile},#${idPlaceOrigin},#${idExtrudeDir},${f(height)});`,
+      `#${idProfile}=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#${idPolyline});`,
+      `#${idExtrudeDir}=IFCDIRECTION((0.,0.,1.));`,
+      `#${idPolyline}=IFCPOLYLINE((#${idPt0},#${idPt1},#${idPt2},#${idPt3},#${idPt0}));`,
+      `#${idPt0}=IFCCARTESIANPOINT((0.,0.));`,
+      `#${idPt1}=IFCCARTESIANPOINT((${f(length)},0.));`,
+      `#${idPt2}=IFCCARTESIANPOINT((${f(length)},${f(thickness)}));`,
+      `#${idPt3}=IFCCARTESIANPOINT((0.,${f(thickness)}));`,
+      `#${idShapeRep}=IFCSHAPEREPRESENTATION(#${idGeomCtx},'Body','SweptSolid',(#${idExtruded}));`,
+      `#${idGeomCtx}=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-5,#${idCtxPlace},$);`,
+      `#${idCtxPlace}=IFCAXIS2PLACEMENT3D(#${idCtxOrigin},$,$);`,
+      `#${idCtxOrigin}=IFCCARTESIANPOINT((0.,0.,0.));`,
+      `#${idProductShape}=IFCPRODUCTDEFINITIONSHAPE($,$,(#${idShapeRep}));`,
+      `#${wallLineNum}=${ifcType}('${element.id}',$,'${name}',$,$,#${idPlaceOrigin},#${idProductShape},$); ${bboxStr}`,
+    ];
+  }
+
+  /** Emit real IFC swept-solid geometry for a slab element. */
+  private _slabToLines(element: ElementSchema): string[] {
+    const bbox = element.boundingBox;
+    const width = bbox.max.x - bbox.min.x;
+    const depth = bbox.max.y - bbox.min.y;
+    const slabHeight = bbox.max.z - bbox.min.z || 300;
+
+    const idPlace = this._nextId();
+    const idOriginPt = this._nextId();
+    const idExtruded = this._nextId();
+    const idProfile = this._nextId();
+    const idExtrudeDir = this._nextId();
+    const idPolyline = this._nextId();
+    const idPt0 = this._nextId();
+    const idPt1 = this._nextId();
+    const idPt2 = this._nextId();
+    const idPt3 = this._nextId();
+    const idShapeRep = this._nextId();
+    const idGeomCtx = this._nextId();
+    const idCtxPlace = this._nextId();
+    const idCtxOrigin = this._nextId();
+    const idProductShape = this._nextId();
+
+    const slabLineNum = this.lineNumber++;
+    const ifcType = this._getIFCType(element.type);
+    const name = (element.properties['Name']?.value as string) || 'Unnamed';
+    const bboxStr = `/* bbox:${bbox.min.x},${bbox.min.y},${bbox.min.z}:${bbox.max.x},${bbox.max.y},${bbox.max.z} */`;
+
+    const f = (n: number): string => {
+      const s = n.toString();
+      return s.includes('.') ? s : `${s}.`;
+    };
+
+    return [
+      `#${idPlace}=IFCAXIS2PLACEMENT3D(#${idOriginPt},$,$);`,
+      `#${idOriginPt}=IFCCARTESIANPOINT((${f(bbox.min.x)},${f(bbox.min.y)},0.));`,
+      `#${idExtruded}=IFCEXTRUDEDAREASOLID(#${idProfile},#${idPlace},#${idExtrudeDir},${f(slabHeight)});`,
+      `#${idProfile}=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#${idPolyline});`,
+      `#${idExtrudeDir}=IFCDIRECTION((0.,0.,1.));`,
+      `#${idPolyline}=IFCPOLYLINE((#${idPt0},#${idPt1},#${idPt2},#${idPt3},#${idPt0}));`,
+      `#${idPt0}=IFCCARTESIANPOINT((0.,0.));`,
+      `#${idPt1}=IFCCARTESIANPOINT((${f(width)},0.));`,
+      `#${idPt2}=IFCCARTESIANPOINT((${f(width)},${f(depth)}));`,
+      `#${idPt3}=IFCCARTESIANPOINT((0.,${f(depth)}));`,
+      `#${idShapeRep}=IFCSHAPEREPRESENTATION(#${idGeomCtx},'Body','SweptSolid',(#${idExtruded}));`,
+      `#${idGeomCtx}=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-5,#${idCtxPlace},$);`,
+      `#${idCtxPlace}=IFCAXIS2PLACEMENT3D(#${idCtxOrigin},$,$);`,
+      `#${idCtxOrigin}=IFCCARTESIANPOINT((0.,0.,0.));`,
+      `#${idProductShape}=IFCPRODUCTDEFINITIONSHAPE($,$,(#${idShapeRep}));`,
+      `#${slabLineNum}=${ifcType}('${element.id}',$,'${name}',$,$,#${idPlace},#${idProductShape},$); ${bboxStr}`,
+    ];
   }
 
   private _getIFCType(elementType: ElementType): string {
@@ -318,79 +454,17 @@ export class IFCSerializer {
       ellipse: 'IFCANNOTATION',
       rectangle: 'IFCANNOTATION',
       polygon: 'IFCANNOTATION',
-      spline: 'IFCANNOTATION',
       component: 'IFCGROUP',
       group: 'IFCGROUP',
-      plumbing_fixture: 'IFCFLOWFITTING',
+      duct: 'IFCDUCTFITTINGTYPE',
+      pipe: 'IFCPIPEFITTINGTYPE',
+      plumbing_fixture: 'IFCFLOWTERMINAL',
       electrical_equipment: 'IFCELECTRICAPPLIANCE',
       mechanical_equipment: 'IFCMECHANICALFASTENER',
-      duct: 'IFCDUCTFITTING',
-      pipe: 'IFCPIPEFITTING',
-      cable_tray: 'IFCPIPEFITTING',
-      conduit: 'IFCPIPEFITTING',
-      structural_member: 'IFCMEMBER',
     };
 
     return map[elementType] || 'IFCANNOTATION';
   }
-}
-
-// ─── PsetDef helpers (T-BIM-003) ─────────────────────────────────────────────
-
-/**
- * Lightweight Pset definition used for editing/applying Psets on elements.
- * Keys in `properties` are plain property names (not namespaced).
- */
-export interface PsetDef {
-  name: string;
-  properties: Record<string, string | number | boolean>;
-}
-
-/**
- * Extracts PsetDefs from an element's properties.
- * Any property key that matches `Pset_<name>.<propName>` is treated as a Pset.
- * Returns one PsetDef per unique Pset name found.
- */
-export function extractPsets(element: ElementSchema): PsetDef[] {
-  const groups: Record<string, Record<string, string | number | boolean>> = {};
-
-  for (const [key, propVal] of Object.entries(element.properties)) {
-    const match = key.match(/^(Pset_[^.]+)\.(.+)$/);
-    if (!match) continue;
-    const [, psetName, propName] = match;
-    if (!groups[psetName]) groups[psetName] = {};
-    const val = propVal.value;
-    groups[psetName][propName] = typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean'
-      ? val
-      : String(val);
-  }
-
-  return Object.entries(groups).map(([name, properties]) => ({ name, properties }));
-}
-
-/**
- * Merges a PsetDef's properties into an element's properties,
- * namespaced as `Pset_<name>.<propName>`.
- * Returns a new element; the original is not mutated.
- */
-export function applyPset(element: ElementSchema, pset: PsetDef): ElementSchema {
-  const additionalProps: ElementSchema['properties'] = {};
-
-  for (const [propName, propVal] of Object.entries(pset.properties)) {
-    const key = `${pset.name}.${propName}`;
-    const type: 'boolean' | 'number' | 'string' =
-      typeof propVal === 'boolean' ? 'boolean' :
-      typeof propVal === 'number' ? 'number' : 'string';
-    additionalProps[key] = { type, value: propVal };
-  }
-
-  return {
-    ...element,
-    properties: {
-      ...element.properties,
-      ...additionalProps,
-    },
-  };
 }
 
 // ─── Property set parsing ─────────────────────────────────────────────────────
@@ -464,6 +538,258 @@ export function parsePropertySets(content: string): IFCPropertySet[] {
   return psets;
 }
 
+// ─── Pset helpers ────────────────────────────────────────────────────────────
+
+/** A flat pset definition used when editing element property sets. */
+export interface PsetDef {
+  name: string;
+  properties: Record<string, string | number | boolean>;
+}
+
+/**
+ * Extracts psets from an element's flat `properties` map.
+ * Properties namespaced as `Pset_<Name>.<Key>` are grouped into PsetDef objects.
+ */
+export function extractPsets(el: { properties: Record<string, { type: string; value: unknown }> }): PsetDef[] {
+  const map = new Map<string, Record<string, string | number | boolean>>();
+
+  for (const [key, propVal] of Object.entries(el.properties)) {
+    const dot = key.indexOf('.');
+    if (dot === -1) continue;
+    const psetName = key.slice(0, dot);
+    if (!psetName.startsWith('Pset_')) continue;
+    const propKey = key.slice(dot + 1);
+    if (!map.has(psetName)) map.set(psetName, {});
+    const v = propVal.value;
+    map.get(psetName)![propKey] = v as string | number | boolean;
+  }
+
+  return Array.from(map.entries()).map(([name, properties]) => ({ name, properties }));
+}
+
+/**
+ * Applies a PsetDef to an element, namespacing the pset properties as
+ * `<pset.name>.<key>`. Returns a new element without mutating the original.
+ */
+export function applyPset(
+  el: { properties: Record<string, { type: 'string' | 'number' | 'boolean' | 'enum' | 'reference'; value: unknown }> },
+  pset: PsetDef,
+): typeof el {
+  const added: Record<string, { type: 'string' | 'number' | 'boolean'; value: string | number | boolean }> = {};
+
+  for (const [key, value] of Object.entries(pset.properties)) {
+    const nsKey = `${pset.name}.${key}`;
+    const type: 'string' | 'number' | 'boolean' =
+      typeof value === 'boolean' ? 'boolean' : typeof value === 'number' ? 'number' : 'string';
+    added[nsKey] = { type, value };
+  }
+
+  return {
+    ...el,
+    properties: { ...el.properties, ...added },
+  };
+}
+
+// ─── Dimensional extraction helpers ──────────────────────────────────────────
+
+/**
+ * Given a `#N` entity ref, finds `#N=IFCCARTESIANPOINT((x,y[,z]))` in content
+ * and returns the parsed coordinates. Returns null if not found or parse fails.
+ */
+export function extractEntityCoordinates(
+  content: string,
+  entityRef: string
+): { x: number; y: number; z: number } | null {
+  try {
+    const id = entityRef.replace(/^#/, '');
+    const re = new RegExp(
+      `#${id}\\s*=\\s*IFCCARTESIANPOINT\\s*\\(\\s*\\(([^)]+)\\)\\s*\\)`,
+      'i'
+    );
+    const m = content.match(re);
+    if (!m) return null;
+    const coords = m[1].split(',').map((s) => parseFloat(s.trim()));
+    if (coords.some(isNaN)) return null;
+    return { x: coords[0] ?? 0, y: coords[1] ?? 0, z: coords[2] ?? 0 };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts wall dimensional properties from an IFC STEP file.
+ *
+ * Resolution chain:
+ *  - startX/Y  → IFCLOCALPLACEMENT → IFCAXIS2PLACEMENT3D → IFCCARTESIANPOINT
+ *  - height     → IFCEXTRUDEDAREASOLID depth (last float argument)
+ *  - endX/Y     → startX/Y + polyline extent (longest axis of cross-section profile)
+ *  - thickness  → polyline cross-section minor dimension
+ *
+ * Returns null if extraction fails at any critical step.
+ */
+export function extractWallDimensions(
+  content: string,
+  wallEntityLine: string
+): {
+  startX: number;
+  startY: number;
+  endX: number;
+  endY: number;
+  height: number;
+  thickness: number;
+} | null {
+  try {
+    // ── 1. Find placement ref from wall entity line ──────────────────────────
+    // Wall line shape: IFCWALL('guid',$,'name',$,$,#placementRef,#shapeRef,$,$)
+    // The 6th argument (index 5, 0-based) is typically the placement ref.
+    // We match any #N references in the wall args to find placement/shape.
+    const wallRefs = wallEntityLine.match(/#(\d+)/g) ?? [];
+    // wallRefs[0] is the wall entity id itself — skip it
+    const candidateRefs = wallRefs.slice(1);
+
+    // Fast early-exit: if the wall entity has no geometry refs at all,
+    // there is nothing to extract. Avoid expensive full-content regex scans.
+    if (candidateRefs.length === 0) return null;
+
+    // ── 2. Resolve start coordinates from IFCLOCALPLACEMENT chain ────────────
+    let startX = 0;
+    let startY = 0;
+    let foundPlacement = false;
+
+    for (const ref of candidateRefs) {
+      const id = ref.replace('#', '');
+      // Check if this ref is an IFCLOCALPLACEMENT
+      const placementLineRe = new RegExp(
+        `#${id}\\s*=\\s*IFCLOCALPLACEMENT\\s*\\(([^)]*)\\)`,
+        'i'
+      );
+      const placementMatch = content.match(placementLineRe);
+      if (!placementMatch) continue;
+
+      // Find the IFCAXIS2PLACEMENT3D ref inside this IFCLOCALPLACEMENT
+      const axis2Ref = placementMatch[1].match(/#(\d+)/g);
+      if (!axis2Ref || axis2Ref.length === 0) continue;
+
+      for (const aRef of axis2Ref) {
+        const aId = aRef.replace('#', '');
+        const axis2Re = new RegExp(
+          `#${aId}\\s*=\\s*IFCAXIS2PLACEMENT3D\\s*\\(([^)]*)\\)`,
+          'i'
+        );
+        const axis2Match = content.match(axis2Re);
+        if (!axis2Match) continue;
+
+        // First ref in IFCAXIS2PLACEMENT3D is the location point
+        const ptRefs = axis2Match[1].match(/#(\d+)/g);
+        if (!ptRefs || ptRefs.length === 0) continue;
+
+        const coords = extractEntityCoordinates(content, ptRefs[0]);
+        if (coords) {
+          startX = coords.x;
+          startY = coords.y;
+          foundPlacement = true;
+          break;
+        }
+      }
+      if (foundPlacement) break;
+    }
+
+    // ── 3. Find IFCEXTRUDEDAREASOLID depth (height) ──────────────────────────
+    // IFCEXTRUDEDAREASOLID(profileRef, placementRef, directionRef, depth)
+    // depth is the last numeric argument.
+    let height = 0;
+    let polylineRef: string | null = null;
+    let foundExtrusion = false;
+
+    const extrusionRe = /#(\d+)\s*=\s*IFCEXTRUDEDAREASOLID\s*\(([^)]+)\)/gi;
+    let extMatch;
+    while ((extMatch = extrusionRe.exec(content)) !== null) {
+      const extArgs = extMatch[2];
+      // Last float in the argument list is the depth/height
+      const floatMatches = extArgs.match(/[\d.]+(?:[eE][+-]?\d+)?/g);
+      if (!floatMatches || floatMatches.length === 0) continue;
+      const depthStr = floatMatches[floatMatches.length - 1];
+      const depth = parseFloat(depthStr);
+      if (isNaN(depth)) continue;
+
+      height = depth;
+
+      // The first ref in extArgs is typically the profile def
+      const profileRef = extArgs.match(/#(\d+)/);
+      if (profileRef) {
+        // Resolve profile def to get polyline ref
+        const profId = profileRef[1];
+        const profRe = new RegExp(
+          `#${profId}\\s*=\\s*IFCARBITRARYCLOSEDPROFILEDEF\\s*\\(([^)]*)\\)`,
+          'i'
+        );
+        const profMatch = content.match(profRe);
+        if (profMatch) {
+          const polyRefs = profMatch[1].match(/#(\d+)/g);
+          if (polyRefs && polyRefs.length > 0) {
+            polylineRef = polyRefs[polyRefs.length - 1];
+          }
+        }
+      }
+      foundExtrusion = true;
+      break; // use the first extrusion solid found
+    }
+
+    // ── 4. Resolve polyline points for endX/Y and thickness ──────────────────
+    let endX = startX;
+    let endY = startY;
+    let thickness = 0;
+
+    if (polylineRef) {
+      const polyId = polylineRef.replace('#', '');
+      const polyRe = new RegExp(
+        `#${polyId}\\s*=\\s*IFCPOLYLINE\\s*\\(\\s*\\(([^)]+(?:\\([^)]*\\)[^)]*)*)\\)\\s*\\)`,
+        'i'
+      );
+      const polyMatch = content.match(polyRe);
+      if (polyMatch) {
+        // Extract all #N refs inside the polyline point list
+        const ptRefs = polyMatch[1].match(/#\d+/g) ?? [];
+        // Deduplicate (closing repeat of first point)
+        const uniqueRefs = [...new Set(ptRefs)];
+        const points = uniqueRefs
+          .map((r) => extractEntityCoordinates(content, r))
+          .filter((p): p is { x: number; y: number; z: number } => p !== null);
+
+        if (points.length >= 2) {
+          // Compute bounding box of profile points
+          const xs = points.map((p) => p.x);
+          const ys = points.map((p) => p.y);
+          const minX = Math.min(...xs);
+          const maxX = Math.max(...xs);
+          const minY = Math.min(...ys);
+          const maxY = Math.max(...ys);
+          const spanX = maxX - minX;
+          const spanY = maxY - minY;
+
+          // The longer span is the wall length, shorter is thickness
+          if (spanX >= spanY) {
+            endX = startX + spanX;
+            endY = startY;
+            thickness = spanY;
+          } else {
+            endX = startX;
+            endY = startY + spanY;
+            thickness = spanX;
+          }
+        }
+      }
+    }
+
+    // Only return a result if we found at least the extrusion (height)
+    if (!foundExtrusion && !foundPlacement) return null;
+
+    return { startX, startY, endX, endY, height, thickness };
+  } catch {
+    return null;
+  }
+}
+
 // ─── Convenience functions ────────────────────────────────────────────────────
 
 export function parseIFC(content: string): DocumentSchema {
@@ -532,6 +858,11 @@ export function parseIFC(content: string): DocumentSchema {
     }
   }
 
+  // Pre-check: skip geometry extraction entirely if the file has no geometry
+  // entities — avoids per-entity regex scans on files without IFC geometry.
+  const hasGeometry =
+    /IFCEXTRUDEDAREASOLID/i.test(content) || /IFCLOCALPLACEMENT/i.test(content);
+
   entities.forEach((entity) => {
     const elementId = crypto.randomUUID();
 
@@ -582,12 +913,57 @@ export function parseIFC(content: string): DocumentSchema {
       return { id: ps.id, name: ps.name, properties: propRecord };
     });
 
+    // Build initial properties
+    const elementProperties: Record<string, { type: 'string' | 'number' | 'boolean'; value: string | number | boolean }> = {
+      Name: { type: 'string', value: entity.name },
+    };
+
+    // ── Dimensional extraction for wall/slab elements ────────────────────────
+    if (hasGeometry && (entity.elementType === 'wall' || entity.elementType === 'slab') && entity.rawLine) {
+      const dims = extractWallDimensions(content, entity.rawLine);
+      if (dims) {
+        elementProperties['StartX'] = { type: 'number', value: dims.startX };
+        elementProperties['StartY'] = { type: 'number', value: dims.startY };
+        elementProperties['EndX'] = { type: 'number', value: dims.endX };
+        elementProperties['EndY'] = { type: 'number', value: dims.endY };
+        elementProperties['Height'] = { type: 'number', value: dims.height };
+        elementProperties['Thickness'] = { type: 'number', value: dims.thickness };
+      }
+    }
+
+    // ── Pset_WallCommon property promotion ───────────────────────────────────
+    // If dimensional extraction didn't supply Height/Thickness, try Pset values.
+    const wallCommonPset = (entityPsets[entity.id] ?? []).find(
+      (ps) => ps.name === 'Pset_WallCommon'
+    );
+    if (wallCommonPset) {
+      if (!elementProperties['Height'] && wallCommonPset.properties['Height'] !== undefined) {
+        const h = wallCommonPset.properties['Height'];
+        elementProperties['Height'] = {
+          type: typeof h === 'number' ? 'number' : 'string',
+          value: h,
+        };
+      }
+      if (!elementProperties['Thickness'] && wallCommonPset.properties['Width'] !== undefined) {
+        const w = wallCommonPset.properties['Width'];
+        elementProperties['Thickness'] = {
+          type: typeof w === 'number' ? 'number' : 'string',
+          value: w,
+        };
+      }
+      if (wallCommonPset.properties['IsExternal'] !== undefined) {
+        const ext = wallCommonPset.properties['IsExternal'];
+        elementProperties['IsExternal'] = {
+          type: 'boolean',
+          value: Boolean(ext),
+        };
+      }
+    }
+
     document.content.elements[elementId] = {
       id: elementId,
       type: entity.elementType,
-      properties: {
-        Name: { type: 'string', value: entity.name },
-      },
+      properties: elementProperties,
       propertySets: elementPsets,
       geometry: { type: 'brep', data: null },
       layerId: defaultLayerId,

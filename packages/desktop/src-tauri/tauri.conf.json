@@ -4,8 +4,8 @@
   "version": "0.0.1",
   "identifier": "com.opencad.desktop",
   "build": {
-    "beforeBuildCommand": "cd ../../ && pnpm build:browser",
-    "beforeDevCommand": "cd ../../ && pnpm dev:browser",
+    "beforeBuildCommand": "cd ../.. && pnpm build:browser",
+    "beforeDevCommand": "cd ../.. && pnpm dev:browser",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../../app/dist"
   },
@@ -19,11 +19,9 @@
         "minWidth": 800,
         "minHeight": 600,
         "resizable": true,
+        "maximized": true,
         "fullscreen": false,
-        "decorations": true,
-        "titleBarStyle": "Overlay",
-        "hiddenTitle": true,
-        "trafficLightPosition": { "x": 12, "y": 23 }
+        "decorations": true
       }
     ],
     "security": {
@@ -39,6 +37,11 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
+    ],
+    "fileAssociations": [
+      { "ext": ["opencad"], "name": "OpenCAD Project" },
+      { "ext": ["ifc"], "name": "IFC Building Model" },
+      { "ext": ["dwg"], "name": "AutoCAD Drawing" }
     ],
     "windows": {
       "certificateThumbprint": null,

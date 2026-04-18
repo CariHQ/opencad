@@ -19,28 +19,19 @@ export * from './io';
 export * from './material';
 export * from './dwg';
 export * from './pdf';
+export * from './mep';
+export * from './diff';
 
 // ArchiCAD adapter — explicit exports to avoid name collisions with ./io#detectFormat
 export {
   parsePLN,
   parsePLA,
   parseGDL,
-  detectFormat as detectArchicadFormat,
-  importFile as importArchicadFile,
   type PLAObject,
 } from './archicad';
 
-// Revit adapter — explicit exports to avoid name collisions with ./io#detectFormat
-export {
-  parseRVT,
-  detectFormat as detectRevitFormat,
-  importFile as importRevitFile,
-} from './revit';
+// Revit adapter
+export { parseRVT } from './revit';
 
-// SketchUp adapter — explicit exports to avoid name collisions with ./io#detectFormat
-export {
-  parseSKP,
-  serializeSKP,
-  detectFormat as detectSKPFormat,
-  importFile as importSKPFile,
-} from './sketchup';
+// SketchUp adapter
+export { parseSKP, serializeSKP } from './sketchup';

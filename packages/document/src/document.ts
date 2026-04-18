@@ -16,104 +16,10 @@ import {
   SyncResult,
   SaveEventData,
   Point3D,
+  BoundingBox3D,
 } from './types';
 import { createDefaultMaterials } from './material';
 import { parseIFC, serializeIFC } from './ifc';
-
-type BoundingBox = ElementSchema['boundingBox'];
-
-export function computeBoundingBox(
-  type: ElementType | string,
-  props: Record<string, PropertyValue> = {}
-): BoundingBox {
-  const num = (key: string): number => {
-    const v = props[key];
-    return v && v.type === 'number' ? (v.value as number) : 0;
-  };
-  const str = (key: string): string => {
-    const v = props[key];
-    return v && v.type === 'string' ? (v.value as string) : '';
-  };
-
-  const bb = (minX: number, minY: number, maxX: number, maxY: number, minZ = 0, maxZ = 0): BoundingBox => ({
-    min: { x: minX, y: minY, z: minZ, _type: 'Point3D' },
-    max: { x: maxX, y: maxY, z: maxZ, _type: 'Point3D' },
-  });
-
-  // Ensure minimum 1-unit size in each dimension
-  const ensureMin = (minX: number, minY: number, maxX: number, maxY: number): BoundingBox => {
-    const padX = maxX - minX < 1 ? (1 - (maxX - minX)) / 2 : 0;
-    const padY = maxY - minY < 1 ? (1 - (maxY - minY)) / 2 : 0;
-    return bb(minX - padX, minY - padY, maxX + padX, maxY + padY);
-  };
-
-  switch (type) {
-    case 'wall': {
-      const sx = num('StartX'), sy = num('StartY'), ex = num('EndX'), ey = num('EndY');
-      return ensureMin(Math.min(sx, ex), Math.min(sy, ey), Math.max(sx, ex), Math.max(sy, ey));
-    }
-    case 'door':
-    case 'window': {
-      const x = num('X'), y = num('Y');
-      const w = num('Width') || 900, h = num('Height') || 2100;
-      return bb(x, y, x + w, y + h);
-    }
-    case 'column': {
-      const x = num('X'), y = num('Y'), r = num('Diameter') / 2;
-      return bb(x - r, y - r, x + r, y + r, 0, num('Height'));
-    }
-    case 'slab': {
-      const x = num('X'), y = num('Y'), w = num('Width'), h = num('Height');
-      return bb(x, y, x + w, y + h, 0, num('Depth') || 200);
-    }
-    case 'space': {
-      // StartX/StartY/EndX/EndY pattern (T-BIM-008)
-      const sx = num('StartX'), sy = num('StartY'), ex = num('EndX'), ey = num('EndY');
-      if (ex > 0 || ey > 0) return bb(Math.min(sx, ex), Math.min(sy, ey), Math.max(sx, ex), Math.max(sy, ey));
-      // Width/Height pattern
-      const x = num('X'), y = num('Y'), w = num('Width'), h = num('Height');
-      if (w > 0 || h > 0) return bb(x, y, x + w, y + h);
-      // Explicit min/max pattern
-      const minX = num('MinX'), minY = num('MinY'), maxX = num('MaxX'), maxY = num('MaxY');
-      if (maxX > 0 || maxY > 0) return bb(minX, minY, maxX, maxY);
-      return ensureMin(0, 0, 0, 0);
-    }
-    case 'dimension':
-    case 'line':
-    case 'annotation': {
-      const sx = num('StartX'), sy = num('StartY'), ex = num('EndX'), ey = num('EndY');
-      return bb(Math.min(sx, ex), Math.min(sy, ey), Math.max(sx, ex), Math.max(sy, ey));
-    }
-    case 'circle':
-    case 'arc': {
-      const cx = num('CenterX'), cy = num('CenterY'), r = num('Radius');
-      return bb(cx - r, cy - r, cx + r, cy + r);
-    }
-    case 'rectangle': {
-      const x = num('X'), y = num('Y'), w = num('Width'), h = num('Height');
-      return bb(x, y, x + w, y + h);
-    }
-    case 'polygon':
-    case 'polyline': {
-      const pointsStr = str('Points');
-      try {
-        const pts = JSON.parse(pointsStr) as Array<{ x: number; y: number }>;
-        if (pts.length === 0) return ensureMin(0, 0, 0, 0);
-        const xs = pts.map((p) => p.x);
-        const ys = pts.map((p) => p.y);
-        return bb(Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys));
-      } catch {
-        return ensureMin(0, 0, 0, 0);
-      }
-    }
-    case 'text': {
-      const x = num('X'), y = num('Y');
-      return bb(x, y, x + 100, y + 20);
-    }
-    default:
-      return ensureMin(0, 0, 0, 0);
-  }
-}
 
 export interface CreateProjectOptions {
   name?: string;
@@ -191,11 +97,12 @@ export interface AddElementParams {
 export function addElement(document: DocumentSchema, params: AddElementParams): string {
   const elementId = crypto.randomUUID();
   const now = Date.now();
+  const props = params.properties || {};
 
   const element: ElementSchema = {
     id: elementId,
     type: params.type,
-    properties: params.properties || {},
+    properties: props,
     propertySets: [],
     geometry: params.geometry || { type: 'brep', data: null },
     layerId: params.layerId,
@@ -205,10 +112,7 @@ export function addElement(document: DocumentSchema, params: AddElementParams): 
       rotation: { x: 0, y: 0, z: 0 },
       scale: { x: 1, y: 1, z: 1 },
     },
-    boundingBox: {
-      min: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-      max: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-    },
+    boundingBox: computeBoundingBox(params.type, props),
     metadata: {
       id: elementId,
       createdBy: 'import',
@@ -228,6 +132,125 @@ export function addElement(document: DocumentSchema, params: AddElementParams): 
   document.metadata.updatedAt = now;
 
   return elementId;
+}
+
+/**
+ * Computes a bounding box for an element based on its type and properties.
+ * Returns a BoundingBox3D with at least 1-unit size in each axis.
+ */
+export function computeBoundingBox(
+  elementType: string,
+  properties: Record<string, PropertyValue>,
+): BoundingBox3D {
+  const num = (key: string, fallback = 0): number => {
+    const v = properties[key]?.value;
+    return typeof v === 'number' ? v : fallback;
+  };
+
+  let minX = 0, minY = 0, minZ = 0;
+  let maxX = 0, maxY = 0, maxZ = 0;
+
+  switch (elementType) {
+    case 'wall':
+    case 'line':
+    case 'beam':
+    case 'dimension': {
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX'), ey = num('EndY');
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      break;
+    }
+    case 'rectangle':
+    case 'slab': {
+      const x = num('X'), y = num('Y');
+      const w = num('Width'), h = num('Height');
+      const depth = num('Depth', 200);
+      minX = x; maxX = x + w;
+      minY = y; maxY = y + h;
+      minZ = 0; maxZ = depth;
+      break;
+    }
+    case 'space': {
+      if ('StartX' in properties) {
+        const sx = num('StartX'), sy = num('StartY');
+        const ex = num('EndX'), ey = num('EndY');
+        minX = sx; maxX = ex;
+        minY = sy; maxY = ey;
+      } else if ('MinX' in properties) {
+        minX = num('MinX'); maxX = num('MaxX');
+        minY = num('MinY'); maxY = num('MaxY');
+      } else {
+        const x = num('X'), y = num('Y');
+        const w = num('Width'), h = num('Height');
+        minX = x; maxX = x + w;
+        minY = y; maxY = y + h;
+      }
+      break;
+    }
+    case 'polyline':
+    case 'polygon': {
+      const ptsVal = properties['Points']?.value;
+      if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+        try {
+          const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+          if (pts.length > 0) {
+            minX = Math.min(...pts.map((p) => p.x));
+            maxX = Math.max(...pts.map((p) => p.x));
+            minY = Math.min(...pts.map((p) => p.y));
+            maxY = Math.max(...pts.map((p) => p.y));
+            break;
+          }
+        } catch { /* fall through to ensureMin */ }
+      }
+      minX = num('X'); minY = num('Y');
+      maxX = minX; maxY = minY;
+      break;
+    }
+    case 'circle':
+    case 'arc': {
+      const cx = num('CenterX'), cy = num('CenterY');
+      const r = num('Radius', 25);
+      minX = cx - r; maxX = cx + r;
+      minY = cy - r; maxY = cy + r;
+      break;
+    }
+    case 'column': {
+      const x = num('X'), y = num('Y');
+      const d = num('Diameter', 400);
+      minX = x - d / 2; maxX = x + d / 2;
+      minY = y - d / 2; maxY = y + d / 2;
+      break;
+    }
+    case 'door':
+    case 'window': {
+      const x = num('X'), y = num('Y');
+      const w = num('Width', 900), h = num('Height', 2100);
+      minX = x; maxX = x + w;
+      minY = y; maxY = y + h;
+      break;
+    }
+    case 'text': {
+      const x = num('X'), y = num('Y');
+      minX = x; maxX = x + 100;
+      minY = y; maxY = y + 20;
+      break;
+    }
+    default: {
+      minX = num('X'); minY = num('Y');
+      maxX = minX; maxY = minY;
+    }
+  }
+
+  // Ensure minimum bounding box size of 1 unit in each planar axis
+  if (maxX - minX < 1) { const cx = (minX + maxX) / 2; minX = cx - 0.5; maxX = cx + 0.5; }
+  if (maxY - minY < 1) { const cy = (minY + maxY) / 2; minY = cy - 0.5; maxY = cy + 0.5; }
+  if (maxZ - minZ < 1) maxZ = minZ + 1;
+
+  return {
+    min: { x: minX, y: minY, z: minZ, _type: 'Point3D' },
+    max: { x: maxX, y: maxY, z: maxZ, _type: 'Point3D' },
+  };
 }
 
 type SaveHandler = (data: SaveEventData) => void;
@@ -273,11 +296,14 @@ export class DocumentModel {
 
   loadDocument(saved: DocumentSchema): void {
     this.document = saved;
-    // Migrate degenerate bounding boxes from documents saved before bb computation existed
-    for (const el of Object.values(this.document.content.elements)) {
-      const bbox = el.boundingBox;
-      if (bbox.max.x === 0 && bbox.max.y === 0 && bbox.max.z === 0) {
-        el.boundingBox = computeBoundingBox(el.type, el.properties);
+    // Migrate elements with degenerate (zero) bounding boxes
+    for (const element of Object.values(this.document.content.elements)) {
+      const bb = element.boundingBox;
+      const isDegenerate =
+        bb.min.x === 0 && bb.min.y === 0 && bb.min.z === 0 &&
+        bb.max.x === 0 && bb.max.y === 0 && bb.max.z === 0;
+      if (isDegenerate) {
+        element.boundingBox = computeBoundingBox(element.type, element.properties);
       }
     }
   }
@@ -402,8 +428,6 @@ export class DocumentModel {
     const now = Date.now();
 
     const props = params.properties || {};
-    const boundingBox = computeBoundingBox(params.type, props);
-
     const element: ElementSchema = {
       id: elementId,
       type: params.type,
@@ -417,7 +441,7 @@ export class DocumentModel {
         rotation: { x: 0, y: 0, z: 0 },
         scale: { x: 1, y: 1, z: 1 },
       },
-      boundingBox,
+      boundingBox: computeBoundingBox(params.type, props),
       metadata: {
         id: elementId,
         createdBy: this.clientId,

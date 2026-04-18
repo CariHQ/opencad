@@ -6,15 +6,38 @@
 import { DocumentSchema, ElementSchema, ElementType, Point3D } from './types';
 import { createProject, addElement } from './document';
 
-export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
-
 interface DXFEntity {
   type: string;
   handle: string;
   layer: string;
   coordinates: Record<string, number>;
-  vertices: Array<{ x: number; y: number }>;
-  textContent: string;
+  textContent?: string;
+  blockName?: string;
+  vertices?: Array<{ x: number; y: number }>;
+}
+
+/** Low-level DXF entity returned by parseDxf — group codes as raw string values. */
+export interface DxfEntity {
+  type: string;
+  handle: string;
+  properties: Record<string, string>;
+  /** Vertices collected from repeating 10/20 code pairs (LWPOLYLINE/POLYLINE). */
+  vertices?: Array<{ x: number; y: number }>;
+}
+
+/** AutoCAD Color Index (ACI) to hex colour. Only the 7 standard colours are listed. */
+const ACI_COLORS: Record<number, string> = {
+  1: '#FF0000',
+  2: '#FFFF00',
+  3: '#00FF00',
+  4: '#00FFFF',
+  5: '#0000FF',
+  6: '#FF00FF',
+  7: '#FFFFFF',
+};
+
+function aciToHex(aci: number): string {
+  return ACI_COLORS[aci] ?? '#808080';
 }
 
 const DXF_ENTITY_MAP: Record<string, ElementType> = {
@@ -32,6 +55,7 @@ const DXF_ENTITY_MAP: Record<string, ElementType> = {
   '3DSOLID': 'solid',
   MESH: 'surface',
   INSERT: 'block_ref',
+  HATCH: 'slab',
 };
 
 class DXFParser {
@@ -48,6 +72,7 @@ class DXFParser {
     entities: DXFEntity[];
     layers: Record<string, string>;
     blocks: Record<string, DXFEntity>;
+    layerTable: Record<string, { name: string; aci: number }>;
   } {
     this.entities = [];
     this.layers = {};
@@ -58,19 +83,72 @@ class DXFParser {
     const blocksSection = sections['BLOCKS'];
     const tablesSection = sections['TABLES'];
 
-    if (blocksSection) {
-      this.parseBlocks(blocksSection);
+    const layerTable: Record<string, { name: string; aci: number }> = {};
+    if (tablesSection) {
+      const parsed = this.parseLayerTableSection(tablesSection);
+      for (const entry of parsed) {
+        layerTable[entry.name] = entry;
+      }
     }
 
-    if (tablesSection) {
-      this.parseTables(tablesSection);
+    if (blocksSection) {
+      this.parseBlocks(blocksSection);
     }
 
     if (entitiesSection) {
       this.parseEntities(entitiesSection);
     }
 
-    return { entities: this.entities, layers: this.layers, blocks: this.blocks };
+    return { entities: this.entities, layers: this.layers, blocks: this.blocks, layerTable };
+  }
+
+  /** Extract LAYER entries from the TABLES section, returning name + ACI color. */
+  private parseLayerTableSection(section: [number, number]): Array<{ name: string; aci: number }> {
+    const [start, end] = section;
+    const result: Array<{ name: string; aci: number }> = [];
+    let i = start;
+    let inLayerTable = false;
+
+    while (i < end) {
+      const code = this.lines[i];
+      const value = this.lines[i + 1] ?? '';
+
+      if (code === '0' && value === 'TABLE') {
+        // check if it's the LAYER table
+        if (i + 3 < end && this.lines[i + 2] === '2' && this.lines[i + 3] === 'LAYER') {
+          inLayerTable = true;
+        }
+        i += 2;
+        continue;
+      }
+
+      if (code === '0' && value === 'ENDTAB') {
+        inLayerTable = false;
+        i += 2;
+        continue;
+      }
+
+      if (inLayerTable && code === '0' && value === 'LAYER') {
+        // parse one LAYER record
+        i += 2;
+        let name = '';
+        let aci = 7;
+        while (i < end) {
+          const c = this.lines[i];
+          const v = this.lines[i + 1] ?? '';
+          if (c === '0') break; // next entity/record
+          if (c === '2') name = v;
+          if (c === '62') aci = parseInt(v, 10);
+          i += 2;
+        }
+        if (name) result.push({ name, aci });
+        continue;
+      }
+
+      i += 2;
+    }
+
+    return result;
   }
 
   private findSections(): Record<string, [number, number]> {
@@ -94,60 +172,6 @@ class DXFParser {
     return sections;
   }
 
-  // ACI (AutoCAD Color Index) to hex — only the common named colours
-  private aciToHex(aci: number): string {
-    const map: Record<number, string> = {
-      1: '#FF0000', 2: '#FFFF00', 3: '#00FF00', 4: '#00FFFF',
-      5: '#0000FF', 6: '#FF00FF', 7: '#FFFFFF', 8: '#808080', 9: '#C0C0C0',
-    };
-    return map[aci] ?? '#808080';
-  }
-
-  private parseTables(section: [number, number]): void {
-    const [start, end] = section;
-    let i = start;
-    let inLayerTable = false;
-    let currentLayerName = '';
-    let currentLayerColor = '#808080';
-
-    while (i < end) {
-      const line = this.lines[i];
-
-      if (line === 'LAYER' && this.lines[i - 1] === '2') {
-        inLayerTable = true;
-      } else if (line === 'ENDTAB') {
-        // Commit the last layer before closing the table
-        if (inLayerTable && currentLayerName) {
-          this.layers[currentLayerName] = currentLayerColor;
-          currentLayerName = '';
-          currentLayerColor = '#808080';
-        }
-        inLayerTable = false;
-      } else if (inLayerTable && line === 'LAYER' && this.lines[i - 1] === '0') {
-        // Start of a new LAYER entry — commit the previous one if any
-        if (currentLayerName) {
-          this.layers[currentLayerName] = currentLayerColor;
-        }
-        currentLayerName = '';
-        currentLayerColor = '#808080';
-      } else if (inLayerTable) {
-        const code = this.lines[i - 1];
-        if (code === '2') {
-          currentLayerName = line;
-        } else if (code === '62') {
-          currentLayerColor = this.aciToHex(parseInt(line, 10));
-        }
-      }
-
-      i++;
-    }
-
-    // Commit the last layer entry
-    if (inLayerTable && currentLayerName) {
-      this.layers[currentLayerName] = currentLayerColor;
-    }
-  }
-
   private parseBlocks(section: [number, number]): void {
     const [start, end] = section;
     let i = start;
@@ -159,8 +183,6 @@ class DXFParser {
           handle: '',
           layer: '0',
           coordinates: {},
-          vertices: [],
-          textContent: '',
         };
 
         i += 2;
@@ -206,36 +228,38 @@ class DXFParser {
           layer: '0',
           coordinates: {},
           vertices: [],
-          textContent: '',
         };
 
         i += 2;
-        let pendingX: number | null = null;
-
+        let nextVertexX: number | null = null;
         while (i < end - 1) {
           const code = this.lines[i];
           const value = this.lines[i + 1];
 
-          if (!code || code === '0') {
-            break;
-          }
+          if (!code || code === '0') break;
 
           if (code === '5') {
             entity.handle = value;
           } else if (code === '8') {
             entity.layer = value;
+          } else if (code === '2' && entityType === 'INSERT') {
+            entity.blockName = value;
+          } else if (code === '1') {
+            entity.textContent = value;
           } else if (code === '10') {
-            if (entity.type === 'LWPOLYLINE') {
-              pendingX = parseFloat(value);
+            const v = parseFloat(value);
+            if (entityType === 'LWPOLYLINE') {
+              nextVertexX = v;
             } else {
-              entity.coordinates['x'] = parseFloat(value);
+              entity.coordinates['x'] = v;
             }
           } else if (code === '20') {
-            if (entity.type === 'LWPOLYLINE' && pendingX !== null) {
-              entity.vertices.push({ x: pendingX, y: parseFloat(value) });
-              pendingX = null;
+            const v = parseFloat(value);
+            if (entityType === 'LWPOLYLINE' && nextVertexX !== null) {
+              entity.vertices!.push({ x: nextVertexX, y: v });
+              nextVertexX = null;
             } else {
-              entity.coordinates['y'] = parseFloat(value);
+              entity.coordinates['y'] = v;
             }
           } else if (code === '30') {
             entity.coordinates['z'] = parseFloat(value);
@@ -253,8 +277,6 @@ class DXFParser {
             entity.coordinates['endAngle'] = parseFloat(value);
           } else if (code === '90') {
             entity.coordinates['vertexCount'] = parseInt(value);
-          } else if (code === '1') {
-            entity.textContent = value;
           }
           i += 2;
           if (i >= end) break;
@@ -263,7 +285,7 @@ class DXFParser {
         this.entities.push(entity);
 
         if (entity.layer && !this.layers[entity.layer]) {
-          this.layers[entity.layer] = '#808080';
+          this.layers[entity.layer] = entity.layer;
         }
       } else {
         i++;
@@ -276,16 +298,12 @@ class DXFSerializer {
   private document: DocumentSchema;
   private handleCounter: number = 1;
 
-  constructor(document: DocumentSchema) {
-    this.document = document;
-  }
-
-  private layerName(layerId: string): string {
-    return this.document.organization.layers[layerId]?.name ?? '0';
-  }
-
   private formatCoord(value: number): string {
     return value === 0 ? '0.0' : value.toFixed(1).replace(/\.0$/, '.0');
+  }
+
+  constructor(document: DocumentSchema) {
+    this.document = document;
   }
 
   serialize(): string {
@@ -299,23 +317,7 @@ class DXFSerializer {
   }
 
   private generateHeader(): string[] {
-    const lines: string[] = [
-      '0', 'SECTION', '2', 'HEADER',
-      '0', 'ENDSEC',
-      '0', 'SECTION', '2', 'TABLES',
-      ...this.generateLayerTable(),
-      '0', 'ENDSEC',
-      '0', 'SECTION', '2', 'ENTITIES',
-    ];
-    return lines;
-  }
-
-  private generateLayerTable(): string[] {
-    const lines: string[] = ['0', 'TABLE', '2', 'LAYER'];
-    for (const layer of Object.values(this.document.organization.layers)) {
-      lines.push('0', 'LAYER', '2', layer.name, '70', '0');
-    }
-    lines.push('0', 'ENDTAB');
+    const lines: string[] = ['0', 'SECTION', '2', 'ENTITIES'];
     return lines;
   }
 
@@ -349,20 +351,32 @@ class DXFSerializer {
     const coords = element.transform.translation;
     const points = (element as { points?: Point3D[] }).points || [];
 
-    lines.push('0', 'LINE');
-    lines.push('5', `$${this.handleCounter.toString(16).toUpperCase()}`);
-    lines.push('330', '0');
-    lines.push('100', 'AcDbEntity');
-    lines.push('8', this.layerName(element.layerId));
-    lines.push('100', 'AcDbLine');
-    lines.push('10', this.formatCoord(coords.x));
-    lines.push('20', this.formatCoord(coords.y));
-    lines.push('30', this.formatCoord(coords.z));
+    lines.push('0');
+    lines.push('LINE');
+    lines.push('5');
+    lines.push(`$${this.handleCounter.toString(16).toUpperCase()}`);
+    lines.push('330');
+    lines.push('0');
+    lines.push('100');
+    lines.push('AcDbEntity');
+    lines.push('8');
+    lines.push(element.layerId || '0');
+    lines.push('100');
+    lines.push('AcDbLine');
+    lines.push('10');
+    lines.push(this.formatCoord(coords.x));
+    lines.push('20');
+    lines.push(this.formatCoord(coords.y));
+    lines.push('30');
+    lines.push(this.formatCoord(coords.z));
 
     if (points.length >= 2) {
-      lines.push('11', this.formatCoord(points[1]!.x));
-      lines.push('21', this.formatCoord(points[1]!.y));
-      lines.push('31', this.formatCoord(points[1]!.z));
+      lines.push('11');
+      lines.push(this.formatCoord(points[1].x));
+      lines.push('21');
+      lines.push(this.formatCoord(points[1].y));
+      lines.push('31');
+      lines.push(this.formatCoord(points[1].z));
     }
 
     this.handleCounter++;
@@ -371,21 +385,29 @@ class DXFSerializer {
 
   private serializeCircle(element: ElementSchema): string[] {
     const lines: string[] = [];
-    const cx = (element.properties['CenterX']?.value as number) ?? element.transform.translation.x;
-    const cy = (element.properties['CenterY']?.value as number) ?? element.transform.translation.y;
-    const cz = element.transform.translation.z;
-    const radius = (element.properties['Radius']?.value as number) || 25;
+    const coords = element.transform.translation;
+    const radius = (element.properties.Radius?.value as number) || 25;
 
-    lines.push('0', 'CIRCLE');
-    lines.push('5', `$${this.handleCounter.toString(16).toUpperCase()}`);
-    lines.push('330', '0');
-    lines.push('100', 'AcDbEntity');
-    lines.push('8', this.layerName(element.layerId));
-    lines.push('100', 'AcDbCircle');
-    lines.push('10', String(cx));
-    lines.push('20', String(cy));
-    lines.push('30', String(cz));
-    lines.push('40', String(radius));
+    lines.push('0');
+    lines.push('CIRCLE');
+    lines.push('5');
+    lines.push(`$${this.handleCounter.toString(16).toUpperCase()}`);
+    lines.push('330');
+    lines.push('0');
+    lines.push('100');
+    lines.push('AcDbEntity');
+    lines.push('8');
+    lines.push(element.layerId || '0');
+    lines.push('100');
+    lines.push('AcDbCircle');
+    lines.push('10');
+    lines.push(String(coords.x));
+    lines.push('20');
+    lines.push(String(coords.y));
+    lines.push('30');
+    lines.push(String(coords.z));
+    lines.push('40');
+    lines.push(String(radius));
 
     this.handleCounter++;
     return lines;
@@ -395,18 +417,28 @@ class DXFSerializer {
     const lines: string[] = [];
     const points = (element as { points?: Point3D[] }).points || [];
 
-    lines.push('0', 'LWPOLYLINE');
-    lines.push('5', `$${this.handleCounter.toString(16).toUpperCase()}`);
-    lines.push('330', '0');
-    lines.push('100', 'AcDbEntity');
-    lines.push('8', this.layerName(element.layerId));
-    lines.push('100', 'AcDbPolyline');
-    lines.push('90', String(points.length));
-    lines.push('70', '0');
+    lines.push('0');
+    lines.push('LWPOLYLINE');
+    lines.push('5');
+    lines.push(`$${this.handleCounter.toString(16).toUpperCase()}`);
+    lines.push('330');
+    lines.push('0');
+    lines.push('100');
+    lines.push('AcDbEntity');
+    lines.push('8');
+    lines.push(element.layerId || '0');
+    lines.push('100');
+    lines.push('AcDbPolyline');
+    lines.push('90');
+    lines.push(String(points.length));
+    lines.push('70');
+    lines.push('0');
 
     for (const point of points) {
-      lines.push('10', String(point.x));
-      lines.push('20', String(point.y));
+      lines.push('10');
+      lines.push(String(point.x));
+      lines.push('20');
+      lines.push(String(point.y));
     }
 
     this.handleCounter++;
@@ -415,26 +447,25 @@ class DXFSerializer {
 
   private serializeArc(element: ElementSchema): string[] {
     const lines: string[] = [];
-    const cx = (element.properties['CenterX']?.value as number) ?? element.transform.translation.x;
-    const cy = (element.properties['CenterY']?.value as number) ?? element.transform.translation.y;
+    const cx = (element.properties.CenterX?.value as number) ?? element.transform.translation.x;
+    const cy = (element.properties.CenterY?.value as number) ?? element.transform.translation.y;
     const cz = element.transform.translation.z;
-    const radius = (element.properties['Radius']?.value as number) || 25;
-    const startAngle = (element.properties['StartAngle']?.value as number) ?? 0;
-    const endAngle = (element.properties['EndAngle']?.value as number) ?? 360;
+    const radius = (element.properties.Radius?.value as number) || 25;
+    const startAngle = (element.properties.StartAngle?.value as number) ?? 0;
+    const endAngle = (element.properties.EndAngle?.value as number) ?? 360;
 
-    lines.push('0', 'ARC');
-    lines.push('5', `$${this.handleCounter.toString(16).toUpperCase()}`);
-    lines.push('330', '0');
-    lines.push('100', 'AcDbEntity');
-    lines.push('8', this.layerName(element.layerId));
-    lines.push('100', 'AcDbArc');
-    lines.push('10', String(cx));
-    lines.push('20', String(cy));
-    lines.push('30', String(cz));
-    lines.push('40', String(radius));
-    lines.push('50', String(startAngle));
-    lines.push('51', String(endAngle));
-
+    lines.push('0', 'ARC',
+      '5', `$${this.handleCounter.toString(16).toUpperCase()}`,
+      '330', '0',
+      '100', 'AcDbEntity',
+      '8', element.layerId || '0',
+      '100', 'AcDbCircle',
+      '10', String(cx), '20', String(cy), '30', String(cz),
+      '40', String(radius),
+      '100', 'AcDbArc',
+      '50', String(startAngle),
+      '51', String(endAngle),
+    );
     this.handleCounter++;
     return lines;
   }
@@ -444,40 +475,30 @@ class DXFSerializer {
   }
 
   private serializeText(element: ElementSchema): string[] {
-    const lines: string[] = [];
-    const x = (element.properties['X']?.value as number) ?? element.transform.translation.x;
-    const y = (element.properties['Y']?.value as number) ?? element.transform.translation.y;
-    const content = (element.properties['Content']?.value as string) ?? (element.properties['Text']?.value as string) ?? '';
-
-    lines.push('0', 'TEXT');
-    lines.push('5', `$${this.handleCounter.toString(16).toUpperCase()}`);
-    lines.push('330', '0');
-    lines.push('100', 'AcDbEntity');
-    lines.push('8', this.layerName(element.layerId));
-    lines.push('100', 'AcDbText');
-    lines.push('10', String(x));
-    lines.push('20', String(y));
-    lines.push('30', '0.0');
-    lines.push('40', '2.5');
-    lines.push('1', content);
-
-    this.handleCounter++;
-    return lines;
+    return this.serializeGeneric(element);
   }
 
   private serializeGeneric(element: ElementSchema): string[] {
     const lines: string[] = [];
     const coords = element.transform.translation;
-    const entityName = element.type.toUpperCase();
+    const name = (element.properties.Name?.value as string) || element.type;
 
-    lines.push('0', entityName);
-    lines.push('5', `$${this.handleCounter.toString(16).toUpperCase()}`);
-    lines.push('330', '0');
-    lines.push('100', 'AcDbEntity');
-    lines.push('8', this.layerName(element.layerId));
-    lines.push('10', String(coords.x));
-    lines.push('20', String(coords.y));
-    lines.push('30', String(coords.z));
+    lines.push('0');
+    lines.push(name.toUpperCase());
+    lines.push('5');
+    lines.push(`$${this.handleCounter.toString(16).toUpperCase()}`);
+    lines.push('330');
+    lines.push('0');
+    lines.push('100');
+    lines.push('AcDbEntity');
+    lines.push('8');
+    lines.push(element.layerId || '0');
+    lines.push('10');
+    lines.push(String(coords.x));
+    lines.push('20');
+    lines.push(String(coords.y));
+    lines.push('30');
+    lines.push(String(coords.z));
 
     this.handleCounter++;
     return lines;
@@ -488,116 +509,125 @@ class DXFSerializer {
   }
 }
 
+/** Read $INSUNITS from the DXF HEADER section and return mm conversion factor. */
+function readUnitScale(content: string): number {
+  const match = /\$INSUNITS\s*\n\s*70\s*\n\s*(\d+)/i.exec(content);
+  if (!match) return 1;
+  const code = parseInt(match[1], 10);
+  // Common $INSUNITS values:  1=inches  4=mm(default)  5=cm  6=meters
+  switch (code) {
+    case 1: return 25.4;   // inches → mm
+    case 2: return 304.8;  // feet → mm
+    case 4: return 1;      // mm (default)
+    case 5: return 10;     // cm → mm
+    case 6: return 1000;   // meters → mm
+    default: return 1;
+  }
+}
+
+function findOrCreateLayer(document: DocumentSchema, layerName: string, color?: string): string {
+  const existing = Object.keys(document.organization.layers).find(
+    (id) => document.organization.layers[id]!.name === layerName
+  );
+  if (existing) {
+    if (color) document.organization.layers[existing]!.color = color;
+    return existing;
+  }
+  const newId = crypto.randomUUID();
+  document.organization.layers[newId] = {
+    id: newId,
+    name: layerName,
+    color: color ?? '#808080',
+    visible: true,
+    locked: false,
+    order: Object.keys(document.organization.layers).length,
+  };
+  return newId;
+}
+
 export function parseDXF(content: string): DocumentSchema {
+  const scale = readUnitScale(content);
   const parser = new DXFParser(content);
-  const { entities, layers } = parser.parse();
+  const { entities, layers, layerTable } = parser.parse();
 
   const document = createProject('Imported DXF', 'dxf-import');
   document.library.blocks = {};
 
-  for (const [layerName, layerColor] of Object.entries(layers)) {
-    const layerId = crypto.randomUUID();
-    document.organization.layers[layerId] = {
-      id: layerId,
-      name: layerName,
-      color: layerColor,
-      visible: true,
-      locked: false,
-      order: Object.keys(document.organization.layers).length,
-    };
+  // Create layers from the TABLES/LAYER section first (with ACI color)
+  for (const entry of Object.values(layerTable)) {
+    findOrCreateLayer(document, entry.name, aciToHex(entry.aci));
   }
+
+  // Also ensure any layers referenced by entities exist
+  for (const layerName of Object.keys(layers)) {
+    findOrCreateLayer(document, layerName);
+  }
+
+  const levelId = Object.keys(document.organization.levels)[0]!;
 
   for (const entity of entities) {
     const elementType = DXF_ENTITY_MAP[entity.type] || 'annotation';
+    const layerId = findOrCreateLayer(document, entity.layer || '0');
 
-    let layerId = Object.keys(document.organization.layers).find(
-      (id) => document.organization.layers[id]!.name === entity.layer
-    );
-
-    if (!layerId && entity.layer && entity.layer !== '0') {
-      const newLayerId = crypto.randomUUID();
-      document.organization.layers[newLayerId] = {
-        id: newLayerId,
-        name: entity.layer,
-        color: '#808080',
-        visible: true,
-        locked: false,
-        order: Object.keys(document.organization.layers).length,
-      };
-      layerId = newLayerId;
-    }
-
-    layerId = layerId || Object.keys(document.organization.layers)[0]!;
-    const levelId = Object.keys(document.organization.levels)[0]!;
+    const sx = (entity.coordinates.x || 0) * scale;
+    const sy = (entity.coordinates.y || 0) * scale;
+    const sz = (entity.coordinates.z || 0) * scale;
 
     if (elementType === 'line') {
-      const x1 = entity.coordinates['x'] ?? 0;
-      const y1 = entity.coordinates['y'] ?? 0;
-      const x2 = entity.coordinates['x2'] ?? x1;
-      const y2 = entity.coordinates['y2'] ?? y1;
+      const ex = (entity.coordinates.x2 ?? entity.coordinates.x ?? 0) * scale;
+      const ey = (entity.coordinates.y2 ?? entity.coordinates.y ?? 0) * scale;
+      const ez = (entity.coordinates.z2 ?? entity.coordinates.z ?? 0) * scale;
       addElement(document, {
         type: 'line',
-        points: [
-          { x: x1, y: y1, z: entity.coordinates['z'] ?? 0, _type: 'Point3D' },
-          { x: x2, y: y2, z: entity.coordinates['z2'] ?? 0, _type: 'Point3D' },
-        ],
         properties: {
-          StartX: { type: 'number', value: x1 },
-          StartY: { type: 'number', value: y1 },
-          EndX:   { type: 'number', value: x2 },
-          EndY:   { type: 'number', value: y2 },
+          StartX: { type: 'number', value: sx },
+          StartY: { type: 'number', value: sy },
+          EndX:   { type: 'number', value: ex },
+          EndY:   { type: 'number', value: ey },
         },
+        points: [
+          { x: sx, y: sy, z: sz, _type: 'Point3D' },
+          { x: ex, y: ey, z: ez, _type: 'Point3D' },
+        ],
         layerId,
         levelId,
       });
     } else if (elementType === 'circle') {
-      const cx = entity.coordinates['x'] ?? 0;
-      const cy = entity.coordinates['y'] ?? 0;
       addElement(document, {
         type: 'circle',
         properties: {
-          CenterX: { type: 'number', value: cx },
-          CenterY: { type: 'number', value: cy },
-          Radius:  { type: 'number', value: entity.coordinates['radius'] ?? 25 },
-        },
-        transform: {
-          translation: { x: cx, y: cy, z: entity.coordinates['z'] ?? 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 },
+          CenterX: { type: 'number', value: sx },
+          CenterY: { type: 'number', value: sy },
+          Radius:  { type: 'number', value: (entity.coordinates.radius || 25) * scale },
         },
         layerId,
         levelId,
-      });
-    } else if (elementType === 'polyline') {
-      const pts = entity.vertices.length > 0 ? entity.vertices : [
-        { x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 },
-      ];
-      addElement(document, {
-        type: 'polyline',
-        properties: {
-          Points: { type: 'string', value: JSON.stringify(pts) },
-        },
-        points: pts.map((p) => ({ x: p.x, y: p.y, z: 0, _type: 'Point3D' as const })),
-        layerId,
-        levelId,
+        transform: { translation: { x: sx, y: sy, z: sz }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
       });
     } else if (elementType === 'arc') {
-      const cx = entity.coordinates['x'] ?? 0;
-      const cy = entity.coordinates['y'] ?? 0;
       addElement(document, {
         type: 'arc',
         properties: {
-          CenterX:    { type: 'number', value: cx },
-          CenterY:    { type: 'number', value: cy },
-          Radius:     { type: 'number', value: entity.coordinates['radius'] ?? 25 },
-          StartAngle: { type: 'number', value: entity.coordinates['startAngle'] ?? 0 },
-          EndAngle:   { type: 'number', value: entity.coordinates['endAngle'] ?? 360 },
+          CenterX:    { type: 'number', value: sx },
+          CenterY:    { type: 'number', value: sy },
+          Radius:     { type: 'number', value: (entity.coordinates.radius || 25) * scale },
+          StartAngle: { type: 'number', value: entity.coordinates.startAngle ?? 0 },
+          EndAngle:   { type: 'number', value: entity.coordinates.endAngle ?? 360 },
         },
-        transform: {
-          translation: { x: cx, y: cy, z: entity.coordinates['z'] ?? 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 },
+        layerId,
+        levelId,
+        transform: { translation: { x: sx, y: sy, z: sz }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      });
+    } else if (elementType === 'polyline') {
+      const verts = entity.vertices && entity.vertices.length > 0
+        ? entity.vertices
+        : [{ x: 0, y: 0 }, { x: 10, y: 0 }, { x: 10, y: 10 }, { x: 0, y: 10 }];
+      addElement(document, {
+        type: 'polyline',
+        properties: {
+          Points: { type: 'string', value: JSON.stringify(verts.map((v) => ({ x: v.x * scale, y: v.y * scale }))) },
         },
+        points: verts.map((v) => ({ x: v.x * scale, y: v.y * scale, z: 0, _type: 'Point3D' as const })),
         layerId,
         levelId,
       });
@@ -605,34 +635,30 @@ export function parseDXF(content: string): DocumentSchema {
       addElement(document, {
         type: 'text',
         properties: {
-          X:       { type: 'number', value: entity.coordinates['x'] ?? 0 },
-          Y:       { type: 'number', value: entity.coordinates['y'] ?? 0 },
-          Content: { type: 'string', value: entity.textContent },
+          Content: { type: 'string', value: entity.textContent || '' },
+          X: { type: 'number', value: sx },
+          Y: { type: 'number', value: sy },
         },
         layerId,
         levelId,
+        transform: { translation: { x: sx, y: sy, z: sz }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
       });
-    } else if (elementType === 'surface') {
+    } else if (elementType === 'block_ref') {
       addElement(document, {
-        type: 'surface',
+        type: 'block_ref',
+        properties: {
+          BlockName: { type: 'string', value: entity.blockName || '' },
+        },
         layerId,
         levelId,
-        transform: {
-          translation: { x: entity.coordinates['x'] ?? 0, y: entity.coordinates['y'] ?? 0, z: entity.coordinates['z'] ?? 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 },
-        },
+        transform: { translation: { x: sx, y: sy, z: sz }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
       });
     } else {
       addElement(document, {
         type: elementType as ElementType,
         layerId,
         levelId,
-        transform: {
-          translation: { x: entity.coordinates['x'] ?? 0, y: entity.coordinates['y'] ?? 0, z: entity.coordinates['z'] ?? 0 },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 },
-        },
+        transform: { translation: { x: sx, y: sy, z: sz }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
       });
     }
   }
@@ -645,11 +671,209 @@ export function serializeDXF(document: DocumentSchema): string {
   return serializer.serialize();
 }
 
-export function exportDXF(document: DocumentSchema): string {
+export function parseDWG(content: ArrayBuffer): DocumentSchema {
+  const decoder = new TextDecoder('utf-8');
+  const text = decoder.decode(content);
+  return parseDXF(text);
+}
+
+export function serializeDWG(document: DocumentSchema): ArrayBuffer {
+  const text = serializeDXF(document);
+  const encoder = new TextEncoder();
+  return encoder.encode(text).buffer;
+}
+
+// ─── Low-level DXF API ────────────────────────────────────────────────────────
+
+/**
+ * Parses a DXF string into an array of raw DxfEntity objects.
+ * Each entity has its DXF group codes as string values (last value wins for
+ * duplicate codes). Suitable for programmatic inspection before calling
+ * dxfToDocument().
+ */
+export function parseDxf(content: string): DxfEntity[] {
+  if (!content) return [];
+
+  const lines = content.split('\n').map((l) => l.trim());
+  const entities: DxfEntity[] = [];
+  let inEntities = false;
+  let i = 0;
+
+  while (i < lines.length) {
+    // Detect the ENTITIES section
+    if (!inEntities) {
+      if (lines[i] === '2' && i + 1 < lines.length && lines[i + 1] === 'ENTITIES') {
+        inEntities = true;
+      }
+      i++;
+      continue;
+    }
+
+    if (lines[i] === 'ENDSEC') break;
+
+    if (lines[i] === '0' && i + 1 < lines.length) {
+      const entityType = lines[i + 1];
+      if (entityType === 'ENDSEC' || entityType === 'EOF' || !entityType) break;
+
+      const isPolyline = entityType === 'LWPOLYLINE' || entityType === 'POLYLINE';
+      const entity: DxfEntity = { type: entityType, handle: '', properties: {} };
+      if (isPolyline) entity.vertices = [];
+
+      i += 2;
+      let pendingX: string | null = null;
+
+      while (i < lines.length - 1) {
+        const code = lines[i];
+        const value = lines[i + 1];
+        if (code === '0') break;
+        if (code === '5') entity.handle = value;
+        // For polylines, collect repeating 10/20 pairs as vertices
+        if (isPolyline && code === '10') {
+          pendingX = value;
+        } else if (isPolyline && code === '20' && pendingX !== null) {
+          entity.vertices!.push({ x: parseFloat(pendingX), y: parseFloat(value) });
+          pendingX = null;
+        } else {
+          entity.properties[code] = value;
+        }
+        i += 2;
+      }
+
+      entities.push(entity);
+    } else {
+      i++;
+    }
+  }
+
+  return entities;
+}
+
+/**
+ * Converts an array of DxfEntity objects (from parseDxf) into a DocumentSchema
+ * with the given projectId as document ID.
+ */
+export function dxfToDocument(entities: DxfEntity[], projectId: string): DocumentSchema {
+  const document = createProject(projectId, 'dxf-import');
+  (document as DocumentSchema).id = projectId;
+  document.library.blocks = {};
+
+  const levelId = Object.keys(document.organization.levels)[0]!;
+
+  for (const entity of entities) {
+    const elementType = DXF_ENTITY_MAP[entity.type] || 'annotation';
+    const layerName = entity.properties['8'] || '0';
+    const layerId = findOrCreateLayer(document, layerName);
+
+    const x = parseFloat(entity.properties['10'] || '0');
+    const y = parseFloat(entity.properties['20'] || '0');
+    const z = parseFloat(entity.properties['30'] || '0');
+
+    if (entity.type === 'LINE') {
+      const x2 = parseFloat(entity.properties['11'] || String(x));
+      const y2 = parseFloat(entity.properties['21'] || String(y));
+      addElement(document, {
+        type: 'line',
+        properties: {
+          StartX: { type: 'number', value: x },
+          StartY: { type: 'number', value: y },
+          EndX:   { type: 'number', value: x2 },
+          EndY:   { type: 'number', value: y2 },
+        },
+        points: [
+          { x, y, z, _type: 'Point3D' },
+          { x: x2, y: y2, z, _type: 'Point3D' },
+        ],
+        layerId,
+        levelId,
+      });
+    } else if (entity.type === 'CIRCLE') {
+      addElement(document, {
+        type: 'circle',
+        properties: {
+          CenterX: { type: 'number', value: x },
+          CenterY: { type: 'number', value: y },
+          Radius:  { type: 'number', value: parseFloat(entity.properties['40'] || '25') },
+        },
+        layerId,
+        levelId,
+        transform: { translation: { x, y, z }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      });
+    } else if (entity.type === 'ARC') {
+      addElement(document, {
+        type: 'arc',
+        properties: {
+          CenterX:    { type: 'number', value: x },
+          CenterY:    { type: 'number', value: y },
+          Radius:     { type: 'number', value: parseFloat(entity.properties['40'] || '25') },
+          StartAngle: { type: 'number', value: parseFloat(entity.properties['50'] || '0') },
+          EndAngle:   { type: 'number', value: parseFloat(entity.properties['51'] || '360') },
+        },
+        layerId,
+        levelId,
+        transform: { translation: { x, y, z }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      });
+    } else if (entity.type === 'LWPOLYLINE' || entity.type === 'POLYLINE') {
+      const verts = entity.vertices && entity.vertices.length > 0
+        ? entity.vertices
+        : [{ x, y }];
+      addElement(document, {
+        type: 'polyline',
+        properties: {
+          Points: { type: 'string', value: JSON.stringify(verts) },
+        },
+        points: verts.map((v) => ({ x: v.x, y: v.y, z, _type: 'Point3D' as const })),
+        layerId,
+        levelId,
+      });
+    } else if (entity.type === 'TEXT' || entity.type === 'MTEXT') {
+      addElement(document, {
+        type: 'text',
+        properties: {
+          Content: { type: 'string', value: entity.properties['1'] || '' },
+          X: { type: 'number', value: x },
+          Y: { type: 'number', value: y },
+        },
+        layerId,
+        levelId,
+        transform: { translation: { x, y, z }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      });
+    } else if (entity.type === 'INSERT') {
+      addElement(document, {
+        type: 'block_ref',
+        properties: {
+          BlockName: { type: 'string', value: entity.properties['2'] || '' },
+        },
+        layerId,
+        levelId,
+        transform: { translation: { x, y, z }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      });
+    } else {
+      addElement(document, {
+        type: elementType as ElementType,
+        layerId,
+        levelId,
+        transform: { translation: { x, y, z }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      });
+    }
+  }
+
+  return document;
+}
+
+/** Serializes a DocumentSchema to a DXF string. Alias for serializeDXF. */
+export function documentToDxf(document: DocumentSchema): string {
   return serializeDXF(document);
 }
 
-export function importDXF(content: string): Result<DocumentSchema, string> {
+// ─── Result type ──────────────────────────────────────────────────────────────
+
+export type DXFResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+/**
+ * Parses a DXF string and returns a Result<DocumentSchema, string>.
+ * Returns ok:false for empty input; ok:true with the document otherwise.
+ */
+export function importDXF(content: string): DXFResult<DocumentSchema> {
   if (!content || content.trim() === '') {
     return { ok: false, error: 'Empty DXF content' };
   }
@@ -661,343 +885,131 @@ export function importDXF(content: string): Result<DocumentSchema, string> {
   }
 }
 
-// ─── T-DOC-006: New lower-level DXF API ──────────────────────────────────────
+// ─── Full DXF export (HEADER + TABLES + ENTITIES) ────────────────────────────
 
 /**
- * A single DXF entity parsed from the ENTITIES section.
- * Each group code is stored as a string key mapping to its string value.
+ * Serializes a DocumentSchema to a fully-structured DXF string with HEADER,
+ * TABLES (including LAYER table), and ENTITIES sections.
  */
-export interface DxfEntity {
-  /** The entity type (e.g. "LINE", "ARC", "LWPOLYLINE", "INSERT") */
-  type: string;
-  /** The handle from group code 5 */
-  handle: string;
-  /** All group code key-value pairs for this entity */
-  properties: Record<string, string>;
-}
-
-/**
- * Minimal DXF ASCII parser.
- * Reads the ENTITIES section and returns an array of DxfEntity objects.
- * Each entity starts at group code `0` (entity type) and ends at the next `0`.
- */
-export function parseDxf(content: string): DxfEntity[] {
-  if (!content || !content.trim()) return [];
-
-  const lines = content.split('\n').map((l) => l.trim());
-  const entities: DxfEntity[] = [];
-
-  // Locate ENTITIES section bounds
-  let inEntities = false;
-  let i = 0;
-
-  while (i < lines.length) {
-    const code = lines[i];
-    const value = lines[i + 1] ?? '';
-
-    if (!inEntities) {
-      // Looking for start of ENTITIES section
-      if (code === '2' && value === 'ENTITIES') {
-        inEntities = true;
-        i += 2;
-        continue;
-      }
-      i += 2;
-      continue;
-    }
-
-    // Inside ENTITIES section
-    if (code === '0' && value === 'ENDSEC') {
-      break;
-    }
-
-    if (code === '0' && value && value !== 'ENDSEC' && value !== 'EOF' && value !== 'SECTION') {
-      // Start of a new entity
-      const entity: DxfEntity = {
-        type: value,
-        handle: '',
-        properties: {},
-      };
-
-      i += 2;
-
-      // Read group codes until next entity or end
-      while (i < lines.length) {
-        const eCode = lines[i];
-        const eValue = lines[i + 1] ?? '';
-
-        if (eCode === '0') {
-          // Next entity or section end — don't consume
-          break;
-        }
-
-        // Store raw group code → value
-        entity.properties[eCode] = eValue;
-
-        // Extract handle from code 5
-        if (eCode === '5') {
-          entity.handle = eValue;
-        }
-
-        i += 2;
-      }
-
-      entities.push(entity);
-      continue;
-    }
-
-    i += 2;
-  }
-
-  return entities;
-}
-
-/** Map from DXF entity type to OpenCAD ElementType */
-const DXF_ENTITY_TO_ELEMENT_TYPE: Record<string, ElementType> = {
-  LINE: 'line',
-  ARC: 'arc',
-  CIRCLE: 'circle',
-  LWPOLYLINE: 'polyline',
-  POLYLINE: 'polyline',
-  INSERT: 'block_ref',
-  TEXT: 'text',
-  MTEXT: 'text',
-  DIMENSION: 'dimension',
-  ELLIPSE: 'ellipse',
-  POINT: 'point',
-  '3DFACE': 'surface',
-  '3DSOLID': 'solid',
-  MESH: 'surface',
-};
-
-/**
- * Converts an array of DxfEntity objects into a DocumentSchema.
- * LINE/ARC/LWPOLYLINE/INSERT entities are mapped to corresponding element types.
- */
-export function dxfToDocument(entities: DxfEntity[], projectId: string): DocumentSchema {
-  const doc = createProject(projectId, 'dxf-import');
-  doc.name = 'Imported DXF';
-
-  const defaultLayerId = Object.keys(doc.organization.layers)[0]!;
-  const defaultLevelId = Object.keys(doc.organization.levels)[0]!;
-
-  // Build a layer-name → layerId map
-  const layerNameToId: Record<string, string> = {
-    '0': defaultLayerId,
-  };
-
-  const getOrCreateLayer = (layerName: string): string => {
-    if (layerNameToId[layerName]) return layerNameToId[layerName]!;
-    const layerId = crypto.randomUUID();
-    doc.organization.layers[layerId] = {
-      id: layerId,
-      name: layerName,
-      color: '#808080',
-      visible: true,
-      locked: false,
-      order: Object.keys(doc.organization.layers).length,
-    };
-    layerNameToId[layerName] = layerId;
-    return layerId;
-  };
-
-  for (const entity of entities) {
-    const elementType = DXF_ENTITY_TO_ELEMENT_TYPE[entity.type] ?? 'annotation';
-    const layerName = entity.properties['8'] ?? '0';
-    const layerId = getOrCreateLayer(layerName);
-
-    const x = parseFloat(entity.properties['10'] ?? '0') || 0;
-    const y = parseFloat(entity.properties['20'] ?? '0') || 0;
-    const z = parseFloat(entity.properties['30'] ?? '0') || 0;
-
-    if (entity.type === 'LINE') {
-      const x2 = parseFloat(entity.properties['11'] ?? String(x)) || x;
-      const y2 = parseFloat(entity.properties['21'] ?? String(y)) || y;
-      const z2 = parseFloat(entity.properties['31'] ?? '0') || 0;
-      addElement(doc, {
-        type: 'line',
-        points: [
-          { x, y, z, _type: 'Point3D' },
-          { x: x2, y: y2, z: z2, _type: 'Point3D' },
-        ],
-        properties: {
-          StartX: { type: 'number', value: x },
-          StartY: { type: 'number', value: y },
-          EndX: { type: 'number', value: x2 },
-          EndY: { type: 'number', value: y2 },
-        },
-        layerId,
-        levelId: defaultLevelId,
-      });
-    } else if (entity.type === 'ARC') {
-      const radius = parseFloat(entity.properties['40'] ?? '0') || 0;
-      const startAngle = parseFloat(entity.properties['50'] ?? '0') || 0;
-      const endAngle = parseFloat(entity.properties['51'] ?? '360') || 360;
-      addElement(doc, {
-        type: 'arc',
-        properties: {
-          CenterX: { type: 'number', value: x },
-          CenterY: { type: 'number', value: y },
-          Radius: { type: 'number', value: radius },
-          StartAngle: { type: 'number', value: startAngle },
-          EndAngle: { type: 'number', value: endAngle },
-        },
-        transform: {
-          translation: { x, y, z },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 },
-        },
-        layerId,
-        levelId: defaultLevelId,
-      });
-    } else if (entity.type === 'LWPOLYLINE' || entity.type === 'POLYLINE') {
-      // Collect vertex pairs from repeated code 10/20
-      const rawProps = entity.properties;
-      // We need to re-parse vertices — but parseDxf stores last value per code.
-      // Since we stored only last value, we reconstruct vertices from Points stored in the entity
-      // via a re-parse of the original section. Instead, store all vertices by keeping
-      // track in the parser. For now use the collected single pair as a degenerate case,
-      // falling back to a stub polyline. The raw properties may not have all vertices
-      // since Record<string,string> takes last write. We can check for any vertex data:
-      const pts: Array<{ x: number; y: number; z: number; _type: 'Point3D' }> = [
-        { x, y, z: 0, _type: 'Point3D' },
-      ];
-      // Add end point if available
-      const x2 = parseFloat(rawProps['11'] ?? 'NaN');
-      const y2 = parseFloat(rawProps['21'] ?? 'NaN');
-      if (!isNaN(x2) && !isNaN(y2)) {
-        pts.push({ x: x2, y: y2, z: 0, _type: 'Point3D' });
-      }
-      addElement(doc, {
-        type: 'polyline',
-        points: pts,
-        properties: {
-          Points: { type: 'string', value: JSON.stringify(pts.map((p) => ({ x: p.x, y: p.y }))) },
-        },
-        layerId,
-        levelId: defaultLevelId,
-      });
-    } else if (entity.type === 'INSERT') {
-      addElement(doc, {
-        type: 'block_ref',
-        properties: {
-          BlockName: { type: 'string', value: entity.properties['2'] ?? '' },
-          X: { type: 'number', value: x },
-          Y: { type: 'number', value: y },
-        },
-        transform: {
-          translation: { x, y, z },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 },
-        },
-        layerId,
-        levelId: defaultLevelId,
-      });
-    } else {
-      addElement(doc, {
-        type: elementType as ElementType,
-        transform: {
-          translation: { x, y, z },
-          rotation: { x: 0, y: 0, z: 0 },
-          scale: { x: 1, y: 1, z: 1 },
-        },
-        layerId,
-        levelId: defaultLevelId,
-      });
-    }
-  }
-
-  return doc;
-}
-
-/**
- * Converts a DocumentSchema to a DXF ASCII string (ENTITIES section only).
- * Walls/lines → LINE, arcs → ARC, polylines → LWPOLYLINE.
- */
-export function documentToDxf(doc: DocumentSchema): string {
+export function exportDXF(document: DocumentSchema): string {
   const lines: string[] = [];
+  let handle = 1;
+  const nextHandle = (): string => `${(handle++).toString(16).toUpperCase()}`;
+
+  // ── HEADER section ────────────────────────────────────────────────────────
+  lines.push('0', 'SECTION', '2', 'HEADER');
+  lines.push('9', '$ACADVER', '1', 'AC1015');
+  lines.push('9', '$INSUNITS', '70', '4'); // 4 = mm
+  lines.push('0', 'ENDSEC');
+
+  // ── TABLES section with LAYER table ──────────────────────────────────────
+  const docLayers = Object.values(document.organization.layers);
+  lines.push('0', 'SECTION', '2', 'TABLES');
+  lines.push('0', 'TABLE', '2', 'LAYER', '5', nextHandle(), '70', String(docLayers.length));
+
+  for (const layer of docLayers) {
+    // Reverse hex color to ACI (default 7 = white)
+    const aci = Object.entries(ACI_COLORS).find(([, hex]) => hex.toLowerCase() === layer.color.toLowerCase())?.[0] ?? '7';
+    lines.push(
+      '0', 'LAYER',
+      '5', nextHandle(),
+      '100', 'AcDbSymbolTableRecord',
+      '100', 'AcDbLayerTableRecord',
+      '2', layer.name,
+      '70', layer.visible ? '0' : '1',
+      '62', String(aci),
+    );
+  }
+
+  lines.push('0', 'ENDTAB');
+  lines.push('0', 'ENDSEC');
+
+  // ── ENTITIES section ──────────────────────────────────────────────────────
   lines.push('0', 'SECTION', '2', 'ENTITIES');
 
-  let handleCounter = 1;
-  const nextHandle = (): string => (handleCounter++).toString(16).toUpperCase();
+  for (const element of Object.values(document.content.elements)) {
+    const layerName = document.organization.layers[element.layerId]?.name ?? '0';
+    const t = element.transform?.translation ?? { x: 0, y: 0, z: 0 };
+    const h = nextHandle();
 
-  const getLayerName = (layerId: string): string =>
-    doc.organization.layers[layerId]?.name ?? '0';
-
-  for (const element of Object.values(doc.content.elements)) {
     if (element.type === 'line') {
-      const p = element.transform.translation;
-      const pts = (element as { points?: Point3D[] }).points ?? [];
-      const p2 = pts[1] ?? { x: p.x, y: p.y, z: p.z };
+      const pts = (element as { points?: Array<{ x: number; y: number; z: number }> }).points ?? [];
+      const sx = pts[0]?.x ?? t.x;
+      const sy = pts[0]?.y ?? t.y;
+      const sz = pts[0]?.z ?? t.z;
+      const ex = pts[1]?.x ?? (element.properties['EndX']?.value as number ?? sx);
+      const ey = pts[1]?.y ?? (element.properties['EndY']?.value as number ?? sy);
+      const ez = pts[1]?.z ?? sz;
       lines.push(
-        '0', 'LINE',
-        '5', nextHandle(),
-        '8', getLayerName(element.layerId),
-        '10', String(p.x),
-        '20', String(p.y),
-        '30', String(p.z),
-        '11', String(p2.x),
-        '21', String(p2.y),
-        '31', String(p2.z),
+        '0', 'LINE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbLine',
+        '10', String(sx), '20', String(sy), '30', String(sz),
+        '11', String(ex), '21', String(ey), '31', String(ez),
+      );
+    } else if (element.type === 'circle') {
+      const cx = (element.properties['CenterX']?.value as number) ?? t.x;
+      const cy = (element.properties['CenterY']?.value as number) ?? t.y;
+      const r  = (element.properties['Radius']?.value as number) ?? 25;
+      lines.push(
+        '0', 'CIRCLE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbCircle',
+        '10', String(cx), '20', String(cy), '30', String(t.z),
+        '40', String(r),
       );
     } else if (element.type === 'arc') {
-      const cx = (element.properties['CenterX']?.value as number) ?? element.transform.translation.x;
-      const cy = (element.properties['CenterY']?.value as number) ?? element.transform.translation.y;
-      const cz = element.transform.translation.z;
-      const radius = (element.properties['Radius']?.value as number) ?? 0;
-      const startAngle = (element.properties['StartAngle']?.value as number) ?? 0;
-      const endAngle = (element.properties['EndAngle']?.value as number) ?? 360;
+      const cx = (element.properties['CenterX']?.value as number) ?? t.x;
+      const cy = (element.properties['CenterY']?.value as number) ?? t.y;
+      const r  = (element.properties['Radius']?.value as number) ?? 25;
+      const sa = (element.properties['StartAngle']?.value as number) ?? 0;
+      const ea = (element.properties['EndAngle']?.value as number) ?? 360;
       lines.push(
-        '0', 'ARC',
-        '5', nextHandle(),
-        '8', getLayerName(element.layerId),
-        '10', String(cx),
-        '20', String(cy),
-        '30', String(cz),
-        '40', String(radius),
-        '50', String(startAngle),
-        '51', String(endAngle),
+        '0', 'ARC', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbCircle',
+        '10', String(cx), '20', String(cy), '30', String(t.z),
+        '40', String(r),
+        '100', 'AcDbArc',
+        '50', String(sa), '51', String(ea),
       );
     } else if (element.type === 'polyline') {
-      const pts = (element as { points?: Point3D[] }).points ?? [];
+      const pts = (element as { points?: Array<{ x: number; y: number }> }).points ?? [];
       lines.push(
-        '0', 'LWPOLYLINE',
-        '5', nextHandle(),
-        '8', getLayerName(element.layerId),
+        '0', 'LWPOLYLINE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbPolyline',
         '90', String(pts.length),
         '70', '0',
       );
       for (const pt of pts) {
         lines.push('10', String(pt.x), '20', String(pt.y));
       }
+    } else if (element.type === 'text') {
+      const x = (element.properties['X']?.value as number) ?? t.x;
+      const y = (element.properties['Y']?.value as number) ?? t.y;
+      const content = String(element.properties['Content']?.value ?? '');
+      lines.push(
+        '0', 'TEXT', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbText',
+        '10', String(x), '20', String(y), '30', String(t.z),
+        '40', '2.5',
+        '1', content,
+      );
     } else {
       // Generic fallback
-      const p = element.transform.translation;
+      const name = (element.properties['Name']?.value as string) || element.type;
       lines.push(
-        '0', element.type.toUpperCase(),
-        '5', nextHandle(),
-        '8', getLayerName(element.layerId),
-        '10', String(p.x),
-        '20', String(p.y),
-        '30', String(p.z),
+        '0', name.toUpperCase(), '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '10', String(t.x), '20', String(t.y), '30', String(t.z),
       );
     }
   }
 
-  lines.push('0', 'ENDSEC', '0', 'EOF');
+  lines.push('0', 'ENDSEC');
+  lines.push('0', 'EOF');
+
   return lines.join('\n');
-}
-
-// ─── End T-DOC-006 ────────────────────────────────────────────────────────────
-
-export function parseDWG(content: ArrayBuffer): DocumentSchema {
-  const decoder = new TextDecoder('utf-8');
-  const text = decoder.decode(content);
-  return parseDXF(text);
-}
-
-export function serializeDWG(document: DocumentSchema): ArrayBuffer {
-  const text = serializeDXF(document);
-  const encoder = new TextEncoder();
-  return encoder.encode(text).buffer;
 }

@@ -6,62 +6,6 @@
 import { DocumentSchema, ElementType } from './types';
 import { createProject } from './document';
 
-// ArchiCAD .pln magic bytes: "PLAN" = 50 4C 41 4E
-const AC_MAGIC = [0x50, 0x4c, 0x41, 0x4e];
-
-export function detectFormat(buffer: ArrayBuffer): boolean {
-  if (buffer.byteLength < AC_MAGIC.length) return false;
-  const view = new Uint8Array(buffer);
-  return AC_MAGIC.every((byte, i) => view[i] === byte);
-}
-
-export function importFile(
-  _buffer: ArrayBuffer,
-  projectId: string
-): { schema: DocumentSchema; warnings: string[] } {
-  const doc = createProject(projectId, 'archicad-import');
-  doc.name = 'Imported ArchiCAD';
-  doc.content.elements = {};
-
-  const elementId = crypto.randomUUID();
-  const layerId = Object.keys(doc.organization.layers)[0] || crypto.randomUUID();
-
-  doc.content.elements[elementId] = {
-    id: elementId,
-    type: 'annotation',
-    properties: {
-      Name: { type: 'string', value: 'Imported from ArchiCAD' },
-    },
-    propertySets: [],
-    geometry: { type: 'brep', data: null },
-    layerId,
-    levelId: '',
-    transform: {
-      translation: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
-    },
-    boundingBox: {
-      min: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-      max: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-    },
-    metadata: {
-      id: elementId,
-      createdBy: 'archicad-import',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      version: { clock: {} },
-    },
-    visible: true,
-    locked: false,
-  };
-
-  return {
-    schema: doc,
-    warnings: ['Full ArchiCAD import not yet implemented — returning stub'],
-  };
-}
-
 const AC_CATEGORY_MAP: Record<string, ElementType> = {
   Wall: 'wall',
   Column: 'column',
@@ -303,4 +247,53 @@ class PLNParser {
     const match = attrs.match(regex);
     return match ? match[1] : undefined;
   }
+}
+
+// ── Binary format detection ────────────────────────────────────────────────────
+
+/** Returns true if the buffer starts with the ArchiCAD PLN magic bytes: "PLAN" */
+export function detectFormat(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < 4) return false;
+  const view = new Uint8Array(buffer);
+  // "PLAN" = 0x50 0x4C 0x41 0x4E
+  return view[0] === 0x50 && view[1] === 0x4c && view[2] === 0x41 && view[3] === 0x4e;
+}
+
+/** Stub binary import — returns a minimal schema and a stub warning. */
+export function importFile(
+  buffer: ArrayBuffer,
+  projectId: string,
+): { schema: DocumentSchema; warnings: string[] } {
+  void buffer;
+  const schema = createProject(projectId, 'imported');
+  const layerId = Object.keys(schema.organization.layers)[0]!;
+  const elementId = crypto.randomUUID();
+  schema.content.elements[elementId] = {
+    id: elementId,
+    type: 'wall',
+    layerId,
+    levelId: '',
+    visible: true,
+    locked: false,
+    properties: {},
+    propertySets: [],
+    geometry: { type: 'brep', data: null },
+    transform: {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    },
+    boundingBox: { min: { x: 0, y: 0, z: 0, _type: 'Point3D' }, max: { x: 1000, y: 200, z: 3000, _type: 'Point3D' } },
+    metadata: {
+      id: elementId,
+      createdBy: 'archicad-import',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      version: { clock: {} },
+    },
+  };
+  return {
+    schema,
+    warnings: ['ArchiCAD binary format is not fully supported; geometry was stubbed. Export to IFC for full fidelity.'],
+  };
 }

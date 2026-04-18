@@ -238,8 +238,6 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     const { scene } = stateRef.current;
     if (!scene) return;
 
-    const theme = getTheme();
-
     elementMeshesRef.current.forEach((mesh, id) => {
       const isSelected = selectedIds.includes(id);
       const material = mesh.material as THREE.MeshStandardMaterial;
