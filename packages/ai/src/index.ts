@@ -9,6 +9,7 @@ export {
 } from './floorPlanValidation';
 export { checkCompliance, applyFix } from './codeCompliance';
 export type { ComplianceReport, Violation } from './codeCompliance';
+export * from './designCommands';
 
 import {
   createDesignGenerator,
