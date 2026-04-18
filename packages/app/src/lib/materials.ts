@@ -7,19 +7,21 @@ export interface Material {
   costPerM2: number;
   unit: string;
   color: string; // hex fallback when texture unavailable
+  density?: number;        // kg/m³ (optional; used for BIM quantity takeoff)
+  embodiedCarbon?: number; // kgCO2e/kg (optional; used for carbon analysis)
 }
 
 // ≥100 standard architectural materials
 export const BUILT_IN_MATERIALS: Material[] = [
   // Concrete
-  { id: 'concrete-standard', name: 'Concrete', category: 'Concrete', roughness: 0.9, metalness: 0.0, costPerM2: 45, unit: 'm²', color: '#9e9e9e' },
-  { id: 'concrete-polished', name: 'Polished Concrete', category: 'Concrete', roughness: 0.2, metalness: 0.0, costPerM2: 95, unit: 'm²', color: '#bdbdbd' },
-  { id: 'concrete-exposed', name: 'Exposed Concrete', category: 'Concrete', roughness: 0.85, metalness: 0.0, costPerM2: 55, unit: 'm²', color: '#9e9e9e' },
-  { id: 'concrete-precast', name: 'Precast Concrete', category: 'Concrete', roughness: 0.8, metalness: 0.0, costPerM2: 80, unit: 'm²', color: '#aeaeae' },
-  { id: 'concrete-reinforced', name: 'Reinforced Concrete', category: 'Concrete', roughness: 0.9, metalness: 0.1, costPerM2: 60, unit: 'm²', color: '#9e9e9e' },
-  { id: 'concrete-white', name: 'White Concrete', category: 'Concrete', roughness: 0.75, metalness: 0.0, costPerM2: 70, unit: 'm²', color: '#e8e8e8' },
-  { id: 'concrete-stamped', name: 'Stamped Concrete', category: 'Concrete', roughness: 0.8, metalness: 0.0, costPerM2: 110, unit: 'm²', color: '#b0a090' },
-  { id: 'concrete-lightweight', name: 'Lightweight Concrete', category: 'Concrete', roughness: 0.9, metalness: 0.0, costPerM2: 65, unit: 'm²', color: '#c0c0c0' },
+  { id: 'concrete-standard', name: 'Concrete', category: 'Concrete', roughness: 0.9, metalness: 0.0, costPerM2: 45, unit: 'm²', color: '#9e9e9e', density: 2400, embodiedCarbon: 0.13 },
+  { id: 'concrete-polished', name: 'Polished Concrete', category: 'Concrete', roughness: 0.2, metalness: 0.0, costPerM2: 95, unit: 'm²', color: '#bdbdbd', density: 2400, embodiedCarbon: 0.13 },
+  { id: 'concrete-exposed', name: 'Exposed Concrete', category: 'Concrete', roughness: 0.85, metalness: 0.0, costPerM2: 55, unit: 'm²', color: '#9e9e9e', density: 2400, embodiedCarbon: 0.13 },
+  { id: 'concrete-precast', name: 'Precast Concrete', category: 'Concrete', roughness: 0.8, metalness: 0.0, costPerM2: 80, unit: 'm²', color: '#aeaeae', density: 2400, embodiedCarbon: 0.15 },
+  { id: 'concrete-reinforced', name: 'Reinforced Concrete', category: 'Concrete', roughness: 0.9, metalness: 0.1, costPerM2: 60, unit: 'm²', color: '#9e9e9e', density: 2500, embodiedCarbon: 0.17 },
+  { id: 'concrete-white', name: 'White Concrete', category: 'Concrete', roughness: 0.75, metalness: 0.0, costPerM2: 70, unit: 'm²', color: '#e8e8e8', density: 2400, embodiedCarbon: 0.13 },
+  { id: 'concrete-stamped', name: 'Stamped Concrete', category: 'Concrete', roughness: 0.8, metalness: 0.0, costPerM2: 110, unit: 'm²', color: '#b0a090', density: 2300, embodiedCarbon: 0.14 },
+  { id: 'concrete-lightweight', name: 'Lightweight Concrete', category: 'Concrete', roughness: 0.9, metalness: 0.0, costPerM2: 65, unit: 'm²', color: '#c0c0c0', density: 1800, embodiedCarbon: 0.11 },
 
   // Brick
   { id: 'brick-red', name: 'Brick - Red', category: 'Masonry', roughness: 0.95, metalness: 0.0, costPerM2: 85, unit: 'm²', color: '#b55239' },

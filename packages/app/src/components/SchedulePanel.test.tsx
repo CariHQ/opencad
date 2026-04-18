@@ -150,3 +150,80 @@ describe('T-SCHED-001: SchedulePanel', () => {
     expect(screen.getByText(/no.*wall|0.*wall/i)).toBeInTheDocument();
   });
 });
+
+describe('T-BIM-002: SchedulePanel quantity takeoff', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(useDocumentStore).mockReturnValue(makeStore() as ReturnType<typeof useDocumentStore>);
+  });
+
+  it('renders column headers: Type, Count, Area, Length', () => {
+    render(<SchedulePanel />);
+    // The quantity takeoff summary table should show these column headers
+    expect(screen.getAllByText(/type/i).length).toBeGreaterThan(0);
+    expect(screen.getByText(/count/i)).toBeInTheDocument();
+    expect(screen.getByText(/area/i)).toBeInTheDocument();
+    expect(screen.getByText(/length/i)).toBeInTheDocument();
+  });
+
+  it('renders empty state when no elements', () => {
+    vi.mocked(useDocumentStore).mockReturnValue(
+      makeStore({
+        document: {
+          id: 'doc-1',
+          content: { elements: {}, spaces: {} },
+          organization: { layers: {}, levels: {} },
+          presentation: { views: {}, annotations: {} },
+          library: { materials: {} },
+          versions: [],
+          vectorClock: {},
+        },
+      }) as ReturnType<typeof useDocumentStore>
+    );
+    render(<SchedulePanel />);
+    // Switch to wall type to show empty state
+    const select = screen.getByRole('combobox', { name: /element type/i });
+    fireEvent.change(select, { target: { value: 'wall' } });
+    expect(screen.getByText(/no.*wall|0.*wall/i)).toBeInTheDocument();
+  });
+
+  it('groups elements by type', () => {
+    render(<SchedulePanel />);
+    // Select wall type — should show 2 walls grouped
+    const select = screen.getByRole('combobox', { name: /element type/i });
+    fireEvent.change(select, { target: { value: 'wall' } });
+    const rows = screen.getAllByRole('row');
+    // header row + 2 wall data rows (+ possible tfoot row)
+    expect(rows.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('shows correct count per type', () => {
+    render(<SchedulePanel />);
+    const select = screen.getByRole('combobox', { name: /element type/i });
+    fireEvent.change(select, { target: { value: 'wall' } });
+    // Total row shows count of 2 walls
+    expect(screen.getByText(/total.*2|2.*wall/i)).toBeInTheDocument();
+  });
+
+  it('export button triggers CSV download', () => {
+    // Mock URL.createObjectURL to track calls
+    const mockCreateObjectURL = vi.fn(() => 'blob:mock-url');
+    const mockRevokeObjectURL = vi.fn();
+    Object.defineProperty(URL, 'createObjectURL', { value: mockCreateObjectURL, writable: true });
+    Object.defineProperty(URL, 'revokeObjectURL', { value: mockRevokeObjectURL, writable: true });
+
+    // Mock anchor click
+    const mockClick = vi.fn();
+    vi.spyOn(document, 'createElement').mockImplementationOnce((tag) => {
+      if (tag === 'a') {
+        return { click: mockClick, href: '', download: '' } as unknown as HTMLElement;
+      }
+      return document.createElement(tag);
+    });
+
+    render(<SchedulePanel />);
+    const exportBtn = screen.getByRole('button', { name: /export.*csv/i });
+    fireEvent.click(exportBtn);
+    expect(mockCreateObjectURL).toHaveBeenCalled();
+  });
+});

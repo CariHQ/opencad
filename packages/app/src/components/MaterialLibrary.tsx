@@ -110,6 +110,11 @@ export function MaterialLibrary({ onSelect, selectedCount, currentMaterialName }
                   className="material-swatch"
                   style={{ backgroundColor: mat.color }}
                   aria-hidden="true"
+                  title={
+                    mat.density !== undefined && mat.embodiedCarbon !== undefined
+                      ? `${mat.name} — density: ${mat.density} kg/m³, carbon: ${mat.embodiedCarbon} kgCO2e/kg`
+                      : mat.name
+                  }
                 />
                 <div className="material-info">
                   <span className="material-name">{mat.name}</span>
