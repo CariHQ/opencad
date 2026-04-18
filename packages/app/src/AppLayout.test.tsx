@@ -69,9 +69,9 @@ describe('T-UI-006: AppLayout', () => {
     setRole(null);
   });
 
-  it('renders brand name', () => {
+  it('renders brand logo', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
-    expect(screen.getByText('OpenCAD')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'OpenCAD' })).toBeInTheDocument();
   });
 
   it('renders view tabs', () => {

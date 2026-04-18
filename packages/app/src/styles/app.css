@@ -163,9 +163,9 @@ input[type='range'] {
   -webkit-app-region: no-drag;
 }
 
-/* macOS traffic lights sit in the top-left; reserve ~72px so they don't overlap content */
+/* macOS: traffic lights are in the native title bar, no extra padding needed */
 .app-toolbar.tauri-macos .toolbar-left {
-  padding-left: 72px;
+  padding-left: 0;
 }
 
 .toolbar-left,
@@ -193,12 +193,12 @@ input[type='range'] {
   flex-shrink: 0;
 }
 
-.brand-name {
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: -0.3px;
-  color: var(--text-primary);
-  margin-right: 4px;
+.brand-logo-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  display: block;
 }
 
 .toolbar-sep {

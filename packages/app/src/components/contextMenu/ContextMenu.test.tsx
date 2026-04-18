@@ -55,17 +55,27 @@ describe('computeMenuPosition', () => {
     expect(pos.cy).toBeLessThanOrEqual(H - RADIAL_RADIUS - 12);
   });
 
-  it('TL panel anchor has left and top (not right)', () => {
+  it('TL panel anchor has right and top (panel opposite the fan)', () => {
+    // TL fan goes RIGHT → panel must go LEFT → uses CSS `right:`
     const pos = computeMenuPosition(100, 100, W, H);
-    expect('left' in pos.panelAnchor).toBe(true);
-    expect('top'  in pos.panelAnchor).toBe(true);
+    expect('right' in pos.panelAnchor).toBe(true);
+    expect('top'   in pos.panelAnchor).toBe(true);
+    expect('left'  in pos.panelAnchor).toBe(false);
+  });
+
+  it('TR panel anchor has left and top (panel opposite the fan)', () => {
+    // TR fan goes LEFT → panel must go RIGHT → uses CSS `left:`
+    const pos = computeMenuPosition(900, 100, W, H);
+    expect('left'  in pos.panelAnchor).toBe(true);
+    expect('top'   in pos.panelAnchor).toBe(true);
     expect('right' in pos.panelAnchor).toBe(false);
   });
 
-  it('TR panel anchor has right and top (not left)', () => {
-    const pos = computeMenuPosition(900, 100, W, H);
-    expect('right' in pos.panelAnchor).toBe(true);
-    expect('left'  in pos.panelAnchor).toBe(false);
+  it('panel top is vertically centred on cy (within clamping)', () => {
+    const pos = computeMenuPosition(300, 300, W, H);
+    // top should be approximately cy - PANEL_H/2 = 300 - 90 = 210
+    expect(pos.panelAnchor.top).toBeDefined();
+    expect(pos.panelAnchor.top!).toBeLessThan(pos.cy);
   });
 });
 

@@ -470,7 +470,8 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     }
 
     const items = getContextMenuItems('3d', elementContext);
-    setContextMenuState({ x: me.clientX - rect.left, y: me.clientY - rect.top, items });
+    // Store global clientX/clientY — ContextMenu uses position:fixed (viewport space).
+    setContextMenuState({ x: me.clientX, y: me.clientY, items });
   }, []);
 
   useEffect(() => {

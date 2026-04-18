@@ -42,12 +42,14 @@ export interface MenuPosition {
 
 /** Radius of the radial arc in pixels */
 export const RADIAL_RADIUS = 72;
-/** Approximate half-height of the secondary panel */
-const PANEL_H = 220;
-/** Approximate half-width of the secondary panel */
+/** Approximate height of the secondary panel (used for centering + overflow clamping) */
+const PANEL_H = 180;
+/** Approximate width of the secondary panel */
 const PANEL_W = 200;
 /** Clearance from viewport edge */
 const EDGE_MARGIN = 12;
+/** Gap between blue dot and the nearest edge of the secondary panel — matches radial icon visual spacing */
+const PANEL_GAP = Math.round(RADIAL_RADIUS / 2);
 
 export function computeMenuPosition(
   clickX: number,
@@ -67,28 +69,29 @@ export function computeMenuPosition(
      isRight && !isBottom ? 'TR' :
     !isRight &&  isBottom ? 'BL' : 'BR';
 
-  // Secondary panel anchors — panel appears to the right/left of the arc
-  // and above/below depending on quadrant
+  // Secondary panel anchors.
+  // Panel is always vertically centred on cy (blue dot): top = cy - PANEL_H/2, clamped.
+  // Horizontal side is OPPOSITE to the radial fan:
+  //   TL fan → RIGHT semicircle → panel goes LEFT  (right: CSS)
+  //   TR fan → LEFT  semicircle → panel goes RIGHT (left:  CSS)
+  //   BL fan → TOP   semicircle → panel goes RIGHT (left:  CSS)
+  //   BR fan → TOP   semicircle → panel goes LEFT  (right: CSS)
+  const panelTop = Math.min(Math.max(cy - PANEL_H / 2, EDGE_MARGIN), viewportH - PANEL_H - EDGE_MARGIN);
+
+  // right: N → panel's right edge is N px from viewport right → panel sits LEFT of cx
+  const rightCss = Math.min(viewportW - cx + PANEL_GAP, viewportW - PANEL_W - EDGE_MARGIN);
+  // left: N → panel's left edge is N px from viewport left → panel sits RIGHT of cx
+  const leftCss  = Math.min(cx + PANEL_GAP, viewportW - PANEL_W - EDGE_MARGIN);
+
   let panelAnchor: MenuPosition['panelAnchor'];
   if (quadrant === 'TL') {
-    panelAnchor = { top: cy - 8, left: cx + RADIAL_RADIUS + 8 };
+    panelAnchor = { top: panelTop, right: rightCss };
   } else if (quadrant === 'TR') {
-    panelAnchor = { top: cy - 8, right: viewportW - cx + RADIAL_RADIUS + 8 };
+    panelAnchor = { top: panelTop, left: leftCss };
   } else if (quadrant === 'BL') {
-    // Clamp so panel doesn't overflow bottom
-    const panelTop = Math.min(cy - PANEL_H / 2, viewportH - PANEL_H - EDGE_MARGIN);
-    panelAnchor = { top: Math.max(EDGE_MARGIN, panelTop), left: cx + RADIAL_RADIUS + 8 };
+    panelAnchor = { top: panelTop, left: leftCss };
   } else {
-    const panelTop = Math.min(cy - PANEL_H / 2, viewportH - PANEL_H - EDGE_MARGIN);
-    panelAnchor = { top: Math.max(EDGE_MARGIN, panelTop), right: viewportW - cx + RADIAL_RADIUS + 8 };
-  }
-
-  // Extra clamp: keep panel from overflowing right/left
-  if ('left' in panelAnchor && panelAnchor.left !== undefined) {
-    panelAnchor.left = Math.min(panelAnchor.left, viewportW - PANEL_W - EDGE_MARGIN);
-  }
-  if ('right' in panelAnchor && panelAnchor.right !== undefined) {
-    panelAnchor.right = Math.min(panelAnchor.right, viewportW - PANEL_W - EDGE_MARGIN);
+    panelAnchor = { top: panelTop, right: rightCss };
   }
 
   return { cx, cy, quadrant, panelAnchor };

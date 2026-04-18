@@ -255,7 +255,7 @@ export function AppLayout() {
             <button className={`toolbar-btn panel-toggle-btn${leftVisible ? ' panel-on' : ''}`} onClick={() => setShowLeftPanel((v) => !v)} title="Toggle navigator (⌘[)">
               <PanelLeft size={16} strokeWidth={2} color={leftVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')} />
             </button>
-            <span className="brand-name">OpenCAD</span>
+            <img src="/favicon.svg" alt="OpenCAD" className="brand-logo-img" />
             <button className="toolbar-btn" onClick={() => navigate('/')} title="Back to projects"><Home size={14} strokeWidth={2} /></button>
           </div>
 
@@ -272,13 +272,13 @@ export function AppLayout() {
           </div>
 
           <div className="toolbar-right">
+            <button className="toolbar-btn" onClick={() => setShowFeedback(true)} title="Send feedback" style={{ color: 'var(--accent-primary)' }}><span className="tool-icon"><MessageCirclePlus size={15} /></span></button>
             <button className="toolbar-btn" onClick={toggleTheme} title="Toggle Theme"><span className="tool-icon">{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</span></button>
             <button className="toolbar-btn" onClick={isTauri() ? () => void handleNativeOpen() : () => setShowModal('import')} title={isTauri() ? 'Open file (⌘O)' : 'Import IFC'}><span className="tool-icon"><FolderOpen size={15} /></span></button>
             <button className="toolbar-btn" onClick={isTauri() ? () => void handleNativeSave() : () => setShowModal('export')} title={isTauri() ? 'Save file (⌘S)' : 'Export IFC'}><span className="tool-icon"><FileDown size={15} /></span></button>
             {can('panel:ai') && (
               <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant"><span className="tool-icon"><Bot size={15} /></span></button>
             )}
-            <button className="toolbar-btn" onClick={() => setShowFeedback(true)} title="Send feedback" style={{ color: 'var(--accent-primary)' }}><span className="tool-icon"><MessageCirclePlus size={15} /></span></button>
             <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In"><span className="tool-icon"><User size={15} /></span></button>
             <button className="toolbar-btn" onClick={() => setShowSettings(true)} title="Settings"><span className="tool-icon"><Settings size={15} /></span></button>
             <div className="toolbar-sep" />

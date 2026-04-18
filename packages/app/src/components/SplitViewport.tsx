@@ -67,7 +67,7 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
     containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraState,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
     contextMenuState, closeContextMenu,
-  } = useThreeViewport();
+  } = useThreeViewport({ isViewOnly });
   const { setActiveTool, deleteElement, setSelectedIds, selectedIds } = useDocumentStore();
 
   const zoomToFitRef = useRef(zoomToFit);
@@ -176,8 +176,8 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
         <ContextMenu
           x={contextMenuState.x}
           y={contextMenuState.y}
-          viewportW={containerRef.current?.clientWidth ?? 800}
-          viewportH={containerRef.current?.clientHeight ?? 600}
+          viewportW={window.innerWidth}
+          viewportH={window.innerHeight}
           items={contextMenuState.items}
           onClose={closeContextMenu}
           onAction={(action) => {
@@ -301,10 +301,14 @@ export function SplitViewport({ viewType = '3d' }: SplitViewportProps) {
         {panes.map((pane, index) => {
           const isActive = index === activePane;
           const isViewOnly = !isActive;
+          // Include pane.type in the key so React cleanly remounts when the
+          // view type changes (prevents stale section state from flashing).
+          // For quad layout two panes share type '3d', so keep the index there.
+          const paneKey = layout === 'single' ? pane.type : `${layout}-${pane.type}-${index}`;
 
           return (
             <div
-              key={`${layout}-${index}`}
+              key={paneKey}
               data-testid="split-viewport-pane"
               data-view-only={String(isViewOnly)}
               className={`split-viewport-pane${isActive ? ' split-viewport-pane--active' : ''}`}
