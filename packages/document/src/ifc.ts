@@ -335,6 +335,64 @@ export class IFCSerializer {
   }
 }
 
+// ─── PsetDef helpers (T-BIM-003) ─────────────────────────────────────────────
+
+/**
+ * Lightweight Pset definition used for editing/applying Psets on elements.
+ * Keys in `properties` are plain property names (not namespaced).
+ */
+export interface PsetDef {
+  name: string;
+  properties: Record<string, string | number | boolean>;
+}
+
+/**
+ * Extracts PsetDefs from an element's properties.
+ * Any property key that matches `Pset_<name>.<propName>` is treated as a Pset.
+ * Returns one PsetDef per unique Pset name found.
+ */
+export function extractPsets(element: ElementSchema): PsetDef[] {
+  const groups: Record<string, Record<string, string | number | boolean>> = {};
+
+  for (const [key, propVal] of Object.entries(element.properties)) {
+    const match = key.match(/^(Pset_[^.]+)\.(.+)$/);
+    if (!match) continue;
+    const [, psetName, propName] = match;
+    if (!groups[psetName]) groups[psetName] = {};
+    const val = propVal.value;
+    groups[psetName][propName] = typeof val === 'string' || typeof val === 'number' || typeof val === 'boolean'
+      ? val
+      : String(val);
+  }
+
+  return Object.entries(groups).map(([name, properties]) => ({ name, properties }));
+}
+
+/**
+ * Merges a PsetDef's properties into an element's properties,
+ * namespaced as `Pset_<name>.<propName>`.
+ * Returns a new element; the original is not mutated.
+ */
+export function applyPset(element: ElementSchema, pset: PsetDef): ElementSchema {
+  const additionalProps: ElementSchema['properties'] = {};
+
+  for (const [propName, propVal] of Object.entries(pset.properties)) {
+    const key = `${pset.name}.${propName}`;
+    const type: 'boolean' | 'number' | 'string' =
+      typeof propVal === 'boolean' ? 'boolean' :
+      typeof propVal === 'number' ? 'number' : 'string';
+    additionalProps[key] = { type, value: propVal };
+  }
+
+  return {
+    ...element,
+    properties: {
+      ...element.properties,
+      ...additionalProps,
+    },
+  };
+}
+
 // ─── Property set parsing ─────────────────────────────────────────────────────
 
 export function parsePropertySets(content: string): IFCPropertySet[] {

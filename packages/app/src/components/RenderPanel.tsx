@@ -1,27 +1,30 @@
 import React, { useState } from 'react';
 
 type ToneMapping = 'linear' | 'aces' | 'reinhard' | 'cineon';
-type EnvironmentMap = 'studio' | 'outdoor' | 'sunset' | 'night' | 'none';
+type EnvironmentMap = 'studio' | 'outdoor' | 'interior' | 'night';
+type RenderQuality = 'draft' | 'standard' | 'high';
 
 export interface RenderSettings {
-  ambientOcclusion: boolean;
-  shadows: boolean;
+  enableAO: boolean;
+  enableShadows: boolean;
   shadowIntensity: number;
   exposure: number;
   toneMapping: ToneMapping;
   environmentMap: EnvironmentMap;
+  renderQuality: RenderQuality;
   groundReflections: boolean;
   bloomEnabled: boolean;
   bloomStrength: number;
 }
 
 const DEFAULT_SETTINGS: RenderSettings = {
-  ambientOcclusion: true,
-  shadows: true,
+  enableAO: true,
+  enableShadows: true,
   shadowIntensity: 0.5,
   exposure: 1.0,
   toneMapping: 'aces',
   environmentMap: 'studio',
+  renderQuality: 'standard',
   groundReflections: false,
   bloomEnabled: false,
   bloomStrength: 0.3,
@@ -44,9 +47,10 @@ export function RenderPanel() {
           <label htmlFor="ao-toggle">Ambient Occlusion</label>
           <input
             id="ao-toggle"
+            data-testid="enable-ao-checkbox"
             type="checkbox"
-            checked={settings.ambientOcclusion}
-            onChange={(e) => update({ ambientOcclusion: e.target.checked })}
+            checked={settings.enableAO}
+            onChange={(e) => update({ enableAO: e.target.checked })}
           />
         </div>
 
@@ -54,13 +58,14 @@ export function RenderPanel() {
           <label htmlFor="shadows-toggle">Shadows</label>
           <input
             id="shadows-toggle"
+            data-testid="enable-shadows-checkbox"
             type="checkbox"
-            checked={settings.shadows}
-            onChange={(e) => update({ shadows: e.target.checked })}
+            checked={settings.enableShadows}
+            onChange={(e) => update({ enableShadows: e.target.checked })}
           />
         </div>
 
-        {settings.shadows && (
+        {settings.enableShadows && (
           <div className="render-field">
             <label htmlFor="shadow-intensity">Shadow Intensity</label>
             <input
@@ -81,8 +86,8 @@ export function RenderPanel() {
           <input
             id="exposure-range"
             type="range"
-            min={0.1}
-            max={3}
+            min={0.5}
+            max={2.0}
             step={0.1}
             value={settings.exposure}
             onChange={(e) => update({ exposure: parseFloat(e.target.value) })}
@@ -117,9 +122,21 @@ export function RenderPanel() {
           >
             <option value="studio">Studio</option>
             <option value="outdoor">Outdoor</option>
-            <option value="sunset">Sunset</option>
+            <option value="interior">Interior</option>
             <option value="night">Night</option>
-            <option value="none">None</option>
+          </select>
+        </div>
+
+        <div className="render-field">
+          <label htmlFor="render-quality-select">Render Quality</label>
+          <select
+            id="render-quality-select"
+            value={settings.renderQuality}
+            onChange={(e) => update({ renderQuality: e.target.value as RenderQuality })}
+          >
+            <option value="draft">Draft</option>
+            <option value="standard">Standard</option>
+            <option value="high">High</option>
           </select>
         </div>
 

@@ -234,3 +234,95 @@ describe('T-BIM-009: IFC Property Sets (Psets)', () => {
     );
   });
 });
+
+// ─── T-BIM-003: IFC Property Set (Pset) Editing in PropertiesPanel ───────────
+
+describe('T-BIM-003: PropertiesPanel Psets section', () => {
+  const mockElementWithPsetProps = {
+    ...mockElement,
+    properties: {
+      ...mockElement.properties,
+      'Pset_WallCommon.IsExternal': { type: 'boolean' as const, value: true },
+      'Pset_WallCommon.FireRating': { type: 'string' as const, value: 'REI 60' },
+      'Pset_ThermalCommon.UValue': { type: 'number' as const, value: 0.35 },
+    },
+    propertySets: [],
+  };
+
+  const mockDocWithPsetProps = {
+    ...mockDoc,
+    content: { elements: { 'el-1': mockElementWithPsetProps }, spaces: {} },
+  };
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders Psets section when element has Pset_ prefixed properties', () => {
+    mockUseDocumentStore.mockReturnValue(
+      makeStore({ document: mockDocWithPsetProps }) as ReturnType<typeof useDocumentStore>
+    );
+    render(<PropertiesPanel />);
+    expect(screen.getByText(/psets/i)).toBeInTheDocument();
+  });
+
+  it('does not render Psets section when element has no Pset_ properties and no propertySets', () => {
+    mockUseDocumentStore.mockReturnValue(makeStore() as ReturnType<typeof useDocumentStore>);
+    render(<PropertiesPanel />);
+    // mockElement has no Pset_ properties and empty propertySets, so no Psets heading
+    expect(screen.queryByText(/^psets$/i)).not.toBeInTheDocument();
+  });
+
+  it('Psets section is hidden when multiple elements are selected', () => {
+    const multiDoc = {
+      ...mockDoc,
+      content: {
+        elements: {
+          'el-1': mockElementWithPsetProps,
+          'el-2': { ...mockElementWithPsetProps, id: 'el-2' },
+        },
+        spaces: {},
+      },
+    };
+    mockUseDocumentStore.mockReturnValue(
+      makeStore({ document: multiDoc, selectedIds: ['el-1', 'el-2'] }) as ReturnType<typeof useDocumentStore>
+    );
+    render(<PropertiesPanel />);
+    expect(screen.queryByText(/psets/i)).not.toBeInTheDocument();
+  });
+
+  it('displays grouped Pset names for Pset_ properties', () => {
+    mockUseDocumentStore.mockReturnValue(
+      makeStore({ document: mockDocWithPsetProps }) as ReturnType<typeof useDocumentStore>
+    );
+    render(<PropertiesPanel />);
+    expect(screen.getByText('Pset_WallCommon')).toBeInTheDocument();
+    expect(screen.getByText('Pset_ThermalCommon')).toBeInTheDocument();
+  });
+
+  it('renders Add Pset button when single element selected', () => {
+    mockUseDocumentStore.mockReturnValue(
+      makeStore({ document: mockDocWithPsetProps }) as ReturnType<typeof useDocumentStore>
+    );
+    render(<PropertiesPanel />);
+    expect(screen.getByRole('button', { name: /add pset/i })).toBeInTheDocument();
+  });
+
+  it('does not render Add Pset button when multiple elements selected', () => {
+    const multiDoc = {
+      ...mockDoc,
+      content: {
+        elements: {
+          'el-1': mockElementWithPsetProps,
+          'el-2': { ...mockElementWithPsetProps, id: 'el-2' },
+        },
+        spaces: {},
+      },
+    };
+    mockUseDocumentStore.mockReturnValue(
+      makeStore({ document: multiDoc, selectedIds: ['el-1', 'el-2'] }) as ReturnType<typeof useDocumentStore>
+    );
+    render(<PropertiesPanel />);
+    expect(screen.queryByRole('button', { name: /add pset/i })).not.toBeInTheDocument();
+  });
+});

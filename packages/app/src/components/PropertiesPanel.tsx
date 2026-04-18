@@ -7,6 +7,27 @@ interface PendingProp {
   value: string;
 }
 
+/**
+ * Extracts Pset_ prefixed properties from an element's properties dict,
+ * grouping them by Pset name. Used for the T-BIM-003 inline Psets display.
+ * Property keys follow the pattern `Pset_<Name>.<propName>`.
+ */
+function extractInlinePsets(
+  properties: Record<string, PropertyValue>
+): Array<{ name: string; props: Array<{ key: string; fullKey: string; prop: PropertyValue }> }> {
+  const groups: Record<string, Array<{ key: string; fullKey: string; prop: PropertyValue }>> = {};
+
+  for (const [fullKey, prop] of Object.entries(properties)) {
+    const match = fullKey.match(/^(Pset_[^.]+)\.(.+)$/);
+    if (!match) continue;
+    const [, psetName, propKey] = match;
+    if (!groups[psetName]) groups[psetName] = [];
+    groups[psetName].push({ key: propKey, fullKey, prop });
+  }
+
+  return Object.entries(groups).map(([name, props]) => ({ name, props }));
+}
+
 function formatPropValue(prop: PropertyValue): string {
   return `${prop.value}${prop.unit ? ' ' + prop.unit : ''}`;
 }
@@ -248,6 +269,65 @@ export function PropertiesPanel() {
             ))}
           </div>
         )}
+
+        {(() => {
+          const inlinePsets = extractInlinePsets(selectedElement.properties);
+          if (inlinePsets.length === 0) return null;
+          return (
+            <div className="property-group">
+              <div className="property-group-title">
+                Psets
+                <button
+                  className="panel-action-btn"
+                  aria-label="Add Pset"
+                  title="Add Pset"
+                  onClick={() => {
+                    const name = window.prompt('Enter Pset name (e.g. Pset_WallCommon):');
+                    if (!name?.trim()) return;
+                    const psetName = name.trim().startsWith('Pset_') ? name.trim() : `Pset_${name.trim()}`;
+                    const key = `${psetName}.NewProperty`;
+                    pushHistory(`Add Pset ${psetName}`);
+                    updateElement(selectedIds[0], {
+                      properties: {
+                        ...selectedElement.properties,
+                        [key]: { type: 'string', value: '' },
+                      },
+                    });
+                  }}
+                  style={{ marginLeft: 'auto', fontSize: '12px' }}
+                >
+                  Add Pset
+                </button>
+              </div>
+              {inlinePsets.map(({ name, props }) => (
+                <div key={name} className="pset-group">
+                  <div className="pset-name">{name}</div>
+                  {props.map(({ key, fullKey, prop }) => (
+                    <div key={fullKey} className="property-row pset-row">
+                      <span className="property-label">{key}</span>
+                      <div className="property-value">
+                        <input
+                          type="text"
+                          className="property-input"
+                          defaultValue={formatPropValue(prop)}
+                          onBlur={(e) => {
+                            pushHistory(`Edit Pset property ${fullKey}`);
+                            updateElement(selectedIds[0], {
+                              properties: {
+                                ...selectedElement.properties,
+                                [fullKey]: { ...prop, value: e.target.value },
+                              },
+                            });
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
       </div>
     </div>
   );

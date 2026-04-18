@@ -1,6 +1,6 @@
 /**
  * IFC Import/Export Tests
- * T-IFC-001 through T-IFC-007
+ * T-IFC-001 through T-IFC-007, T-BIM-003
  */
 
 import { describe, it, expect } from 'vitest';
@@ -10,6 +10,9 @@ import {
   serializeIFC,
   IFC4Parser,
   parsePropertySets,
+  extractPsets,
+  applyPset,
+  type PsetDef,
 } from './ifc';
 import { createProject } from './document';
 
@@ -476,5 +479,115 @@ describe('T-IFC-007: Large IFC Import Performance', () => {
     const elapsed = Date.now() - start;
     expect(Object.values(doc.content.elements).length).toBe(1_000);
     expect(elapsed).toBeLessThan(2_000);
+  });
+});
+
+// ─── T-BIM-003: IFC Property Set (Pset) Editing ──────────────────────────────
+
+describe('T-BIM-003: IFC Pset Editing', () => {
+  function makeElement(props: Record<string, string | number | boolean> = {}) {
+    return {
+      id: 'el-test',
+      type: 'wall' as const,
+      properties: Object.fromEntries(
+        Object.entries(props).map(([k, v]) => [
+          k,
+          { type: (typeof v === 'boolean' ? 'boolean' : typeof v === 'number' ? 'number' : 'string') as 'string' | 'number' | 'boolean',
+            value: v },
+        ])
+      ),
+      propertySets: [],
+      geometry: { type: 'brep' as const, data: null },
+      layerId: 'layer-0',
+      levelId: 'level-0',
+      transform: { translation: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      boundingBox: { min: { x: 0, y: 0, z: 0, _type: 'Point3D' as const }, max: { x: 1, y: 1, z: 1, _type: 'Point3D' as const } },
+      metadata: { id: 'el-test', createdBy: 'test', createdAt: 0, updatedAt: 0, version: { clock: {} } },
+      visible: true,
+      locked: false,
+    };
+  }
+
+  it('extractPsets returns empty array for element with no Pset_ properties', () => {
+    const el = makeElement({ Name: 'Wall 1', Height: 3000 });
+    const psets = extractPsets(el);
+    expect(psets).toEqual([]);
+  });
+
+  it('extractPsets returns correct Pset groupings for element with Pset_ props', () => {
+    const el = makeElement({
+      Name: 'Wall 1',
+      'Pset_WallCommon.IsExternal': true,
+      'Pset_WallCommon.LoadBearing': false,
+      'Pset_ThermalCommon.UValue': 0.25,
+    });
+    const psets = extractPsets(el);
+    expect(psets.length).toBe(2);
+    const names = psets.map((p) => p.name);
+    expect(names).toContain('Pset_WallCommon');
+    expect(names).toContain('Pset_ThermalCommon');
+  });
+
+  it('extractPsets groups properties under the correct pset name', () => {
+    const el = makeElement({
+      'Pset_WallCommon.IsExternal': true,
+      'Pset_WallCommon.FireRating': '1hr',
+    });
+    const psets = extractPsets(el);
+    expect(psets.length).toBe(1);
+    const wallCommon = psets[0] as PsetDef;
+    expect(wallCommon.name).toBe('Pset_WallCommon');
+    expect(wallCommon.properties['IsExternal']).toBe(true);
+    expect(wallCommon.properties['FireRating']).toBe('1hr');
+  });
+
+  it('applyPset merges pset properties into element namespaced under Pset_<name>', () => {
+    const el = makeElement({ Name: 'Wall 1' });
+    const pset: PsetDef = {
+      name: 'Pset_WallCommon',
+      properties: { IsExternal: true, FireRating: '1hr' },
+    };
+    const updated = applyPset(el, pset);
+    expect(updated.properties['Pset_WallCommon.IsExternal']).toBeDefined();
+    expect(updated.properties['Pset_WallCommon.IsExternal']?.value).toBe(true);
+    expect(updated.properties['Pset_WallCommon.FireRating']).toBeDefined();
+    expect(updated.properties['Pset_WallCommon.FireRating']?.value).toBe('1hr');
+  });
+
+  it('applyPset preserves existing properties on the element', () => {
+    const el = makeElement({ Name: 'Wall 1', Height: 3000 });
+    const pset: PsetDef = { name: 'Pset_WallCommon', properties: { IsExternal: false } };
+    const updated = applyPset(el, pset);
+    expect(updated.properties['Name']).toBeDefined();
+    expect(updated.properties['Height']).toBeDefined();
+  });
+
+  it('applyPset returns a new element (does not mutate the original)', () => {
+    const el = makeElement({ Name: 'Wall 1' });
+    const pset: PsetDef = { name: 'Pset_WallCommon', properties: { IsExternal: true } };
+    const updated = applyPset(el, pset);
+    expect(updated).not.toBe(el);
+    expect(el.properties['Pset_WallCommon.IsExternal']).toBeUndefined();
+  });
+
+  it('applyPset correctly types boolean properties', () => {
+    const el = makeElement({});
+    const pset: PsetDef = { name: 'Pset_A', properties: { Flag: true } };
+    const updated = applyPset(el, pset);
+    expect(updated.properties['Pset_A.Flag']?.type).toBe('boolean');
+  });
+
+  it('applyPset correctly types number properties', () => {
+    const el = makeElement({});
+    const pset: PsetDef = { name: 'Pset_A', properties: { Count: 42 } };
+    const updated = applyPset(el, pset);
+    expect(updated.properties['Pset_A.Count']?.type).toBe('number');
+  });
+
+  it('applyPset correctly types string properties', () => {
+    const el = makeElement({});
+    const pset: PsetDef = { name: 'Pset_A', properties: { Label: 'ABC' } };
+    const updated = applyPset(el, pset);
+    expect(updated.properties['Pset_A.Label']?.type).toBe('string');
   });
 });
