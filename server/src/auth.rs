@@ -202,6 +202,11 @@ where
 
 /// Tower middleware layer that verifies the Bearer token and inserts
 /// `AuthUser` into request extensions.  Routes that need auth extract it.
+///
+/// Token sources (checked in order):
+///   1. `Authorization: Bearer <token>` header  (REST / non-WS requests)
+///   2. `?token=<token>` query parameter         (WebSocket upgrade requests;
+///      browsers cannot set headers on WS connections)
 pub async fn auth_middleware(
     State(verifier): State<OptVerifier>,
     mut req: axum::http::Request<axum::body::Body>,
@@ -210,12 +215,25 @@ pub async fn auth_middleware(
     let user = match &verifier {
         None => AuthUser::Unauthenticated,
         Some(v) => {
-            let token = req
+            // 1. Try Authorization header
+            let header_token = req
                 .headers()
                 .get(axum::http::header::AUTHORIZATION)
                 .and_then(|val| val.to_str().ok())
                 .and_then(|val| val.strip_prefix("Bearer "))
                 .map(str::to_string);
+
+            // 2. Fall back to ?token= query param (WebSocket)
+            let token = header_token.or_else(|| {
+                req.uri()
+                    .query()
+                    .and_then(|q| {
+                        q.split('&').find_map(|kv| {
+                            let (k, v) = kv.split_once('=')?;
+                            if k == "token" { Some(v.to_string()) } else { None }
+                        })
+                    })
+            });
 
             match token {
                 None => return AuthError::Missing.into_response(),

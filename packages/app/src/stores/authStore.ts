@@ -15,6 +15,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore';
 import { firebaseAuth, firebaseDb, isFirebaseConfigured } from '../lib/firebase';
+import { authApi } from '../lib/serverApi';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 export type TrialStatus = 'active' | 'expired' | 'none';
@@ -100,6 +101,8 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         const profile = await upsertProfile(user);
+        // Upsert user row in the server DB (fire-and-forget; non-blocking)
+        authApi.me().catch(() => {});
         set({
           status: 'authenticated',
           user,

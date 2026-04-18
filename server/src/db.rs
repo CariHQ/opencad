@@ -1,12 +1,28 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
-use sqlx::{postgres::PgPoolOptions, PgPool};
+use sqlx::{
+    postgres::{PgConnectOptions, PgPoolOptions},
+    PgPool,
+};
+use std::str::FromStr;
 use uuid::Uuid;
 
 pub async fn connect(url: &str) -> Result<PgPool> {
+    let opts = PgConnectOptions::from_str(url)?;
+
+    // On Cloud Run, override the TCP host with the Cloud SQL Unix socket directory.
+    // The socket file is at /cloudsql/<INSTANCE>/.s.PGSQL.5432 — sqlx appends the
+    // filename automatically when a socket *directory* is given via .socket().
+    let opts = match std::env::var("CLOUD_SQL_INSTANCE") {
+        Ok(instance) if !instance.is_empty() => {
+            opts.socket(format!("/cloudsql/{instance}"))
+        }
+        _ => opts,
+    };
+
     let pool = PgPoolOptions::new()
         .max_connections(10)
-        .connect(url)
+        .connect_with(opts)
         .await?;
     Ok(pool)
 }
@@ -133,4 +149,144 @@ pub async fn save_document(
         .await;
 
     Ok(doc)
+}
+
+// ── Version history ───────────────────────────────────────────────────────────
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct VersionInfo {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub version_number: i32,
+    pub message: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct Version {
+    pub id: Uuid,
+    pub project_id: Uuid,
+    pub version_number: i32,
+    pub data: String,
+    pub message: Option<String>,
+    pub created_at: DateTime<Utc>,
+}
+
+pub async fn create_version(
+    pool: &PgPool,
+    project_id: Uuid,
+    data: &str,
+    message: Option<&str>,
+) -> Result<Version, sqlx::Error> {
+    // version_number = max existing + 1
+    sqlx::query_as::<_, Version>(
+        r#"INSERT INTO version_history (project_id, version_number, data, message)
+           VALUES (
+             $1,
+             COALESCE((SELECT MAX(version_number) FROM version_history WHERE project_id = $1), 0) + 1,
+             $2,
+             $3
+           )
+           RETURNING id, project_id, version_number, data, message, created_at"#,
+    )
+    .bind(project_id)
+    .bind(data)
+    .bind(message)
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn list_versions(
+    pool: &PgPool,
+    project_id: Uuid,
+) -> Result<Vec<VersionInfo>, sqlx::Error> {
+    sqlx::query_as::<_, VersionInfo>(
+        "SELECT id, project_id, version_number, message, created_at
+         FROM version_history WHERE project_id = $1
+         ORDER BY version_number DESC",
+    )
+    .bind(project_id)
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn get_version(
+    pool: &PgPool,
+    version_id: Uuid,
+    project_id: Uuid,
+) -> Result<Option<Version>, sqlx::Error> {
+    sqlx::query_as::<_, Version>(
+        "SELECT id, project_id, version_number, data, message, created_at
+         FROM version_history WHERE id = $1 AND project_id = $2",
+    )
+    .bind(version_id)
+    .bind(project_id)
+    .fetch_optional(pool)
+    .await
+}
+
+// ── Feedback ──────────────────────────────────────────────────────────────────
+
+#[derive(Debug, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+pub struct Feedback {
+    pub id: Uuid,
+    pub firebase_uid: Option<String>,
+    pub category: String,
+    pub title: String,
+    pub description: String,
+    pub prd_label: Option<String>,
+    pub feasibility: String,
+    pub github_issue_url: Option<String>,
+    pub github_issue_number: Option<i32>,
+    pub created_at: DateTime<Utc>,
+}
+
+pub struct CreateFeedbackParams<'a> {
+    pub firebase_uid: Option<&'a str>,
+    pub category: &'a str,
+    pub title: &'a str,
+    pub description: &'a str,
+    pub prd_label: Option<&'a str>,
+    pub feasibility: &'a str,
+    pub github_issue_url: Option<&'a str>,
+    pub github_issue_number: Option<i32>,
+}
+
+pub async fn create_feedback(
+    pool: &PgPool,
+    p: CreateFeedbackParams<'_>,
+) -> Result<Feedback, sqlx::Error> {
+    sqlx::query_as::<_, Feedback>(
+        r#"INSERT INTO feedback
+             (firebase_uid, category, title, description, prd_label, feasibility,
+              github_issue_url, github_issue_number)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+           RETURNING id, firebase_uid, category, title, description, prd_label,
+                     feasibility, github_issue_url, github_issue_number, created_at"#,
+    )
+    .bind(p.firebase_uid)
+    .bind(p.category)
+    .bind(p.title)
+    .bind(p.description)
+    .bind(p.prd_label)
+    .bind(p.feasibility)
+    .bind(p.github_issue_url)
+    .bind(p.github_issue_number)
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn list_feedback_by_user(
+    pool: &PgPool,
+    firebase_uid: &str,
+) -> Result<Vec<Feedback>, sqlx::Error> {
+    sqlx::query_as::<_, Feedback>(
+        r#"SELECT id, firebase_uid, category, title, description, prd_label,
+                  feasibility, github_issue_url, github_issue_number, created_at
+           FROM feedback WHERE firebase_uid = $1
+           ORDER BY created_at DESC LIMIT 50"#,
+    )
+    .bind(firebase_uid)
+    .fetch_all(pool)
+    .await
 }

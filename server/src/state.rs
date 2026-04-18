@@ -4,7 +4,7 @@ use dashmap::DashMap;
 use sqlx::PgPool;
 use tokio::sync::broadcast;
 
-use crate::{auth::FirebaseVerifier, storage::Storage};
+use crate::{auth::FirebaseVerifier, storage::Storage, config::Config};
 
 /// Capacity of each per-project broadcast channel (in-flight messages).
 const ROOM_CAPACITY: usize = 256;
@@ -20,15 +20,21 @@ pub struct AppState {
     pub rooms: Arc<DashMap<String, RoomSender>>,
     /// Firebase ID-token verifier. `None` when `AUTH_ENABLED=false`.
     pub verifier: Option<Arc<FirebaseVerifier>>,
+    /// GitHub personal access token for creating issues (optional).
+    pub github_token: Option<String>,
+    /// GitHub repo in owner/repo format (e.g. "opencad/opencad").
+    pub github_repo: Option<String>,
 }
 
 impl AppState {
-    pub fn new(db: PgPool, storage: Arc<dyn Storage>, verifier: Option<Arc<FirebaseVerifier>>) -> Self {
+    pub fn new(db: PgPool, storage: Arc<dyn Storage>, verifier: Option<Arc<FirebaseVerifier>>, cfg: &Config) -> Self {
         Self {
             db,
             storage,
             rooms: Arc::new(DashMap::new()),
             verifier,
+            github_token: cfg.github_token.clone(),
+            github_repo: cfg.github_repo.clone(),
         }
     }
 

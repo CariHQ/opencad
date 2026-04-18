@@ -1,8 +1,10 @@
 use std::{path::PathBuf, sync::Arc};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use async_trait::async_trait;
 use bytes::Bytes;
+use futures_util::TryStreamExt;
+use object_store::{path::Path as OsPath, ObjectStore};
 
 use crate::config::{Config, StorageBackend};
 
@@ -26,11 +28,61 @@ pub fn init(cfg: &Config) -> Result<Arc<dyn Storage>> {
             Ok(Arc::new(LocalStorage::new(&cfg.storage_path)))
         }
         StorageBackend::Gcs => {
-            // Wired up when we deploy to Cloud Run — swap in object_store::gcp.
-            anyhow::bail!(
-                "GCS storage backend is not yet implemented; \
-                 set STORAGE_BACKEND=local for local development"
-            );
+            let bucket = cfg.gcs_bucket.as_deref().unwrap(); // validated in Config::from_env
+            let store = object_store::gcp::GoogleCloudStorageBuilder::new()
+                .with_bucket_name(bucket)
+                .build()
+                .context("failed to build GCS client")?;
+            Ok(Arc::new(GcsStorage {
+                store: Arc::new(store),
+            }))
+        }
+    }
+}
+
+// ── Google Cloud Storage backend ──────────────────────────────────────────────
+
+struct GcsStorage {
+    store: Arc<dyn ObjectStore>,
+}
+
+#[async_trait]
+impl Storage for GcsStorage {
+    async fn put(&self, key: &str, data: Bytes) -> Result<()> {
+        let path = OsPath::from(key);
+        self.store.put(&path, data.into()).await?;
+        Ok(())
+    }
+
+    async fn get(&self, key: &str) -> Result<Bytes> {
+        let path = OsPath::from(key);
+        let result = self.store.get(&path).await?;
+        Ok(result.bytes().await?)
+    }
+
+    async fn delete(&self, key: &str) -> Result<()> {
+        let path = OsPath::from(key);
+        self.store.delete(&path).await?;
+        Ok(())
+    }
+
+    async fn list(&self, prefix: &str) -> Result<Vec<String>> {
+        let prefix = OsPath::from(prefix);
+        let keys: Vec<String> = self
+            .store
+            .list(Some(&prefix))
+            .map_ok(|meta| meta.location.to_string())
+            .try_collect()
+            .await?;
+        Ok(keys)
+    }
+
+    async fn exists(&self, key: &str) -> Result<bool> {
+        let path = OsPath::from(key);
+        match self.store.head(&path).await {
+            Ok(_) => Ok(true),
+            Err(object_store::Error::NotFound { .. }) => Ok(false),
+            Err(e) => Err(e.into()),
         }
     }
 }

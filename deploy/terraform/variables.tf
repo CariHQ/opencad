@@ -99,3 +99,16 @@ variable "cors_origins" {
   type        = string
   default     = "https://opencad.archi,https://app.opencad.archi"
 }
+
+variable "github_token" {
+  description = "GitHub Personal Access Token for creating issues from in-app feedback"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "github_repo" {
+  description = "GitHub repository (owner/repo) where feedback issues are created"
+  type        = string
+  default     = "CariHQ/opencad"
+}

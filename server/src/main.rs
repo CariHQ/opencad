@@ -61,7 +61,7 @@ async fn main() -> anyhow::Result<()> {
     };
 
     // ── HTTP server ───────────────────────────────────────────────────────────
-    let app_state = state::AppState::new(db, storage, verifier);
+    let app_state = state::AppState::new(db, storage, verifier, &cfg);
     let app = routes::build(app_state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], cfg.port));

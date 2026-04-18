@@ -7,9 +7,12 @@
  * URL: ws://localhost:47821/ws/:projectId  (override via VITE_SERVER_URL)
  *
  * Architecture:
- *   - connectToLocalSync(projectId)   — open / reuse the WS and join a project room
- *   - broadcastDocumentUpdate(...)    — send a document snapshot to the server
- *   - setRemoteUpdateHandler(cb)      — receive document snapshots from other clients
+ *   - connectToLocalSync(projectId, token?)  — open / reuse the WS and join a project room
+ *   - broadcastDocumentUpdate(...)           — send a document snapshot to the server
+ *   - setRemoteUpdateHandler(cb)             — receive document snapshots from other clients
+ *
+ * Auth: pass the Firebase ID token as the second argument.  It is appended as
+ *   `?token=<jwt>` because browsers cannot set headers on WebSocket connections.
  *
  * Echo prevention: every outgoing update carries our unique `senderId`.
  * Incoming updates with the same senderId are silently ignored.
@@ -29,6 +32,7 @@ const _clientId: string =
 
 let _ws: WebSocket | null = null;
 let _projectId: string | null = null;
+let _token: string | null = null;
 let _reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
 type RemoteUpdateHandler = (data: string) => void;
@@ -45,8 +49,12 @@ export function setRemoteUpdateHandler(handler: RemoteUpdateHandler): void {
  * Connect to the local sync server and join the given project room.
  * If already connected to the same project, this is a no-op.
  * Switching to a different project closes the old connection first.
+ *
+ * @param projectId  UUID of the project room to join.
+ * @param token      Optional Firebase ID token.  Passed as `?token=<jwt>` in
+ *                   the WebSocket URL since browsers cannot set auth headers.
  */
-export function connectToLocalSync(projectId: string): void {
+export function connectToLocalSync(projectId: string, token?: string | null): void {
   // Already connected (or connecting) to the same project — no-op.
   if (
     _ws &&
@@ -69,9 +77,18 @@ export function connectToLocalSync(projectId: string): void {
   }
 
   _projectId = projectId;
+  _token = token ?? null;
+
+  _openWebSocket(projectId, token ?? null);
+}
+
+function _openWebSocket(projectId: string, token: string | null): void {
+  const url = token
+    ? `${SERVER_WS_URL}/ws/${projectId}?token=${encodeURIComponent(token)}`
+    : `${SERVER_WS_URL}/ws/${projectId}`;
 
   try {
-    _ws = new WebSocket(`${SERVER_WS_URL}/ws/${projectId}`);
+    _ws = new WebSocket(url);
   } catch {
     // WebSocket constructor can throw in non-browser environments.
     return;
@@ -94,7 +111,7 @@ export function connectToLocalSync(projectId: string): void {
       _reconnectTimer = setTimeout(() => {
         _reconnectTimer = null;
         if (_projectId !== null) {
-          connectToLocalSync(_projectId);
+          connectToLocalSync(_projectId, _token);
         }
       }, 3000);
     }
@@ -116,6 +133,7 @@ export function disconnectLocalSync(): void {
     _ws = null;
   }
   _projectId = null;
+  _token = null;
 }
 
 /**
@@ -186,5 +204,6 @@ export function _resetForTest(): void {
   }
   _ws = null;
   _projectId = null;
+  _token = null;
   _onRemoteUpdate = null;
 }

@@ -33,6 +33,7 @@ futures-util = { version = "0.3", default-features = false, features = ["sink", 
 dashmap     = "6"
 bytes       = "1"
 async-trait = "0.1"
+object_store = { version = "0.11", features = ["gcp"] }
 
 # Auth
 jsonwebtoken = "9"

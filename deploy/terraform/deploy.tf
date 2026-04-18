@@ -22,9 +22,28 @@ resource "null_resource" "deploy_landing" {
     command = <<-EOT
       set -e
       BUCKET="${google_storage_bucket.landing.name}"
+      PROJECT="${var.project}"
 
-      # Upload HTML pages (no-cache)
-      for file in index.html privacy.html terms.html; do
+      # Read Firebase config from Secret Manager and build injection script tag
+      FIREBASE_API_KEY=$(gcloud secrets versions access latest --secret=opencad-firebase-api-key --project=$PROJECT 2>/dev/null || echo "")
+      FIREBASE_AUTH_DOMAIN=$(gcloud secrets versions access latest --secret=opencad-firebase-auth-domain --project=$PROJECT 2>/dev/null || echo "")
+      FIREBASE_PROJECT_ID=$(gcloud secrets versions access latest --secret=opencad-firebase-project-id --project=$PROJECT 2>/dev/null || echo "")
+      FIREBASE_STORAGE_BUCKET=$(gcloud secrets versions access latest --secret=opencad-firebase-storage-bucket --project=$PROJECT 2>/dev/null || echo "")
+      FIREBASE_MESSAGING_SENDER_ID=$(gcloud secrets versions access latest --secret=opencad-firebase-messaging-sender-id --project=$PROJECT 2>/dev/null || echo "")
+      FIREBASE_APP_ID=$(gcloud secrets versions access latest --secret=opencad-firebase-app-id --project=$PROJECT 2>/dev/null || echo "")
+
+      FIREBASE_SCRIPT="<script>window.FIREBASE_API_KEY='$FIREBASE_API_KEY';window.FIREBASE_AUTH_DOMAIN='$FIREBASE_AUTH_DOMAIN';window.FIREBASE_PROJECT_ID='$FIREBASE_PROJECT_ID';window.FIREBASE_STORAGE_BUCKET='$FIREBASE_STORAGE_BUCKET';window.FIREBASE_MESSAGING_SENDER_ID='$FIREBASE_MESSAGING_SENDER_ID';window.FIREBASE_APP_ID='$FIREBASE_APP_ID';<\/script>"
+
+      # Inject Firebase config into index.html and upload
+      tmpfile=$(mktemp /tmp/index.XXXXXX.html)
+      sed "s|<!-- FIREBASE_CONFIG_INJECT -->|$FIREBASE_SCRIPT|" "${var.landing_dir}/index.html" > "$tmpfile"
+      gcloud storage cp "$tmpfile" "gs://$BUCKET/index.html" \
+        --cache-control="no-cache, no-store" \
+        --content-type="text/html; charset=utf-8"
+      rm "$tmpfile"
+
+      # Upload remaining HTML pages as-is
+      for file in privacy.html terms.html; do
         src="${var.landing_dir}/$file"
         if [ -f "$src" ]; then
           gcloud storage cp "$src" "gs://$BUCKET/$file" \

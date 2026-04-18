@@ -61,13 +61,26 @@ deploy: build-server build-app _require_tfvars
 
 build-server:
 	gcloud auth configure-docker $(REGION)-docker.pkg.dev --quiet
-	docker build -f server/Dockerfile -t $(SERVER_IMG) server/
+	docker build --platform linux/amd64 -f server/Dockerfile -t $(SERVER_IMG) server/
 	docker tag $(SERVER_IMG) $(REGISTRY)/opencad-server:latest
 	docker push $(SERVER_IMG)
 	docker push $(REGISTRY)/opencad-server:latest
 	@echo "Pushed: $(SERVER_IMG)"
 
 build-app:
+	@echo "Reading Firebase config from Secret Manager..."
+	$(eval VITE_FIREBASE_API_KEY            := $(shell gcloud secrets versions access latest --secret=opencad-firebase-api-key             --project=$(PROJECT) 2>/dev/null))
+	$(eval VITE_FIREBASE_AUTH_DOMAIN        := $(shell gcloud secrets versions access latest --secret=opencad-firebase-auth-domain         --project=$(PROJECT) 2>/dev/null))
+	$(eval VITE_FIREBASE_PROJECT_ID         := $(shell gcloud secrets versions access latest --secret=opencad-firebase-project-id          --project=$(PROJECT) 2>/dev/null))
+	$(eval VITE_FIREBASE_STORAGE_BUCKET     := $(shell gcloud secrets versions access latest --secret=opencad-firebase-storage-bucket      --project=$(PROJECT) 2>/dev/null))
+	$(eval VITE_FIREBASE_MESSAGING_SENDER_ID := $(shell gcloud secrets versions access latest --secret=opencad-firebase-messaging-sender-id --project=$(PROJECT) 2>/dev/null))
+	$(eval VITE_FIREBASE_APP_ID             := $(shell gcloud secrets versions access latest --secret=opencad-firebase-app-id              --project=$(PROJECT) 2>/dev/null))
+	VITE_FIREBASE_API_KEY='$(VITE_FIREBASE_API_KEY)' \
+	VITE_FIREBASE_AUTH_DOMAIN='$(VITE_FIREBASE_AUTH_DOMAIN)' \
+	VITE_FIREBASE_PROJECT_ID='$(VITE_FIREBASE_PROJECT_ID)' \
+	VITE_FIREBASE_STORAGE_BUCKET='$(VITE_FIREBASE_STORAGE_BUCKET)' \
+	VITE_FIREBASE_MESSAGING_SENDER_ID='$(VITE_FIREBASE_MESSAGING_SENDER_ID)' \
+	VITE_FIREBASE_APP_ID='$(VITE_FIREBASE_APP_ID)' \
 	pnpm build:browser
 	@echo "Built: $(DIST)"
 

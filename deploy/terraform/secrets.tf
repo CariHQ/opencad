@@ -110,6 +110,15 @@ resource "google_secret_manager_secret" "app_bucket" {
   lifecycle { prevent_destroy = true }
 }
 
+resource "google_secret_manager_secret" "github_token" {
+  secret_id = "opencad-github-token"
+  project   = var.project
+  replication {
+    auto {}
+  }
+  lifecycle { prevent_destroy = true }
+}
+
 # ── Secret versions (set from variables) ─────────────────────────────────────
 # These are updated whenever terraform apply runs with new values.
 
@@ -125,6 +134,15 @@ resource "google_secret_manager_secret_version" "database_url" {
 resource "google_secret_manager_secret_version" "jwt_secret" {
   secret      = google_secret_manager_secret.jwt_secret.id
   secret_data = var.jwt_secret
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "google_secret_manager_secret_version" "github_token" {
+  secret      = google_secret_manager_secret.github_token.id
+  secret_data = var.github_token
 
   lifecycle {
     create_before_destroy = true

@@ -7,8 +7,6 @@ export {
   validateRoomSizes,
   validateTotalArea,
 } from './floorPlanValidation';
-export { checkCompliance, applyFix } from './codeCompliance';
-export type { ComplianceReport, Violation } from './codeCompliance';
 export * from './designCommands';
 
 import {
@@ -26,3 +24,9 @@ export {
   createEnergyAnalyzer,
   createSmartPlacement,
 };
+
+// IBC compliance engine (T-AI-020 through T-AI-024)
+export { checkCompliance, applyFix } from './codeCompliance';
+export { IBC_RULES } from './rules/ibc';
+export type { ComplianceReport, Violation } from './codeCompliance';
+export type { Rule } from './rules/ibc';

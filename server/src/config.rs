@@ -21,6 +21,10 @@ pub struct Config {
     pub firebase_project_id: Option<String>,
     /// Comma-separated list of allowed CORS origins
     pub cors_origins: Vec<String>,
+    /// GitHub personal access token for creating issues (optional)
+    pub github_token: Option<String>,
+    /// GitHub repo in owner/repo format (e.g. "opencad/opencad")
+    pub github_repo: Option<String>,
 }
 
 impl Config {
@@ -63,6 +67,8 @@ impl Config {
                 .map(|s| s.trim().to_string())
                 .filter(|s| !s.is_empty())
                 .collect(),
+            github_token: std::env::var("GITHUB_TOKEN").ok(),
+            github_repo: std::env::var("GITHUB_REPO").ok(),
         })
     }
 }

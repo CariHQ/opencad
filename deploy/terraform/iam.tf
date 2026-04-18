@@ -39,6 +39,20 @@ resource "google_project_iam_member" "compute_secret_accessor" {
   member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
 }
 
+# Cloud Run needs to pull images from Artifact Registry
+resource "google_project_iam_member" "compute_artifact_reader" {
+  project = var.project
+  role    = "roles/artifactregistry.reader"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
+# Cloud Run needs Cloud SQL Client to authenticate the Auth Proxy sidecar
+resource "google_project_iam_member" "compute_cloudsql_client" {
+  project = var.project
+  role    = "roles/cloudsql.client"
+  member  = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
 # ── Workload Identity Federation (for GitHub Actions CI) ─────────────────────
 
 resource "google_iam_workload_identity_pool" "github" {

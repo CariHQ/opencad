@@ -41,6 +41,11 @@ resource "google_cloud_run_v2_service" "server" {
         value = var.project
       }
       env {
+        # Cloud SQL instance connection name — used by db.rs to connect via Unix socket
+        name  = "CLOUD_SQL_INSTANCE"
+        value = "${var.project}:${var.region}:opencad-db"
+      }
+      env {
         name  = "CORS_ORIGINS"
         value = var.cors_origins
       }
@@ -62,6 +67,24 @@ resource "google_cloud_run_v2_service" "server" {
           }
         }
       }
+      env {
+        name = "GITHUB_TOKEN"
+        value_source {
+          secret_key_ref {
+            secret  = google_secret_manager_secret.github_token.secret_id
+            version = "latest"
+          }
+        }
+      }
+      env {
+        name  = "GITHUB_REPO"
+        value = var.github_repo
+      }
+
+      volume_mounts {
+        name       = "cloudsql"
+        mount_path = "/cloudsql"
+      }
     }
 
     # Cloud SQL connection
@@ -80,6 +103,7 @@ resource "google_cloud_run_v2_service" "server" {
     google_project_iam_member.compute_secret_accessor,
     google_secret_manager_secret_version.database_url,
     google_secret_manager_secret_version.jwt_secret,
+    google_secret_manager_secret_version.github_token,
   ]
 }
 

@@ -54,6 +54,25 @@ resource "google_storage_bucket_iam_member" "app_public" {
   member = "allUsers"
 }
 
+# ── Project file storage (used by the API server) ────────────────────────────
+
+resource "google_storage_bucket" "files" {
+  name                        = "opencad-files"
+  project                     = var.project
+  location                    = "US"
+  storage_class               = "STANDARD"
+  uniform_bucket_level_access = true
+
+  lifecycle { prevent_destroy = true }
+}
+
+# Cloud Run (Compute SA) needs to read and write project files
+resource "google_storage_bucket_iam_member" "files_server" {
+  bucket = google_storage_bucket.files.name
+  role   = "roles/storage.objectAdmin"
+  member = "serviceAccount:${data.google_project.project.number}-compute@developer.gserviceaccount.com"
+}
+
 # ── CDN backend buckets ───────────────────────────────────────────────────────
 
 resource "google_compute_backend_bucket" "landing" {

@@ -636,7 +636,7 @@
         <path d="M3 7h8M7 3l4 4-4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     </a>
-    <a href="/app" class="btn-secondary">
+    <a href="https://app.opencad.archi" class="btn-secondary">
       Open app
     </a>
   </div>
@@ -808,6 +808,7 @@
   </div>
 </footer>
 
+<!-- FIREBASE_CONFIG_INJECT -->
 <!-- Firebase SDK -->
 <script type="module">
   import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -889,11 +890,11 @@
           createdAt: serverTimestamp(),
         });
         showMsg('Account created! Redirecting&hellip;', 'success');
-        setTimeout(() => { window.location.href = '/app'; }, 1200);
+        setTimeout(() => { window.location.href = 'https://app.opencad.archi'; }, 1200);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
         showMsg('Signed in. Redirecting&hellip;', 'success');
-        setTimeout(() => { window.location.href = '/app'; }, 1000);
+        setTimeout(() => { window.location.href = 'https://app.opencad.archi'; }, 1000);
       }
     } catch (err) {
       const code = err.code || '';

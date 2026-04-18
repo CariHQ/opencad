@@ -5,9 +5,11 @@ use crate::{auth, state::AppState};
 
 mod auth_routes;
 mod documents;
+mod feedback;
 mod files;
 mod health;
 mod projects;
+mod versions;
 pub mod ws;
 
 pub fn build(state: AppState) -> Router {
@@ -44,6 +46,20 @@ pub fn build(state: AppState) -> Router {
         .route(
             "/api/v1/projects/:id/files/:name",
             get(files::download_file).delete(files::delete_file),
+        )
+        // ── Versions ──────────────────────────────────────────────────────────
+        .route(
+            "/api/v1/projects/:id/versions",
+            get(versions::list_versions).post(versions::create_version),
+        )
+        .route(
+            "/api/v1/projects/:id/versions/:vid",
+            get(versions::get_version),
+        )
+        // ── Feedback ──────────────────────────────────────────────────────────
+        .route(
+            "/api/v1/feedback",
+            get(feedback::list).post(feedback::submit),
         )
         // ── WebSocket ─────────────────────────────────────────────────────────
         .route("/ws/:project_id", get(ws::handler))
