@@ -1,9 +1,12 @@
 import { useDocumentStore } from '../stores/documentStore';
 import { useOfflineDetection } from '../hooks/useOfflineDetection';
+import { useRole } from '../hooks/useRole';
+import { RoleSwitcher } from './RoleSwitcher';
 
 export function StatusBar() {
   const { document: doc, isOnline, isSaving, lastSaved, selectedIds } = useDocumentStore();
   const { wasOffline } = useOfflineDetection();
+  const { role, config } = useRole();
 
   const formatTime = (timestamp: number | null) => {
     if (!timestamp) return 'Not saved';
@@ -52,6 +55,10 @@ export function StatusBar() {
             <span>{Object.keys(doc.content.elements).length} elements</span>
           </div>
         )}
+        <div className="status-item" title={`Current role: ${config.label}`}>
+          <span className={`role-badge role-badge--${role}`}>{config.label}</span>
+        </div>
+        {import.meta.env.DEV && <RoleSwitcher />}
       </div>
     </footer>
   );

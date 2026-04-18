@@ -37,9 +37,6 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
-    "macOS": {
-      "info-plist": "./Info.plist"
-    },
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",

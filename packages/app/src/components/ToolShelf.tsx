@@ -22,6 +22,7 @@ import {
   PanelRight,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
+import { useRole } from '../hooks/useRole';
 
 interface Tool {
   id: string;
@@ -68,6 +69,7 @@ interface ToolShelfProps {
 
 export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, theme = 'light' }: ToolShelfProps = {}) {
   const { activeTool, setActiveTool } = useDocumentStore();
+  const { can } = useRole();
   const [activeCategory, setActiveCategory] = React.useState<string>(() => {
     try { return localStorage.getItem('opencad-activeCategory') ?? 'modify'; } catch { return 'modify'; }
   });
@@ -86,12 +88,22 @@ export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, t
     try { localStorage.setItem('opencad-activeCategory', catId); } catch { /* ignore */ }
   };
 
-  const filteredTools = tools.filter((t) => t.category === activeCategory);
+  // Filter tools by role permission
+  const allowedTools = tools.filter((t) => can(`tool:${t.id}`));
+  const allowedCategories = categories.filter((cat) =>
+    allowedTools.some((t) => t.category === cat.id)
+  );
+  const filteredTools = allowedTools.filter((t) => t.category === activeCategory);
+
+  // Owners and roles with no tools see an empty shelf
+  if (allowedCategories.length === 0) {
+    return <div className="toolshelf toolshelf--empty" />;
+  }
 
   return (
     <div className="toolshelf">
       <div className="toolshelf-categories">
-        {categories.map((cat) => {
+        {allowedCategories.map((cat) => {
           const Icon = cat.icon;
           return (
             <button

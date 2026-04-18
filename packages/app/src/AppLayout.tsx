@@ -19,6 +19,7 @@ import { WallToolPanel } from './components/WallToolPanel';
 import { SlabToolPanel } from './components/SlabToolPanel';
 import { DoorWindowPanel } from './components/DoorWindowPanel';
 import { useUndoRedo } from './hooks/useUndoRedo';
+import { useRole } from './hooks/useRole';
 import {
   isTauri,
   openFile,
@@ -35,6 +36,7 @@ export function AppLayout() {
   const { document: doc, initProject, activeTool, undo, redo, canUndo, canRedo, loadDocumentSchema } = useDocumentStore();
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
+  const { can } = useRole();
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
   const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>(
     'opencad-activeView',
@@ -214,11 +216,13 @@ export function AppLayout() {
                 <FileDown size={15} />
               </span>
             </button>
-            <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant">
-              <span className="tool-icon">
-                <Bot size={15} />
-              </span>
-            </button>
+            {can('panel:ai') && (
+              <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant">
+                <span className="tool-icon">
+                  <Bot size={15} />
+                </span>
+              </button>
+            )}
             <div className="toolbar-sep" />
             <button
               className={`toolbar-btn panel-toggle-btn${rightVisible ? ' panel-on' : ''}`}
@@ -273,10 +277,10 @@ export function AppLayout() {
           {(activeTool === 'column' || activeTool === 'beam') && <ColumnBeamPanel />}
           {(activeTool === 'stair' || activeTool === 'railing') && <StairRailingPanel />}
           <LayersPanel />
-          <PropertiesPanel />
+          {can('panel:properties') && <PropertiesPanel />}
         </aside>
 
-        {showAIChat && (
+        {showAIChat && can('panel:ai') && (
           <aside className={`app-ai-panel${chromeVisible ? '' : ' panel-collapsed'}`}>
             <AIChatPanel onClose={() => setShowAIChat(false)} />
           </aside>
