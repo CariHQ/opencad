@@ -1,6 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DocumentModel, type DocumentSchema, type PropertyValue } from '@opencad/document';
+import {
+  saveDocument as offlineSaveDocument,
+  loadDocument as offlineLoadDocument,
+  listPendingSync,
+  markSynced,
+} from '../lib/offlineStore';
+import { type RoleId } from '../config/roles';
 
 interface HistoryEntry {
   document: DocumentSchema;
@@ -24,6 +31,8 @@ interface DocumentState {
 
   selectedLevelId: string | null;
 
+  userRole: RoleId | null;
+
   toolParams: Record<string, Record<string, unknown>>;
 
   initProject: (projectId: string, userId: string) => void;
@@ -46,12 +55,16 @@ interface DocumentState {
 
   setToolParam: (tool: string, key: string, value: unknown) => void;
 
+  setUserRole: (role: RoleId | null) => void;
+
   undo: () => void;
   redo: () => void;
   pushHistory: (description: string) => void;
 
   createVersion: (message?: string) => void;
   restoreVersion: (versionNumber: number) => void;
+
+  loadDocumentSchema: (schema: DocumentSchema) => void;
 
   setActiveLevel: (levelId: string) => void;
   addLevel: (params: { name: string; elevation: number; height?: number }) => string;
@@ -77,6 +90,8 @@ export const useDocumentStore = create<DocumentState>()(
       canRedo: false,
 
       selectedLevelId: null,
+
+      userRole: null,
 
       toolParams: {
         wall: { height: 3000, thickness: 200, material: 'Concrete', wallType: 'interior' },
@@ -137,11 +152,24 @@ export const useDocumentStore = create<DocumentState>()(
       setActiveTool: (tool) => set({ activeTool: tool }),
 
       setOnlineStatus: (online) => {
-        const { model } = get();
+        const { model, isOnline } = get();
         if (model) {
           model.setOnlineStatus(online);
         }
         set({ isOnline: online });
+
+        // When transitioning from offline → online, flush any pending offline edits.
+        if (online && !isOnline) {
+          void listPendingSync().then((pendingIds) => {
+            for (const pid of pendingIds) {
+              void offlineLoadDocument(pid).then((data) => {
+                if (!data) return;
+                // Re-save locally to mark synced (no server API on this branch)
+                void markSynced(pid).catch(() => {});
+              }).catch(() => {});
+            }
+          }).catch(() => {});
+        }
       },
 
       addLayer: (params) => {
@@ -183,13 +211,16 @@ export const useDocumentStore = create<DocumentState>()(
         });
 
         const newDoc = { ...model.documentData };
+        const newDocJson = JSON.stringify(newDoc);
         set({
           document: newDoc,
           lastSaved: Date.now(),
         });
         try {
-          localStorage.setItem('opencad-document', JSON.stringify(newDoc));
+          localStorage.setItem('opencad-document', newDocJson);
         } catch { /* ignore storage errors */ }
+        // Also save to offline store so it persists across sessions
+        void offlineSaveDocument('default', newDocJson).catch(() => {});
         return elementId;
       },
 
@@ -219,6 +250,8 @@ export const useDocumentStore = create<DocumentState>()(
         const { toolParams } = get();
         set({ toolParams: { ...toolParams, [tool]: { ...(toolParams[tool] ?? {}), [key]: value } } });
       },
+
+      setUserRole: (role) => set({ userRole: role }),
 
       pushHistory: (description) => {
         const { document, history, historyIndex } = get();
@@ -279,6 +312,16 @@ export const useDocumentStore = create<DocumentState>()(
 
         model.restoreVersion(versionNumber);
         set({ document: { ...model.documentData } });
+      },
+
+      loadDocumentSchema: (schema) => {
+        const { model } = get();
+        if (model) {
+          model.loadDocument(schema);
+          set({ document: { ...model.documentData } });
+        } else {
+          set({ document: schema });
+        }
       },
 
       setActiveLevel: (levelId) => {

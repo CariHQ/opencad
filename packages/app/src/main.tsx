@@ -4,6 +4,13 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles/index.css';
 
+// Register service worker for PWA / offline support.
+// vite-plugin-pwa generates the SW and the virtual module at build time.
+// In dev mode the virtual module is a no-op so this is safe in all environments.
+import { registerSW } from 'virtual:pwa-register';
+
+registerSW({ immediate: false });
+
 const container = document.getElementById('root');
 if (!container) {
   throw new Error('Root element not found');

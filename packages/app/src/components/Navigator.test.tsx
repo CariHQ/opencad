@@ -11,6 +11,7 @@ import { useDocumentStore } from '../stores/documentStore';
 
 describe('T-UI-004: Navigator', () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     localStorage.clear();
     useDocumentStore.getState().initProject('test-project', 'test-user');
     useDocumentStore.setState({ selectedIds: [] });
@@ -101,6 +102,7 @@ describe('T-UI-004: Navigator', () => {
     expect(updateLayer).toHaveBeenCalled();
     const [, updates] = updateLayer.mock.calls[0];
     expect(updates).toHaveProperty('visible');
+    updateLayer.mockRestore();
   });
 
   it('clicking lock button calls updateLayer with toggled locked', () => {
@@ -111,6 +113,7 @@ describe('T-UI-004: Navigator', () => {
     expect(updateLayer).toHaveBeenCalled();
     const [, updates] = updateLayer.mock.calls[0];
     expect(updates).toHaveProperty('locked');
+    updateLayer.mockRestore();
   });
 
   it('search input filters elements by type', () => {

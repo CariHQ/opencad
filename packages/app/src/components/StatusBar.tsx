@@ -1,7 +1,9 @@
 import { useDocumentStore } from '../stores/documentStore';
+import { useOfflineDetection } from '../hooks/useOfflineDetection';
 
 export function StatusBar() {
   const { document: doc, isOnline, isSaving, lastSaved, selectedIds } = useDocumentStore();
+  const { wasOffline } = useOfflineDetection();
 
   const formatTime = (timestamp: number | null) => {
     if (!timestamp) return 'Not saved';
@@ -9,9 +11,20 @@ export function StatusBar() {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  // Offline indicator dot class: green=online, amber=offline-with-pending, grey=offline
+  const offlineDotClass = isOnline
+    ? (wasOffline ? 'offline-dot offline-dot--amber' : 'offline-dot offline-dot--green')
+    : 'offline-dot offline-dot--grey';
+
   return (
     <footer className="app-status-bar">
       <div className="status-left">
+        {/* Offline indicator dot: green=online, amber=back-online-with-pending, grey=offline */}
+        <span
+          className={offlineDotClass}
+          aria-label={isOnline ? (wasOffline ? 'Back online — syncing pending edits' : 'Online') : 'Offline'}
+          title={isOnline ? (wasOffline ? 'Back online — syncing pending edits' : 'Online') : 'Offline'}
+        />
         <div className="status-item">
           <span className={`status-indicator ${isOnline ? '' : 'offline'}`} />
           <span>{isOnline ? 'Online' : 'Offline'}</span>
