@@ -81,6 +81,9 @@ benchmark-results/
 # Turbo
 .turbo/
 
+# Claude Code agent worktrees (nested git repos — must not be tracked)
+.claude/worktrees/
+
 # Temporary
 tmp/
 temp/
