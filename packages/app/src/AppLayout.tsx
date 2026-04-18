@@ -55,6 +55,7 @@ import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import { MobileViewer } from './components/MobileViewer';
 import { FeedbackWidget } from './components/FeedbackWidget';
+import { PanelResizer } from './components/PanelResizer';
 import { isTauri, openFile, saveFile, saveFileDialog, openFileDialog, onFileDrop, tauriToggleMaximize } from './hooks/useTauri';
 import './styles/app.css';
 
@@ -91,6 +92,8 @@ export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema } = useDocumentStore();
+  const leftPanelRef = React.useRef<HTMLElement>(null);
+  const rightPanelRef = React.useRef<HTMLElement>(null);
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
@@ -280,10 +283,11 @@ export function AppLayout() {
       )}
 
       <div className="app-body">
-        <aside className={`app-left-panel${leftVisible ? '' : ' panel-collapsed'}`}>
+        <aside ref={leftPanelRef} className={`app-left-panel${leftVisible ? '' : ' panel-collapsed'}`}>
           {can('panel:navigator') && <Navigator />}
           {can('panel:levels') && <LevelManager />}
         </aside>
+        {leftVisible && <PanelResizer panelRef={leftPanelRef} side="right" minWidth={180} maxWidth={480} />}
 
         <div className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}>
           <ToolShelf />
@@ -309,7 +313,8 @@ export function AppLayout() {
           </PanelErrorBoundary>
         </main>
 
-        <aside className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}>
+        {rightVisible && <PanelResizer panelRef={rightPanelRef} side="left" minWidth={200} maxWidth={600} />}
+        <aside ref={rightPanelRef} className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}>
           <div className="right-panel-tab-bar">
             {RIGHT_PANEL_TABS.filter((tab) => can(`panel:${tab.id}`)).map((tab) => (
               <button key={tab.id} className={`right-panel-tab-btn${rightPanelTab === tab.id ? ' active' : ''}`} onClick={() => setRightPanelTab(tab.id)} title={tab.title} aria-label={tab.title}>
