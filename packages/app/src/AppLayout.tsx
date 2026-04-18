@@ -3,7 +3,7 @@ import {
   FolderOpen, FileDown, Bot, Plus, Sun, Moon, PanelLeft, PanelRight,
   Layers, Settings2, Table2, LayoutDashboard, AlertTriangle, Camera, Sheet,
   MessageSquareWarning, Package, MessageCircle, Leaf, DollarSign, Palette,
-  Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Settings,
+  Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Settings, Shield,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ToolShelf } from './components/ToolShelf';
@@ -56,13 +56,14 @@ import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import { MobileViewer } from './components/MobileViewer';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { PanelResizer } from './components/PanelResizer';
+import { AdminPanel } from './components/AdminPanel';
 import { isTauri, openFile, saveFile, saveFileDialog, openFileDialog, onFileDrop, tauriToggleMaximize } from './hooks/useTauri';
 import './styles/app.css';
 
 type RightPanelTab =
   | 'layers' | 'properties' | 'schedule' | 'spaces' | 'clash' | 'render' | 'sheets'
   | 'bcf' | 'materials' | 'comments' | 'carbon' | 'cost' | 'hatch' | 'symbols'
-  | 'shadow' | 'section' | 'site' | 'specs' | 'photo' | 'marketplace' | 'wind';
+  | 'shadow' | 'section' | 'site' | 'specs' | 'photo' | 'marketplace' | 'wind' | 'admin';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'layers',      title: 'Layers',           icon: <Layers size={16} strokeWidth={2} /> },
@@ -86,6 +87,7 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'photo',       title: 'Photo to Model',     icon: <Image size={16} strokeWidth={2} /> },
   { id: 'marketplace', title: 'Marketplace',        icon: <Store size={16} strokeWidth={2} /> },
   { id: 'wind',        title: 'Wind Analysis',      icon: <Wind size={16} strokeWidth={2} /> },
+  { id: 'admin',       title: 'Admin',              icon: <Shield size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -355,6 +357,7 @@ export function AppLayout() {
               {rightPanelTab === 'photo' && <PhotoToModelPanel />}
               {rightPanelTab === 'marketplace' && <MarketplacePanel />}
               {rightPanelTab === 'wind' && <WindAnalysisPanel />}
+              {rightPanelTab === 'admin' && <AdminPanel can={can} />}
             </PanelErrorBoundary>
           </div>
         </aside>

@@ -7,6 +7,9 @@ export type RoleId =
   | 'pm'
   | 'admin';
 
+/** Alias used by AdminPanel component */
+export type RoleName = RoleId;
+
 export interface RoleConfig {
   label: string;
   tools: string[];

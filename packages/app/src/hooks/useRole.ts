@@ -2,6 +2,28 @@ import { useMemo } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { ROLE_CONFIGS, DEFAULT_ROLE, type RoleId, type RoleConfig } from '../config/roles';
 
+/**
+ * Pure function version of the can() predicate — usable outside React
+ * (e.g. in tests or context menu factories).
+ */
+export function getCanForRole(role: RoleId): (action: string) => boolean {
+  const config = ROLE_CONFIGS[role];
+  return (action: string): boolean => {
+    const [ns, id] = action.split(':');
+    if (!ns || !id) return false;
+    switch (ns) {
+      case 'tool':    return config.tools.includes(id);
+      case 'panel':   return config.panels.includes(id);
+      case 'layer': {
+        if (config.writableLayers === 'all') return true;
+        return (config.writableLayers as string[]).includes(id);
+      }
+      case 'view':    return config.views.includes(id);
+      default:        return false;
+    }
+  };
+}
+
 export interface UseRoleResult {
   role: RoleId;
   config: RoleConfig;
