@@ -46,7 +46,11 @@ const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; dis
   perspective: { azimuth: Math.PI / 4, elevation: Math.PI / 6, distance: 8000 },
 };
 
-export function useThreeViewport() {
+interface UseThreeViewportOptions {
+  isViewOnly?: boolean;
+}
+
+export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<ViewportState>({
     camera: null,
@@ -268,7 +272,7 @@ export function useThreeViewport() {
       const container = containerRef.current;
       if (!container) return;
 
-      if (event.button === 0) {
+      if (event.button === 0 && !isViewOnly) {
         const { camera, scene, renderer } = stateRef.current;
         if (!camera || !scene || !renderer) return;
 
@@ -302,6 +306,11 @@ export function useThreeViewport() {
         }
       }
 
+      if (event.button === 0 && isViewOnly) {
+        isDragging.current = true;
+        lastMouse.current = { x: event.clientX, y: event.clientY };
+      }
+
       if (event.button === 1) {
         isDragging.current = true;
         lastMouse.current = { x: event.clientX, y: event.clientY };
@@ -314,7 +323,7 @@ export function useThreeViewport() {
         event.preventDefault();
       }
     },
-    [selectedIds, setSelectedIds]
+    [isViewOnly, selectedIds, setSelectedIds]
   );
 
   const handleMouseMove = useCallback(

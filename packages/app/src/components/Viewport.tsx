@@ -1,6 +1,7 @@
 import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport, ViewPreset } from '../hooks/useThreeViewport';
+import { useRole } from '../hooks/useRole';
 
 interface ViewportProps {
   viewType?: 'floor-plan' | '3d' | 'section';
@@ -9,6 +10,7 @@ interface ViewportProps {
 export function Viewport({ viewType = '3d' }: ViewportProps) {
   const show3D = viewType === '3d';
   const toggleView = () => {}; // TODO: wire up to parent state
+  const { isViewOnly } = useRole();
 
   const {
     canvasRef,
@@ -18,7 +20,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     handleCanvasMouseUp,
     handleCanvasDoubleClick,
     activeTool,
-  } = useViewport();
+  } = useViewport({ isViewOnly });
   const {
     containerRef: threeContainerRef,
     setViewPreset,
@@ -27,7 +29,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     zoomToFit,
     sectionBox,
     setSectionBox,
-  } = useThreeViewport();
+  } = useThreeViewport({ isViewOnly });
 
   const handleViewChange = (preset: ViewPreset) => {
     if (show3D) {
@@ -40,13 +42,13 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
       {show3D ? (
         <div
           ref={threeContainerRef}
-          className="viewport-canvas"
+          className={`viewport-canvas${isViewOnly ? ' viewport-canvas--view-only' : ''}`}
           style={{ width: '100%', height: '100%' }}
         />
       ) : (
         <canvas
           ref={canvasRef}
-          className="viewport-canvas"
+          className={`viewport-canvas${isViewOnly ? ' viewport-canvas--view-only' : ''}`}
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleCanvasMouseMove}
           onMouseUp={handleCanvasMouseUp}
@@ -109,7 +111,9 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
         </div>
         <div className="viewport-corner bottom-left">
           <div className="viewport-info">
-            {show3D ? (
+            {isViewOnly ? (
+              <span>View only — pan/zoom to navigate</span>
+            ) : show3D ? (
               <span>Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0</span>
             ) : (
               <span>Draw: W L M | Ctrl+Z/Y undo | Ctrl snap</span>

@@ -3,11 +3,15 @@
  *
  * Verifies: 2D canvas renders in floor-plan mode, 3D container renders in 3d mode,
  * view controls render, overlay labels are correct.
+ *
+ * T-ROLE-005: view-only mode — lock indicator shown, draw hints hidden.
  */
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { Viewport } from './Viewport';
+import { useDocumentStore } from '../stores/documentStore';
+import type { RoleId } from '../config/roles';
 
 // Mock Three.js viewport hook — we don't test WebGL in jsdom
 vi.mock('../hooks/useThreeViewport', () => ({
@@ -85,5 +89,38 @@ describe('T-UI-005: Viewport', () => {
   it('shows 2D shortcut hints in floor-plan mode', () => {
     render(<Viewport viewType="floor-plan" />);
     expect(screen.getByText(/Draw/)).toBeInTheDocument();
+  });
+
+  // T-ROLE-005: view-only mode
+  describe('T-ROLE-005: view-only mode', () => {
+    function setRole(role: RoleId | null) {
+      useDocumentStore.setState({ userRole: role });
+    }
+
+    it('shows view-only hint in floor-plan mode when role is owner', () => {
+      setRole('owner');
+      render(<Viewport viewType="floor-plan" />);
+      expect(screen.getByText(/View only/i)).toBeInTheDocument();
+      expect(screen.queryByText(/Draw/)).not.toBeInTheDocument();
+    });
+
+    it('shows view-only hint in 3d mode when role is owner', () => {
+      setRole('owner');
+      render(<Viewport viewType="3d" />);
+      expect(screen.getByText(/View only/i)).toBeInTheDocument();
+    });
+
+    it('does NOT show view-only hint for architect', () => {
+      setRole('architect');
+      render(<Viewport viewType="floor-plan" />);
+      expect(screen.queryByText(/View only/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/Draw/)).toBeInTheDocument();
+    });
+
+    it('canvas has view-only class when role is owner', () => {
+      setRole('owner');
+      const { container } = render(<Viewport viewType="floor-plan" />);
+      expect(container.querySelector('.viewport-canvas--view-only')).toBeInTheDocument();
+    });
   });
 });

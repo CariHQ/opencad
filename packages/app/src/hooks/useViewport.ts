@@ -99,7 +99,11 @@ function findSnapPoints(elements: unknown[], currentPoint: Point, tolerance: num
   return snaps;
 }
 
-export function useViewport() {
+interface UseViewportOptions {
+  isViewOnly?: boolean;
+}
+
+export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams } = useDocumentStore();
@@ -556,6 +560,7 @@ export function useViewport() {
   // ─── Mouse handlers ───────────────────────────────────────────────────────
 
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (isViewOnly) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -599,7 +604,7 @@ export function useViewport() {
         return { isDrawing: true, startPoint: newPoints[0]!, currentPoint: wp, points: newPoints };
       });
     }
-  }, [activeTool, doc, selectedIds, setSelectedIds, applySnapping, commitShape]);
+  }, [isViewOnly, activeTool, doc, selectedIds, setSelectedIds, applySnapping, commitShape]);
 
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
