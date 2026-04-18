@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import type { ElementSchema, ElementType } from '@opencad/document';
+import { computeTakeoff } from '../lib/quantityTakeoff';
 
 const SCHEDULE_TYPES: { value: ElementType; label: string }[] = [
   { value: 'wall', label: 'Wall' },
@@ -108,6 +109,7 @@ export function SchedulePanel() {
 
         <button
           className="btn-secondary"
+          data-testid="export-csv-btn"
           onClick={handleExportCSV}
           aria-label="Export CSV"
         >
@@ -176,6 +178,84 @@ export function SchedulePanel() {
             </tfoot>
           </table>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * QuantityTab — T-BIM-002
+ *
+ * Self-contained quantity takeoff tab that calls computeTakeoff against the
+ * active document and renders Type | Count | Area (m2) | Volume (m3).
+ * Auto-refreshes whenever the document reference changes (Zustand reactivity).
+ */
+export function QuantityTab() {
+  const doc = useDocumentStore((s) => s.document);
+
+  const rows = useMemo(() => {
+    if (!doc) return [];
+    return computeTakeoff(doc);
+  }, [doc]);
+
+  const handleExportCSV = () => {
+    const header = 'Type,Count,Area (m2),Volume (m3)';
+    const dataRows = rows.map((r) =>
+      [
+        r.type,
+        r.count,
+        r.totalArea !== undefined ? r.totalArea.toFixed(2) : '',
+        r.totalVolume !== undefined ? r.totalVolume.toFixed(2) : '',
+      ].join(','),
+    );
+    const csv = [header, ...dataRows].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), {
+      href: url,
+      download: 'quantity-takeoff.csv',
+    });
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  return (
+    <div className="quantity-tab">
+      <div className="panel-header">
+        <span className="panel-title">Quantity Takeoff</span>
+        <button
+          className="btn-secondary"
+          data-testid="export-csv-btn"
+          onClick={handleExportCSV}
+          aria-label="Export CSV"
+        >
+          Export CSV
+        </button>
+      </div>
+
+      {rows.length === 0 ? (
+        <div className="quantity-empty">No elements in model</div>
+      ) : (
+        <table className="quantity-table">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Count</th>
+              <th>Area (m2)</th>
+              <th>Volume (m3)</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.type}>
+                <td>{row.type}</td>
+                <td>{row.count}</td>
+                <td>{row.totalArea !== undefined ? row.totalArea.toFixed(2) : '-'}</td>
+                <td>{row.totalVolume !== undefined ? row.totalVolume.toFixed(2) : '-'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
     </div>
   );

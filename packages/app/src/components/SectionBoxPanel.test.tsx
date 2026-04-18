@@ -2,6 +2,7 @@ import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { SectionBoxPanel } from './SectionBoxPanel';
+import { DEFAULT_SECTION_BOX } from '../lib/sectionBox';
 expect.extend(jestDomMatchers);
 
 describe('T-BIM-007: SectionBoxPanel (legacy)', () => {
@@ -157,5 +158,80 @@ describe('T-VP-002: SectionBoxPanel enhanced controls', () => {
     const xBtn = screen.getByRole('button', { name: /^X$/i });
     fireEvent.click(xBtn);
     expect(xBtn.classList.contains('active') || xBtn.getAttribute('aria-pressed') === 'true').toBeTruthy();
+  });
+});
+
+describe('T-VP-002: SectionBoxPanel — 6-slider section box UI', () => {
+  const onBoxChange = vi.fn();
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders all 6 sliders (Min/Max X/Y/Z)', () => {
+    render(<SectionBoxPanel />);
+    expect(screen.getByTestId('section-min-x')).toBeInTheDocument();
+    expect(screen.getByTestId('section-max-x')).toBeInTheDocument();
+    expect(screen.getByTestId('section-min-y')).toBeInTheDocument();
+    expect(screen.getByTestId('section-max-y')).toBeInTheDocument();
+    expect(screen.getByTestId('section-min-z')).toBeInTheDocument();
+    expect(screen.getByTestId('section-max-z')).toBeInTheDocument();
+  });
+
+  it('Enable Section Box checkbox toggles the enabled flag via onBoxChange', () => {
+    render(<SectionBoxPanel onBoxChange={onBoxChange} />);
+    const checkbox = screen.getByTestId('section-box-enabled');
+    fireEvent.click(checkbox);
+    expect(onBoxChange).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: true }),
+    );
+    fireEvent.click(checkbox);
+    expect(onBoxChange).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: false }),
+    );
+  });
+
+  it('Fit to Model button triggers onBoxChange with bounding box of elements', () => {
+    const elements = [{ x: 0, y: 0, z: 0 }, { x: 10, y: 10, z: 10 }];
+    render(<SectionBoxPanel onBoxChange={onBoxChange} elements={elements} />);
+    fireEvent.click(screen.getByTestId('fit-to-model-btn'));
+    expect(onBoxChange).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: true }),
+    );
+    const called = onBoxChange.mock.calls[0][0];
+    expect(called.minX).toBeLessThanOrEqual(0);
+    expect(called.maxX).toBeGreaterThanOrEqual(10);
+  });
+
+  it('Reset button restores DEFAULT_SECTION_BOX values', () => {
+    render(<SectionBoxPanel onBoxChange={onBoxChange} />);
+    fireEvent.change(screen.getByTestId('section-min-x'), { target: { value: '-100' } });
+    vi.clearAllMocks();
+    fireEvent.click(screen.getByTestId('reset-section-btn'));
+    expect(onBoxChange).toHaveBeenCalledWith(
+      expect.objectContaining({
+        minX: DEFAULT_SECTION_BOX.minX,
+        maxX: DEFAULT_SECTION_BOX.maxX,
+        enabled: DEFAULT_SECTION_BOX.enabled,
+      }),
+    );
+  });
+
+  it('Slider change updates the correct dimension', () => {
+    render(<SectionBoxPanel onBoxChange={onBoxChange} />);
+    fireEvent.change(screen.getByTestId('section-max-x'), { target: { value: '75' } });
+    expect(onBoxChange).toHaveBeenCalledWith(
+      expect.objectContaining({ maxX: 75 }),
+    );
+  });
+
+  it('sliders have min=-200 and max=200 attributes', () => {
+    render(<SectionBoxPanel />);
+    const minXSlider = screen.getByTestId('section-min-x');
+    expect(minXSlider).toHaveAttribute('min', '-200');
+    expect(minXSlider).toHaveAttribute('max', '200');
+    const maxXSlider = screen.getByTestId('section-max-x');
+    expect(maxXSlider).toHaveAttribute('min', '-200');
+    expect(maxXSlider).toHaveAttribute('max', '200');
   });
 });

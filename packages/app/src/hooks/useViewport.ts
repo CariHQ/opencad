@@ -113,6 +113,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   });
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [currentSnap, setCurrentSnap] = useState<SnapResult | null>(null);
+  const [zoomScale, setZoomScale] = useState(1);
 
   const applySnapping = useCallback((point: Point): Point => {
     if (!doc || !snapEnabled) return point;
@@ -725,12 +726,29 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     return () => cancelAnimationFrame(id);
   }, [draw, activeTool]);
 
-  // Update canvas cursor based on active tool
+  // Update canvas cursor based on active tool (isViewOnly always uses 'default')
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
-  }, [activeTool]);
+    if (isViewOnly) {
+      canvas.style.cursor = 'default';
+    } else {
+      canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
+    }
+  }, [activeTool, isViewOnly]);
+
+  // Wheel zoom — always active regardless of isViewOnly
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      const delta = event.deltaY > 0 ? 0.9 : 1.1;
+      setZoomScale((prev) => Math.max(0.05, Math.min(20, prev * delta)));
+    };
+    canvas.addEventListener('wheel', handleWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', handleWheel);
+  }, []);
 
   return {
     canvasRef,
@@ -741,6 +759,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     handleCanvasDoubleClick,
     activeTool,
     drawingState,
-    viewTransform: { scale: 1 / SCALE, panX: OFFSET, panY: OFFSET },
+    isViewOnly,
+    zoomScale,
+    viewTransform: { scale: zoomScale / SCALE, panX: OFFSET, panY: OFFSET },
   };
 }

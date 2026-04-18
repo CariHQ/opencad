@@ -7,8 +7,9 @@ export interface Material {
   costPerM2: number;
   unit: string;
   color: string; // hex fallback when texture unavailable
-  density?: number;        // kg/m³ (optional; used for BIM quantity takeoff)
-  embodiedCarbon?: number; // kgCO2e/kg (optional; used for carbon analysis)
+  density?: number;             // kg/m³ (optional; used for BIM quantity takeoff)
+  embodiedCarbon?: number;      // kgCO2e/kg (optional; used for carbon analysis)
+  thermalConductivity?: number; // W/(m·K) (optional; used for thermal analysis)
 }
 
 // ≥100 standard architectural materials
@@ -145,3 +146,50 @@ export const BUILT_IN_MATERIALS: Material[] = [
 export const MATERIAL_CATEGORIES = Array.from(
   new Set(BUILT_IN_MATERIALS.map((m) => m.category))
 ).sort();
+
+// ── T-BIM-001: BIM Material Library ──────────────────────────────────────────
+
+/**
+ * BIM-specific material with required physical properties used for structural
+ * analysis, thermal modeling, and lifecycle carbon accounting.
+ */
+export interface BIMMaterial {
+  id: string;
+  name: string;
+  category: 'structural' | 'envelope' | 'finish' | 'mep';
+  density: number;             // kg/m³
+  thermalConductivity: number; // W/(m·K)
+  embodiedCarbon: number;      // kgCO₂e/kg
+  color: string;               // CSS hex (#rrggbb)
+}
+
+/**
+ * Predefined BIM material library — 10 core materials spanning all four
+ * BIM categories (structural, envelope, finish, mep).
+ */
+export const MATERIAL_LIBRARY: BIMMaterial[] = [
+  // Structural
+  { id: 'bim-concrete',   name: 'Concrete',    category: 'structural', density: 2400, thermalConductivity: 1.7,   embodiedCarbon: 0.13, color: '#9e9e9e' },
+  { id: 'bim-steel',      name: 'Steel',        category: 'structural', density: 7850, thermalConductivity: 50.0,  embodiedCarbon: 1.55, color: '#607d8b' },
+  { id: 'bim-timber',     name: 'Timber',       category: 'structural', density: 500,  thermalConductivity: 0.13,  embodiedCarbon: 0.42, color: '#d7a86e' },
+  { id: 'bim-aluminum',   name: 'Aluminum',     category: 'structural', density: 2700, thermalConductivity: 237.0, embodiedCarbon: 8.24, color: '#b8b8c0' },
+  // Envelope
+  { id: 'bim-brick',      name: 'Brick',        category: 'envelope',   density: 1800, thermalConductivity: 0.72,  embodiedCarbon: 0.24, color: '#c1440e' },
+  { id: 'bim-glass',      name: 'Glass',        category: 'envelope',   density: 2500, thermalConductivity: 1.0,   embodiedCarbon: 0.91, color: '#b3e5fc' },
+  { id: 'bim-insulation', name: 'Insulation',   category: 'envelope',   density: 50,   thermalConductivity: 0.04,  embodiedCarbon: 1.28, color: '#ffe082' },
+  // Finish
+  { id: 'bim-gypsum',     name: 'Gypsum Board', category: 'finish',     density: 800,  thermalConductivity: 0.25,  embodiedCarbon: 0.38, color: '#f0f0e0' },
+  { id: 'bim-rubber',     name: 'Rubber',       category: 'finish',     density: 1200, thermalConductivity: 0.16,  embodiedCarbon: 2.1,  color: '#424242' },
+  // MEP
+  { id: 'bim-copper',     name: 'Copper',       category: 'mep',        density: 8960, thermalConductivity: 385.0, embodiedCarbon: 3.19, color: '#b87333' },
+];
+
+/** Look up a BIM material by its id. Returns undefined when not found. */
+export function getMaterial(id: string): BIMMaterial | undefined {
+  return MATERIAL_LIBRARY.find((m) => m.id === id);
+}
+
+/** Return all BIM materials belonging to the given category. */
+export function getMaterialsByCategory(category: BIMMaterial['category']): BIMMaterial[] {
+  return MATERIAL_LIBRARY.filter((m) => m.category === category);
+}

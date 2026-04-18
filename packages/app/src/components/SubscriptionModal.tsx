@@ -3,7 +3,13 @@
  *
  * Displays three plan cards (Free / Pro / Business) with pricing,
  * feature bullets, and upgrade CTAs. The current plan card is
- * highlighted with a disabled "Current plan" button.
+ * highlighted with a "Current plan" badge.
+ *
+ * data-testids:
+ *   tier-free, tier-pro, tier-business
+ *   upgrade-pro, upgrade-business
+ *   manage-billing
+ *   current-plan-badge
  */
 import { useSubscription } from '../hooks/useSubscription';
 import type { SubscriptionTier } from '../lib/serverApi';
@@ -21,7 +27,7 @@ const PLANS: PlanConfig[] = [
   {
     tier: 'free',
     label: 'Free',
-    price: '$0',
+    price: '£0',
     priceDetail: 'forever',
     features: [
       '1 project',
@@ -33,7 +39,7 @@ const PLANS: PlanConfig[] = [
   {
     tier: 'pro',
     label: 'Pro',
-    price: '$29',
+    price: '£29',
     priceDetail: 'per user / month',
     features: [
       'Unlimited projects',
@@ -45,7 +51,7 @@ const PLANS: PlanConfig[] = [
   {
     tier: 'business',
     label: 'Business',
-    price: '$99',
+    price: '£99',
     priceDetail: 'per user / month',
     features: [
       'Everything in Pro',
@@ -62,7 +68,7 @@ interface SubscriptionModalProps {
 }
 
 export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
-  const { tier: currentTier, startCheckout, openPortal } = useSubscription();
+  const { tier: currentTier, upgrade, openPortal } = useSubscription();
 
   return (
     <div
@@ -70,7 +76,9 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
       role="dialog"
       aria-modal="true"
       aria-label="Choose your plan"
-      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div className="subscription-modal">
         <button aria-label="Close" className="modal-close" onClick={onClose}>
@@ -85,10 +93,15 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
         <div className="subscription-plans">
           {PLANS.map((plan) => {
             const isCurrent = plan.tier === currentTier;
+            // Business is the top tier — no upgrades beyond it
+            const showUpgrade =
+              !isCurrent && plan.tier !== 'free' && currentTier !== 'business';
+
             return (
               <div
                 key={plan.tier}
                 className={`subscription-plan-card${isCurrent ? ' subscription-plan-card--current' : ''}`}
+                data-testid={`tier-${plan.tier}`}
                 data-tier={plan.tier}
               >
                 {plan.badge && (
@@ -107,23 +120,25 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
                   ))}
                 </ul>
 
-                {isCurrent ? (
+                {isCurrent && (
                   <button
                     className="subscription-plan-cta subscription-plan-cta--current"
+                    data-testid="current-plan-badge"
                     disabled
                   >
                     Current plan
                   </button>
-                ) : (
+                )}
+
+                {showUpgrade && (
                   <button
                     className="subscription-plan-cta subscription-plan-cta--upgrade"
+                    data-testid={`upgrade-${plan.tier}`}
                     onClick={() => {
-                      if (plan.tier !== 'free') {
-                        void startCheckout(plan.tier);
-                      }
+                      void upgrade(plan.tier as 'pro' | 'business');
                     }}
                   >
-                    Upgrade
+                    Upgrade to {plan.label}
                   </button>
                 )}
               </div>
@@ -134,7 +149,10 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
         <div className="subscription-footer">
           <button
             className="subscription-manage-billing"
-            onClick={() => { void openPortal(); }}
+            data-testid="manage-billing"
+            onClick={() => {
+              void openPortal();
+            }}
           >
             Manage billing
           </button>

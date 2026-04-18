@@ -3,10 +3,17 @@
  *
  * Only rendered when the current user has `can('panel:admin')`.
  * Displays a list of project members with a role-assignment dropdown per member.
- * Role changes call the optional `setMemberRole` stub.
+ * Role changes call the optional `onSetRole` callback when Save is clicked.
+ *
+ * data-testids:
+ *   admin-panel               — root element
+ *   member-row-{userId}       — table row per member
+ *   role-select-{userId}      — role dropdown per member
+ *   save-role-{userId}        — save button per member
  */
 import React, { useState } from 'react';
 import type { RoleName } from '../config/roles';
+import { ROLE_CONFIGS } from '../config/roles';
 
 /** Member record — mock data is provided when no external source is wired. */
 export interface AdminMember {
@@ -22,27 +29,66 @@ const MOCK_MEMBERS: AdminMember[] = [
   { id: 'u4', name: 'David Park',     role: 'architect'  },
 ];
 
-const ALL_ROLES: RoleName[] = ['admin', 'architect', 'structural', 'owner'];
+/** All 7 role IDs available in the system */
+const ALL_ROLES: RoleName[] = ['admin', 'architect', 'structural', 'mep', 'contractor', 'owner', 'pm'];
 
 interface AdminPanelProps {
   /** Role-capability predicate from useRole() */
   can: (action: string) => boolean;
   /** Initial member list — falls back to MOCK_MEMBERS when omitted */
   members?: AdminMember[];
-  /** Called when a member's role is changed */
+  /** Called when a member's role save button is clicked */
+  onSetRole?: (userId: string, role: RoleName) => void;
+  /** @deprecated Use onSetRole. Kept for backwards compat. */
   setMemberRole?: (userId: string, role: RoleName) => void;
+  /** The ID of the currently logged-in admin user (that row is hidden) */
+  currentUserId?: string;
 }
 
-export function AdminPanel({ can, members: propMembers, setMemberRole }: AdminPanelProps) {
+export function AdminPanel({
+  can,
+  members: propMembers,
+  onSetRole,
+  setMemberRole,
+  currentUserId,
+}: AdminPanelProps) {
   const [members, setMembers] = useState<AdminMember[]>(propMembers ?? MOCK_MEMBERS);
+  const [pendingRoles, setPendingRoles] = useState<Record<string, RoleName>>({});
 
   // Only visible to admins
   if (!can('panel:admin')) return null;
 
-  const handleRoleChange = (id: string, newRole: RoleName) => {
-    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: newRole } : m)));
-    setMemberRole?.(id, newRole);
+  const handleRoleDropdown = (id: string, newRole: RoleName) => {
+    setPendingRoles((prev) => ({ ...prev, [id]: newRole }));
   };
+
+  const handleSave = (id: string) => {
+    const newRole = pendingRoles[id];
+    if (!newRole) return;
+    setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: newRole } : m)));
+    // Support both callback names for backwards compatibility
+    onSetRole?.(id, newRole);
+    setMemberRole?.(id, newRole);
+    setPendingRoles((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+  };
+
+  // Admin hides itself from the list (can't demote yourself)
+  const visibleMembers = members.filter((m) => m.id !== currentUserId);
+
+  if (visibleMembers.length === 0) {
+    return (
+      <div className="admin-panel" data-testid="admin-panel">
+        <div className="panel-header">
+          <span className="panel-title">Admin — Project Members</span>
+        </div>
+        <p className="admin-empty-state">No members to manage.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-panel" data-testid="admin-panel">
@@ -54,26 +100,44 @@ export function AdminPanel({ can, members: propMembers, setMemberRole }: AdminPa
         <thead>
           <tr>
             <th>Name</th>
-            <th>Role</th>
+            <th>Current Role</th>
+            <th>New Role</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
-          {members.map((m) => (
+          {visibleMembers.map((m) => (
             <tr key={m.id} data-testid={`member-row-${m.id}`}>
               <td className="member-name">{m.name}</td>
+              <td className="member-current-role">
+                <span className={`role-badge role-badge--${m.role}`}>
+                  {ROLE_CONFIGS[m.role]?.label ?? m.role}
+                </span>
+              </td>
               <td>
                 <select
+                  data-testid={`role-select-${m.id}`}
                   aria-label={`Role for ${m.name}`}
-                  value={m.role}
-                  onChange={(e) => handleRoleChange(m.id, e.target.value as RoleName)}
+                  value={pendingRoles[m.id] ?? m.role}
+                  onChange={(e) => handleRoleDropdown(m.id, e.target.value as RoleName)}
                   className="role-select"
                 >
                   {ALL_ROLES.map((r) => (
                     <option key={r} value={r}>
-                      {r.charAt(0).toUpperCase() + r.slice(1)}
+                      {ROLE_CONFIGS[r]?.label ?? r}
                     </option>
                   ))}
                 </select>
+              </td>
+              <td>
+                <button
+                  data-testid={`save-role-${m.id}`}
+                  onClick={() => handleSave(m.id)}
+                  className="save-role-btn"
+                  disabled={!pendingRoles[m.id] || pendingRoles[m.id] === m.role}
+                >
+                  Save
+                </button>
               </td>
             </tr>
           ))}
