@@ -584,6 +584,27 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     updateSelection();
   }, [updateSelection]);
 
+  // Apply or remove clipping plane whenever section state changes
+  useEffect(() => {
+    const { renderer } = stateRef.current;
+    if (!renderer) return;
+
+    if (sectionBox) {
+      // Normal points in the negative axis direction so the plane clips
+      // elements "above" the cut position (in the selected axis direction).
+      let normal: THREE.Vector3;
+      if (sectionDirection === 'x')      normal = new THREE.Vector3(-1, 0, 0);
+      else if (sectionDirection === 'y') normal = new THREE.Vector3(0, -1, 0);
+      else                               normal = new THREE.Vector3(0, 0, -1);
+
+      renderer.clippingPlanes = [new THREE.Plane(normal, sectionPosition)];
+      renderer.localClippingEnabled = true;
+    } else {
+      renderer.clippingPlanes = [];
+      renderer.localClippingEnabled = false;
+    }
+  }, [sectionBox, sectionPosition, sectionDirection]);
+
   useEffect(() => {
     const handleThemeChange = () => {
       const theme = getTheme();

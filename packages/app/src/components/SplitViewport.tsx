@@ -126,14 +126,10 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
         </div>
       )}
 
-      {/* Section cut controls — visible only in section view, not view-only */}
+      {/* Section cut controls — clips the 3D model along the chosen axis */}
       {viewType === 'section' && !isViewOnly && (
-        <div style={{
-          position: 'absolute', bottom: 32, left: 12, right: 12, zIndex: 10,
-          background: 'var(--panel-bg, rgba(20,20,40,0.82))',
-          borderRadius: 6, padding: '8px 10px',
-        }}>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
+        <div className="section-cut-bar">
+          <div className="section-cut-axis">
             {(['x', 'z', 'y'] as const).map((dir) => (
               <button
                 key={dir}
@@ -144,19 +140,19 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
                 {dir.toUpperCase()}
               </button>
             ))}
-            <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 10, opacity: 0.6, alignSelf: 'center' }}>
-              {Math.round(sectionPosition)} mm
+            <span className="section-cut-label">
+              Section plane &nbsp;·&nbsp; {Math.round(sectionPosition)} mm
             </span>
           </div>
           <input
+            className="section-cut-slider"
             type="range"
             min={-20000}
             max={20000}
             step={100}
             value={sectionPosition}
             onChange={(e) => setSectionPosition(Number(e.target.value))}
-            style={{ width: '100%', cursor: 'pointer' }}
+            title="Drag to move the section cut plane"
           />
         </div>
       )}
