@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  FolderOpen, FileDown, Bot, Plus, Sun, Moon, PanelLeft, PanelRight,
+  FolderOpen, FileDown, Bot, Home, Sun, Moon, PanelLeft, PanelRight,
   Layers, Settings2, Table2, LayoutDashboard, AlertTriangle, Camera, Sheet,
   MessageSquareWarning, Package, MessageCircle, Leaf, DollarSign, Palette,
   Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Settings, Shield,
@@ -252,7 +252,7 @@ export function AppLayout() {
               <PanelLeft size={16} strokeWidth={2} color={leftVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')} />
             </button>
             <span className="brand-name">OpenCAD</span>
-            <button className="toolbar-btn" onClick={() => navigate('/')} title="Back to projects"><Plus size={14} strokeWidth={2} /></button>
+            <button className="toolbar-btn" onClick={() => navigate('/')} title="Back to projects"><Home size={14} strokeWidth={2} /></button>
           </div>
 
           <div className="toolbar-tabs">

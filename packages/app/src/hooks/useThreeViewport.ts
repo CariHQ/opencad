@@ -38,6 +38,20 @@ interface CameraState {
   elevation: number;
 }
 
+// Color per element type — module-level constant (not recreated each render)
+const ELEMENT_TYPE_COLORS: Record<string, number> = {
+  wall:      0xc4c8d0,
+  slab:      0xa0a8b8,
+  column:    0xe08040,
+  beam:      0xd07030,
+  door:      0x8090b8,
+  window:    0x70a8d8,
+  stair:     0xb0b870,
+  railing:   0x90a060,
+  roof:      0x909098,
+  space:     0x80c8a8,
+};
+
 const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; distance: number }> = {
   top: { azimuth: 0, elevation: 0.01, distance: 10000 },
   front: { azimuth: 0, elevation: Math.PI / 2, distance: 10000 },
@@ -84,34 +98,39 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
   const elementMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
 
-  const createMaterial = useCallback((color: string, opacity: number = 0.8) => {
+  const createMaterial = useCallback((colorHex: number) => {
     return new THREE.MeshStandardMaterial({
-      color: new THREE.Color(color),
-      transparent: true,
-      opacity,
-      side: THREE.DoubleSide,
+      color: colorHex,
+      transparent: false,
+      roughness: 0.6,
+      metalness: 0.0,
+      side: THREE.FrontSide,
     });
   }, []);
 
   const createMeshFromElement = useCallback(
     (element: ElementSchema): THREE.Mesh | null => {
       const bb = element.boundingBox;
-      let width = bb.max.x - bb.min.x || 1000;
-      let depth = bb.max.y - bb.min.y || 1000;
+      let width = bb.max.x - bb.min.x || 200;
+      let depth = bb.max.y - bb.min.y || 200;
       let height = bb.max.z - bb.min.z || 3000;
 
-      if (width < 1) width = 1000;
-      if (depth < 1) depth = 1000;
+      if (width < 1) width = 200;
+      if (depth < 1) depth = 200;
       if (height < 1) height = 3000;
 
       const geometry = new THREE.BoxGeometry(width, depth, height);
-      const material = createMaterial('#8888aa', 0.8);
+      const colorHex = ELEMENT_TYPE_COLORS[element.type] ?? 0x8888aa;
+      const material = createMaterial(colorHex);
 
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(bb.min.x + width / 2, bb.min.y + depth / 2, bb.min.z + height / 2);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
 
       mesh.userData.elementId = element.id;
       mesh.userData.elementType = element.type;
+      mesh.userData.baseColor = colorHex;
 
       return mesh;
     },
@@ -222,12 +241,11 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
       const material = mesh.material as THREE.MeshStandardMaterial;
       if (isSelected) {
         material.color.setHex(0x4f46e5);
-        material.opacity = 1;
-        material.emissive.setHex(theme.selectionEmissive);
-        material.emissiveIntensity = 0.3;
+        material.emissive.setHex(0x1a1a6e);
+        material.emissiveIntensity = 0.25;
       } else {
-        material.color.setHex(0x8888aa);
-        material.opacity = 0.8;
+        const baseColor = (mesh.userData.baseColor as number | undefined) ?? 0x8888aa;
+        material.color.setHex(baseColor);
         material.emissive.setHex(0x000000);
         material.emissiveIntensity = 0;
       }
@@ -407,13 +425,20 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     const gridHelper = new THREE.GridHelper(20000, 40, theme.gridColor, theme.gridColor2);
     scene.add(gridHelper);
 
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.45);
     scene.add(ambientLight);
 
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(10000, 10000, 10000);
+    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+    directionalLight.position.set(8000, 12000, 8000);
     directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
     scene.add(directionalLight);
+
+    // Fill light from below/opposite side for softer shadows
+    const fillLight = new THREE.DirectionalLight(0xcce8ff, 0.35);
+    fillLight.position.set(-6000, 2000, -6000);
+    scene.add(fillLight);
 
     const axesHelper = new THREE.AxesHelper(1000);
     scene.add(axesHelper);
