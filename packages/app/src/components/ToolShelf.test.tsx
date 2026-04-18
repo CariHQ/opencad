@@ -2,18 +2,27 @@
  * T-UI-001: ToolShelf component tests
  *
  * Verifies: tool categories render, tool buttons activate on click,
- * active tool is reflected in store and UI.
+ * active tool is reflected in store and UI, role-based gating.
  */
-import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
-import { describe, it, expect, beforeEach } from 'vitest';
+import '@testing-library/jest-dom/vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ToolShelf } from './ToolShelf';
 import { useDocumentStore } from '../stores/documentStore';
-expect.extend(jestDomMatchers);
+import type { RoleId } from '../config/roles';
+
+function setRole(role: RoleId | null) {
+  useDocumentStore.setState({ userRole: role });
+}
 
 describe('T-UI-001: ToolShelf', () => {
   beforeEach(() => {
     useDocumentStore.getState().setActiveTool('select');
+    setRole(null); // architect (default)
+  });
+
+  afterEach(() => {
+    setRole(null);
   });
 
   it('renders all category buttons', () => {
@@ -61,5 +70,48 @@ describe('T-UI-001: ToolShelf', () => {
     const drawBtn = screen.getByTitle('Draw');
     fireEvent.click(drawBtn);
     expect(drawBtn).toHaveClass('active');
+  });
+
+  // T-ROLE-002: role-based gating
+  describe('role-based tool gating (T-ROLE-002)', () => {
+    it('architect sees all categories and all tools', () => {
+      setRole('architect');
+      render(<ToolShelf />);
+      // Structure category should exist
+      fireEvent.click(screen.getByTitle('Structure'));
+      expect(screen.getByTitle('Wall (W)')).toBeInTheDocument();
+    });
+
+    it('owner sees empty shelf (no tools, no categories)', () => {
+      setRole('owner');
+      render(<ToolShelf />);
+      // No category buttons with known names
+      expect(screen.queryByTitle('Structure')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Wall (W)')).not.toBeInTheDocument();
+    });
+
+    it('structural engineer sees dimension tool but not wall tool', () => {
+      setRole('structural');
+      render(<ToolShelf />);
+      // Structural has no 'structure' category tools — that category button should be absent
+      expect(screen.queryByTitle('Structure')).not.toBeInTheDocument();
+      // Dimension is in annotation category
+      fireEvent.click(screen.getByTitle('Annotate'));
+      expect(screen.getByTitle('Dimension (M)')).toBeInTheDocument();
+      // Wall tool must never appear
+      expect(screen.queryByTitle('Wall (W)')).not.toBeInTheDocument();
+    });
+
+    it('contractor sees select tool but not wall tool', () => {
+      setRole('contractor');
+      render(<ToolShelf />);
+      // Contractor has no 'structure' category tools
+      expect(screen.queryByTitle('Structure')).not.toBeInTheDocument();
+      // Modify category has select
+      fireEvent.click(screen.getByTitle('Modify'));
+      expect(screen.getByTitle('Select (V)')).toBeInTheDocument();
+      // Wall tool must never appear
+      expect(screen.queryByTitle('Wall (W)')).not.toBeInTheDocument();
+    });
   });
 });

@@ -1,54 +1,13 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
+import { DocumentModel, type DocumentSchema, type PropertyValue } from '@opencad/document';
 import {
-  DocumentModel,
-  type DocumentSchema,
-  type PropertyValue,
-  loadProject as idbLoadProject,
-  saveProject as idbSaveProject,
-} from '@opencad/document';
-import { isTauri, tauriLoadProject, tauriSaveProject } from '../hooks/useTauri';
-import { broadcastDocumentUpdate } from '../sync/localSyncClient';
-import { documentsApi } from '../lib/serverApi';
-
-const MAX_HISTORY = 50;
-
-// Unified debounced save — writes to localStorage, IndexedDB, Tauri SQLite (when
-// running as desktop), and broadcasts to the local sync server so the other
-// environment (browser ↔ desktop) picks up the change.
-// Using a single debounce timer means rapid changes coalesce into one write 500 ms
-// after the last user action.
-let _saveTimer: ReturnType<typeof setTimeout> | null = null;
-function debouncedSave(projectId: string | null, doc: DocumentSchema): void {
-  if (_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(() => {
-    const key = projectId ? `opencad-doc-${projectId}` : 'opencad-document';
-    const json = JSON.stringify(doc);
-
-    // 1. localStorage (fast read on refresh)
-    try { localStorage.setItem(key, json); } catch { /* quota exceeded */ }
-
-    // 2. IndexedDB (authoritative browser store)
-    void idbSaveProject(doc).catch(() => {});
-
-    // 3. Tauri SQLite (authoritative desktop store when running in Tauri)
-    if (isTauri() && projectId) {
-      void tauriSaveProject(projectId, doc.name, json).catch(() => {});
-    }
-
-    // 4. Broadcast to local sync server — no-op when disconnected
-    if (projectId) {
-      broadcastDocumentUpdate(projectId, json);
-    }
-
-    // 5. Persist to REST API server (fire-and-forget)
-    if (projectId) {
-      void documentsApi.save(projectId, json).catch(() => {});
-    }
-
-    _saveTimer = null;
-  }, 500);
-}
+  saveDocument as offlineSaveDocument,
+  loadDocument as offlineLoadDocument,
+  listPendingSync,
+  markSynced,
+} from '../lib/offlineStore';
+import { type RoleId } from '../config/roles';
 
 interface HistoryEntry {
   document: DocumentSchema;
@@ -59,7 +18,6 @@ interface HistoryEntry {
 interface DocumentState {
   document: DocumentSchema | null;
   model: DocumentModel | null;
-  currentProjectId: string | null;
   selectedIds: string[];
   activeTool: string;
   isOnline: boolean;
@@ -72,6 +30,8 @@ interface DocumentState {
   canRedo: boolean;
 
   selectedLevelId: string | null;
+
+  userRole: RoleId | null;
 
   toolParams: Record<string, Record<string, unknown>>;
 
@@ -95,6 +55,8 @@ interface DocumentState {
 
   setToolParam: (tool: string, key: string, value: unknown) => void;
 
+  setUserRole: (role: RoleId | null) => void;
+
   undo: () => void;
   redo: () => void;
   pushHistory: (description: string) => void;
@@ -102,6 +64,7 @@ interface DocumentState {
   createVersion: (message?: string) => void;
   restoreVersion: (versionNumber: number) => void;
   getVersionList: () => Array<{ version: number; timestamp: number; message?: string }>;
+
   loadDocumentSchema: (schema: DocumentSchema) => void;
 
   setActiveLevel: (levelId: string) => void;
@@ -109,21 +72,15 @@ interface DocumentState {
   updateLevel: (levelId: string, updates: { name?: string; elevation?: number; height?: number }) => void;
   deleteLevel: (levelId: string) => void;
   renameLevel: (levelId: string, name: string) => void;
-
-  /**
-   * Apply a document schema received from the remote sync server.
-   * This saves locally (IDB + localStorage) but does NOT broadcast back,
-   * preventing infinite echo loops.
-   */
-  applyRemoteDocument: (schema: DocumentSchema) => void;
 }
+
+const MAX_HISTORY = 50;
 
 export const useDocumentStore = create<DocumentState>()(
   persist(
     (set, get) => ({
       document: null,
       model: null,
-      currentProjectId: null,
       selectedIds: [],
       activeTool: 'select',
       isOnline: true,
@@ -137,6 +94,8 @@ export const useDocumentStore = create<DocumentState>()(
 
       selectedLevelId: null,
 
+      userRole: null,
+
       toolParams: {
         wall: { height: 3000, thickness: 200, material: 'Concrete', wallType: 'interior' },
         door: { height: 2100, width: 900, swing: 90 },
@@ -144,98 +103,36 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       initProject: (projectId, userId) => {
-        const storageKey = `opencad-doc-${projectId}`;
-
-        const applyDocData = (saved: string | null) => {
-          let model: DocumentModel;
-          try {
-            if (saved) {
-              const docData = JSON.parse(saved);
-              if (docData?.content && docData?.organization) {
-                model = new DocumentModel(projectId, userId);
-                model.loadDocument(docData);
-              } else {
-                model = new DocumentModel(projectId, userId);
-              }
+        let model: DocumentModel;
+        try {
+          const saved = localStorage.getItem('opencad-document');
+          if (saved) {
+            const docData = JSON.parse(saved);
+            // Guard against pre-refactor schema (no content/organization groups)
+            if (docData?.content && docData?.organization) {
+              model = new DocumentModel(projectId, userId);
+              model.loadDocument(docData);
             } else {
+              localStorage.removeItem('opencad-document');
               model = new DocumentModel(projectId, userId);
             }
-          } catch {
+          } else {
             model = new DocumentModel(projectId, userId);
           }
-          set({
-            document: model.documentData,
-            model,
-            currentProjectId: projectId,
-            lastSaved: Date.now(),
-            history: [],
-            historyIndex: -1,
-            canUndo: false,
-            canRedo: false,
-          });
-        };
-
-        if (isTauri()) {
-          // Async: load from SQLite on desktop
-          void tauriLoadProject(projectId).then((data) => {
-            applyDocData(data);
-          }).catch(() => {
-            applyDocData(null);
-          });
-        } else {
-          // Browser: try IndexedDB first (most reliable), fall back to localStorage
-          void idbLoadProject(projectId).then((schema) => {
-            if (schema) {
-              // IndexedDB had data — use it directly
-              const model2 = new DocumentModel(schema.id, userId);
-              model2.loadDocument(schema);
-              set({
-                document: model2.documentData,
-                model: model2,
-                currentProjectId: schema.id,
-                lastSaved: Date.now(),
-                history: [],
-                historyIndex: -1,
-                canUndo: false,
-                canRedo: false,
-              });
-            } else {
-              // Fall back to localStorage (with legacy key migration)
-              let saved = localStorage.getItem(storageKey);
-              if (!saved) {
-                const legacy = localStorage.getItem('opencad-document');
-                if (legacy) {
-                  try {
-                    const docData = JSON.parse(legacy);
-                    if (docData?.content && docData?.organization) {
-                      localStorage.setItem(storageKey, legacy);
-                      saved = legacy;
-                    }
-                  } catch { /* ignore */ }
-                  localStorage.removeItem('opencad-document');
-                }
-              }
-              applyDocData(saved);
-            }
-          }).catch(() => {
-            // IndexedDB unavailable — use localStorage
-            let saved = localStorage.getItem(storageKey);
-            if (!saved) {
-              const legacy = localStorage.getItem('opencad-document');
-              if (legacy) {
-                try {
-                  const docData = JSON.parse(legacy);
-                  if (docData?.content && docData?.organization) {
-                    localStorage.setItem(storageKey, legacy);
-                    saved = legacy;
-                  }
-                } catch { /* ignore */ }
-                localStorage.removeItem('opencad-document');
-              }
-            }
-            applyDocData(saved);
-          });
+        } catch {
+          model = new DocumentModel(projectId, userId);
         }
+        const document = model.documentData;
+
+        set({
+          document,
+          model,
+          lastSaved: Date.now(),
+          history: [],
+          historyIndex: -1,
+          canUndo: false,
+          canRedo: false,
+        });
       },
 
       loadProject: (projectId, userId) => {
@@ -245,7 +142,6 @@ export const useDocumentStore = create<DocumentState>()(
         set({
           document,
           model,
-          currentProjectId: projectId,
           lastSaved: Date.now(),
           history: [],
           historyIndex: -1,
@@ -259,46 +155,56 @@ export const useDocumentStore = create<DocumentState>()(
       setActiveTool: (tool) => set({ activeTool: tool }),
 
       setOnlineStatus: (online) => {
-        const { model } = get();
+        const { model, isOnline } = get();
         if (model) {
           model.setOnlineStatus(online);
         }
         set({ isOnline: online });
+
+        // When transitioning from offline → online, flush any pending offline edits.
+        if (online && !isOnline) {
+          void listPendingSync().then((pendingIds) => {
+            for (const pid of pendingIds) {
+              void offlineLoadDocument(pid).then((data) => {
+                if (!data) return;
+                // Re-save locally to mark synced (no server API on this branch)
+                void markSynced(pid).catch(() => {});
+              }).catch(() => {});
+            }
+          }).catch(() => {});
+        }
       },
 
       addLayer: (params) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) throw new Error('No document loaded');
 
         const layerId = model.addLayer(params);
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc, lastSaved: Date.now() });
-        debouncedSave(currentProjectId, newDoc);
+        set({
+          document: { ...model.documentData },
+          lastSaved: Date.now(),
+        });
         return layerId;
       },
 
       updateLayer: (layerId, updates) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) return;
 
         model.updateLayer(layerId, updates as Record<string, unknown>);
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc });
-        debouncedSave(currentProjectId, newDoc);
+        set({ document: { ...model.documentData } });
       },
 
       deleteLayer: (layerId) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) return;
 
         model.deleteLayer(layerId);
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc });
-        debouncedSave(currentProjectId, newDoc);
+        set({ document: { ...model.documentData } });
       },
 
       addElement: (params) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) throw new Error('No document loaded');
 
         const elementId = model.addElement({
@@ -308,43 +214,47 @@ export const useDocumentStore = create<DocumentState>()(
         });
 
         const newDoc = { ...model.documentData };
-        set({ document: newDoc, lastSaved: Date.now() });
-        debouncedSave(currentProjectId, newDoc);
+        const newDocJson = JSON.stringify(newDoc);
+        set({
+          document: newDoc,
+          lastSaved: Date.now(),
+        });
+        try {
+          localStorage.setItem('opencad-document', newDocJson);
+        } catch { /* ignore storage errors */ }
+        // Also save to offline store so it persists across sessions
+        void offlineSaveDocument('default', newDocJson).catch(() => {});
         return elementId;
       },
 
       updateElement: (elementId, updates) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) return;
 
         const element = model.getElementById(elementId);
         if (element) {
-          const FORBIDDEN = new Set(['__proto__', 'constructor', 'prototype']);
-          const safeUpdates = Object.fromEntries(
-            Object.entries(updates as Record<string, unknown>).filter(([k]) => !FORBIDDEN.has(k))
-          );
-          const updatedElement = { ...element, ...safeUpdates };
-          model.documentData.content.elements[elementId] = updatedElement as typeof element;
-          const newDoc = { ...model.documentData };
-          set({ document: newDoc });
-          debouncedSave(currentProjectId, newDoc);
+          Object.assign(element, updates);
+          set({ document: { ...model.documentData } });
         }
       },
 
       deleteElement: (elementId) => {
-        const { model, document, currentProjectId } = get();
+        const { model, document } = get();
         if (!model || !document) return;
 
         delete document.content.elements[elementId];
-        const newDoc = { ...document };
-        set({ document: newDoc, lastSaved: Date.now() });
-        debouncedSave(currentProjectId, newDoc);
+        set({
+          document: { ...document },
+          lastSaved: Date.now(),
+        });
       },
 
       setToolParam: (tool, key, value) => {
         const { toolParams } = get();
         set({ toolParams: { ...toolParams, [tool]: { ...(toolParams[tool] ?? {}), [key]: value } } });
       },
+
+      setUserRole: (role) => set({ userRole: role }),
 
       pushHistory: (description) => {
         const { document, history, historyIndex } = get();
@@ -356,7 +266,8 @@ export const useDocumentStore = create<DocumentState>()(
           timestamp: Date.now(),
           description,
         });
-        // Cap history depth to avoid unbounded memory growth
+
+        // Cap history at MAX_HISTORY entries
         if (newHistory.length > MAX_HISTORY) {
           newHistory = newHistory.slice(newHistory.length - MAX_HISTORY);
         }
@@ -370,67 +281,61 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       undo: () => {
-        const { history, historyIndex, currentProjectId } = get();
+        const { history, historyIndex } = get();
         if (historyIndex <= 0) return;
 
         const newIndex = historyIndex - 1;
-        const restoredDoc = JSON.parse(JSON.stringify(history[newIndex].document)) as DocumentSchema;
-        set({ document: restoredDoc, historyIndex: newIndex, canUndo: newIndex > 0, canRedo: true });
-        debouncedSave(currentProjectId, restoredDoc);
+        set({
+          document: JSON.parse(JSON.stringify(history[newIndex].document)),
+          historyIndex: newIndex,
+          canUndo: newIndex > 0,
+          canRedo: true,
+        });
       },
 
       redo: () => {
-        const { history, historyIndex, currentProjectId } = get();
+        const { history, historyIndex } = get();
         if (historyIndex >= history.length - 1) return;
 
         const newIndex = historyIndex + 1;
-        const restoredDoc = JSON.parse(JSON.stringify(history[newIndex].document)) as DocumentSchema;
-        set({ document: restoredDoc, historyIndex: newIndex, canUndo: true, canRedo: newIndex < history.length - 1 });
-        debouncedSave(currentProjectId, restoredDoc);
+        set({
+          document: JSON.parse(JSON.stringify(history[newIndex].document)),
+          historyIndex: newIndex,
+          canUndo: true,
+          canRedo: newIndex < history.length - 1,
+        });
       },
 
       createVersion: (message) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) return;
 
         model.createVersion(message);
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc });
-        debouncedSave(currentProjectId, newDoc);
+        set({ document: { ...model.documentData } });
       },
 
       restoreVersion: (versionNumber) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) return;
 
         model.restoreVersion(versionNumber);
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc });
-        debouncedSave(currentProjectId, newDoc);
+        set({ document: { ...model.documentData } });
       },
 
       getVersionList: () => {
         const { model } = get();
-        return model?.getVersionList() ?? [];
+        if (!model) return [];
+        return model.getVersionList();
       },
 
       loadDocumentSchema: (schema) => {
-        const existing = get().model;
-        const userId = existing ? existing.documentData.metadata.createdBy : 'user-1';
-        const newModel = new DocumentModel(schema.id, userId);
-        newModel.loadDocument(schema);
-        const newDoc = { ...newModel.documentData };
-        set({
-          document: newDoc,
-          model: newModel,
-          currentProjectId: schema.id,
-          lastSaved: Date.now(),
-          history: [],
-          historyIndex: -1,
-          canUndo: false,
-          canRedo: false,
-        });
-        debouncedSave(schema.id, newDoc);
+        const { model } = get();
+        if (model) {
+          model.loadDocument(schema);
+          set({ document: { ...model.documentData } });
+        } else {
+          set({ document: schema });
+        }
       },
 
       setActiveLevel: (levelId) => {
@@ -438,35 +343,37 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       addLevel: (params) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) throw new Error('No document loaded');
 
         const levelId = model.addLevel({ name: params.name, elevation: params.elevation, height: params.height });
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc, selectedLevelId: levelId, lastSaved: Date.now() });
-        debouncedSave(currentProjectId, newDoc);
+        set({
+          document: { ...model.documentData },
+          selectedLevelId: levelId,
+          lastSaved: Date.now(),
+        });
         return levelId;
       },
 
       updateLevel: (levelId, updates) => {
-        const { document, currentProjectId } = get();
+        const { document } = get();
         if (!document) return;
         const level = document.organization.levels[levelId];
         if (!level) return;
         Object.assign(level, updates);
-        const newDoc = {
-          ...document,
-          organization: {
-            ...document.organization,
-            levels: { ...document.organization.levels, [levelId]: { ...level } },
+        set({
+          document: {
+            ...document,
+            organization: {
+              ...document.organization,
+              levels: { ...document.organization.levels, [levelId]: { ...level } },
+            },
           },
-        };
-        set({ document: newDoc });
-        debouncedSave(currentProjectId, newDoc);
+        });
       },
 
       deleteLevel: (levelId) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) return;
 
         const levels = model.documentData.organization.levels;
@@ -474,44 +381,22 @@ export const useDocumentStore = create<DocumentState>()(
 
         delete levels[levelId];
         const remainingIds = Object.keys(levels);
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc, selectedLevelId: remainingIds[0] ?? null, lastSaved: Date.now() });
-        debouncedSave(currentProjectId, newDoc);
+        set({
+          document: { ...model.documentData },
+          selectedLevelId: remainingIds[0] ?? null,
+          lastSaved: Date.now(),
+        });
       },
 
       renameLevel: (levelId, name) => {
-        const { model, currentProjectId } = get();
+        const { model } = get();
         if (!model) return;
 
         const level = model.documentData.organization.levels[levelId];
         if (!level) return;
         level.name = name;
         model.documentData.metadata.updatedAt = Date.now();
-        const newDoc = { ...model.documentData };
-        set({ document: newDoc });
-        debouncedSave(currentProjectId, newDoc);
-      },
-
-      applyRemoteDocument: (schema) => {
-        const existing = get().model;
-        const userId = existing ? existing.documentData.metadata.createdBy : 'user-1';
-        const newModel = new DocumentModel(schema.id, userId);
-        newModel.loadDocument(schema);
-        const newDoc = { ...newModel.documentData };
-        set({
-          document: newDoc,
-          model: newModel,
-          currentProjectId: schema.id,
-          lastSaved: Date.now(),
-          history: [],
-          historyIndex: -1,
-          canUndo: false,
-          canRedo: false,
-        });
-        // Save locally without broadcasting (avoids echo loop).
-        const key = `opencad-doc-${schema.id}`;
-        try { localStorage.setItem(key, JSON.stringify(newDoc)); } catch { /* quota */ }
-        void idbSaveProject(newDoc).catch(() => {});
+        set({ document: { ...model.documentData } });
       },
     }),
     {

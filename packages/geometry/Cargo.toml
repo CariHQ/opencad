@@ -1,0 +1,25 @@
+[package]
+name = "opencad-geometry"
+version = "0.1.0"
+edition = "2021"
+description = "OpenCAD Geometry WASM kernel — fast triangulation and BIM mesh generation"
+authors = ["OpenCAD Team"]
+
+[lib]
+name = "opencad_geometry"
+path = "src-rust/lib.rs"
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+wasm-bindgen = "=0.2.93"
+js-sys = "=0.3.70"
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3.43"
+
+[profile.release]
+opt-level = 3
+lto = true
+
+[package.metadata.wasm-pack.profile.release]
+wasm-opt = false

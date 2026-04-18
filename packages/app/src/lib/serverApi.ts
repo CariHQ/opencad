@@ -1,60 +1,112 @@
 /**
- * Thin client for the OpenCAD REST API server.
+ * Server API client — all calls to the OpenCAD backend.
  *
- * Default base URL: http://localhost:8081 (local dev).
- * Override via VITE_SERVER_URL env var.
- *
- * All methods gracefully return null / throw on failure — callers decide
- * whether to fall back to local storage.
+ * Auth: Firebase ID token attached via Authorization header.
+ * Base URL: proxied through Vite dev server; uses /api prefix in production.
  */
 
-const SERVER_URL: string =
-  (import.meta.env?.VITE_SERVER_URL as string | undefined) ?? 'http://localhost:47821';
+/**
+ * Token provider — injected at runtime by the auth layer so serverApi.ts
+ * doesn't have a hard compile-time dependency on firebase.
+ */
+let _getToken: (() => Promise<string | null>) | null = null;
 
-/** WebSocket base URL derived from the HTTP URL (http→ws, https→wss). */
-export const SERVER_WS_URL: string = SERVER_URL.replace(/^http/, 'ws');
-
-// ── Types ────────────────────────────────────────────────────────────────────
-
-export interface ServerProject {
-  id: string;
-  name: string;
-  created_at: string;
-  updated_at: string;
+export function registerTokenProvider(fn: () => Promise<string | null>): void {
+  _getToken = fn;
 }
 
-export interface ServerDocument {
-  project_id: string;
-  data: string;
-  version: number;
+async function authHeaders(): Promise<HeadersInit> {
+  const token = _getToken ? await _getToken().catch(() => null) : null;
+  return token
+    ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+    : { 'Content-Type': 'application/json' };
 }
 
-// ── Internal fetch helper ─────────────────────────────────────────────────────
-
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${SERVER_URL}${path}`, {
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = await authHeaders();
+  const res = await fetch(`/api/v1${path}`, {
     ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers: { ...headers, ...(init?.headers ?? {}) },
   });
   if (!res.ok) {
-    throw new Error(`${init?.method ?? 'GET'} ${path} → HTTP ${res.status}`);
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`API ${res.status}: ${text}`);
   }
-  if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
-// ── Health ────────────────────────────────────────────────────────────────────
+// ── Feedback ──────────────────────────────────────────────────────────────────
 
-/** Returns true if the server is reachable within 2 s. */
+export type FeedbackCategory = 'bug' | 'feature' | 'question';
+
+export interface FeedbackItem {
+  id: number;
+  title: string;
+  feasibility: string;
+  prd_label: string | null;
+  github_issue_url: string | null;
+  github_issue_number: number | null;
+}
+
+export const feedbackApi = {
+  submit: (
+    category: FeedbackCategory,
+    title: string,
+    description: string,
+  ): Promise<FeedbackItem> =>
+    apiFetch<FeedbackItem>('/feedback', {
+      method: 'POST',
+      body: JSON.stringify({ category, title, description }),
+    }),
+};
+
+// ── Documents ─────────────────────────────────────────────────────────────────
+
+export interface DocumentMeta {
+  id: string;
+  name: string;
+  updatedAt: number;
+}
+
+export const documentsApi = {
+  list: (): Promise<DocumentMeta[]> => apiFetch<DocumentMeta[]>('/documents'),
+  save: (projectId: string, schema: unknown): Promise<void> =>
+    apiFetch<void>(`/documents/${projectId}`, {
+      method: 'PUT',
+      body: JSON.stringify(schema),
+    }),
+};
+
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export interface UserProfile {
+  uid: string;
+  email: string;
+  role: string;
+  trialEndsAt: number | null;
+}
+
+export const authApi = {
+  me: (): Promise<UserProfile> => apiFetch<UserProfile>('/auth/me'),
+};
+
+// ── Server health ─────────────────────────────────────────────────────────────
+
+/** Base URL for HTTP API requests (without trailing slash). */
+export const SERVER_URL = (import.meta.env.VITE_SERVER_URL as string | undefined) ?? '';
+
+/** WebSocket URL for real-time sync. */
+export const SERVER_WS_URL = (import.meta.env.VITE_SERVER_WS_URL as string | undefined)
+  ?? (SERVER_URL ? SERVER_URL.replace(/^http/, 'ws') : 'ws://localhost:47821');
+
+/**
+ * Returns true if the OpenCAD backend is reachable.
+ * Uses the /api/v1/auth/me endpoint (unauthenticated 401 counts as "online").
+ */
 export async function isServerAvailable(): Promise<boolean> {
   try {
-    const res = await fetch(`${SERVER_URL}/health`, {
-      signal: AbortSignal.timeout(2000),
-    });
-    return res.ok;
+    const res = await fetch('/api/v1/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
+    return res.status < 500;
   } catch {
     return false;
   }
@@ -62,40 +114,25 @@ export async function isServerAvailable(): Promise<boolean> {
 
 // ── Projects ──────────────────────────────────────────────────────────────────
 
+export interface ProjectServerMeta {
+  id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export const projectsApi = {
-  list: (): Promise<ServerProject[]> =>
-    request<ServerProject[]>('/api/v1/projects'),
-
-  /**
-   * Create a project on the server.
-   * Pass `id` to preserve the client UUID (used during reconciliation so that
-   * locally-created projects keep the same ID when pushed to the server).
-   */
-  create: (name: string, id?: string): Promise<ServerProject> =>
-    request<ServerProject>('/api/v1/projects', {
+  list: (): Promise<ProjectServerMeta[]> => apiFetch<ProjectServerMeta[]>('/projects'),
+  create: (name: string, id?: string): Promise<ProjectServerMeta> =>
+    apiFetch<ProjectServerMeta>('/projects', {
       method: 'POST',
-      body: JSON.stringify(id ? { id, name } : { name }),
+      body: JSON.stringify({ name, id }),
     }),
-
-  update: (id: string, name: string): Promise<ServerProject> =>
-    request<ServerProject>(`/api/v1/projects/${id}`, {
+  update: (id: string, name: string): Promise<ProjectServerMeta> =>
+    apiFetch<ProjectServerMeta>(`/projects/${id}`, {
       method: 'PATCH',
       body: JSON.stringify({ name }),
     }),
-
   delete: (id: string): Promise<void> =>
-    request<void>(`/api/v1/projects/${id}`, { method: 'DELETE' }),
-};
-
-// ── Documents ─────────────────────────────────────────────────────────────────
-
-export const documentsApi = {
-  get: (projectId: string): Promise<ServerDocument | null> =>
-    request<ServerDocument>(`/api/v1/projects/${projectId}/document`).catch(() => null),
-
-  save: (projectId: string, data: string): Promise<ServerDocument> =>
-    request<ServerDocument>(`/api/v1/projects/${projectId}/document`, {
-      method: 'PUT',
-      body: JSON.stringify({ data }),
-    }),
+    apiFetch<void>(`/projects/${id}`, { method: 'DELETE' }),
 };

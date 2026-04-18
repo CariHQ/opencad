@@ -1,9 +1,8 @@
-import React, { useState, useCallback, useEffect } from 'react';
+import React, { useState } from 'react';
 import { LayoutGrid, List, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../stores/projectStore';
 import { ProjectTemplates } from './ProjectTemplates';
-import { isTauri, tauriStartDragging } from '../hooks/useTauri';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
@@ -21,21 +20,9 @@ export function ProjectDashboard() {
     setFilterBy,
     setSearchQuery,
     getFilteredProjects,
-    syncFromServer,
   } = useProjectStore();
 
-  useEffect(() => {
-    void syncFromServer();
-  }, [syncFromServer]);
-
   const projects = getFilteredProjects();
-
-  const handleHeaderMouseDown = useCallback((e: React.MouseEvent<HTMLElement>) => {
-    if (e.button !== 0) return;
-    if (!(e.target as HTMLElement).closest('button, input, a, select, [role="button"]')) {
-      if (isTauri()) tauriStartDragging();
-    }
-  }, []);
 
   function handleOpenProject(id: string) {
     openProject(id);
@@ -50,7 +37,7 @@ export function ProjectDashboard() {
 
   return (
     <div className="project-dashboard">
-      <header className="dashboard-header" data-tauri-drag-region onMouseDown={handleHeaderMouseDown}>
+      <header className="dashboard-header">
         <h1 className="dashboard-title">Projects</h1>
         <button className="btn-secondary" onClick={() => setShowTemplates(true)}>
           From Template
@@ -116,23 +103,14 @@ export function ProjectDashboard() {
 
       {projects.length === 0 ? (
         <div className="dashboard-empty">
-          <div className="empty-hero">
-            <h2 className="empty-title">No projects yet</h2>
-            <p className="empty-subtitle">Start with a blank canvas or choose a template below.</p>
-            <button className="btn-primary" onClick={handleNewProject}>
-              New Blank Project
-            </button>
-          </div>
-          <div className="empty-templates-section">
-            <p className="empty-templates-label">Or start from a template</p>
-            <ProjectTemplates
-              onSelect={(tmpl) => {
-                const id = createProject(tmpl.name);
-                openProject(id);
-                navigate(`/project/${id}`);
-              }}
-            />
-          </div>
+          <p>No projects yet. Create one to get started.</p>
+          <ProjectTemplates
+            onSelect={(tmpl) => {
+              const id = createProject(tmpl.name);
+              openProject(id);
+              navigate(`/project/${id}`);
+            }}
+          />
         </div>
       ) : (
         <div className={viewMode === 'grid' ? 'projects-grid' : 'projects-list'}>

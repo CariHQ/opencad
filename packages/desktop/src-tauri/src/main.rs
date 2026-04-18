@@ -9,6 +9,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri_plugin_dialog::{DialogExt, FilePath};
 
 struct AppState {
     db: Arc<Mutex<Connection>>,
@@ -202,6 +203,39 @@ fn save_file(path: String, content: String) -> Result<(), String> {
     fs::write(&path, content).map_err(|e| e.to_string())?;
     info!("Saved file: {}", path);
     Ok(())
+}
+
+/// T-DSK-006: Show a native open-file dialog filtered to .opencad, .ifc, and .dwg files.
+/// Returns the selected file path or None if the user cancels.
+#[tauri::command]
+async fn open_file_dialog(app: AppHandle) -> Result<Option<String>, String> {
+    let response = app
+        .dialog()
+        .file()
+        .add_filter("OpenCAD files", &["opencad", "ifc", "dwg"])
+        .blocking_pick_file();
+
+    match response {
+        Some(FilePath::Path(p)) => Ok(Some(p.to_string_lossy().into_owned())),
+        _ => Ok(None),
+    }
+}
+
+/// T-DSK-006: Show a native save-file dialog with a suggested filename.
+/// Returns the chosen path or None if the user cancels.
+#[tauri::command]
+async fn save_file_dialog(app: AppHandle, default_name: String) -> Result<Option<String>, String> {
+    let response = app
+        .dialog()
+        .file()
+        .set_file_name(&default_name)
+        .add_filter("OpenCAD Project", &["opencad"])
+        .blocking_save_file();
+
+    match response {
+        Some(FilePath::Path(p)) => Ok(Some(p.to_string_lossy().into_owned())),
+        _ => Ok(None),
+    }
 }
 
 #[tauri::command]
@@ -473,7 +507,9 @@ fn main() {
             list_projects,
             delete_project,
             open_file,
+            open_file_dialog,
             save_file,
+            save_file_dialog,
             get_storage_info,
             watch_file,
             unwatch_file,

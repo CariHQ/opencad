@@ -47,7 +47,7 @@ interface ThreeDViewProps {
 
 function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps) {
   const {
-    containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraTarget,
+    containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraState,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
   } = useThreeViewport();
 
@@ -66,7 +66,7 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
     if (viewType === 'section') {
       setSectionBox(true);
       // Default cut at camera target — put the slice through the model centre
-      const t = getCameraTarget();
+      const t = getCameraState()?.target ?? { x: 0, y: 0, z: 0 };
       setSectionPosition(Math.round(t.z));
     } else {
       setSectionBox(false);

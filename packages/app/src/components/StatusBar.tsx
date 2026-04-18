@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { SyncStatusBar, type SyncStatus } from './SyncStatusBar';
 import { getStorageUsage, isStorageQuotaWarning } from '@opencad/document';
+import { useRole } from '../hooks/useRole';
+import { RoleSwitcher } from './RoleSwitcher';
 
 export function StatusBar() {
   const { document: doc, isOnline, isSaving, lastSaved, selectedIds } = useDocumentStore();
   const [storageWarning, setStorageWarning] = useState(false);
+  const { role, config } = useRole();
 
   const syncStatus: SyncStatus = !isOnline ? 'offline' : isSaving ? 'syncing' : 'connected';
 
@@ -18,7 +21,6 @@ export function StatusBar() {
       } catch { /* non-fatal */ }
     };
     void check();
-    // Re-check every 5 minutes
     const id = setInterval(() => { void check(); }, 5 * 60 * 1000);
     return () => { active = false; clearInterval(id); };
   }, []);
@@ -49,6 +51,10 @@ export function StatusBar() {
             <span>{Object.keys(doc.content.elements).length} elements</span>
           </div>
         )}
+        <div className="status-item" title={`Current role: ${config.label}`}>
+          <span className={`role-badge role-badge--${role}`}>{config.label}</span>
+        </div>
+        {import.meta.env.DEV && <RoleSwitcher />}
       </div>
     </footer>
   );

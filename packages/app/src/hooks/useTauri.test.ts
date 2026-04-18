@@ -1,6 +1,9 @@
 /**
  * useTauri hook tests
  * T-DSK-001: Tauri integration utilities
+ * T-DSK-002: Open .opencad file via file association
+ * T-DSK-005: Drag-and-drop from OS
+ * T-DSK-006: Save file → writes to native filesystem (not download)
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { isTauri } from './useTauri';
@@ -137,5 +140,176 @@ describe('T-DSK-001: useTauri utilities', () => {
       const result = await tauriGetLocalAIStatus();
       expect(result.available).toBe(true);
     });
+  });
+});
+
+// ─── T-DSK-002: Open .opencad file via file association ───────────────────────
+
+describe('T-DSK-002: openFile', () => {
+  const mockInvoke = vi.fn();
+
+  beforeEach(() => {
+    (window as Window & { __TAURI__?: { core: { invoke: typeof mockInvoke } } }).__TAURI__ = {
+      core: { invoke: mockInvoke },
+    };
+  });
+
+  afterEach(() => {
+    delete (window as Window & { __TAURI__?: unknown }).__TAURI__;
+    vi.clearAllMocks();
+  });
+
+  it('openFile(path) calls invoke("open_file", { path }) and returns parsed DocumentSchema', async () => {
+    const schema = {
+      id: 'proj-1',
+      name: 'Test Project',
+      version: { clock: {} },
+      metadata: { createdAt: 0, updatedAt: 0, createdBy: 'user', schemaVersion: '1' },
+      content: { elements: {}, spaces: {} },
+      organization: { layers: {}, levels: {} },
+      presentation: { views: {}, annotations: {} },
+      library: { materials: {} },
+    };
+    mockInvoke.mockResolvedValue(JSON.stringify(schema));
+    const { openFile } = await import('./useTauri');
+    const result = await openFile('/path/to/project.opencad');
+    expect(mockInvoke).toHaveBeenCalledWith('open_file', { path: '/path/to/project.opencad' });
+    expect(result).toEqual(schema);
+  });
+
+  it('openFile("nonexistent.opencad") rejects with an error message', async () => {
+    mockInvoke.mockRejectedValue(new Error('File not found: nonexistent.opencad'));
+    const { openFile } = await import('./useTauri');
+    await expect(openFile('nonexistent.opencad')).rejects.toThrow('File not found');
+  });
+
+  it('openFile rejects with invalid JSON content', async () => {
+    mockInvoke.mockResolvedValue('not valid json');
+    const { openFile } = await import('./useTauri');
+    await expect(openFile('/path/to/broken.opencad')).rejects.toThrow();
+  });
+});
+
+// ─── T-DSK-005: Drag-and-drop from OS ──────────────────────────────────────
+
+describe('T-DSK-005: onFileDrop', () => {
+  const mockInvoke = vi.fn();
+
+  beforeEach(() => {
+    (window as Window & { __TAURI__?: { core: { invoke: typeof mockInvoke } } }).__TAURI__ = {
+      core: { invoke: mockInvoke },
+    };
+  });
+
+  afterEach(() => {
+    delete (window as Window & { __TAURI__?: unknown }).__TAURI__;
+    vi.clearAllMocks();
+  });
+
+  it('onFileDrop(handler) registers a drop handler and returns an unlisten function', async () => {
+    const { onFileDrop } = await import('./useTauri');
+    const handler = vi.fn();
+    const unlisten = onFileDrop(handler);
+    expect(typeof unlisten).toBe('function');
+  });
+
+  it('when "tauri://file-drop" fires with paths, handler is called with the paths', async () => {
+    const { onFileDrop } = await import('./useTauri');
+    const handler = vi.fn();
+
+    // Register the drop handler — this sets up a window event listener
+    onFileDrop(handler);
+
+    // Simulate the tauri://file-drop event with a payload
+    const dropEvent = new CustomEvent('tauri://file-drop', {
+      detail: { paths: ['path/to/file.opencad'] },
+    });
+    window.dispatchEvent(dropEvent);
+
+    expect(handler).toHaveBeenCalledWith(['path/to/file.opencad']);
+  });
+
+  it('when dropped file is .ifc, handler is called with the .ifc path (not filtered out)', async () => {
+    const { onFileDrop } = await import('./useTauri');
+    const handler = vi.fn();
+    onFileDrop(handler);
+
+    const dropEvent = new CustomEvent('tauri://file-drop', {
+      detail: { paths: ['path/to/model.ifc'] },
+    });
+    window.dispatchEvent(dropEvent);
+
+    expect(handler).toHaveBeenCalledWith(['path/to/model.ifc']);
+  });
+
+  it('unlisten function removes the handler so it no longer fires', async () => {
+    const { onFileDrop } = await import('./useTauri');
+    const handler = vi.fn();
+    const unlisten = onFileDrop(handler);
+    unlisten();
+
+    const dropEvent = new CustomEvent('tauri://file-drop', {
+      detail: { paths: ['file.dwg'] },
+    });
+    window.dispatchEvent(dropEvent);
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+});
+
+// ─── T-DSK-006: Save file → writes to native filesystem (not download) ────────
+
+describe('T-DSK-006: saveFile and saveFileDialog', () => {
+  const mockInvoke = vi.fn();
+
+  beforeEach(() => {
+    (window as Window & { __TAURI__?: { core: { invoke: typeof mockInvoke } } }).__TAURI__ = {
+      core: { invoke: mockInvoke },
+    };
+  });
+
+  afterEach(() => {
+    delete (window as Window & { __TAURI__?: unknown }).__TAURI__;
+    vi.clearAllMocks();
+  });
+
+  it('saveFile(path, content) calls invoke("save_file", { path, content })', async () => {
+    mockInvoke.mockResolvedValue(undefined);
+    const { saveFile } = await import('./useTauri');
+    await saveFile('/Users/me/project.opencad', '{"id":"proj-1"}');
+    expect(mockInvoke).toHaveBeenCalledWith('save_file', {
+      path: '/Users/me/project.opencad',
+      content: '{"id":"proj-1"}',
+    });
+  });
+
+  it('saveFileDialog(defaultName) calls invoke("save_file_dialog", { defaultName }) and returns chosen path', async () => {
+    mockInvoke.mockResolvedValue('/Users/me/Desktop/my-project.opencad');
+    const { saveFileDialog } = await import('./useTauri');
+    const result = await saveFileDialog('my-project.opencad');
+    expect(mockInvoke).toHaveBeenCalledWith('save_file_dialog', { defaultName: 'my-project.opencad' });
+    expect(result).toBe('/Users/me/Desktop/my-project.opencad');
+  });
+
+  it('saveFileDialog returns null when user cancels', async () => {
+    mockInvoke.mockResolvedValue(null);
+    const { saveFileDialog } = await import('./useTauri');
+    const result = await saveFileDialog('untitled.opencad');
+    expect(result).toBeNull();
+  });
+
+  it('openFileDialog calls invoke("open_file_dialog") and returns chosen path', async () => {
+    mockInvoke.mockResolvedValue('/Users/me/Documents/building.opencad');
+    const { openFileDialog } = await import('./useTauri');
+    const result = await openFileDialog();
+    expect(mockInvoke).toHaveBeenCalledWith('open_file_dialog', {});
+    expect(result).toBe('/Users/me/Documents/building.opencad');
+  });
+
+  it('openFileDialog returns null when user cancels', async () => {
+    mockInvoke.mockResolvedValue(null);
+    const { openFileDialog } = await import('./useTauri');
+    const result = await openFileDialog();
+    expect(result).toBeNull();
   });
 });

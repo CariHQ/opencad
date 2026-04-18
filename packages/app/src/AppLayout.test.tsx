@@ -4,13 +4,13 @@
  * Verifies: the full layout renders without crash, toolbar tabs switch views,
  * theme toggle works, AI panel toggle works, panel collapse/focus mode.
  */
-import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import '@testing-library/jest-dom/vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppLayout } from './AppLayout';
 import { useDocumentStore } from './stores/documentStore';
-expect.extend(jestDomMatchers);
+import type { RoleId } from './config/roles';
 
 // jsdom doesn't implement scrollIntoView or matchMedia
 window.HTMLElement.prototype.scrollIntoView = vi.fn();
@@ -53,11 +53,20 @@ vi.mock('./hooks/useViewport', () => ({
   }),
 }));
 
+function setRole(role: RoleId | null) {
+  useDocumentStore.setState({ userRole: role });
+}
+
 describe('T-UI-006: AppLayout', () => {
   beforeEach(() => {
     // Clear localStorage so tests don't bleed state
     localStorage.clear();
     useDocumentStore.getState().initProject('test', 'user');
+    setRole(null); // architect default
+  });
+
+  afterEach(() => {
+    setRole(null);
   });
 
   it('renders brand name', () => {
@@ -98,24 +107,25 @@ describe('T-UI-006: AppLayout', () => {
     expect(floorPlanTab).toHaveClass('active');
   });
 
-  it('shows AI chat panel when Bot button is clicked', async () => {
+  it('shows AI chat panel when Bot button is clicked', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
-    fireEvent.click(screen.getByTitle('AI Assistant'));
-    await waitFor(() => expect(screen.getByText('AI Assistant')).toBeInTheDocument());
+    const aiBtn = screen.getByTitle('AI Assistant');
+    fireEvent.click(aiBtn);
+    expect(screen.getByText('AI Assistant')).toBeInTheDocument();
   });
 
-  it('closes AI chat panel when close button is clicked', async () => {
+  it('closes AI chat panel when close button is clicked', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('AI Assistant'));
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Close AI chat' })).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: 'Close AI chat' }));
-    await waitFor(() => expect(screen.queryByRole('button', { name: 'Close AI chat' })).not.toBeInTheDocument());
+    const closeBtn = screen.getByRole('button', { name: 'Close AI chat' });
+    fireEvent.click(closeBtn);
+    expect(screen.queryByText('AI Assistant')).not.toBeInTheDocument();
   });
 
-  it('opens import modal when import button is clicked', async () => {
+  it('opens import modal when import button is clicked', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     fireEvent.click(screen.getByTitle('Import IFC'));
-    await waitFor(() => expect(screen.getAllByText(/Import/).length).toBeGreaterThan(0));
+    expect(screen.getByText(/Import/)).toBeInTheDocument();
   });
 
   // Panel collapse
@@ -151,6 +161,27 @@ describe('T-UI-006: AppLayout', () => {
     fireEvent.keyDown(window, { key: '\\' });
     expect(document.querySelector('.app-toolbar')).toBeNull();
     expect(screen.getByText(/exit focus mode/i)).toBeInTheDocument();
+  });
+
+  // T-ROLE-003: panel gating tests
+  describe('role-based panel gating (T-ROLE-003)', () => {
+    it('architect sees AI Assistant button', () => {
+      setRole('architect');
+      render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
+      expect(screen.getByTitle('AI Assistant')).toBeInTheDocument();
+    });
+
+    it('structural engineer does not see AI Assistant button', () => {
+      setRole('structural');
+      render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
+      expect(screen.queryByTitle('AI Assistant')).not.toBeInTheDocument();
+    });
+
+    it('owner does not see AI Assistant button', () => {
+      setRole('owner');
+      render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
+      expect(screen.queryByTitle('AI Assistant')).not.toBeInTheDocument();
+    });
   });
 
   it('exits focus mode on second \\ keypress', () => {

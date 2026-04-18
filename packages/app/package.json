@@ -18,14 +18,16 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
+    "@opencad/ai": "workspace:*",
     "@opencad/document": "workspace:*",
     "@opencad/geometry": "workspace:*",
     "@opencad/shared": "workspace:*",
-    "firebase": "^12.12.0",
+    "idb": "^7.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-router-dom": "^7.14.1",
     "three": "^0.183.2",
+    "workbox-window": "^7.4.0",
     "zustand": "^5.0.0"
   },
   "devDependencies": {
@@ -38,9 +40,9 @@
     "@types/three": "^0.183.1",
     "@vitejs/plugin-react": "^6.0.1",
     "jsdom": "^29.0.2",
-    "playwright": "^1.59.1",
     "typescript": "^6.0.2",
     "vite": "^8.0.8",
-    "vitest": "^1.6.1"
+"vite-plugin-pwa": "^1.2.0",
+    "vitest": "^4.1.4"
   }
 }

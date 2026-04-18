@@ -4,21 +4,12 @@ import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles/index.css';
 
-// Stamp the HTML element before React mounts so CSS can target Tauri vs browser
-// without any runtime flicker.  The class is used purely for layout — e.g.
-// shifting the toolbar right to clear the macOS traffic-light buttons.
-if (typeof window !== 'undefined' && (window as Window & { __TAURI__?: unknown }).__TAURI__) {
-  document.documentElement.classList.add('tauri-window');
-}
+// Register service worker for PWA / offline support.
+// vite-plugin-pwa generates the SW and the virtual module at build time.
+// In dev mode the virtual module is a no-op so this is safe in all environments.
+import { registerSW } from 'virtual:pwa-register';
 
-// Register service worker for PWA / offline support
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
-      // Service worker registration failure is non-fatal
-    });
-  });
-}
+registerSW({ immediate: false });
 
 const container = document.getElementById('root');
 if (!container) {
