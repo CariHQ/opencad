@@ -253,9 +253,7 @@ body {
   right: -4px;
 }
 
-.panel-resizer--right {
-  order: 1;
-}
+/* panel-resizer--right: no order override needed — DOM position handles placement */
 
 /* Navigator Panel */
 .app-left-panel {
@@ -481,29 +479,9 @@ body {
 
 .tool-btn.active {
   color: var(--accent-primary);
-  position: relative;
 }
 
-/* Symmetric accent bars on both sides of the active tool */
-.tool-btn.active::before,
-.tool-btn.active::after {
-  content: '';
-  position: absolute;
-  top: 25%;
-  height: 50%;
-  width: 2px;
-  background: var(--accent-primary);
-}
-
-.tool-btn.active::before {
-  left: 0;
-  border-radius: 0 2px 2px 0;
-}
-
-.tool-btn.active::after {
-  right: 0;
-  border-radius: 2px 0 0 2px;
-}
+/* Active tool: icon color only — no bars, no backgrounds */
 
 /* Main Viewport */
 .app-main {
@@ -1870,18 +1848,6 @@ body {
 
 .right-panel-tab-btn.active {
   color: var(--accent-primary);
-  position: relative;
-}
-
-.right-panel-tab-btn.active::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 25%;
-  height: 50%;
-  width: 2px;
-  background: var(--accent-primary);
-  border-radius: 2px 0 0 2px;
 }
 
 .right-panel-content {

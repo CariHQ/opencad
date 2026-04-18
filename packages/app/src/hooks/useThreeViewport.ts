@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
 import { useDocumentStore } from '../stores/documentStore';
 import { type ElementSchema } from '@opencad/document';
+import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
@@ -83,6 +84,9 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
   const [sectionBox, setSectionBox] = useState(false);
   const [sectionPosition, setSectionPosition] = useState(0);
   const [sectionDirection, setSectionDirection] = useState<'x' | 'y' | 'z'>('z');
+
+  const [contextMenuState, setContextMenuState] = useState<{ x: number; y: number; items: ContextMenuGroup } | null>(null);
+  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
 
   const saveSectionView = useCallback(() => {
     // Persist the current section view settings
@@ -254,43 +258,72 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
+      // Don't consume keys when user is typing in an input
+      const tag = (event.target as HTMLElement).tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+
+      const cs = cameraStateRef.current;
+      const panStep = cs.distance * 0.05;
+
       switch (event.key) {
-        case '1':
-          setViewPreset('top');
+        case '1': setViewPreset('top'); break;
+        case '2': setViewPreset('front'); break;
+        case '3': setViewPreset('right'); break;
+        case '4': setViewPreset('3d'); break;
+        case '0': zoomToFit(); break;
+        case '+': case '=': zoomIn(); break;
+        case '-': zoomOut(); break;
+        // Arrow key pan
+        case 'ArrowLeft':
+          cs.target.x -= panStep;
+          updateCamera();
+          event.preventDefault();
           break;
-        case '2':
-          setViewPreset('front');
+        case 'ArrowRight':
+          cs.target.x += panStep;
+          updateCamera();
+          event.preventDefault();
           break;
-        case '3':
-          setViewPreset('right');
+        case 'ArrowUp':
+          cs.target.y += panStep;
+          updateCamera();
+          event.preventDefault();
           break;
-        case '4':
-          setViewPreset('3d');
-          break;
-        case '0':
-          zoomToFit();
-          break;
-        case '+':
-        case '=':
-          zoomIn();
-          break;
-        case '-':
-          zoomOut();
+        case 'ArrowDown':
+          cs.target.y -= panStep;
+          updateCamera();
+          event.preventDefault();
           break;
       }
     },
-    [setViewPreset, zoomIn, zoomOut, zoomToFit]
+    [setViewPreset, zoomIn, zoomOut, zoomToFit, updateCamera]
   );
 
+  // Use a ref for selectedIds so handleMouseDown never changes identity on selection change
+  const selectedIdsRef = useRef(selectedIds);
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
+
   const isDragging = useRef(false);
+  // 'orbit' = left drag rotates camera; 'pan' = middle/right drag translates target
+  const dragMode = useRef<'orbit' | 'pan'>('orbit');
   const lastMouse = useRef({ x: 0, y: 0 });
 
+  // Stable ref — never changes, so it won't invalidate the main setup effect
   const handleMouseDown = useCallback(
     (event: MouseEvent) => {
       const container = containerRef.current;
       if (!container) return;
 
-      if (event.button === 0 && !isViewOnly) {
+      if (event.button === 1 || event.button === 2) {
+        // Middle or right button → pan
+        isDragging.current = true;
+        dragMode.current = 'pan';
+        lastMouse.current = { x: event.clientX, y: event.clientY };
+        event.preventDefault();
+        return;
+      }
+
+      if (event.button === 0) {
         const { camera, scene, renderer } = stateRef.current;
         if (!camera || !scene || !renderer) return;
 
@@ -300,48 +333,37 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-
         const meshes = Array.from(elementMeshesRef.current.values());
         const intersects = raycaster.intersectObjects(meshes);
 
-        if (intersects.length > 0) {
+        if (intersects.length > 0 && !isViewOnly) {
+          // Hit an element → select it
           const mesh = intersects[0].object as THREE.Mesh;
           const elementId = mesh.userData.elementId as string;
+          const current = selectedIdsRef.current;
           if (event.shiftKey) {
-            if (selectedIds.includes(elementId)) {
-              setSelectedIds(selectedIds.filter((id) => id !== elementId));
-            } else {
-              setSelectedIds([...selectedIds, elementId]);
-            }
+            setSelectedIds(
+              current.includes(elementId)
+                ? current.filter((id) => id !== elementId)
+                : [...current, elementId]
+            );
           } else {
             setSelectedIds([elementId]);
           }
-        } else if (!event.shiftKey) {
-          setSelectedIds([]);
         } else {
+          // Empty space → start orbit drag; deselect if not shift
           isDragging.current = true;
+          dragMode.current = 'orbit';
           lastMouse.current = { x: event.clientX, y: event.clientY };
+          if (!event.shiftKey && !isViewOnly) {
+            setSelectedIds([]);
+          }
         }
       }
-
-      if (event.button === 0 && isViewOnly) {
-        isDragging.current = true;
-        lastMouse.current = { x: event.clientX, y: event.clientY };
-      }
-
-      if (event.button === 1) {
-        isDragging.current = true;
-        lastMouse.current = { x: event.clientX, y: event.clientY };
-        event.preventDefault();
-      }
-
-      if (event.button === 2) {
-        isDragging.current = true;
-        lastMouse.current = { x: event.clientX, y: event.clientY };
-        event.preventDefault();
-      }
     },
-    [isViewOnly, selectedIds, setSelectedIds]
+    // Intentionally stable: selectedIds accessed via ref, not closure
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [isViewOnly, setSelectedIds]
   );
 
   const handleMouseMove = useCallback(
@@ -354,28 +376,25 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
       const deltaX = event.clientX - lastMouse.current.x;
       const deltaY = event.clientY - lastMouse.current.y;
 
-      if (event.buttons === 1) {
+      if (dragMode.current === 'orbit') {
         const cs = cameraStateRef.current;
         cs.azimuth -= deltaX * 0.005;
         cs.elevation -= deltaY * 0.005;
         cs.elevation = Math.max(0.01, Math.min(Math.PI - 0.01, cs.elevation));
         updateCamera();
-      } else if (event.buttons === 4) {
+      } else {
+        // Pan: translate target in camera-relative horizontal plane
         const cs = cameraStateRef.current;
-        const forward = new THREE.Vector3();
-        camera.getWorldDirection(forward);
-        forward.y = 0;
-        forward.normalize();
-
+        const panSpeed = cs.distance * 0.001;
         const right = new THREE.Vector3();
-        right.crossVectors(forward, new THREE.Vector3(0, 0, 1)).normalize();
+        const up = new THREE.Vector3(0, 0, 1);
+        camera.getWorldDirection(right);
+        right.z = 0;
+        right.normalize();
+        const panRight = right.clone().cross(up).normalize();
 
-        cs.target.addScaledVector(right, -deltaX * 5);
-        cs.target.addScaledVector(forward, deltaY * 5);
-        updateCamera();
-      } else if (event.buttons === 2) {
-        const cs = cameraStateRef.current;
-        cs.distance = Math.max(500, cs.distance - deltaY * 20);
+        cs.target.addScaledVector(panRight, deltaX * panSpeed);
+        cs.target.addScaledVector(right, -deltaY * panSpeed);
         updateCamera();
       }
 
@@ -386,9 +405,33 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {
+      event.preventDefault();
       const cs = cameraStateRef.current;
-      const zoomFactor = event.deltaY > 0 ? 1.1 : 0.9;
-      cs.distance = Math.max(500, Math.min(50000, cs.distance * zoomFactor));
+
+      if (event.ctrlKey) {
+        // Trackpad pinch-to-zoom: ctrlKey is set by browser for pinch gesture
+        const zoomFactor = 1 + event.deltaY * 0.01;
+        cs.distance = Math.max(500, Math.min(50000, cs.distance * zoomFactor));
+      } else if (Math.abs(event.deltaX) > Math.abs(event.deltaY) * 0.5 && Math.abs(event.deltaX) > 3) {
+        // Trackpad horizontal scroll → pan left/right
+        const { camera } = stateRef.current;
+        if (!camera) return;
+        const panSpeed = cs.distance * 0.0008;
+        const right = new THREE.Vector3();
+        camera.getWorldDirection(right);
+        right.z = 0;
+        right.normalize();
+        const panRight = right.clone().cross(new THREE.Vector3(0, 0, 1)).normalize();
+        cs.target.addScaledVector(panRight, event.deltaX * panSpeed);
+        if (Math.abs(event.deltaY) > 3) {
+          cs.target.addScaledVector(right, -event.deltaY * panSpeed);
+        }
+      } else {
+        // Vertical scroll → zoom (mouse wheel and trackpad two-finger vertical)
+        const zoomFactor = event.deltaY > 0 ? 1.08 : 0.92;
+        cs.distance = Math.max(500, Math.min(50000, cs.distance * zoomFactor));
+      }
+
       updateCamera();
     },
     [updateCamera]
@@ -396,6 +439,40 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
   const handleContextMenu = useCallback((event: Event) => {
     event.preventDefault();
+    const me = event as MouseEvent;
+    const container = containerRef.current;
+    const { camera } = stateRef.current;
+    if (!container || !camera) return;
+
+    const rect = container.getBoundingClientRect();
+    const nx = ((me.clientX - rect.left) / rect.width) * 2 - 1;
+    const ny = -((me.clientY - rect.top) / rect.height) * 2 + 1;
+
+    const raycaster = new THREE.Raycaster();
+    raycaster.setFromCamera(new THREE.Vector2(nx, ny), camera);
+    const meshes = Array.from(elementMeshesRef.current.values());
+    const intersects = raycaster.intersectObjects(meshes);
+
+    const ids = selectedIdsRef.current;
+    let elementContext: import('../components/contextMenu/contextMenuItems').ElementContext;
+    if (intersects.length > 0) {
+      const mesh = intersects[0].object as THREE.Mesh;
+      const eType = mesh.userData.elementType as string;
+      if (ids.length > 1) {
+        elementContext = 'multi';
+      } else if (eType === 'wall' || eType === 'door' || eType === 'window') {
+        elementContext = eType as 'wall' | 'door' | 'window';
+      } else if (eType === 'slab' || eType === 'column' || eType === 'beam' || eType === 'stair' || eType === 'roof' || eType === 'space') {
+        elementContext = eType as ElementContext;
+      } else {
+        elementContext = 'empty';
+      }
+    } else {
+      elementContext = 'empty';
+    }
+
+    const items = getContextMenuItems('3d', elementContext);
+    setContextMenuState({ x: me.clientX - rect.left, y: me.clientY - rect.top, items });
   }, []);
 
   useEffect(() => {
@@ -451,16 +528,15 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     };
     animate();
 
+    const onMouseUp = () => { isDragging.current = false; };
+    const onMouseLeave = () => { isDragging.current = false; };
+
     container.addEventListener('mousedown', handleMouseDown);
     container.addEventListener('mousemove', handleMouseMove);
-    container.addEventListener('wheel', handleWheel);
+    container.addEventListener('wheel', handleWheel, { passive: false });
     container.addEventListener('contextmenu', handleContextMenu);
-    container.addEventListener('mouseup', () => {
-      isDragging.current = false;
-    });
-    container.addEventListener('mouseleave', () => {
-      isDragging.current = false;
-    });
+    container.addEventListener('mouseup', onMouseUp);
+    container.addEventListener('mouseleave', onMouseLeave);
 
     window.addEventListener('keydown', handleKeyDown);
 
@@ -483,6 +559,8 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
       container.removeEventListener('mousemove', handleMouseMove);
       container.removeEventListener('wheel', handleWheel);
       container.removeEventListener('contextmenu', handleContextMenu);
+      container.removeEventListener('mouseup', onMouseUp);
+      container.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('keydown', handleKeyDown);
       renderer.dispose();
       if (container.contains(renderer.domElement)) {
@@ -602,5 +680,7 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     sectionDirection,
     setSectionDirection,
     saveSectionView,
+    contextMenuState,
+    closeContextMenu,
   };
 }

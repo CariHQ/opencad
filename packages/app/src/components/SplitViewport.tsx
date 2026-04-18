@@ -2,6 +2,8 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Square, Columns, LayoutGrid, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
+import { ContextMenu } from './contextMenu/ContextMenu';
+import { useDocumentStore } from '../stores/documentStore';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -64,7 +66,9 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
   const {
     containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraState,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
+    contextMenuState, closeContextMenu,
   } = useThreeViewport();
+  const { setActiveTool, deleteElement, setSelectedIds, selectedIds } = useDocumentStore();
 
   const zoomToFitRef = useRef(zoomToFit);
   zoomToFitRef.current = zoomToFit;
@@ -162,10 +166,33 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
           {isViewOnly
             ? 'View only'
             : viewType === 'section'
-              ? 'Section: drag slider to move cut plane · Orbit: drag · Zoom: scroll'
-              : 'Orbit: drag · Pan: middle-drag · Zoom: scroll · Fit: 0'}
+              ? 'Section: drag slider · Orbit: drag · Pan: middle-drag · Zoom: scroll/pinch'
+              : 'Orbit: drag · Pan: middle/right-drag · Zoom: scroll/pinch · Arrows: pan · Fit: 0'}
         </span>
       </div>
+
+      {/* Context menu — shown on right-click */}
+      {contextMenuState && (
+        <ContextMenu
+          x={contextMenuState.x}
+          y={contextMenuState.y}
+          viewportW={containerRef.current?.clientWidth ?? 800}
+          viewportH={containerRef.current?.clientHeight ?? 600}
+          items={contextMenuState.items}
+          onClose={closeContextMenu}
+          onAction={(action) => {
+            closeContextMenu();
+            if (action === 'delete') {
+              selectedIds.forEach((id) => deleteElement(id));
+              setSelectedIds([]);
+            } else if (action === 'select') {
+              setActiveTool('select');
+            } else if (action === 'deselect') {
+              setSelectedIds([]);
+            }
+          }}
+        />
+      )}
     </div>
   );
 }
