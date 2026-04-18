@@ -490,12 +490,77 @@ export function useThreeViewport() {
     };
   }, []);
 
+  /**
+   * T-3D-003: Simulate an orbit drag: deltaX rotates azimuth, deltaY changes elevation.
+   * Elevation is clamped to [0.01, π-0.01] to prevent gimbal lock.
+   * Units: pixels (same as mouse delta — 1 px ≈ 0.005 rad).
+   */
+  const simulateOrbit = useCallback(
+    (deltaX: number, deltaY: number) => {
+      const cs = cameraStateRef.current;
+      cs.azimuth   -= deltaX * 0.005;
+      cs.elevation -= deltaY * 0.005;
+      cs.elevation  = Math.max(0.01, Math.min(Math.PI - 0.01, cs.elevation));
+      updateCamera();
+    },
+    [updateCamera]
+  );
+
+  /**
+   * T-3D-003: Simulate a pan: translate the camera target by (dx, dy) world units
+   * relative to the camera's horizontal plane.
+   */
+  const simulatePan = useCallback(
+    (dx: number, dy: number) => {
+      const cs = cameraStateRef.current;
+      cs.target.x -= dx;
+      cs.target.z -= dy;
+      updateCamera();
+    },
+    [updateCamera]
+  );
+
+  /**
+   * T-3D-003: Simulate a zoom: positive delta zooms out, negative zooms in.
+   * Distance is clamped to [500, 50000].
+   */
+  const simulateZoom = useCallback(
+    (delta: number) => {
+      const cs = cameraStateRef.current;
+      cs.distance = Math.max(500, Math.min(50000, cs.distance + delta));
+      updateCamera();
+    },
+    [updateCamera]
+  );
+
+  /**
+   * T-3D-005: Return a snapshot of the current camera spherical state.
+   * Useful for assertions in tests.
+   */
+  const getCameraState = useCallback(
+    () => ({
+      azimuth:   cameraStateRef.current.azimuth,
+      elevation: cameraStateRef.current.elevation,
+      distance:  cameraStateRef.current.distance,
+      target: {
+        x: cameraStateRef.current.target.x,
+        y: cameraStateRef.current.target.y,
+        z: cameraStateRef.current.target.z,
+      },
+    }),
+    []
+  );
+
   return {
     containerRef,
     setViewPreset,
     zoomIn,
     zoomOut,
     zoomToFit,
+    getCameraState,
+    simulateOrbit,
+    simulatePan,
+    simulateZoom,
     sectionBox,
     setSectionBox,
     sectionPosition,
