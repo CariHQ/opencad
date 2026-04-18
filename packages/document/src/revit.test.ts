@@ -3,7 +3,7 @@
  * T-IO-008: Revit RVT import produces valid document
  */
 import { describe, it, expect } from 'vitest';
-import { parseRVT } from './revit';
+import { parseRVT, detectFormat as detectRVT, importFile as importRVT } from './revit';
 
 const MINIMAL_RVT = `
 <RevitModel>
@@ -102,5 +102,44 @@ describe('T-IO-008: parseRVT', () => {
     const doc = parseRVT(MINIMAL_RVT);
     const report = (doc.metadata as { importReport: { elements: number } }).importReport;
     expect(report.elements).toBe(3);
+  });
+});
+
+// T-DOC-007: Binary format detection and stub import for Revit
+describe('T-DOC-007: Revit detectFormat + importFile', () => {
+  function makeBuffer(bytes: number[]): ArrayBuffer {
+    const buf = new ArrayBuffer(bytes.length);
+    const view = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i++) view[i] = bytes[i];
+    return buf;
+  }
+
+  it('detectFormat returns true for RVT magic bytes 44 4F C8 F4', () => {
+    const buf = makeBuffer([0x44, 0x4f, 0xc8, 0xf4, 0x00, 0x00]);
+    expect(detectRVT(buf)).toBe(true);
+  });
+
+  it('detectFormat returns false for non-RVT bytes', () => {
+    const buf = makeBuffer([0x00, 0x01, 0x02, 0x03]);
+    expect(detectRVT(buf)).toBe(false);
+  });
+
+  it('detectFormat returns false for empty buffer', () => {
+    const buf = makeBuffer([]);
+    expect(detectRVT(buf)).toBe(false);
+  });
+
+  it('importFile returns a DocumentSchema with at least one element', () => {
+    const buf = makeBuffer([0x44, 0x4f, 0xc8, 0xf4]);
+    const result = importRVT(buf, 'proj-456');
+    expect(result.schema).toBeDefined();
+    expect(Object.keys(result.schema.content.elements).length).toBeGreaterThan(0);
+  });
+
+  it('importFile includes a warning about stub implementation', () => {
+    const buf = makeBuffer([0x44, 0x4f, 0xc8, 0xf4]);
+    const result = importRVT(buf, 'proj-456');
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings[0]).toMatch(/Revit/i);
   });
 });

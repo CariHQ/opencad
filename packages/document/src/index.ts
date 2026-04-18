@@ -17,8 +17,30 @@ export * from './ifc';
 export * from './versioning';
 export * from './io';
 export * from './material';
-export * from './archicad';
-export * from './revit';
 export * from './dwg';
 export * from './pdf';
-export * from './sketchup';
+
+// ArchiCAD adapter — explicit exports to avoid name collisions with ./io#detectFormat
+export {
+  parsePLN,
+  parsePLA,
+  parseGDL,
+  detectFormat as detectArchicadFormat,
+  importFile as importArchicadFile,
+  type PLAObject,
+} from './archicad';
+
+// Revit adapter — explicit exports to avoid name collisions with ./io#detectFormat
+export {
+  parseRVT,
+  detectFormat as detectRevitFormat,
+  importFile as importRevitFile,
+} from './revit';
+
+// SketchUp adapter — explicit exports to avoid name collisions with ./io#detectFormat
+export {
+  parseSKP,
+  serializeSKP,
+  detectFormat as detectSKPFormat,
+  importFile as importSKPFile,
+} from './sketchup';

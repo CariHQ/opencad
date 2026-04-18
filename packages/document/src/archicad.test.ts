@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { parsePLN, parsePLA, parseGDL } from './archicad';
+import { parsePLN, parsePLA, parseGDL, detectFormat as detectAC, importFile as importAC } from './archicad';
 
 const SAMPLE_PLN = `<?xml version="1.0" encoding="UTF-8"?>
 <ArchiCADProject>
@@ -233,5 +233,45 @@ describe('T-AC-007: Import GDL objects → verify approximated as static geometr
     for (const obj of objects) {
       expect(obj.category).toBeDefined();
     }
+  });
+});
+
+// T-DOC-007: Binary format detection and stub import for ArchiCAD
+describe('T-DOC-007: ArchiCAD detectFormat + importFile', () => {
+  function makeBuffer(bytes: number[]): ArrayBuffer {
+    const buf = new ArrayBuffer(bytes.length);
+    const view = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i++) view[i] = bytes[i];
+    return buf;
+  }
+
+  // ArchiCAD .pln: "PLAN" = 0x50 0x4C 0x41 0x4E
+  it('detectFormat returns true for PLN magic bytes "PLAN"', () => {
+    const buf = makeBuffer([0x50, 0x4c, 0x41, 0x4e, 0x00, 0x00]);
+    expect(detectAC(buf)).toBe(true);
+  });
+
+  it('detectFormat returns false for non-PLN bytes', () => {
+    const buf = makeBuffer([0x00, 0x01, 0x02, 0x03]);
+    expect(detectAC(buf)).toBe(false);
+  });
+
+  it('detectFormat returns false for empty buffer', () => {
+    const buf = makeBuffer([]);
+    expect(detectAC(buf)).toBe(false);
+  });
+
+  it('importFile returns a DocumentSchema with at least one element', () => {
+    const buf = makeBuffer([0x50, 0x4c, 0x41, 0x4e]);
+    const result = importAC(buf, 'proj-789');
+    expect(result.schema).toBeDefined();
+    expect(Object.keys(result.schema.content.elements).length).toBeGreaterThan(0);
+  });
+
+  it('importFile includes a warning about stub implementation', () => {
+    const buf = makeBuffer([0x50, 0x4c, 0x41, 0x4e]);
+    const result = importAC(buf, 'proj-789');
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings[0]).toMatch(/ArchiCAD/i);
   });
 });

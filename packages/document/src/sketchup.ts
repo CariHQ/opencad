@@ -32,6 +32,63 @@ interface SKPComponent {
   materials: string[];
 }
 
+// SKP magic bytes: 37 FC F4 75 at offset 0
+const SKP_MAGIC = [0x37, 0xfc, 0xf4, 0x75];
+
+export function detectFormat(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < SKP_MAGIC.length) return false;
+  const view = new Uint8Array(buffer);
+  return SKP_MAGIC.every((byte, i) => view[i] === byte);
+}
+
+export function importFile(
+  _buffer: ArrayBuffer,
+  projectId: string
+): { schema: DocumentSchema; warnings: string[] } {
+  const doc = createProject(projectId, 'sketchup-import');
+  doc.name = 'Imported SketchUp';
+  doc.content.elements = {};
+
+  const elementId = crypto.randomUUID();
+  const layerId = Object.keys(doc.organization.layers)[0] || crypto.randomUUID();
+  const levelId = Object.keys(doc.organization.levels)[0] || null;
+
+  doc.content.elements[elementId] = {
+    id: elementId,
+    type: 'annotation',
+    properties: {
+      Name: { type: 'string', value: 'Imported from SketchUp' },
+    },
+    propertySets: [],
+    geometry: { type: 'brep', data: null },
+    layerId,
+    levelId,
+    transform: {
+      translation: { x: 0, y: 0, z: 0 },
+      rotation: { x: 0, y: 0, z: 0 },
+      scale: { x: 1, y: 1, z: 1 },
+    },
+    boundingBox: {
+      min: { x: 0, y: 0, z: 0, _type: 'Point3D' },
+      max: { x: 0, y: 0, z: 0, _type: 'Point3D' },
+    },
+    metadata: {
+      id: elementId,
+      createdBy: 'sketchup-import',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      version: { clock: {} },
+    },
+    visible: true,
+    locked: false,
+  };
+
+  return {
+    schema: doc,
+    warnings: ['Full SketchUp import not yet implemented — returning stub'],
+  };
+}
+
 export function parseSKP(content: string): DocumentSchema {
   const parser = new SKPParser(content);
   const { name, entities, materials, components } = parser.parse();

@@ -1,11 +1,11 @@
 /**
  * TDD Tests for SketchUp SKP Import/Export
  *
- * Test IDs: T-SKP-001 through T-SKP-004
+ * Test IDs: T-SKP-001 through T-SKP-004, T-DOC-007
  */
 
 import { describe, it, expect } from 'vitest';
-import { parseSKP, serializeSKP } from './sketchup';
+import { parseSKP, serializeSKP, detectFormat as detectSKP, importFile as importSKP } from './sketchup';
 
 const SAMPLE_SKP = `<?xml version="1.0" encoding="UTF-8"?>
 <SketchUp>
@@ -194,5 +194,44 @@ describe('T-SKP-004: Export SKP → verify opens correctly in SketchUp', () => {
     const exported = serializeSKP(doc);
     const reimported = parseSKP(exported);
     expect(Object.keys(reimported.content.elements).length).toBe(originalCount);
+  });
+});
+
+// T-DOC-007: Binary format detection and stub import for SketchUp
+describe('T-DOC-007: SketchUp detectFormat + importFile', () => {
+  function makeBuffer(bytes: number[]): ArrayBuffer {
+    const buf = new ArrayBuffer(bytes.length);
+    const view = new Uint8Array(buf);
+    for (let i = 0; i < bytes.length; i++) view[i] = bytes[i];
+    return buf;
+  }
+
+  it('detectFormat returns true for SKP magic bytes 0x37 FC F4 75', () => {
+    const buf = makeBuffer([0x37, 0xfc, 0xf4, 0x75, 0x00, 0x00]);
+    expect(detectSKP(buf)).toBe(true);
+  });
+
+  it('detectFormat returns false for non-SKP bytes', () => {
+    const buf = makeBuffer([0x00, 0x01, 0x02, 0x03]);
+    expect(detectSKP(buf)).toBe(false);
+  });
+
+  it('detectFormat returns false for empty buffer', () => {
+    const buf = makeBuffer([]);
+    expect(detectSKP(buf)).toBe(false);
+  });
+
+  it('importFile returns a DocumentSchema with at least one element', () => {
+    const buf = makeBuffer([0x37, 0xfc, 0xf4, 0x75]);
+    const result = importSKP(buf, 'proj-123');
+    expect(result.schema).toBeDefined();
+    expect(Object.keys(result.schema.content.elements).length).toBeGreaterThan(0);
+  });
+
+  it('importFile includes a warning about stub implementation', () => {
+    const buf = makeBuffer([0x37, 0xfc, 0xf4, 0x75]);
+    const result = importSKP(buf, 'proj-123');
+    expect(result.warnings.length).toBeGreaterThan(0);
+    expect(result.warnings[0]).toMatch(/SketchUp/i);
   });
 });
