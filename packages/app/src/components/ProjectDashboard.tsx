@@ -8,6 +8,16 @@ import { isTauri, tauriStartDragging } from '../hooks/useTauri';
 export function ProjectDashboard() {
   const navigate = useNavigate();
   const [showTemplates, setShowTemplates] = useState(false);
+
+  // Apply stored theme (same key AppLayout uses) so dashboard matches the app
+  useEffect(() => {
+    const stored = localStorage.getItem('opencad-theme');
+    const systemDark = typeof window.matchMedia === 'function'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : false;
+    const theme = stored ? (JSON.parse(stored) as string) : (systemDark ? 'dark' : 'light');
+    document.documentElement.setAttribute('data-theme', theme);
+  }, []);
   const {
     viewMode,
     sortBy,
