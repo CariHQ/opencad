@@ -93,7 +93,7 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema } = useDocumentStore();
+  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, updateElement } = useDocumentStore();
   const leftPanelRef = React.useRef<HTMLElement>(null);
   const rightPanelRef = React.useRef<HTMLElement>(null);
 
@@ -155,10 +155,13 @@ export function AppLayout() {
     }
   }, [can, rightPanelTab, setRightPanelTab]);
 
-  // When an element is selected, switch to properties only if the role allows it
+  // When an element is selected from the Layers tab, auto-switch to Properties.
+  // Do NOT override if the user is already on any other panel (e.g. Materials).
   useEffect(() => {
-    if (selectedIds.length > 0 && can('panel:properties')) setRightPanelTab('properties');
-  }, [selectedIds, setRightPanelTab, can]);
+    if (selectedIds.length > 0 && can('panel:properties') && rightPanelTab === 'layers') {
+      setRightPanelTab('properties');
+    }
+  }, [selectedIds, can, rightPanelTab, setRightPanelTab]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -341,7 +344,19 @@ export function AppLayout() {
               {rightPanelTab === 'render' && <RenderPanel />}
               {rightPanelTab === 'sheets' && <SheetPanel />}
               {rightPanelTab === 'bcf' && <BCFPanel />}
-              {rightPanelTab === 'materials' && <MaterialLibrary onSelect={() => {}} selectedCount={selectedIds.length} />}
+              {rightPanelTab === 'materials' && (
+                <MaterialLibrary
+                  selectedCount={selectedIds.length}
+                  currentMaterialName={
+                    selectedIds.length > 0 && doc
+                      ? (doc.content.elements[selectedIds[0]] as { material?: string } | undefined)?.material
+                      : undefined
+                  }
+                  onSelect={(mat) => {
+                    selectedIds.forEach((id) => updateElement(id, { material: mat.name }));
+                  }}
+                />
+              )}
               {rightPanelTab === 'comments' && <CommentsPanel />}
               {rightPanelTab === 'carbon' && <CarbonPanel />}
               {rightPanelTab === 'cost' && <CostPanel />}
