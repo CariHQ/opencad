@@ -225,7 +225,7 @@ export function AppLayout() {
   return (
     <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
       {chromeVisible && (
-        <header className="app-toolbar">
+        <header className={`app-toolbar${isTauri() && navigator.platform.includes('Mac') ? ' tauri-macos' : ''}`}>
           <div className="toolbar-left">
             <button className={`toolbar-btn panel-toggle-btn${leftVisible ? ' panel-on' : ''}`} onClick={() => setShowLeftPanel((v) => !v)} title="Toggle navigator (⌘[)">
               <PanelLeft size={16} strokeWidth={2} color={leftVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')} />

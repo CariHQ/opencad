@@ -29,7 +29,7 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
       // core
       'navigator', 'levels', 'layers', 'properties',
       // design tools
-      'schedule', 'spaces', 'render', 'hatch', 'symbols', 'shadow', 'section', 'site', 'photo',
+      'schedule', 'spaces', 'render', 'sheets', 'hatch', 'symbols', 'shadow', 'section', 'site', 'photo',
       // analysis
       'compliance', 'carbon', 'cost', 'wind',
       // collaboration

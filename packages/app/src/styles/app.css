@@ -90,6 +90,21 @@ body {
   border-bottom: 1px solid var(--border-color);
   gap: 8px;
   flex-shrink: 0;
+  /* Allow dragging the window in Tauri desktop mode */
+  -webkit-app-region: drag;
+}
+
+/* Buttons inside the drag region must opt-out of drag */
+.app-toolbar button,
+.app-toolbar a,
+.app-toolbar select,
+.app-toolbar input {
+  -webkit-app-region: no-drag;
+}
+
+/* macOS traffic lights sit in the top-left; reserve ~72px so they don't overlap content */
+.app-toolbar.tauri-macos .toolbar-left {
+  padding-left: 72px;
 }
 
 .toolbar-left,
@@ -368,8 +383,9 @@ body {
   min-width: 48px;
   background: var(--bg-secondary);
   border-right: 1px solid var(--border-color);
-  padding: 8px 0;
-  overflow: hidden;
+  padding: 6px 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
   transition: width var(--panel-transition), min-width var(--panel-transition),
     border-color var(--panel-transition);
 }
@@ -387,65 +403,27 @@ body {
   gap: 4px;
 }
 
-.toolshelf-categories {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 0 4px;
-}
-
-.category-btn {
-  width: 40px;
-  height: 40px;
-  border: none;
-  background: transparent;
-  color: var(--text-secondary);
-  border-radius: 8px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  transition: all 0.15s ease;
-}
-
-.category-btn:hover {
-  background: var(--bg-elevated);
-  color: var(--text-primary);
-}
-
-.category-btn.active {
-  background: var(--accent-primary);
-  color: white;
-}
-
-.toolshelf-divider {
-  width: 32px;
-  height: 1px;
-  background: var(--border-color);
-  margin: 8px 0;
-}
-
 .toolshelf-tools {
   display: flex;
   flex-direction: column;
   gap: 2px;
   padding: 0 4px;
+  width: 100%;
 }
 
 .tool-btn {
   width: 40px;
-  height: 40px;
+  height: 36px;
   border: none;
   background: transparent;
-  color: var(--text-secondary);
-  border-radius: 8px;
+  color: var(--text-muted);
+  border-radius: 6px;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 18px;
-  transition: all 0.15s ease;
+  transition: color 0.12s ease, background 0.12s ease;
+  flex-shrink: 0;
 }
 
 .tool-btn:hover {
@@ -454,19 +432,8 @@ body {
 }
 
 .tool-btn.active {
-  background: var(--accent-primary);
-  color: white;
-}
-
-.toolshelf-info {
-  margin-top: auto;
-  padding: 8px;
-}
-
-.current-tool {
-  font-size: 10px;
-  color: var(--text-muted);
-  text-transform: uppercase;
+  color: var(--accent-primary);
+  background: transparent;
 }
 
 /* Main Viewport */
@@ -2555,11 +2522,9 @@ body {
 .split-viewport-pane {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--border-color);
 }
 
 .split-viewport-pane--active {
-  border-color: var(--accent-primary);
   box-shadow: inset 0 0 0 2px var(--accent-primary);
 }
 

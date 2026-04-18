@@ -7,16 +7,13 @@ import {
   Fence,
   Ruler,
   Type,
-  Boxes,
   Circle,
   Hexagon,
   Minus,
   RectangleHorizontal,
   Pentagon,
-  Move,
   PenLine,
   AppWindow,
-  Baseline,
   RectangleVertical,
   StretchHorizontal,
   Triangle,
@@ -30,104 +27,53 @@ interface Tool {
   name: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   shortcut: string;
-  category: 'structure' | 'opening' | 'annotation' | 'modify' | 'draw';
 }
 
 const tools: Tool[] = [
-  { id: 'select', name: 'Select', icon: MousePointer2, shortcut: 'V', category: 'modify' },
-  { id: 'line', name: 'Line', icon: Minus, shortcut: 'L', category: 'draw' },
-  { id: 'rectangle', name: 'Rectangle', icon: Square, shortcut: 'R', category: 'draw' },
-  { id: 'circle', name: 'Circle', icon: Circle, shortcut: 'C', category: 'draw' },
-  { id: 'arc', name: 'Arc', icon: Spline, shortcut: 'A', category: 'draw' },
-  { id: 'spline', name: 'Spline', icon: Spline, shortcut: 'U', category: 'draw' },
-  { id: 'polygon', name: 'Polygon', icon: Pentagon, shortcut: 'P', category: 'draw' },
-  { id: 'wall', name: 'Wall', icon: RectangleVertical, shortcut: 'W', category: 'structure' },
-  { id: 'column', name: 'Column', icon: Hexagon, shortcut: 'K', category: 'structure' },
-  { id: 'beam', name: 'Beam', icon: StretchHorizontal, shortcut: 'B', category: 'structure' },
-  { id: 'slab', name: 'Slab', icon: RectangleHorizontal, shortcut: 'S', category: 'structure' },
-  { id: 'roof', name: 'Roof', icon: Triangle, shortcut: 'O', category: 'structure' },
-  { id: 'stair', name: 'Stair', icon: ArrowUpDown, shortcut: 'T', category: 'structure' },
-  { id: 'door', name: 'Door', icon: DoorOpen, shortcut: 'D', category: 'opening' },
-  { id: 'window', name: 'Window', icon: AppWindow, shortcut: 'N', category: 'opening' },
-  { id: 'railing', name: 'Railing', icon: Fence, shortcut: 'G', category: 'opening' },
-  { id: 'dimension', name: 'Dimension', icon: Ruler, shortcut: 'M', category: 'annotation' },
-  { id: 'text', name: 'Text', icon: Type, shortcut: 'X', category: 'annotation' },
-];
-
-const categories = [
-  { id: 'modify', name: 'Modify', icon: Move },
-  { id: 'draw', name: 'Draw', icon: PenLine },
-  { id: 'structure', name: 'Structure', icon: Boxes },
-  { id: 'opening', name: 'Openings', icon: AppWindow },
-  { id: 'annotation', name: 'Annotate', icon: Baseline },
+  { id: 'select',    name: 'Select',    icon: MousePointer2,      shortcut: 'V' },
+  { id: 'line',      name: 'Line',      icon: Minus,              shortcut: 'L' },
+  { id: 'rectangle', name: 'Rectangle', icon: Square,             shortcut: 'R' },
+  { id: 'circle',    name: 'Circle',    icon: Circle,             shortcut: 'C' },
+  { id: 'arc',       name: 'Arc',       icon: Spline,             shortcut: 'A' },
+  { id: 'spline',    name: 'Spline',    icon: Spline,             shortcut: 'U' },
+  { id: 'polygon',   name: 'Polygon',   icon: Pentagon,           shortcut: 'P' },
+  { id: 'wall',      name: 'Wall',      icon: RectangleVertical,  shortcut: 'W' },
+  { id: 'column',    name: 'Column',    icon: Hexagon,            shortcut: 'K' },
+  { id: 'beam',      name: 'Beam',      icon: StretchHorizontal,  shortcut: 'B' },
+  { id: 'slab',      name: 'Slab',      icon: RectangleHorizontal, shortcut: 'S' },
+  { id: 'roof',      name: 'Roof',      icon: Triangle,           shortcut: 'O' },
+  { id: 'stair',     name: 'Stair',     icon: ArrowUpDown,        shortcut: 'T' },
+  { id: 'door',      name: 'Door',      icon: DoorOpen,           shortcut: 'D' },
+  { id: 'window',    name: 'Window',    icon: AppWindow,          shortcut: 'N' },
+  { id: 'railing',   name: 'Railing',   icon: Fence,              shortcut: 'G' },
+  { id: 'dimension', name: 'Dimension', icon: Ruler,              shortcut: 'M' },
+  { id: 'text',      name: 'Text',      icon: Type,               shortcut: 'X' },
+  { id: 'polyline',  name: 'Polyline',  icon: PenLine,            shortcut: 'Y' },
 ];
 
 export function ToolShelf() {
   const { activeTool, setActiveTool } = useDocumentStore();
   const { can } = useRole();
-  const [activeCategory, setActiveCategory] = React.useState<string>(() => {
-    try { return localStorage.getItem('opencad-activeCategory') ?? 'modify'; } catch { return 'modify'; }
-  });
 
-  // When activeTool changes (e.g. via keyboard shortcut), sync the category panel
-  React.useEffect(() => {
-    const toolDef = tools.find((t) => t.id === activeTool);
-    if (toolDef) {
-      setActiveCategory(toolDef.category);
-      try { localStorage.setItem('opencad-activeCategory', toolDef.category); } catch { /* ignore */ }
-    }
-  }, [activeTool]);
-
-  const handleSetCategory = (catId: string) => {
-    setActiveCategory(catId);
-    try { localStorage.setItem('opencad-activeCategory', catId); } catch { /* ignore */ }
-  };
-
-  // Filter tools by role permission
   const allowedTools = tools.filter((t) => can(`tool:${t.id}`));
-  const allowedCategories = categories.filter((cat) =>
-    allowedTools.some((t) => t.category === cat.id)
-  );
-  const filteredTools = allowedTools.filter((t) => t.category === activeCategory);
 
-  // Owners and roles with no tools see an empty shelf
-  if (allowedCategories.length === 0) {
+  if (allowedTools.length === 0) {
     return <div className="toolshelf toolshelf--empty" />;
   }
 
   return (
     <div className="toolshelf">
-      <div className="toolshelf-categories">
-        {allowedCategories.map((cat) => {
-          const Icon = cat.icon;
-          return (
-            <button
-              key={cat.id}
-              className={`category-btn ${activeCategory === cat.id ? 'active' : ''}`}
-              onClick={() => handleSetCategory(cat.id)}
-              title={cat.name}
-            >
-              <span className="tool-icon">
-                <Icon size={16} strokeWidth={2} />
-              </span>
-            </button>
-          );
-        })}
-      </div>
-      <div className="toolshelf-divider" />
       <div className="toolshelf-tools">
-        {filteredTools.map((tool) => {
+        {allowedTools.map((tool) => {
           const Icon = tool.icon;
           return (
             <button
               key={tool.id}
-              className={`tool-btn ${activeTool === tool.id ? 'active' : ''}`}
+              className={`tool-btn${activeTool === tool.id ? ' active' : ''}`}
               onClick={() => setActiveTool(tool.id)}
               title={`${tool.name} (${tool.shortcut})`}
             >
-              <span className="tool-icon">
-                <Icon size={16} strokeWidth={2} />
-              </span>
+              <Icon size={16} strokeWidth={activeTool === tool.id ? 2.5 : 1.5} />
             </button>
           );
         })}

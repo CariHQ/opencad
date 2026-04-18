@@ -1,8 +1,8 @@
 /**
  * T-UI-001: ToolShelf component tests
  *
- * Verifies: tool categories render, tool buttons activate on click,
- * active tool is reflected in store and UI, role-based gating.
+ * Verifies: all allowed tools render, active tool is reflected in store and UI,
+ * role-based gating hides/shows tools per role.
  */
 import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
@@ -25,92 +25,65 @@ describe('T-UI-001: ToolShelf', () => {
     setRole(null);
   });
 
-  it('renders all category buttons', () => {
-    render(<ToolShelf />);
-    expect(screen.getByTitle('Modify')).toBeInTheDocument();
-    expect(screen.getByTitle('Draw')).toBeInTheDocument();
-    expect(screen.getByTitle('Structure')).toBeInTheDocument();
-    expect(screen.getByTitle('Openings')).toBeInTheDocument();
-    expect(screen.getByTitle('Annotate')).toBeInTheDocument();
-  });
-
-  it('shows Select tool by default in Modify category', () => {
+  it('renders Select tool by default and marks it active', () => {
     render(<ToolShelf />);
     const selectBtn = screen.getByTitle('Select (V)');
     expect(selectBtn).toBeInTheDocument();
     expect(selectBtn).toHaveClass('active');
   });
 
-  it('switches tools when a tool button is clicked', () => {
+  it('renders all architect tools as a flat list', () => {
+    setRole('architect');
     render(<ToolShelf />);
+    expect(screen.getByTitle('Wall (W)')).toBeInTheDocument();
+    expect(screen.getByTitle('Line (L)')).toBeInTheDocument();
+    expect(screen.getByTitle('Dimension (M)')).toBeInTheDocument();
+    expect(screen.getByTitle('Door (D)')).toBeInTheDocument();
+  });
 
-    // Switch to Draw category first
-    fireEvent.click(screen.getByTitle('Draw'));
+  it('switches tool on click and marks it active', () => {
+    render(<ToolShelf />);
     const lineBtn = screen.getByTitle('Line (L)');
     fireEvent.click(lineBtn);
-
     expect(useDocumentStore.getState().activeTool).toBe('line');
     expect(lineBtn).toHaveClass('active');
   });
 
-  it('switches category and shows filtered tools', () => {
+  it('deactivates previous tool when a new one is clicked', () => {
     render(<ToolShelf />);
-
-    fireEvent.click(screen.getByTitle('Structure'));
-
-    expect(screen.getByTitle('Wall (W)')).toBeInTheDocument();
-    expect(screen.getByTitle('Column (K)')).toBeInTheDocument();
-    // Draw tools should not be visible
-    expect(screen.queryByTitle('Line (L)')).not.toBeInTheDocument();
-  });
-
-
-  it('marks the active category button with active class', () => {
-    render(<ToolShelf />);
-    const drawBtn = screen.getByTitle('Draw');
-    fireEvent.click(drawBtn);
-    expect(drawBtn).toHaveClass('active');
+    const selectBtn = screen.getByTitle('Select (V)');
+    const lineBtn = screen.getByTitle('Line (L)');
+    fireEvent.click(lineBtn);
+    expect(selectBtn).not.toHaveClass('active');
+    expect(lineBtn).toHaveClass('active');
   });
 
   // T-ROLE-002: role-based gating
   describe('role-based tool gating (T-ROLE-002)', () => {
-    it('architect sees all categories and all tools', () => {
+    it('architect sees all tools including wall', () => {
       setRole('architect');
       render(<ToolShelf />);
-      // Structure category should exist
-      fireEvent.click(screen.getByTitle('Structure'));
       expect(screen.getByTitle('Wall (W)')).toBeInTheDocument();
     });
 
-    it('owner sees empty shelf (no tools, no categories)', () => {
+    it('owner sees empty shelf (no tools)', () => {
       setRole('owner');
       render(<ToolShelf />);
-      // No category buttons with known names
-      expect(screen.queryByTitle('Structure')).not.toBeInTheDocument();
       expect(screen.queryByTitle('Wall (W)')).not.toBeInTheDocument();
+      expect(screen.queryByTitle('Select (V)')).not.toBeInTheDocument();
     });
 
     it('structural engineer sees dimension tool but not wall tool', () => {
       setRole('structural');
       render(<ToolShelf />);
-      // Structural has no 'structure' category tools — that category button should be absent
-      expect(screen.queryByTitle('Structure')).not.toBeInTheDocument();
-      // Dimension is in annotation category
-      fireEvent.click(screen.getByTitle('Annotate'));
       expect(screen.getByTitle('Dimension (M)')).toBeInTheDocument();
-      // Wall tool must never appear
       expect(screen.queryByTitle('Wall (W)')).not.toBeInTheDocument();
     });
 
     it('contractor sees select tool but not wall tool', () => {
       setRole('contractor');
       render(<ToolShelf />);
-      // Contractor has no 'structure' category tools
-      expect(screen.queryByTitle('Structure')).not.toBeInTheDocument();
-      // Modify category has select
-      fireEvent.click(screen.getByTitle('Modify'));
       expect(screen.getByTitle('Select (V)')).toBeInTheDocument();
-      // Wall tool must never appear
       expect(screen.queryByTitle('Wall (W)')).not.toBeInTheDocument();
     });
   });
