@@ -1,0 +1,21 @@
+{
+  "name": "@opencad/sync-rs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build:rust": "wasm-pack build --target web --out-dir pkg",
+    "build:ts": "tsc",
+    "build": "pnpm run build:rust && pnpm run build:ts",
+    "typecheck": "tsc --noEmit",
+    "test:unit": "vitest run",
+    "test:rust": "cargo test --manifest-path Cargo.toml"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "vitest": "^1.0.0",
+    "@testing-library/jest-dom": "^6.0.0"
+  }
+}

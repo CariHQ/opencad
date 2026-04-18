@@ -18,28 +18,62 @@ export interface Comment {
 }
 
 interface CommentsPanelProps {
-  comments: Comment[];
-  onAdd: (comment: Omit<Comment, 'id' | 'replies' | 'resolved'>) => void;
-  onResolve: (commentId: string) => void;
-  onReply: (commentId: string, reply: Omit<CommentReply, 'id'>) => void;
+  initialComments?: Comment[];
+  onAdd?: (comment: Omit<Comment, 'id' | 'replies' | 'resolved'>) => void;
+  onResolve?: (commentId: string) => void;
+  onReply?: (commentId: string, reply: Omit<CommentReply, 'id'>) => void;
   currentUser?: string;
 }
 
-export function CommentsPanel({ comments, onAdd, onResolve, onReply, currentUser = 'You' }: CommentsPanelProps) {
+export function CommentsPanel({
+  initialComments = [],
+  onAdd,
+  onResolve,
+  onReply,
+  currentUser = 'You',
+}: CommentsPanelProps = {}) {
+  const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newText, setNewText] = useState('');
   const [replyText, setReplyText] = useState<Record<string, string>>({});
 
   const handleAddComment = () => {
     const text = newText.trim();
     if (!text) return;
-    onAdd({ author: currentUser, text, createdAt: new Date().toISOString() });
+    const comment: Comment = {
+      id: `c-${Date.now()}`,
+      author: currentUser,
+      text,
+      createdAt: new Date().toISOString(),
+      resolved: false,
+      replies: [],
+    };
+    setComments((prev) => [...prev, comment]);
+    onAdd?.({ author: currentUser, text, createdAt: comment.createdAt });
     setNewText('');
+  };
+
+  const handleResolve = (commentId: string) => {
+    setComments((prev) =>
+      prev.map((c) => (c.id === commentId ? { ...c, resolved: true } : c))
+    );
+    onResolve?.(commentId);
   };
 
   const handleReply = (commentId: string) => {
     const text = (replyText[commentId] ?? '').trim();
     if (!text) return;
-    onReply(commentId, { author: currentUser, text, createdAt: new Date().toISOString() });
+    const reply: CommentReply = {
+      id: `r-${Date.now()}`,
+      author: currentUser,
+      text,
+      createdAt: new Date().toISOString(),
+    };
+    setComments((prev) =>
+      prev.map((c) =>
+        c.id === commentId ? { ...c, replies: [...c.replies, reply] } : c
+      )
+    );
+    onReply?.(commentId, { author: currentUser, text, createdAt: reply.createdAt });
     setReplyText((prev) => ({ ...prev, [commentId]: '' }));
   };
 
@@ -67,7 +101,7 @@ export function CommentsPanel({ comments, onAdd, onResolve, onReply, currentUser
                   <button
                     aria-label={`Resolve comment ${c.id}`}
                     className="btn-resolve"
-                    onClick={() => onResolve(c.id)}
+                    onClick={() => handleResolve(c.id)}
                   >
                     Resolve
                   </button>

@@ -106,14 +106,17 @@ describe('T-UI-004: Navigator', () => {
   });
 
   it('clicking lock button calls updateLayer with toggled locked', () => {
-    const updateLayer = vi.spyOn(useDocumentStore.getState(), 'updateLayer');
+    // Use setState injection instead of spyOn to avoid Zustand state-replacement issues
+    const mockUpdateLayer = vi.fn();
+    const originalUpdateLayer = useDocumentStore.getState().updateLayer;
+    useDocumentStore.setState({ updateLayer: mockUpdateLayer });
     render(<Navigator />);
     const lockBtns = screen.getAllByTitle(/lock/i);
     fireEvent.click(lockBtns[0]);
-    expect(updateLayer).toHaveBeenCalled();
-    const [, updates] = updateLayer.mock.calls[0];
+    expect(mockUpdateLayer).toHaveBeenCalled();
+    const [, updates] = mockUpdateLayer.mock.calls[0];
     expect(updates).toHaveProperty('locked');
-    updateLayer.mockRestore();
+    useDocumentStore.setState({ updateLayer: originalUpdateLayer });
   });
 
   it('search input filters elements by type', () => {

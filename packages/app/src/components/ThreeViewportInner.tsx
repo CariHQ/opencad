@@ -22,9 +22,9 @@ export function ThreeViewportInner({ onViewChange }: ThreeViewportInnerProps) {
     zoomToFit,
     sectionBox,
     setSectionBox,
-    sectionPosition,
+    sectionPosition: _sectionPosition,
     setSectionPosition,
-    sectionDirection,
+    sectionDirection: _sectionDirection,
     setSectionDirection,
     saveSectionView,
   } = useThreeViewport();
@@ -72,10 +72,7 @@ export function ThreeViewportInner({ onViewChange }: ThreeViewportInnerProps) {
       {sectionBox && (
         <div className="section-box-overlay">
           <SectionBoxPanel
-            enabled={sectionBox}
-            position={sectionPosition}
-            direction={sectionDirection}
-            onToggle={() => setSectionBox(!sectionBox)}
+            onToggle={(en) => setSectionBox(en)}
             onPositionChange={setSectionPosition}
             onDirectionChange={setSectionDirection}
             onSaveView={saveSectionView}

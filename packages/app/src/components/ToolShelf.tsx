@@ -137,7 +137,6 @@ export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, t
           );
         })}
       </div>
-      <div className="toolshelf-active-label">{activeTool}</div>
       {(onToggleAI != null || onToggleProperties != null) && (
         <>
           <div className="toolshelf-divider" />
@@ -158,7 +157,9 @@ export function ToolShelf({ onToggleAI, onToggleProperties, propertiesVisible, t
                 <PanelRight
                   size={16}
                   strokeWidth={2}
-                  style={propertiesVisible ? { stroke: theme === 'dark' ? '#18a0fb' : '#0d99ff' } : undefined}
+                  color={propertiesVisible
+                    ? (theme === 'dark' ? '#18a0fb' : '#0d99ff')
+                    : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')}
                 />
               </button>
             )}

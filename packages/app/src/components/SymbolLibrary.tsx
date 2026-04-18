@@ -23,9 +23,9 @@ const SYMBOLS: Symbol2D[] = [
   { id: 'match-line', name: 'Match Line', category: 'Drawing', description: 'Sheet continuation line' },
 ];
 
-interface SymbolLibraryProps { onInsert: (symbol: Symbol2D) => void; }
+interface SymbolLibraryProps { onInsert?: (symbol: Symbol2D) => void; }
 
-export function SymbolLibrary({ onInsert }: SymbolLibraryProps) {
+export function SymbolLibrary({ onInsert }: SymbolLibraryProps = {}) {
   const [search, setSearch] = useState('');
   const filtered = useMemo(() =>
     SYMBOLS.filter((s) => !search || s.name.toLowerCase().includes(search.toLowerCase())),
@@ -43,7 +43,7 @@ export function SymbolLibrary({ onInsert }: SymbolLibraryProps) {
               <span className="symbol-name">{sym.name}</span>
               <span className="symbol-desc">{sym.description}</span>
             </div>
-            <button aria-label={`Insert ${sym.name}`} onClick={() => onInsert(sym)} className="btn-insert">
+            <button aria-label={`Insert ${sym.name}`} onClick={() => onInsert?.(sym)} className="btn-insert">
               Insert
             </button>
           </div>

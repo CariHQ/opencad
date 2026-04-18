@@ -116,7 +116,7 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: 1.80
+          toolchain: stable
           targets: ${{ matrix.target }}
 
       - name: Install system dependencies (Linux)

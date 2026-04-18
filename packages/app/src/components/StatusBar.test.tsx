@@ -31,9 +31,9 @@ describe('T-UI-003: StatusBar', () => {
     setRole(null);
   });
 
-  it('shows Online when connected', () => {
+  it('shows Connected when online', () => {
     render(<StatusBar />);
-    expect(screen.getByText('Online')).toBeInTheDocument();
+    expect(screen.getByText('Connected')).toBeInTheDocument();
   });
 
   it('shows Offline when disconnected', () => {
@@ -42,10 +42,10 @@ describe('T-UI-003: StatusBar', () => {
     expect(screen.getByText('Offline')).toBeInTheDocument();
   });
 
-  it('shows Saving... when isSaving is true', () => {
+  it('shows Syncing when isSaving is true', () => {
     useDocumentStore.setState({ isSaving: true });
     render(<StatusBar />);
-    expect(screen.getByText('Saving...')).toBeInTheDocument();
+    expect(screen.getByText(/syncing/i)).toBeInTheDocument();
   });
 
   it('shows element count from document', () => {

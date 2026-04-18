@@ -64,10 +64,6 @@ describe('T-UI-001: ToolShelf', () => {
     expect(screen.queryByTitle('Line (L)')).not.toBeInTheDocument();
   });
 
-  it('displays current active tool name', () => {
-    render(<ToolShelf />);
-    expect(screen.getByText('select')).toBeInTheDocument();
-  });
 
   it('marks the active category button with active class', () => {
     render(<ToolShelf />);

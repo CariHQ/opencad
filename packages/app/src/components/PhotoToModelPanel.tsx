@@ -8,25 +8,25 @@ interface ExtractedGeometry {
 }
 
 interface PhotoToModelPanelProps {
-  onUpload: (file: File) => void;
-  onExtract: () => void;
+  onUpload?: (file: File) => void;
+  onExtract?: () => void;
   status?: PhotoToModelStatus;
   photoUrl?: string;
   extractedGeometry?: ExtractedGeometry;
 }
 
-export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoUrl, extractedGeometry }: PhotoToModelPanelProps) {
+export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoUrl, extractedGeometry }: PhotoToModelPanelProps = {}) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) onUpload(file);
+    if (file) onUpload?.(file);
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     const file = e.dataTransfer.files?.[0];
-    if (file) onUpload(file);
+    if (file) onUpload?.(file);
   };
 
   return (
@@ -74,7 +74,7 @@ export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoU
           <button
             aria-label="Extract massing geometry"
             className="btn-extract"
-            onClick={onExtract}
+            onClick={() => onExtract?.()}
           >
             Extract Massing
           </button>

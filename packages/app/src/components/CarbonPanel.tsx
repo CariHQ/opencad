@@ -13,15 +13,15 @@ export interface CarbonEntry {
 }
 
 interface CarbonPanelProps {
-  entries: CarbonEntry[];
-  onExport: (entries: CarbonEntry[]) => void;
+  entries?: CarbonEntry[];
+  onExport?: (entries: CarbonEntry[]) => void;
 }
 
 function formatCarbon(value: number): string {
   return value.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
-export function CarbonPanel({ entries, onExport }: CarbonPanelProps) {
+export function CarbonPanel({ entries = [], onExport }: CarbonPanelProps = {}) {
   const totalKgCO2e = entries.reduce((sum, e) => sum + e.totalKgCO2e, 0);
 
   return (
@@ -31,7 +31,7 @@ export function CarbonPanel({ entries, onExport }: CarbonPanelProps) {
         <button
           aria-label="Export carbon report"
           className="btn-export"
-          onClick={() => onExport(entries)}
+          onClick={() => onExport?.(entries)}
           disabled={entries.length === 0}
         >
           Export

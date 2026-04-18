@@ -12,12 +12,13 @@ export interface APIKey {
 }
 
 interface APIKeyPanelProps {
-  keys: APIKey[];
-  onCreate: (params: { name: string; scopes: APIKeyScope[] }) => void;
-  onRevoke: (keyId: string) => void;
+  keys?: APIKey[];
+  onCreate?: (params: { name: string; scopes: APIKeyScope[] }) => void;
+  onRevoke?: (keyId: string) => void;
 }
 
-export function APIKeyPanel({ keys, onCreate, onRevoke }: APIKeyPanelProps) {
+export function APIKeyPanel({ keys: propKeys = [], onCreate, onRevoke }: APIKeyPanelProps = {}) {
+  const [keys, setKeys] = useState<APIKey[]>(propKeys);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
   const [newScopes, setNewScopes] = useState<APIKeyScope[]>(['read']);
@@ -31,10 +32,25 @@ export function APIKeyPanel({ keys, onCreate, onRevoke }: APIKeyPanelProps) {
   const handleCreate = () => {
     const name = newName.trim();
     if (!name) return;
-    onCreate({ name, scopes: newScopes });
+    const params = { name, scopes: newScopes };
+    const newKey: APIKey = {
+      id: `key-${Date.now()}`,
+      name,
+      prefix: 'oc_live_xxxx',
+      scopes: newScopes,
+      createdAt: new Date().toISOString().slice(0, 10),
+      lastUsed: null,
+    };
+    setKeys((prev) => [...prev, newKey]);
+    onCreate?.(params);
     setCreating(false);
     setNewName('');
     setNewScopes(['read']);
+  };
+
+  const handleRevoke = (keyId: string) => {
+    setKeys((prev) => prev.filter((k) => k.id !== keyId));
+    onRevoke?.(keyId);
   };
 
   return (
@@ -99,7 +115,7 @@ export function APIKeyPanel({ keys, onCreate, onRevoke }: APIKeyPanelProps) {
             <button
               aria-label={`Revoke ${key.name}`}
               className="btn-revoke"
-              onClick={() => onRevoke(key.id)}
+              onClick={() => handleRevoke(key.id)}
             >
               Revoke
             </button>

@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 
 interface Command {
   id: string;
@@ -53,21 +53,16 @@ export function CommandPalette({ onClose, onExecute }: CommandPaletteProps) {
   const isAiMode = query.startsWith('>');
   const searchQuery = isAiMode ? query.slice(1).trim() : query.trim();
 
-  const commands: Command[] = BUILT_IN_COMMANDS.map((c) => ({
-    ...c,
-    action: () => onExecute({ ...c, action: () => {} }),
-  }));
+  const commands: Command[] = useMemo(
+    () => BUILT_IN_COMMANDS.map((c) => ({ ...c, action: () => onExecute({ ...c, action: () => {} }) })),
+    [onExecute]
+  );
 
-  const filtered = isAiMode
-    ? []
-    : searchQuery === ''
-      ? commands
-      : commands.filter((c) => fuzzyMatch(searchQuery, c.label));
-
-  const results: Array<{ id: string; label: string; shortcut?: string; isAi?: boolean; command?: Command }> =
-    isAiMode
-      ? [{ id: '__ai__', label: `AI: ${searchQuery || '…'}`, isAi: true }]
-      : filtered.map((c) => ({ id: c.id, label: c.label, shortcut: c.shortcut, command: c }));
+  const results = useMemo(() => {
+    if (isAiMode) return [{ id: '__ai__', label: `AI: ${searchQuery || '…'}`, isAi: true, shortcut: undefined, command: undefined }];
+    const filtered = searchQuery === '' ? commands : commands.filter((c) => fuzzyMatch(searchQuery, c.label));
+    return filtered.map((c) => ({ id: c.id, label: c.label, shortcut: c.shortcut, isAi: false, command: c }));
+  }, [isAiMode, searchQuery, commands]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {

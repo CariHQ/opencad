@@ -4,10 +4,10 @@
   "version": "0.0.1",
   "identifier": "com.opencad.desktop",
   "build": {
-    "beforeBuildCommand": "pnpm build",
-    "beforeDevCommand": "pnpm dev:browser",
-    "devUrl": "http://localhost:3000",
-    "frontendDist": "../app/dist"
+    "beforeBuildCommand": "cd ../../../ && pnpm build:browser",
+    "beforeDevCommand": "cd ../../../ && pnpm dev:browser",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../../app/dist"
   },
   "app": {
     "withGlobalTauri": true,

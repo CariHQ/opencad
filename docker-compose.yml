@@ -1,0 +1,45 @@
+services:
+  # ── PostgreSQL ──────────────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: opencad
+      POSTGRES_USER: opencad
+      POSTGRES_PASSWORD: opencad
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U opencad"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ── OpenCAD API server ──────────────────────────────────────────────────────
+  # For local development prefer: pnpm dev:server  (faster iteration)
+  # Use this service for full-stack Docker testing or CI.
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgres://opencad:opencad@postgres:5432/opencad
+      STORAGE_BACKEND: local
+      STORAGE_PATH: /data/files
+      PORT: "8081"
+      AUTH_ENABLED: "false"
+      RUST_LOG: opencad_server=debug,tower_http=info
+    ports:
+      - "8081:8081"
+    volumes:
+      - server_files:/data/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
+  server_files:

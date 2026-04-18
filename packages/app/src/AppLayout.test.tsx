@@ -47,6 +47,7 @@ vi.mock('./hooks/useViewport', () => ({
     handleCanvasMouseDown: vi.fn(),
     handleCanvasMouseMove: vi.fn(),
     handleCanvasMouseUp: vi.fn(),
+    handleCanvasDoubleClick: vi.fn(),
     activeTool: 'select',
     drawingState: null,
   }),
@@ -77,7 +78,8 @@ describe('T-UI-006: AppLayout', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
     expect(screen.getByRole('button', { name: 'Floor Plan' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '3D View' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Section' })).toBeInTheDocument();
+    // 'Section' now also appears as a right-panel tab; use getAllByRole
+    expect(screen.getAllByRole('button', { name: 'Section' }).length).toBeGreaterThan(0);
   });
 
   it('renders Navigator panel', () => {
@@ -95,7 +97,7 @@ describe('T-UI-006: AppLayout', () => {
 
   it('renders StatusBar', () => {
     render(<MemoryRouter initialEntries={['/project/test']}><AppLayout /></MemoryRouter>);
-    expect(screen.getByText('Online')).toBeInTheDocument();
+    expect(screen.getByText('Connected')).toBeInTheDocument();
   });
 
   it('switches to Floor Plan view when Floor Plan tab is clicked', () => {

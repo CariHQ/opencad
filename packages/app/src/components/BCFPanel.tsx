@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export type BCFStatus = 'open' | 'in-progress' | 'resolved' | 'closed';
 export type BCFPriority = 'critical' | 'high' | 'normal' | 'low';
@@ -15,10 +15,10 @@ export interface BCFTopic {
 }
 
 interface BCFPanelProps {
-  topics: BCFTopic[];
-  onImport: (file: File) => void;
-  onExport: (topics: BCFTopic[]) => void;
-  onSelectTopic: (topic: BCFTopic) => void;
+  initialTopics?: BCFTopic[];
+  onImport?: (file: File) => void;
+  onExport?: (topics: BCFTopic[]) => void;
+  onSelectTopic?: (topic: BCFTopic) => void;
 }
 
 const STATUS_COLORS: Record<BCFStatus, string> = {
@@ -35,14 +35,16 @@ const PRIORITY_LABELS: Record<BCFPriority, string> = {
   low: 'Low',
 };
 
-export function BCFPanel({ topics, onImport, onExport, onSelectTopic }: BCFPanelProps) {
+export function BCFPanel({ initialTopics = [], onImport, onExport, onSelectTopic }: BCFPanelProps = {}) {
+  const [topics] = useState<BCFTopic[]>(initialTopics);
+
   const handleImportClick = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.bcf,.bcfzip';
     input.onchange = (e) => {
       const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) onImport(file);
+      if (file) onImport?.(file);
     };
     input.click();
   };
@@ -62,7 +64,7 @@ export function BCFPanel({ topics, onImport, onExport, onSelectTopic }: BCFPanel
           <button
             aria-label="Export BCF"
             className="btn-export-bcf"
-            onClick={() => onExport(topics)}
+            onClick={() => onExport?.(topics)}
           >
             Export BCF
           </button>
@@ -77,10 +79,10 @@ export function BCFPanel({ topics, onImport, onExport, onSelectTopic }: BCFPanel
             <div
               key={topic.guid}
               className="bcf-topic"
-              onClick={() => onSelectTopic(topic)}
+              onClick={() => onSelectTopic?.(topic)}
               role="button"
               tabIndex={0}
-              onKeyDown={(e) => { if (e.key === 'Enter') onSelectTopic(topic); }}
+              onKeyDown={(e) => { if (e.key === 'Enter') onSelectTopic?.(topic); }}
             >
               <div className="topic-header">
                 <span

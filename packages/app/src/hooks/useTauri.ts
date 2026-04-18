@@ -26,9 +26,6 @@ export function isTauri(): boolean {
 
 /**
  * Programmatically start a window drag gesture.
- * Called from mousedown handlers so the drag works even when the pointer
- * lands on a child element of the drag region (Tauri v2's data-tauri-drag-region
- * only fires when e.target IS the attributed element, not a descendant).
  */
 export function tauriStartDragging(): void {
   if (!isTauri()) return;
@@ -85,13 +82,6 @@ export async function tauriSaveFile(path: string, content: string): Promise<void
 
 // ─── T-DSK-002: File association / open by path ───────────────────────────────
 
-/**
- * Open a native file by path and parse it as a DocumentSchema.
- * The Tauri `open_file` command returns the raw file content as a string.
- * This function parses that string and returns the typed schema.
- *
- * @throws if the file does not exist or cannot be parsed.
- */
 export async function openFile(path: string): Promise<DocumentSchema> {
   const content = await invoke<string>('open_file', { path });
   return JSON.parse(content) as DocumentSchema;
@@ -99,38 +89,20 @@ export async function openFile(path: string): Promise<DocumentSchema> {
 
 // ─── T-DSK-006: Native save dialog / open dialog ─────────────────────────────
 
-/**
- * Write content to a native file path without showing a browser download dialog.
- * Alias of tauriSaveFile — exposed with a shorter name for convenience.
- */
 export async function saveFile(path: string, content: string): Promise<void> {
   return invoke('save_file', { path, content });
 }
 
-/**
- * Show a native save-file dialog and return the chosen path, or null if cancelled.
- */
 export async function saveFileDialog(defaultName: string): Promise<string | null> {
   return invoke<string | null>('save_file_dialog', { defaultName });
 }
 
-/**
- * Show a native open-file dialog (filtered to .opencad, .ifc, .dwg) and return
- * the chosen path, or null if cancelled.
- */
 export async function openFileDialog(): Promise<string | null> {
   return invoke<string | null>('open_file_dialog', {});
 }
 
 // ─── T-DSK-005: OS drag-and-drop ─────────────────────────────────────────────
 
-/**
- * Register a handler for OS-level file-drop events (drag a file from Finder/Explorer
- * onto the app window).  The handler is called with the array of dropped file paths.
- * Returns an unlisten function that removes the handler.
- *
- * Uses the `tauri://file-drop` custom event that Tauri v2 emits on the window.
- */
 export function onFileDrop(handler: (paths: string[]) => void): () => void {
   function listener(event: Event): void {
     const e = event as CustomEvent<{ paths: string[] }>;

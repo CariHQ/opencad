@@ -14,7 +14,7 @@ concurrency:
 
 env:
   NODE_VERSION: 20
-  RUST_VERSION: 1.80
+  RUST_VERSION: stable
 
 jobs:
   # ──────────────────────────────────────────────────────────────
@@ -159,6 +159,7 @@ jobs:
 
       - name: Post coverage comment
         if: github.event_name == 'pull_request'
+        continue-on-error: true
         uses: davelosert/vitest-coverage-report-action@v2
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}

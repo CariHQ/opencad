@@ -11,8 +11,8 @@ export interface CostItem {
 }
 
 interface CostPanelProps {
-  items: CostItem[];
-  onExport: (items: CostItem[]) => void;
+  items?: CostItem[];
+  onExport?: (items: CostItem[]) => void;
   currency?: string;
 }
 
@@ -20,7 +20,7 @@ function formatCurrency(value: number, currency = '$'): string {
   return `${currency}${value.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-export function CostPanel({ items, onExport, currency = '$' }: CostPanelProps) {
+export function CostPanel({ items = [], onExport, currency = '$' }: CostPanelProps = {}) {
   const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
 
   return (
@@ -30,7 +30,7 @@ export function CostPanel({ items, onExport, currency = '$' }: CostPanelProps) {
         <button
           aria-label="Export cost estimate"
           className="btn-export"
-          onClick={() => onExport(items)}
+          onClick={() => onExport?.(items)}
           disabled={items.length === 0}
         >
           Export

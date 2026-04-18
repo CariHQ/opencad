@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
-import type { PropertyValue } from '@opencad/document';
+import type { PropertyValue, PropertySet } from '@opencad/document';
 
 interface PendingProp {
   name: string;
@@ -89,6 +89,30 @@ export function PropertiesPanel() {
         },
       },
     });
+  };
+
+  const handlePsetPropertyBlur = (psetId: string, propKey: string, rawValue: string, existing: PropertyValue) => {
+    let parsed: string | number | boolean = rawValue;
+    if (existing.type === 'number') {
+      const match = rawValue.match(/^([\d.]+)/);
+      if (match) parsed = parseFloat(match[1]);
+    } else if (existing.type === 'boolean') {
+      parsed = rawValue.toLowerCase() === 'true';
+    }
+
+    const updatedPsets = (selectedElement.propertySets ?? []).map((pset: PropertySet) => {
+      if (pset.id !== psetId) return pset;
+      return {
+        ...pset,
+        properties: {
+          ...pset.properties,
+          [propKey]: { ...existing, value: parsed },
+        },
+      };
+    });
+
+    pushHistory(`Edit Pset property ${propKey}`);
+    updateElement(selectedIds[0], { propertySets: updatedPsets });
   };
 
   const handleAddProperty = () => {
@@ -204,6 +228,30 @@ export function PropertiesPanel() {
             </div>
           ))}
         </div>
+
+        {selectedElement.propertySets && selectedElement.propertySets.length > 0 && (
+          <div className="property-group">
+            <div className="property-group-title">IFC Property Sets</div>
+            {selectedElement.propertySets.map((pset) => (
+              <div key={pset.id} className="pset-group">
+                <div className="pset-name">{pset.name}</div>
+                {Object.entries(pset.properties).map(([key, prop]) => (
+                  <div key={key} className="property-row pset-row">
+                    <span className="property-label">{key}</span>
+                    <div className="property-value">
+                      <input
+                        type="text"
+                        className="property-input"
+                        defaultValue={formatPropValue(prop)}
+                        onBlur={(e) => handlePsetPropertyBlur(pset.id, key, e.target.value, prop)}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
