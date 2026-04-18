@@ -18,7 +18,7 @@ jobs:
   ci:
     name: CI
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -26,6 +26,17 @@ jobs:
         with:
           node-version: 20
           cache: pnpm
+      - name: Setup Rust (wasm-pack / sync-rs)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/sync-rs -> pkg
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
       - run: pnpm install --frozen-lockfile
       - run: pnpm ci:local
 

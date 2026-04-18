@@ -23,7 +23,7 @@ jobs:
   typecheck:
     name: Type Check
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +34,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+
+      - name: Setup Rust (wasm-pack / sync-rs)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/sync-rs -> pkg
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -47,7 +61,7 @@ jobs:
   lint:
     name: Lint
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
 
@@ -58,6 +72,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+
+      - name: Setup Rust (wasm-pack / sync-rs)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/sync-rs -> pkg
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -76,7 +104,7 @@ jobs:
   rust-check:
     name: Rust Check (Clippy + fmt)
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -93,12 +121,17 @@ jobs:
         with:
           toolchain: ${{ env.RUST_VERSION }}
           components: clippy, rustfmt
+          targets: wasm32-unknown-unknown
 
       - name: Cache Rust dependencies
         uses: Swatinem/rust-cache@v2
         with:
           workspaces: |
             packages/desktop/src-tauri -> target
+            packages/sync-rs -> pkg
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install system dependencies (Tauri)
         run: |
@@ -125,7 +158,7 @@ jobs:
   test-unit:
     name: Unit Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -137,12 +170,19 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
 
-      - name: Cache dependencies
-        uses: actions/cache@v5
+      - name: Setup Rust (wasm-pack / sync-rs)
+        uses: dtolnay/rust-toolchain@stable
         with:
-          path: ~/.pnpm-store
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: ${{ runner.os }}-pnpm-
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/sync-rs -> pkg
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -172,7 +212,7 @@ jobs:
   test-e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 35
     # Non-blocking: E2E requires a running web server; wired up in T-E2E-001
     continue-on-error: true
     steps:
@@ -185,6 +225,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+
+      - name: Setup Rust (wasm-pack / sync-rs)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/sync-rs -> pkg
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -212,7 +266,7 @@ jobs:
   build:
     name: Build
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -223,6 +277,20 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+
+      - name: Setup Rust (wasm-pack / sync-rs)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          targets: wasm32-unknown-unknown
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: packages/sync-rs -> pkg
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -262,7 +330,7 @@ jobs:
   desktop-smoke:
     name: Desktop Build (Smoke Test)
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
 
@@ -278,6 +346,10 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: ${{ env.RUST_VERSION }}
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-pack
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
 
       - name: Install system dependencies (Tauri)
         run: |
