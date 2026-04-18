@@ -84,6 +84,24 @@ build-app:
 	pnpm build:browser
 	@echo "Built: $(DIST)"
 
+deploy-landing:
+	@echo "Deploying landing pages (including /for/* role pages) to GCS..."
+	cd $(TF_DIR) && terraform apply \
+	  -var="server_image=$(SERVER_IMG)" \
+	  -var="app_version=$(IMAGE_TAG)" \
+	  -target=null_resource.deploy_landing \
+	  -auto-approve
+	@echo "Landing pages deployed."
+
+deploy-app: build-app
+	@echo "Deploying React app to GCS..."
+	cd $(TF_DIR) && terraform apply \
+	  -var="server_image=$(SERVER_IMG)" \
+	  -var="app_version=$(IMAGE_TAG)" \
+	  -target=null_resource.deploy_app \
+	  -auto-approve
+	@echo "App deployed."
+
 # ── Ops ───────────────────────────────────────────────────────────────────────
 
 logs:
