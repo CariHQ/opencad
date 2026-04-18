@@ -2527,3 +2527,39 @@ body {
   background: var(--bg-secondary);
 }
 
+
+/* ─── SplitViewport ─────────────────────────────────────────────────────────── */
+
+.split-viewport-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.split-viewport-layout-picker {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 30;
+  display: flex;
+  gap: 2px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 3px;
+}
+
+.split-viewport-pane {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+}
+
+.split-viewport-pane--active {
+  border-color: var(--accent-primary);
+  box-shadow: inset 0 0 0 2px var(--accent-primary);
+}
+
