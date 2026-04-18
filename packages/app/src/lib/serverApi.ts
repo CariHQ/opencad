@@ -136,3 +136,26 @@ export const projectsApi = {
   delete: (id: string): Promise<void> =>
     apiFetch<void>(`/projects/${id}`, { method: 'DELETE' }),
 };
+
+// ── Subscriptions ─────────────────────────────────────────────────────────────
+
+export type SubscriptionTier = 'free' | 'pro' | 'business';
+
+export interface SubscriptionStatus {
+  tier: SubscriptionTier;
+  validUntil: number | null;
+}
+
+export const subscriptionApi = {
+  getStatus: (): Promise<SubscriptionStatus> =>
+    apiFetch<SubscriptionStatus>('/subscription/status'),
+
+  createCheckout: (tier: 'pro' | 'business'): Promise<{ url: string }> =>
+    apiFetch<{ url: string }>('/subscription/checkout', {
+      method: 'POST',
+      body: JSON.stringify({ tier }),
+    }),
+
+  openPortal: (): Promise<{ url: string }> =>
+    apiFetch<{ url: string }>('/subscription/portal', { method: 'POST' }),
+};
