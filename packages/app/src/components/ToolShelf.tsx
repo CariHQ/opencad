@@ -18,13 +18,14 @@ import {
   StretchHorizontal,
   Triangle,
   Spline,
-  GripVertical,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 import { useRole } from '../hooks/useRole';
-import { useDraggable } from '../hooks/useDraggable';
 
 const EXPANDED_KEY = 'opencad-toolshelf-expanded';
+
+// Clear any stale drag position that would make the toolbar float over the UI
+try { localStorage.removeItem('opencad-toolshelf-pos'); } catch { /**/ }
 
 function readStoredExpanded(): boolean {
   try {
@@ -67,43 +68,28 @@ const tools: Tool[] = [
 export function ToolShelf() {
   const { activeTool, setActiveTool } = useDocumentStore();
   const { can } = useRole();
-  const { pos, dragHandleProps, resetPos } = useDraggable();
   const [expanded, setExpanded] = useState<boolean>(() => readStoredExpanded());
 
   const handleDoubleClick = useCallback(() => {
-    if (expanded) {
-      // Collapsing: reset position too
-      setExpanded(false);
-      try { localStorage.setItem(EXPANDED_KEY, JSON.stringify(false)); } catch { /**/ }
-      resetPos();
-    } else {
-      setExpanded(true);
-      try { localStorage.setItem(EXPANDED_KEY, JSON.stringify(true)); } catch { /**/ }
-    }
-  }, [expanded, resetPos]);
+    const next = !expanded;
+    setExpanded(next);
+    try { localStorage.setItem(EXPANDED_KEY, JSON.stringify(next)); } catch { /**/ }
+  }, [expanded]);
 
   const allowedTools = tools.filter((t) => can(`tool:${t.id}`));
 
   const classNames = [
     'toolshelf',
     expanded ? 'toolshelf--expanded' : '',
-    pos !== null ? 'toolshelf--floating' : '',
     allowedTools.length === 0 ? 'toolshelf--empty' : '',
   ].filter(Boolean).join(' ');
-
-  const style: React.CSSProperties = pos !== null
-    ? { position: 'fixed', left: pos.x, top: pos.y }
-    : {};
 
   if (allowedTools.length === 0) {
     return <div className={classNames} />;
   }
 
   return (
-    <div className={classNames} style={style} onDoubleClick={handleDoubleClick}>
-      <div className="toolshelf-drag-handle" {...dragHandleProps}>
-        <GripVertical size={12} />
-      </div>
+    <div className={classNames} onDoubleClick={handleDoubleClick}>
       <div className="toolshelf-tools">
         {allowedTools.map((tool) => {
           const Icon = tool.icon;
