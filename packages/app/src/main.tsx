@@ -8,8 +8,13 @@ import './styles/index.css';
 // vite-plugin-pwa generates the SW and the virtual module at build time.
 // In dev mode the virtual module is a no-op so this is safe in all environments.
 import { registerSW } from 'virtual:pwa-register';
+import { initSyncCrdt } from './lib/syncAdapter';
 
 registerSW({ immediate: false });
+
+// Kick off WASM load in the background — document mutations tolerate the
+// short window before the CRDT is ready (crdtApply* are no-ops when not ready).
+void initSyncCrdt();
 
 const container = document.getElementById('root');
 if (!container) {

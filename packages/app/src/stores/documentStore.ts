@@ -7,6 +7,12 @@ import {
   listPendingSync,
   markSynced,
 } from '../lib/offlineStore';
+import {
+  crdtApplyLocal,
+  crdtApplyProperty,
+  crdtDeleteElement,
+  crdtFlushOfflineQueue,
+} from '../lib/syncAdapter';
 import { type RoleId } from '../config/roles';
 
 interface HistoryEntry {
@@ -166,6 +172,8 @@ export const useDocumentStore = create<DocumentState>()(
 
         // When transitioning from offline → online, flush any pending offline edits.
         if (online && !isOnline) {
+          // Flush Rust CRDT delta queue over WebSocket
+          crdtFlushOfflineQueue();
           void listPendingSync().then((pendingIds) => {
             for (const pid of pendingIds) {
               void offlineLoadDocument(pid).then((data) => {
@@ -217,6 +225,10 @@ export const useDocumentStore = create<DocumentState>()(
         });
 
         const newDoc = { ...model.documentData };
+        const element = newDoc.content.elements[elementId];
+        // Record in Rust CRDT for collaborative sync
+        if (element) crdtApplyLocal(elementId, element);
+
         const newDocJson = JSON.stringify(newDoc);
         set({
           document: newDoc,
@@ -237,6 +249,10 @@ export const useDocumentStore = create<DocumentState>()(
         const element = model.getElementById(elementId);
         if (element) {
           Object.assign(element, updates);
+          // Record each property change as a property-level CRDT op
+          for (const [prop, val] of Object.entries(updates)) {
+            crdtApplyProperty(elementId, prop, val);
+          }
           set({ document: { ...model.documentData } });
         }
       },
@@ -246,6 +262,8 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model || !document) return;
 
         delete document.content.elements[elementId];
+        // Record tombstone in Rust CRDT
+        crdtDeleteElement(elementId);
         set({
           document: { ...document },
           lastSaved: Date.now(),

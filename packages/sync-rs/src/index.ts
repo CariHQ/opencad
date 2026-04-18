@@ -21,7 +21,7 @@ export async function initSync(): Promise<void> {
   if (_wasm) return;
   try {
     const mod = await import('../pkg/opencad_sync.js');
-    await (mod as { default?: () => Promise<void> }).default?.();
+    await (mod as { default?: () => Promise<unknown> }).default?.();
     _wasm = mod as unknown as WasmModule;
   } catch {
     // WASM not yet compiled — createDocumentCrdt will throw with a helpful message

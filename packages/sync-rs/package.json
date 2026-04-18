@@ -5,6 +5,16 @@
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./pkg": {
+      "types": "./pkg/opencad_sync.d.ts",
+      "import": "./pkg/opencad_sync.js"
+    }
+  },
   "scripts": {
     "build:rust": "wasm-pack build --target web --out-dir pkg",
     "build:ts": "tsc",
