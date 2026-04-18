@@ -1,5 +1,18 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, User, X } from 'lucide-react';
+import { FloorPlanGenerator } from '@opencad/ai';
+import { useDocumentStore } from '../stores/documentStore';
+
+/** Returns true when the message looks like a floor-plan generation request. */
+function isFloorPlanRequest(text: string): boolean {
+  const lower = text.toLowerCase();
+  const keywords = [
+    'bedroom', 'room', 'house', 'apartment', 'flat', 'floor plan',
+    'floorplan', 'm²', 'm2', 'sqft', 'sq ft', 'square feet',
+    'generate a', 'design a', 'create a',
+  ];
+  return keywords.some((kw) => lower.includes(kw));
+}
 
 interface Message {
   id: string;
@@ -21,6 +34,7 @@ const suggestedPrompts = [
 ];
 
 export function AIChatPanel({ onClose }: AIChatPanelProps) {
+  const { loadDocumentSchema } = useDocumentStore();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -51,6 +65,40 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+
+    // T-AI-001: Floor plan generation path — uses FloorPlanGenerator when
+    // an Anthropic API key is configured and the message looks like a floor plan request.
+    const anthropicApiKey = import.meta.env['VITE_ANTHROPIC_API_KEY'] as string | undefined;
+    if (isFloorPlanRequest(input) && anthropicApiKey) {
+      const assistantId = (Date.now() + 1).toString();
+      setMessages((prev) => [
+        ...prev,
+        { id: assistantId, role: 'assistant', content: 'Generating floor plan…', timestamp: Date.now() },
+      ]);
+      const generator = new FloorPlanGenerator({ apiKey: anthropicApiKey });
+      try {
+        const schema = await generator.generateFloorPlan(input);
+        loadDocumentSchema(schema);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: 'Floor plan generated and loaded into the canvas. Switch to 2D view to see the layout.' }
+              : m
+          )
+        );
+      } catch (err) {
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === assistantId
+              ? { ...m, content: `Failed to generate floor plan: ${err instanceof Error ? err.message : 'Unknown error'}` }
+              : m
+          )
+        );
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     setTimeout(() => {
       const assistantMessage: Message = {
