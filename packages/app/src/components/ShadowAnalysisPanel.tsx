@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { calculateSolarPosition, estimateDaylightHours } from '../lib/solarAnalysis';
 
 export interface ShadowAnalysisSettings {
   latitude: number;
@@ -10,8 +11,8 @@ export interface ShadowAnalysisSettings {
 }
 
 const DEFAULT_SETTINGS: ShadowAnalysisSettings = {
-  latitude: 51.5074,   // London
-  longitude: -0.1278,
+  latitude: 40.7,    // NYC (per spec)
+  longitude: -74.0,
   date: new Date().toISOString().slice(0, 10),
   time: '12:00',
   showSunPath: true,
@@ -23,6 +24,19 @@ interface ShadowAnalysisPanelProps {
   onChange?: (settings: ShadowAnalysisSettings) => void;
 }
 
+/** Parse "HH:MM" time string into an hour number (e.g. "14:30" → 14.5) */
+function parseHour(time: string): number {
+  const [h = '12', m = '0'] = time.split(':');
+  return parseInt(h, 10) + parseInt(m, 10) / 60;
+}
+
+/** Parse a date string "YYYY-MM-DD" into a month number (1–12) */
+function parseMonth(date: string): number {
+  const parts = date.split('-');
+  const month = parseInt(parts[1] ?? '6', 10);
+  return isNaN(month) ? 6 : month;
+}
+
 export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProps = {}) {
   const [settings, setSettings] = useState<ShadowAnalysisSettings>(DEFAULT_SETTINGS);
 
@@ -31,6 +45,20 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
     setSettings(next);
     onChange?.(next);
   };
+
+  // Derived solar calculations
+  const solarData = useMemo(() => {
+    const month = parseMonth(settings.date);
+    const hour = parseHour(settings.time);
+    const position = calculateSolarPosition({
+      latitude: settings.latitude,
+      longitude: settings.longitude,
+      month,
+      hour,
+    });
+    const daylightHours = estimateDaylightHours(settings.latitude, month);
+    return { position, daylightHours };
+  }, [settings.latitude, settings.longitude, settings.date, settings.time]);
 
   return (
     <div className="shadow-analysis-panel">
@@ -81,6 +109,62 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
             value={settings.time}
             onChange={(e) => update({ time: e.target.value })}
           />
+        </div>
+
+        {/* Month slider (1–12) */}
+        <div className="field-row">
+          <label htmlFor="shadow-month">Month</label>
+          <input
+            id="shadow-month"
+            type="range"
+            min={1}
+            max={12}
+            step={1}
+            value={parseMonth(settings.date)}
+            onChange={(e) => {
+              const month = parseInt(e.target.value, 10);
+              const year = new Date().getFullYear();
+              const pad = (n: number) => String(n).padStart(2, '0');
+              update({ date: `${year}-${pad(month)}-01` });
+            }}
+          />
+          <span className="field-value">{parseMonth(settings.date)}</span>
+        </div>
+
+        {/* Hour slider (6–18) */}
+        <div className="field-row">
+          <label htmlFor="shadow-hour">Hour</label>
+          <input
+            id="shadow-hour"
+            type="range"
+            min={6}
+            max={18}
+            step={1}
+            value={Math.round(parseHour(settings.time))}
+            onChange={(e) => {
+              const h = parseInt(e.target.value, 10);
+              const pad = (n: number) => String(n).padStart(2, '0');
+              update({ time: `${pad(h)}:00` });
+            }}
+          />
+          <span className="field-value">{Math.round(parseHour(settings.time))}:00</span>
+        </div>
+      </div>
+
+      {/* Solar Analysis Results */}
+      <div className="analysis-section">
+        <h4>Solar Analysis</h4>
+        <div className="field-row">
+          <span className="field-label">Elevation</span>
+          <span className="field-value">{solarData.position.elevation.toFixed(1)}°</span>
+        </div>
+        <div className="field-row">
+          <span className="field-label">Azimuth</span>
+          <span className="field-value">{solarData.position.azimuth.toFixed(1)}°</span>
+        </div>
+        <div className="field-row">
+          <span className="field-label">Daylight Hours</span>
+          <span className="field-value">{solarData.daylightHours.toFixed(1)} h</span>
         </div>
       </div>
 
