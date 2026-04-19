@@ -125,7 +125,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: aarch64-apple-darwin,x86_64-apple-darwin,wasm32-unknown-unknown
 
       # Belt-and-suspenders: ensure both arches are present on the runner
       - name: Add macOS cross-compile targets
@@ -134,16 +134,20 @@ jobs:
           rustup target add aarch64-apple-darwin
           rustup target add x86_64-apple-darwin
 
+      # wasm32 target required by @opencad/geometry (cargo build) on all platforms
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
       - name: Rust cache
         uses: swatinem/rust-cache@v2
         with:
           workspaces: packages/desktop/src-tauri -> target
 
-      # tauri.conf.json beforeBuildCommand calls pnpm build:browser which pulls
-      # in @opencad/sync-rs. That package requires wasm-pack to compile the WASM
-      # geometry/sync module. Rust is already on the runner via dtolnay/rust-toolchain.
-      - name: Install wasm-pack
-        run: cargo install wasm-pack --locked
+      # beforeBuildCommand runs pnpm build:browser which includes:
+      #   @opencad/sync-rs  → needs wasm-pack
+      #   @opencad/geometry → needs wasm-bindgen CLI (cargo build + wasm-bindgen)
+      - name: Install wasm tooling
+        run: cargo install wasm-pack wasm-bindgen-cli --locked
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
