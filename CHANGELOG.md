@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/CariHQ/opencad/compare/v1.0.4...v1.0.5) (2026-04-19)
+
+
+### Bug Fixes
+
+* **docker:** replace nginx with serve for Cloud Run ([bf86486](https://github.com/CariHQ/opencad/commit/bf864862a7e784f9265f524e3584d2e3fcf8c570))
+
 ## [1.0.4](https://github.com/CariHQ/opencad/compare/v1.0.3...v1.0.4) (2026-04-19)
 
 
