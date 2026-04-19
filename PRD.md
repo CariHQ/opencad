@@ -214,7 +214,7 @@ The convergence of **WebAssembly maturity**, **WebGPU rendering**, **CRDT-based 
 │  ├── CRDT Sync Engine (Yjs-based custom implementation)              │
 │  ├── Service Worker (offline caching, background sync)               │
 │  ├── Conflict Resolution Engine                                      │
-│  └── Cloud Storage Adapter (S3-compatible, self-hostable)            │
+│  └── Cloud Storage Adapter (S3-compatible, GCS / AWS S3)             │
 ├─────────────────────────────────────────────────────────────────────┤
 │  PWA Shell                                                           │
 │  ├── Service Worker                                                  │
@@ -2148,9 +2148,9 @@ Week 11-12: Polish & Beta
 | **API Framework**  | Go (Gin) or Rust (Axum)               | Performance, concurrency, type safety         |
 | **Database**       | PostgreSQL 16                         | Relational integrity, JSONB, full-text search |
 | **Cache**          | Redis 7                               | Sessions, presence, real-time data            |
-| **Object Storage** | S3-compatible (MinIO self-hosted)     | Project files, assets, backups                |
+| **Object Storage** | S3-compatible (GCS / AWS S3)          | Project files, assets, backups                |
 | **WebSocket**      | Gorilla WebSocket (Go) / Tokio (Rust) | Real-time sync, presence                      |
-| **Auth**           | OAuth2 + OIDC (Keycloak self-hosted)  | SSO, enterprise auth                          |
+| **Auth**           | Firebase Auth (OAuth2 + OIDC)         | SSO, enterprise auth                          |
 
 ### 15.5 AI Infrastructure
 

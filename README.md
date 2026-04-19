@@ -51,18 +51,6 @@ Download from [releases](https://github.com/CariHQ/opencad/releases):
 | Ubuntu/Debian | `.deb` / `.AppImage` |
 | Fedora/RHEL | `.rpm` / `.AppImage` |
 
-### Self-Host
-
-```bash
-git clone https://github.com/CariHQ/opencad.git
-cd opencad
-pnpm install
-pnpm build
-pnpm start
-```
-
-See [Self-Hosting Guide](docs/guides/self-hosting.md) for detailed setup.
-
 ## 📋 System Requirements
 
 ### Browser
@@ -86,7 +74,7 @@ See [Self-Hosting Guide](docs/guides/self-hosting.md) for detailed setup.
 | **Contributing Guide** | [CONTRIBUTING.md](CONTRIBUTING.md) |
 | **Product Requirements** | [PRD.md](PRD.md) |
 | **Architecture Docs** | [docs/architecture/](docs/architecture/) |
-| **Self-Hosting** | [docs/guides/self-hosting.md](docs/guides/self-hosting.md) |
+
 
 ## 🛠️ Development
 

@@ -68,7 +68,7 @@ Use the [Feature Request Template](https://github.com/CariHQ/opencad/issues/new?
 ### General
 
 **Q: Is OpenCAD free?**
-A: The core is open-source (Apache 2.0). Hosted cloud features require a subscription starting at $29/mo after a 14-day free trial. You can self-host for free.
+A: There is a 14-day free trial with full access — no credit card required. After that, plans start at $29/mo. The code is open-source so you can read, contribute, and fork it, but OpenCAD is provided exclusively as a hosted service at opencad.archi.
 
 **Q: Can I use OpenCAD commercially?**
 A: Yes. The Apache 2.0 license allows commercial use. Our hosted service is a separate subscription.
@@ -88,7 +88,7 @@ A: Yes. Both browser (PWA) and desktop apps work fully offline with automatic cl
 A: IFC, DWG, DXF, SKP, PLN (import), RVT (import), PDF, SVG, glTF, OBJ, STL, STEP, and more. See [PRD.md §11](PRD.md#11-file-format-interoperability) for the complete matrix.
 
 **Q: Can I self-host OpenCAD?**
-A: Yes. The core is fully open-source. Our hosted service provides cloud sync, AI features, and collaboration. Self-hosting guides are in `docs/guides/self-hosting/`.
+A: No. OpenCAD is a hosted-only service available at opencad.archi. The source code is open for contributions and review, but we do not support self-hosted deployments. All users access the platform through our managed service.
 
 ### Contributing
 
