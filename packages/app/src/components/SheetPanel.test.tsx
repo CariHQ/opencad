@@ -149,17 +149,16 @@ describe('T-DOC-020: SheetManager', () => {
   });
 
   it('delete button removes the sheet after confirmation', () => {
-    // Mock window.confirm to return true
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
     render(<SheetManager />);
     fireEvent.click(screen.getByRole('button', { name: /add sheet/i }));
     const sheetItem = screen.getAllByRole('listitem')[0];
     fireEvent.click(sheetItem);
     const deleteBtn = screen.getByRole('button', { name: /delete sheet/i });
     fireEvent.click(deleteBtn);
-    expect(confirmSpy).toHaveBeenCalled();
+    // Confirm modal appears — click the Delete confirm button
+    const confirmBtn = screen.getByRole('button', { name: /^delete$/i });
+    fireEvent.click(confirmBtn);
     // Sheet list should be empty again
     expect(screen.queryAllByRole('listitem').length).toBe(0);
-    confirmSpy.mockRestore();
   });
 });

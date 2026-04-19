@@ -5,7 +5,6 @@ import { useRole } from '../hooks/useRole';
 
 // Canvas coordinate constants — must match useViewport.ts
 const VIEWPORT_SCALE = 20;
-const VIEWPORT_OFFSET = 5000;
 
 interface ViewportProps {
   viewType?: 'floor-plan' | '3d' | 'section';
@@ -28,6 +27,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     textInputRef,
     confirmText,
     cancelText,
+    viewRef,
   } = useViewport({ isViewOnly });
   const {
     containerRef: threeContainerRef,
@@ -47,15 +47,17 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
 
   // Compute screen position for the text overlay input from world-space coordinates.
   // Uses the same formula as worldToScreen in useViewport:
-  //   sx = (wx + OFFSET) / SCALE + cw/2
+  //   sx = wx / SCALE + cw/2
+  //   sy = ch/2 - wy / SCALE   (Y is flipped)
   const computeTextOverlayPosition = (): { left: number; top: number } => {
     if (!drawingText) return { left: 0, top: 0 };
     const canvas = canvasRef.current;
     const cw = canvas?.offsetWidth ?? 800;
     const ch = canvas?.offsetHeight ?? 600;
+    const { zoom, panX, panY } = viewRef.current;
     return {
-      left: (drawingText.x + VIEWPORT_OFFSET) / VIEWPORT_SCALE + cw / 2,
-      top: (drawingText.y + VIEWPORT_OFFSET) / VIEWPORT_SCALE + ch / 2,
+      left: drawingText.x * zoom / VIEWPORT_SCALE + cw / 2 + panX,
+      top: ch / 2 + panY - drawingText.y * zoom / VIEWPORT_SCALE,
     };
   };
 

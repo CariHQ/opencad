@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
+import { useDocumentStore } from '../stores/documentStore';
 
 export interface HatchConfig { pattern: string; scale: number; angle: number; spacing: number; }
 
 const HATCH_PATTERNS = [
-  { id: 'concrete', label: 'Concrete', description: 'Dotted triangle pattern' },
-  { id: 'brick', label: 'Brick', description: 'Staggered horizontal lines' },
-  { id: 'sand', label: 'Sand/Earth', description: 'Stipple dots' },
-  { id: 'insulation', label: 'Insulation', description: 'Zigzag lines' },
-  { id: 'gravel', label: 'Gravel', description: 'Random circles' },
-  { id: 'stone', label: 'Cut Stone', description: 'Diagonal cross-hatch' },
-  { id: 'timber', label: 'Timber', description: 'Diagonal lines with knots' },
-  { id: 'steel', label: 'Steel (section)', description: 'Diagonal lines 45°' },
-  { id: 'glass', label: 'Glass', description: 'Vertical lines' },
-  { id: 'plasterboard', label: 'Plasterboard', description: 'Fine horizontal lines' },
-  { id: 'water', label: 'Water', description: 'Wavy horizontal lines' },
-  { id: 'earth', label: 'Earth/Ground', description: 'Horizontal with grass symbols' },
-  { id: 'diagonal', label: 'Diagonal Lines', description: 'Simple 45° diagonal' },
-  { id: 'crosshatch', label: 'Cross-hatch', description: 'Grid at 45°' },
-  { id: 'dots', label: 'Dot Grid', description: 'Regular dot pattern' },
+  { id: 'concrete',     label: 'Concrete',      symbol: '▦' },
+  { id: 'brick',        label: 'Brick',          symbol: '▤' },
+  { id: 'sand',         label: 'Sand/Earth',     symbol: '∷' },
+  { id: 'insulation',   label: 'Insulation',     symbol: '≋' },
+  { id: 'gravel',       label: 'Gravel',         symbol: '∘' },
+  { id: 'stone',        label: 'Cut Stone',      symbol: '▩' },
+  { id: 'timber',       label: 'Timber',         symbol: '⊞' },
+  { id: 'steel',        label: 'Steel',          symbol: '▨' },
+  { id: 'glass',        label: 'Glass',          symbol: '║' },
+  { id: 'plasterboard', label: 'Plasterboard',   symbol: '≡' },
+  { id: 'water',        label: 'Water',          symbol: '≈' },
+  { id: 'earth',        label: 'Earth/Ground',   symbol: '≛' },
+  { id: 'diagonal',     label: 'Diagonal',       symbol: '▧' },
+  { id: 'crosshatch',   label: 'Cross-hatch',    symbol: '▦' },
+  { id: 'dots',         label: 'Dot Grid',       symbol: '⋮' },
 ];
 
 interface HatchPanelProps { onApply?: (config: HatchConfig) => void; }
@@ -28,18 +29,56 @@ export function HatchPanel({ onApply }: HatchPanelProps = {}) {
   const [angle, setAngle] = useState(0);
   const [spacing, setSpacing] = useState(5);
 
+  const { selectedIds, updateElement } = useDocumentStore();
+
+  const handleApply = () => {
+    const config: HatchConfig = { pattern: selected, scale, angle, spacing };
+    // Apply hatch to all selected elements via document store
+    if (selectedIds.length > 0) {
+      selectedIds.forEach((id) => {
+        updateElement(id, {
+          properties: {
+            HatchPattern: { type: 'string', value: selected },
+            HatchScale: { type: 'number', value: scale },
+            HatchAngle: { type: 'number', value: angle },
+            HatchSpacing: { type: 'number', value: spacing },
+          },
+        });
+      });
+    }
+    onApply?.(config);
+  };
+
   return (
     <div className="hatch-panel">
       <div className="panel-header"><span className="panel-title">Hatch Patterns</span></div>
-      <div className="hatch-pattern-list">
+
+      {selectedIds.length === 0 && (
+        <div className="hatch-notice">Select elements to apply a hatch pattern.</div>
+      )}
+
+      <div className="hatch-pattern-grid">
         {HATCH_PATTERNS.map((p) => (
-          <label key={p.id} className={`hatch-option ${selected === p.id ? 'selected' : ''}`}>
-            <input type="radio" name="hatch" value={p.id} checked={selected === p.id}
-              onChange={() => setSelected(p.id)} />
-            <span className="hatch-label">{p.label}</span>
+          <label
+            key={p.id}
+            className={`hatch-tile${selected === p.id ? ' selected' : ''}`}
+            title={p.label}
+          >
+            <input
+              type="radio"
+              name="hatch-pattern"
+              value={p.id}
+              checked={selected === p.id}
+              onChange={() => setSelected(p.id)}
+              className="sr-only"
+              aria-label={p.label}
+            />
+            <span className="hatch-tile-symbol">{p.symbol}</span>
+            <span className="hatch-tile-label">{p.label}</span>
           </label>
         ))}
       </div>
+
       <div className="hatch-controls">
         <div className="hatch-row">
           <label htmlFor="hatch-scale">Scale</label>
@@ -57,8 +96,14 @@ export function HatchPanel({ onApply }: HatchPanelProps = {}) {
             onChange={(e) => setSpacing(parseFloat(e.target.value) || 5)} />
         </div>
       </div>
-      <button className="btn-primary" onClick={() => onApply?.({ pattern: selected, scale, angle, spacing })}
-        aria-label="Apply hatch">Apply</button>
+
+      <button
+        className="btn-primary hatch-apply-btn"
+        onClick={handleApply}
+        aria-label="Apply hatch"
+      >
+        {selectedIds.length > 0 ? `Apply to ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}` : 'Apply'}
+      </button>
     </div>
   );
 }

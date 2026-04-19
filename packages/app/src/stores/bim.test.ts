@@ -98,7 +98,7 @@ describe('T-BIM-002: Door element', () => {
     const bb = useDocumentStore.getState().document!.content.elements[id]!.boundingBox;
     expect(bb.min.x).toBe(500);
     expect(bb.max.x).toBe(1400);
-    expect(bb.max.y).toBe(2100);
+    expect(bb.max.z).toBe(2100); // door Height maps to Z (elevation axis)
   });
 });
 

@@ -54,7 +54,6 @@ beforeEach(() => {
   vi.mocked(projectsApi.create).mockResolvedValue({ id: 'new-id' });
   vi.mocked(projectsApi.delete).mockResolvedValue(undefined);
   vi.mocked(projectsApi.rename).mockResolvedValue(undefined);
-  vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
   // Mock prompt for new project name dialog
   vi.stubGlobal('prompt', vi.fn().mockReturnValue('New Project'));
 });
@@ -131,6 +130,11 @@ describe('T-DOC-010: ProjectBrowser', () => {
     const deleteBtn = screen.getAllByRole('button', { name: /delete/i })[0]!;
     await act(async () => {
       fireEvent.click(deleteBtn);
+    });
+    // ConfirmModal appears — click the confirm Delete button
+    const confirmBtn = screen.getByRole('button', { name: /^delete$/i });
+    await act(async () => {
+      fireEvent.click(confirmBtn);
     });
     // Any project's delete was called — just verify the API was invoked
     expect(projectsApi.delete).toHaveBeenCalledTimes(1);

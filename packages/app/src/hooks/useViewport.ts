@@ -66,19 +66,34 @@ interface SnapResult {
 const GRID_SIZE = 500;
 const SNAP_TOLERANCE = 15;
 const SCALE = 20;
-const OFFSET = 5000;
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
 const DRAG_TOOLS = new Set(['line', 'wall', 'curtain_wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
 // Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing, spline)
 const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing', 'spline']);
 
-function screenToWorld(sx: number, sy: number, cw: number, ch: number): Point {
-  return { x: (sx - cw / 2) * SCALE - OFFSET, y: (sy - ch / 2) * SCALE - OFFSET };
+/**
+ * Convert a canvas screen coordinate to world (mm) coordinates.
+ * Origin (0,0) is at canvas centre. Y is flipped: screen-up = world-positive-Y.
+ * panX/panY are screen-pixel offsets (positive panX shifts content right).
+ */
+function screenToWorld(sx: number, sy: number, cw: number, ch: number, zoom = 1, panX = 0, panY = 0): Point {
+  return {
+    x: (sx - cw / 2 - panX) * SCALE / zoom,
+    y: (ch / 2 + panY - sy) * SCALE / zoom,
+  };
 }
 
-function worldToScreen(wx: number, wy: number, cw: number, ch: number): Point {
-  return { x: (wx + OFFSET) / SCALE + cw / 2, y: (wy + OFFSET) / SCALE + ch / 2 };
+/**
+ * Convert a world (mm) coordinate to canvas screen coordinates.
+ * Inverse of screenToWorld — Y is flipped.
+ * panX/panY are screen-pixel offsets (positive panX shifts content right).
+ */
+function worldToScreen(wx: number, wy: number, cw: number, ch: number, zoom = 1, panX = 0, panY = 0): Point {
+  return {
+    x: wx * zoom / SCALE + cw / 2 + panX,
+    y: ch / 2 + panY - wy * zoom / SCALE,
+  };
 }
 
 function snapToGrid(point: Point, gridSize: number = GRID_SIZE): Point {
@@ -199,7 +214,13 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   });
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [currentSnap, setCurrentSnap] = useState<SnapResult | null>(null);
-  const [zoomScale, setZoomScale] = useState(1);
+
+  // View transform — stored in a ref so the rAF draw loop always reads the latest
+  // without triggering re-renders. zoom is unitless multiplier; panX/panY in screen px.
+  const viewRef = useRef({ zoom: 1, panX: 0, panY: 0 });
+  // Middle-mouse / space-drag panning state
+  const isPanningRef = useRef(false);
+  const lastMousePos = useRef({ x: 0, y: 0 });
 
   // ─── Text tool state ────────────────────────────────────────────────────────
   // When the user clicks with the text tool active, drawingText records the
@@ -511,22 +532,54 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     ctx.fillStyle = theme.background;
     ctx.fillRect(0, 0, width, height);
 
-    // Grid
-    ctx.strokeStyle = theme.grid;
-    ctx.lineWidth = 1;
-    for (let x = 0; x <= width; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke(); }
-    for (let y = 0; y <= height; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke(); }
-    ctx.strokeStyle = theme.gridMajor;
-    ctx.setLineDash([5, 5]);
-    ctx.beginPath(); ctx.moveTo(width / 2, 0); ctx.lineTo(width / 2, height);
-    ctx.moveTo(0, height / 2); ctx.lineTo(width, height / 2); ctx.stroke();
-    ctx.setLineDash([]);
+    // ── View transform helpers ──
+    const { zoom, panX, panY } = viewRef.current;
+    const toS = (wx: number, wy: number) => worldToScreen(wx, wy, width, height, zoom, panX, panY);
+    const toW = (sx: number, sy: number) => screenToWorld(sx, sy, width, height, zoom, panX, panY);
+
+    // ── Grid — adapt density to zoom level ──
+    {
+      // Choose grid step so lines are ~40-80px apart on screen
+      const minPxSpacing = 40;
+      const worldStep = GRID_SIZE; // 500 mm base
+      const pxPerStep = worldStep * zoom / SCALE;
+      // Scale grid step if too dense or too sparse
+      let step = worldStep;
+      if (pxPerStep < minPxSpacing) step = worldStep * Math.ceil(minPxSpacing / pxPerStep);
+      const pxStep = step * zoom / SCALE;
+      if (pxStep < width * 2) {
+        const tl = toW(0, 0);
+        const br = toW(width, height);
+        const gMinX = Math.floor(Math.min(tl.x, br.x) / step) * step;
+        const gMaxX = Math.ceil(Math.max(tl.x, br.x) / step) * step;
+        const gMinY = Math.floor(Math.min(tl.y, br.y) / step) * step;
+        const gMaxY = Math.ceil(Math.max(tl.y, br.y) / step) * step;
+        ctx.strokeStyle = theme.grid;
+        ctx.lineWidth = 1;
+        for (let wx = gMinX; wx <= gMaxX; wx += step) {
+          const sx = toS(wx, 0).x;
+          ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, height); ctx.stroke();
+        }
+        for (let wy = gMinY; wy <= gMaxY; wy += step) {
+          const sy = toS(0, wy).y;
+          ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(width, sy); ctx.stroke();
+        }
+      }
+      // Axes
+      ctx.strokeStyle = theme.gridMajor;
+      ctx.setLineDash([5, 5]);
+      const axisX = toS(0, 0).x;
+      const axisY = toS(0, 0).y;
+      ctx.beginPath(); ctx.moveTo(axisX, 0); ctx.lineTo(axisX, height);
+      ctx.moveTo(0, axisY); ctx.lineTo(width, axisY); ctx.stroke();
+      ctx.setLineDash([]);
+    }
 
     if (!doc) return;
 
     // ── Compute canvas viewport rect in world coordinates for culling ──
-    const vTopLeft = screenToWorld(0, 0, width, height);
-    const vBottomRight = screenToWorld(width, height, width, height);
+    const vTopLeft = toW(0, 0);
+    const vBottomRight = toW(width, height);
     const vpMinX = Math.min(vTopLeft.x, vBottomRight.x);
     const vpMinY = Math.min(vTopLeft.y, vBottomRight.y);
     const vpMaxX = Math.max(vTopLeft.x, vBottomRight.x);
@@ -549,8 +602,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       if (type === 'annotation' || type === 'wall' || type === 'curtain_wall' || type === 'dimension') {
         // Lines and walls drawn as bounding rect or line
         if (props['StartX'] && props['EndX']) {
-          const p1 = worldToScreen(props['StartX'].value as number, props['StartY']!.value as number, width, height);
-          const p2 = worldToScreen(props['EndX'].value as number, props['EndY']!.value as number, width, height);
+          const p1 = toS(props['StartX'].value as number, props['StartY']!.value as number);
+          const p2 = toS(props['EndX'].value as number, props['EndY']!.value as number);
           if (type === 'annotation') {
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
           } else if (type === 'wall') {
@@ -591,34 +644,38 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         }
       } else if (type === 'rectangle') {
         if (props['X']) {
-          const p = worldToScreen(props['X'].value as number, props['Y']!.value as number, width, height);
-          const w = (props['Width']!.value as number) / SCALE;
-          const h = (props['Height']!.value as number) / SCALE;
-          ctx.beginPath(); ctx.rect(p.x, p.y, w, h); ctx.fill(); ctx.stroke();
+          const p1 = toS(props['X'].value as number, props['Y']!.value as number);
+          const p2 = toS(
+            (props['X'].value as number) + (props['Width']!.value as number),
+            (props['Y']!.value as number) + (props['Height']!.value as number),
+          );
+          ctx.beginPath();
+          ctx.rect(Math.min(p1.x, p2.x), Math.min(p1.y, p2.y), Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y));
+          ctx.fill(); ctx.stroke();
         }
       } else if (type === 'circle') {
         if (props['CenterX']) {
-          const c = worldToScreen(props['CenterX'].value as number, props['CenterY']!.value as number, width, height);
-          const r = (props['Radius']!.value as number) / SCALE;
+          const c = toS(props['CenterX'].value as number, props['CenterY']!.value as number);
+          const r = (props['Radius']!.value as number) * zoom / SCALE;
           ctx.beginPath(); ctx.arc(c.x, c.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         }
       } else if (type === 'arc') {
         if (props['CenterX']) {
-          const c = worldToScreen(props['CenterX'].value as number, props['CenterY']!.value as number, width, height);
-          const r = (props['Radius']!.value as number) / SCALE;
+          const c = toS(props['CenterX'].value as number, props['CenterY']!.value as number);
+          const r = (props['Radius']!.value as number) * zoom / SCALE;
           const sa = props['StartAngle']!.value as number;
           const ea = props['EndAngle']!.value as number;
-          ctx.beginPath(); ctx.arc(c.x, c.y, r, sa, ea); ctx.stroke();
+          ctx.beginPath(); ctx.arc(c.x, c.y, r, -ea, -sa); ctx.stroke();
         }
       } else if (type === 'polygon' || type === 'polyline') {
         if (props['Points']) {
           const pts = JSON.parse(props['Points'].value as string) as Point[];
           if (pts.length < 2) continue;
           ctx.beginPath();
-          const p0 = worldToScreen(pts[0]!.x, pts[0]!.y, width, height);
+          const p0 = toS(pts[0]!.x, pts[0]!.y);
           ctx.moveTo(p0.x, p0.y);
           for (let i = 1; i < pts.length; i++) {
-            const p = worldToScreen(pts[i]!.x, pts[i]!.y, width, height);
+            const p = toS(pts[i]!.x, pts[i]!.y);
             ctx.lineTo(p.x, p.y);
           }
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
@@ -628,7 +685,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         // Text elements use geometry.data (TextGeometryData) for position/content.
         const td = element.geometry.data as TextGeometryData | null;
         if (td) {
-          const tp = worldToScreen(td.x, td.y, width, height);
+          const tp = toS(td.x, td.y);
           ctx.fillStyle = color;
           ctx.font = `${td.fontSize}px ${td.fontFamily}`;
           ctx.fillText(td.content, tp.x, tp.y);
@@ -636,10 +693,11 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       } else {
         // Fallback: bounding box
         const bb = element.boundingBox;
-        const p = worldToScreen(bb.min.x, bb.min.y, width, height);
-        const w = (bb.max.x - bb.min.x) / SCALE;
-        const h = (bb.max.y - bb.min.y) / SCALE;
-        ctx.beginPath(); ctx.rect(p.x, p.y, w, h); ctx.fill(); ctx.stroke();
+        const p1 = toS(bb.min.x, bb.min.y);
+        const p2 = toS(bb.max.x, bb.max.y);
+        ctx.beginPath();
+        ctx.rect(Math.min(p1.x, p2.x), Math.min(p1.y, p2.y), Math.abs(p2.x - p1.x), Math.abs(p2.y - p1.y));
+        ctx.fill(); ctx.stroke();
       }
     }
 
@@ -652,8 +710,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     ctx.lineWidth = 2;
     ctx.setLineDash([5, 5]);
 
-    const sp = worldToScreen(startPoint.x, startPoint.y, width, height);
-    const cp = currentPoint ? worldToScreen(currentPoint.x, currentPoint.y, width, height) : sp;
+    const sp = toS(startPoint.x, startPoint.y);
+    const cp = currentPoint ? toS(currentPoint.x, currentPoint.y) : sp;
 
     if (activeTool === 'line' || activeTool === 'dimension') {
       if (currentPoint) {
@@ -674,7 +732,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
         ctx.fillText(
           `${Math.round(Math.abs(currentPoint.x - startPoint.x) / SCALE)} × ${Math.round(Math.abs(currentPoint.y - startPoint.y) / SCALE)}`,
-          x + 4, y - 6
+          x + 4, y - 6,
         );
       }
     }
@@ -682,7 +740,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     if (activeTool === 'circle') {
       if (currentPoint) {
         const r = dist(startPoint, currentPoint) / SCALE;
-        ctx.beginPath(); ctx.arc(sp.x, sp.y, dist(sp, cp), 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        const rPx = dist(sp, cp);
+        ctx.beginPath(); ctx.arc(sp.x, sp.y, rPx, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
         ctx.fillStyle = theme.accent; ctx.font = '11px sans-serif';
         ctx.fillText(`r=${Math.round(r)}`, sp.x + 4, sp.y - 6);
       }
@@ -690,19 +749,19 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
 
     if (activeTool === 'arc') {
       if (currentPoint) {
-        const r = dist(sp, cp);
+        const rPx = dist(sp, cp);
         const sa = Math.atan2(cp.y - sp.y, cp.x - sp.x);
-        ctx.beginPath(); ctx.arc(sp.x, sp.y, r, sa, sa + Math.PI); ctx.stroke();
+        ctx.beginPath(); ctx.arc(sp.x, sp.y, rPx, sa, sa + Math.PI); ctx.stroke();
       }
     }
 
     // Polygon / polyline: show committed points so far + rubber-band to mouse
     if ((activeTool === 'polygon' || activeTool === 'polyline') && points.length > 0) {
       ctx.beginPath();
-      const p0 = worldToScreen(points[0]!.x, points[0]!.y, width, height);
+      const p0 = toS(points[0]!.x, points[0]!.y);
       ctx.moveTo(p0.x, p0.y);
       for (let i = 1; i < points.length; i++) {
-        const p = worldToScreen(points[i]!.x, points[i]!.y, width, height);
+        const p = toS(points[i]!.x, points[i]!.y);
         ctx.lineTo(p.x, p.y);
       }
       if (currentPoint) ctx.lineTo(cp.x, cp.y);
@@ -711,14 +770,14 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       ctx.setLineDash([]);
       ctx.fillStyle = theme.accent;
       for (const pt of points) {
-        const s = worldToScreen(pt.x, pt.y, width, height);
+        const s = toS(pt.x, pt.y);
         ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
       }
     }
 
     // Spline: Catmull-Rom smooth curve + dotted rubber-band to cursor
     if (activeTool === 'spline' && points.length > 0) {
-      const screenPts = points.map((pt) => worldToScreen(pt.x, pt.y, width, height));
+      const screenPts = points.map((pt) => toS(pt.x, pt.y));
       if (screenPts.length === 1) {
         ctx.setLineDash([]);
         ctx.fillStyle = theme.accent;
@@ -737,7 +796,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         ctx.stroke();
       }
       if (currentPoint) {
-        const lastS = worldToScreen(points[points.length - 1]!.x, points[points.length - 1]!.y, width, height);
+        const lastS = toS(points[points.length - 1]!.x, points[points.length - 1]!.y);
         ctx.setLineDash([4, 4]);
         ctx.strokeStyle = theme.accent;
         ctx.lineWidth = 1.5;
@@ -754,7 +813,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
 
     // Snap indicator
     if (currentSnap) {
-      const ss = worldToScreen(currentSnap.point.x, currentSnap.point.y, width, height);
+      const ss = toS(currentSnap.point.x, currentSnap.point.y);
       ctx.strokeStyle = theme.snap;
       ctx.lineWidth = 1.5;
       ctx.beginPath(); ctx.arc(ss.x, ss.y, 6, 0, Math.PI * 2); ctx.stroke();
@@ -766,13 +825,17 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     if (isViewOnly) return;
 
+    // Middle mouse button → start panning (handled natively); ignore in React handler
+    if (event.button === 1) return;
+
     // Text tool: compute world position using canvas dimensions (with fallbacks for test env).
     if (activeTool === 'text') {
       const canvas = canvasRef.current;
       const rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
       const cw = canvas?.width ?? 800;
       const ch = canvas?.height ?? 600;
-      let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, cw, ch);
+      const { zoom, panX, panY } = viewRef.current;
+      let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, cw, ch, zoom, panX, panY);
       wp = applySnapping(wp);
       setDrawingText({ x: wp.x, y: wp.y });
       // Focus the input overlay on the next tick (it's rendered by Viewport once drawingText is set)
@@ -786,7 +849,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     const cw = canvas ? canvas.width : 800;
     const ch = canvas ? canvas.height : 600;
     if (!canvas && activeTool !== 'text') return;
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, cw, ch);
+    const { zoom: _zoom, panX: _panX, panY: _panY } = viewRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, cw, ch, _zoom, _panX, _panY);
     wp = applySnapping(wp);
 
     if (activeTool === 'select') {
@@ -838,7 +902,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height);
+    const { zoom, panX, panY } = viewRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, zoom, panX, panY);
     wp = applySnapping(wp);
 
     if (!drawingState.isDrawing) return;
@@ -853,7 +918,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     }
 
     const rect = canvas.getBoundingClientRect();
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height);
+    const { zoom, panX, panY } = viewRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, zoom, panX, panY);
     wp = applySnapping(wp);
 
     if (DRAG_TOOLS.has(activeTool)) {
@@ -870,7 +936,8 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height);
+    const { zoom, panX, panY } = viewRef.current;
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, zoom, panX, panY);
     wp = applySnapping(wp);
     setDrawingState((prev) => {
       if (prev.points.length >= 2) {
@@ -965,18 +1032,76 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     }
   }, [activeTool, isViewOnly]);
 
-  // Wheel zoom — always active regardless of isViewOnly
+  // Wheel: zoom-to-cursor (Ctrl/pinch) or two-finger pan — always active
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const delta = event.deltaY > 0 ? 0.9 : 1.1;
-      setZoomScale((prev) => Math.max(0.05, Math.min(20, prev * delta)));
+      const { zoom, panX, panY } = viewRef.current;
+      const cw = canvas.offsetWidth;
+      const ch = canvas.offsetHeight;
+      const rect = canvas.getBoundingClientRect();
+      const mx = event.clientX - rect.left;
+      const my = event.clientY - rect.top;
+
+      if (event.ctrlKey) {
+        // Pinch-to-zoom or Ctrl+scroll: zoom toward cursor
+        const factor = event.deltaY > 0 ? 1 / 1.08 : 1.08;
+        const newZoom = Math.max(0.05, Math.min(50, zoom * factor));
+        // Keep the world point under the cursor fixed
+        const newPanX = mx - cw / 2 - (mx - cw / 2 - panX) * newZoom / zoom;
+        const newPanY = (ch / 2 + panY - my) * newZoom / zoom - ch / 2 + my;
+        viewRef.current = { zoom: newZoom, panX: newPanX, panY: newPanY };
+      } else {
+        // Two-finger scroll / regular scroll → pan
+        viewRef.current = {
+          zoom,
+          panX: panX - event.deltaX,
+          panY: panY - event.deltaY,
+        };
+      }
     };
     canvas.addEventListener('wheel', handleWheel, { passive: false });
     return () => canvas.removeEventListener('wheel', handleWheel);
   }, []);
+
+  // Middle-mouse button panning — always active
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (e.button !== 1) return;
+      e.preventDefault();
+      isPanningRef.current = true;
+      lastMousePos.current = { x: e.clientX, y: e.clientY };
+      canvas.style.cursor = 'grabbing';
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isPanningRef.current) return;
+      const dx = e.clientX - lastMousePos.current.x;
+      const dy = e.clientY - lastMousePos.current.y;
+      lastMousePos.current = { x: e.clientX, y: e.clientY };
+      viewRef.current = {
+        zoom: viewRef.current.zoom,
+        panX: viewRef.current.panX + dx,
+        panY: viewRef.current.panY + dy,
+      };
+    };
+    const onMouseUp = (e: MouseEvent) => {
+      if (e.button !== 1) return;
+      isPanningRef.current = false;
+      canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
+    };
+    canvas.addEventListener('mousedown', onMouseDown);
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+    return () => {
+      canvas.removeEventListener('mousedown', onMouseDown);
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [activeTool]);
 
   // Cancel text entry on Escape
   useEffect(() => {
@@ -1027,8 +1152,12 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     activeTool,
     drawingState,
     isViewOnly,
-    zoomScale,
-    viewTransform: { scale: zoomScale / SCALE, panX: OFFSET, panY: OFFSET },
+    viewRef,
+    viewTransform: {
+      scale: viewRef.current.zoom / SCALE,
+      panX: viewRef.current.panX,
+      panY: viewRef.current.panY,
+    },
     // Text tool
     drawingText,
     textInputRef,

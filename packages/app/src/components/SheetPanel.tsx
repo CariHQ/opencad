@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { ConfirmModal } from './ConfirmModal';
+import { useDocumentStore } from '../stores/documentStore';
 
 // ---------------------------------------------------------------------------
 // T-DOC-020: Sheet Layout Manager
@@ -28,6 +30,7 @@ function makeSheet(): Sheet {
 export function SheetManager(): React.ReactElement {
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
 
   const selectedSheet = sheets.find((s) => s.id === selectedId) ?? null;
 
@@ -41,12 +44,26 @@ export function SheetManager(): React.ReactElement {
   }
 
   function deleteSheet(id: string): void {
-    if (!window.confirm('Delete this sheet?')) return;
-    setSheets((prev) => prev.filter((s) => s.id !== id));
-    if (selectedId === id) setSelectedId(null);
+    setPendingDeleteId(id);
+  }
+
+  function confirmDelete(): void {
+    if (!pendingDeleteId) return;
+    setSheets((prev) => prev.filter((s) => s.id !== pendingDeleteId));
+    if (selectedId === pendingDeleteId) setSelectedId(null);
+    setPendingDeleteId(null);
   }
 
   return (
+    <>
+    {pendingDeleteId && (
+      <ConfirmModal
+        message="Delete this sheet? This cannot be undone."
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+    )}
     <div className="sheet-manager">
       <div className="sheet-manager-header">
         <span className="panel-title">Sheets</span>
@@ -126,6 +143,7 @@ export function SheetManager(): React.ReactElement {
         </div>
       )}
     </div>
+    </>
   );
 }
 
@@ -149,6 +167,7 @@ interface SheetPanelProps {
 }
 
 export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
+  const { document: doc } = useDocumentStore();
   const [size, setSize] = useState('A1');
   const [orientation, setOrientation] = useState('Landscape');
   const [scale, setScale] = useState('1:100');
@@ -156,8 +175,21 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
   const [drawnBy, setDrawnBy] = useState('');
   const [sheetNumber, setSheetNumber] = useState('A1-01');
 
+  // Auto-populate project name from the active document
+  useEffect(() => {
+    if (doc?.name && !projectName) {
+      setProjectName(doc.name);
+    }
+  }, [doc?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleExport = () => {
-    onExportPDF?.({ size, orientation, scale, projectName, drawnBy, sheetNumber });
+    const config = { size, orientation, scale, projectName, drawnBy, sheetNumber };
+    if (onExportPDF) {
+      onExportPDF(config);
+    } else {
+      // Fallback: trigger browser print dialog
+      window.print();
+    }
   };
 
   // Approximate sheet ratio for preview

@@ -4,10 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../stores/projectStore';
 import { ProjectTemplates } from './ProjectTemplates';
 import { isTauri, tauriStartDragging } from '../hooks/useTauri';
+import { ConfirmModal } from './ConfirmModal';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
   const [showTemplates, setShowTemplates] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
 
   // Apply stored theme (same key AppLayout uses) so dashboard matches the app
   useEffect(() => {
@@ -60,6 +63,15 @@ export function ProjectDashboard() {
   }
 
   return (
+    <>
+    {pendingDeleteId && (
+      <ConfirmModal
+        message={`Delete "${pendingDeleteName}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={() => { deleteProject(pendingDeleteId); setPendingDeleteId(null); }}
+        onCancel={() => setPendingDeleteId(null)}
+      />
+    )}
     <div className="project-dashboard">
       <header className="dashboard-header" data-tauri-drag-region onMouseDown={handleHeaderMouseDown}>
         <h1 className="dashboard-title">Projects</h1>
@@ -188,9 +200,8 @@ export function ProjectDashboard() {
                     title="Delete project"
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (window.confirm(`Delete "${project.name}"? This cannot be undone.`)) {
-                        deleteProject(project.id);
-                      }
+                      setPendingDeleteId(project.id);
+                      setPendingDeleteName(project.name);
                     }}
                   >
                     ×
@@ -227,5 +238,6 @@ export function ProjectDashboard() {
         </div>
       )}
     </div>
+    </>
   );
 }

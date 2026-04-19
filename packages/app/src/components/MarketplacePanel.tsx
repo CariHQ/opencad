@@ -196,139 +196,45 @@ export function MarketplacePanel({
 
   const installedPlugins = pluginRegistry.list();
 
+  // Determine what to show in the main list
+  const showFallback = !loading && !!error;
+  const showApiList = !loading && !error && apiPlugins.length > 0;
+  const showEmpty = !loading && !error && apiPlugins.length === 0;
+
   return (
     <div className="marketplace-panel">
       <div className="panel-header">
         <span className="panel-title">Marketplace</span>
-        <button
-          aria-label="Publish component"
-          className="btn-publish"
-          onClick={() => onPublish?.()}
-        >
-          Publish
-        </button>
       </div>
 
       <input
         type="text"
-        placeholder="Search components…"
+        placeholder="Search plugins…"
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="marketplace-search"
         aria-label="Search plugins"
       />
 
-      {/* Legacy prop-based items list */}
-      <div className="marketplace-list">
-        {filtered.map((item) => (
-          <div key={item.id} className="marketplace-item">
-            <div className="item-info">
-              <span className="item-name">{item.name}</span>
-              <span className="item-author">by {item.author}</span>
-              <span className="item-desc">{item.description}</span>
-              <span className="item-meta">
-                v{item.version} · {item.category} · {item.downloads.toLocaleString('en-US')}{' '}
-                downloads
-              </span>
-            </div>
-            {item.installed ? (
-              <span className="installed-badge">Installed</span>
-            ) : (
-              <button
-                aria-label={`Install ${item.name}`}
-                className="btn-install"
-                onClick={() => onInstall?.(item)}
-              >
-                Install
-              </button>
-            )}
-          </div>
-        ))}
-        {filtered.length === 0 && items.length > 0 && (
-          <div className="marketplace-empty">No components found.</div>
-        )}
-      </div>
+      {/* Loading skeleton */}
+      {loading && (
+        <div className="marketplace-section" aria-label="Loading plugins">
+          <PluginSkeleton />
+          <PluginSkeleton />
+          <PluginSkeleton />
+        </div>
+      )}
 
-      {/* API-backed plugins section */}
-      <div className="marketplace-section">
-        <h4 className="section-title">Available Plugins</h4>
-
-        {/* Error state */}
-        {error && !loading && (
+      {/* Error + fallback catalogue */}
+      {showFallback && (
+        <div className="marketplace-section">
           <div className="marketplace-error" role="alert">
-            <span>{error}</span>
+            <span>Could not reach marketplace. Showing local catalogue.</span>
             <button className="btn-retry" onClick={() => void fetchPlugins(debouncedSearch)}>
               Retry
             </button>
           </div>
-        )}
-
-        {/* Loading skeleton */}
-        {loading && (
-          <div aria-label="Loading plugins">
-            <PluginSkeleton />
-            <PluginSkeleton />
-            <PluginSkeleton />
-          </div>
-        )}
-
-        {/* Plugin list */}
-        {!loading &&
-          !error &&
-          apiPlugins.map((plugin) => {
-            const isInstalling = installingIds.has(plugin.id);
-            const isUninstalling = uninstallingIds.has(plugin.id);
-            return (
-              <div
-                key={plugin.id}
-                className={`marketplace-item${plugin.installed ? ' installed' : ''}`}
-              >
-                <div className="item-info">
-                  {plugin.icon && (
-                    <img src={plugin.icon} alt={plugin.name} className="plugin-icon" />
-                  )}
-                  <span className="item-name">{plugin.name}</span>
-                  <span className="item-author">by {plugin.author}</span>
-                  <span className="item-desc">{plugin.description}</span>
-                  <span className="item-meta">
-                    v{plugin.version} · {plugin.category} ·{' '}
-                    {plugin.downloadCount.toLocaleString('en-US')} downloads ·{' '}
-                    {plugin.price === 'free' ? 'Free' : `$${plugin.price}`}
-                    {plugin.rating > 0 && ` · ★ ${plugin.rating.toFixed(1)}`}
-                  </span>
-                </div>
-                {plugin.installed ? (
-                  <button
-                    aria-label={`Uninstall ${plugin.name}`}
-                    className="btn-uninstall"
-                    disabled={isUninstalling}
-                    onClick={() => void handleApiUninstall(plugin.id)}
-                  >
-                    {isUninstalling ? 'Removing…' : 'Uninstall'}
-                  </button>
-                ) : (
-                  <button
-                    aria-label={`Install ${plugin.name}`}
-                    className="btn-install"
-                    disabled={isInstalling}
-                    onClick={() => void handleApiInstall(plugin.id)}
-                  >
-                    {isInstalling ? 'Installing…' : 'Install'}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-
-        {/* Empty state after loading */}
-        {!loading && !error && apiPlugins.length === 0 && (
-          <div className="marketplace-empty">No plugins found.</div>
-        )}
-
-        {/* Fallback catalogue when API failed */}
-        {!loading &&
-          error &&
-          AVAILABLE_PLUGINS.map((plugin) => {
+          {AVAILABLE_PLUGINS.map((plugin) => {
             const isInstalled = registeredIds.has(plugin.id);
             return (
               <div key={plugin.id} className="marketplace-item">
@@ -337,27 +243,103 @@ export function MarketplacePanel({
                   <span className="item-desc">{plugin.description}</span>
                   <span className="item-meta">v{plugin.version}</span>
                 </div>
-                {isInstalled ? (
+                <div className="item-actions">
+                  {isInstalled ? (
+                    <span className="installed-badge">Installed</span>
+                  ) : (
+                    <button
+                      aria-label={`Install ${plugin.name}`}
+                      className="btn-install"
+                      onClick={() => handleInstallPlugin(plugin)}
+                    >
+                      Install
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* API-backed list */}
+      {showApiList && (
+        <div className="marketplace-section">
+          <h4 className="section-title">Available</h4>
+          {apiPlugins.map((plugin) => {
+            const isInstalling = installingIds.has(plugin.id);
+            const isUninstalling = uninstallingIds.has(plugin.id);
+            return (
+              <div key={plugin.id} className={`marketplace-item${plugin.installed ? ' installed' : ''}`}>
+                <div className="item-info">
+                  {plugin.icon && <img src={plugin.icon} alt="" className="plugin-icon" />}
+                  <span className="item-name">{plugin.name}</span>
+                  <span className="item-desc">{plugin.description}</span>
+                  <span className="item-meta">
+                    v{plugin.version} · {plugin.price === 'free' ? 'Free' : `$${plugin.price}`}
+                    {plugin.rating > 0 && ` · ★ ${plugin.rating.toFixed(1)}`}
+                  </span>
+                </div>
+                <div className="item-actions">
+                  {plugin.installed ? (
+                    <button
+                      aria-label={`Uninstall ${plugin.name}`}
+                      className="btn-uninstall"
+                      disabled={isUninstalling}
+                      onClick={() => void handleApiUninstall(plugin.id)}
+                    >
+                      {isUninstalling ? 'Removing…' : 'Uninstall'}
+                    </button>
+                  ) : (
+                    <button
+                      aria-label={`Install ${plugin.name}`}
+                      className="btn-install"
+                      disabled={isInstalling}
+                      onClick={() => void handleApiInstall(plugin.id)}
+                    >
+                      {isInstalling ? 'Installing…' : 'Install'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {showEmpty && (
+        <div className="marketplace-empty">No plugins found.</div>
+      )}
+
+      {/* Legacy prop-based items (used in tests / embedded mode) */}
+      {filtered.length > 0 && (
+        <div className="marketplace-section">
+          {filtered.map((item) => (
+            <div key={item.id} className="marketplace-item">
+              <div className="item-info">
+                <span className="item-name">{item.name}</span>
+                <span className="item-desc">{item.description}</span>
+                <span className="item-meta">v{item.version} · {item.category} · {item.downloads.toLocaleString()} downloads</span>
+              </div>
+              <div className="item-actions">
+                {item.installed ? (
                   <span className="installed-badge">Installed</span>
                 ) : (
-                  <button
-                    aria-label={`Install ${plugin.name}`}
-                    className="btn-install"
-                    onClick={() => handleInstallPlugin(plugin)}
-                  >
+                  <button aria-label={`Install ${item.name}`} className="btn-install" onClick={() => onInstall?.(item)}>
                     Install
                   </button>
                 )}
               </div>
-            );
-          })}
-      </div>
+            </div>
+          ))}
+        </div>
+      )}
 
-      {/* Registered Plugins section */}
+      {/* My installed plugins */}
       <div className="marketplace-section">
         <h4 className="section-title">My Plugins</h4>
         {installedPlugins.length === 0 ? (
-          <div className="marketplace-empty">No plugins registered yet.</div>
+          <div className="marketplace-empty">No plugins installed yet.</div>
         ) : (
           installedPlugins.map((plugin) => (
             <div key={plugin.id} className="marketplace-item installed">

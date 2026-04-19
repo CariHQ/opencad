@@ -216,12 +216,12 @@ describe('T-ROLE-005: viewport read-only mode', () => {
    * T-ROLE-005-003: isViewOnly=true — wheel zoom is still available
    * The wheel handler is registered regardless of isViewOnly.
    */
-  it('T-ROLE-005-003: isViewOnly=true hook exposes zoomScale for wheel zoom', () => {
+  it('T-ROLE-005-003: isViewOnly=true hook exposes viewRef for wheel zoom', () => {
     const { result } = renderHook(() => useViewport({ isViewOnly: true }));
-    // zoomScale starts at 1
-    expect(result.current.zoomScale).toBe(1);
-    // The wheel handler is registered on the canvas — presence of zoomScale confirms feature
-    expect(typeof result.current.zoomScale).toBe('number');
+    // viewRef.current.zoom starts at 1
+    expect(result.current.viewRef.current.zoom).toBe(1);
+    // The wheel handler is registered on the canvas — presence of viewRef confirms feature
+    expect(typeof result.current.viewRef.current.zoom).toBe('number');
   });
 
   /**

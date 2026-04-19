@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { LayoutGrid, List } from 'lucide-react';
 import { projectsApi, type ProjectSummary } from '../lib/projectsApi';
+import { ConfirmModal } from './ConfirmModal';
 
 type SortKey = 'name-asc' | 'name-desc' | 'recent' | 'oldest';
 
@@ -19,6 +20,7 @@ export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('recent');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [pendingDelete, setPendingDelete] = useState<ProjectSummary | null>(null);
 
   // Debounce search input by 300 ms
   useEffect(() => {
@@ -78,21 +80,32 @@ export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
     });
   }, []);
 
-  const handleDelete = useCallback(
-    (project: ProjectSummary) => {
-      if (!window.confirm(`Delete "${project.name}"? This cannot be undone.`)) return;
-      projectsApi.delete(project.id).then(() => {
-        setProjects((prev) => prev.filter((p) => p.id !== project.id));
-      });
-    },
-    [],
-  );
+  const handleDelete = useCallback((project: ProjectSummary) => {
+    setPendingDelete(project);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    if (!pendingDelete) return;
+    projectsApi.delete(pendingDelete.id).then(() => {
+      setProjects((prev) => prev.filter((p) => p.id !== pendingDelete.id));
+    });
+    setPendingDelete(null);
+  }, [pendingDelete]);
 
   if (loading) {
     return <div className="project-browser-loading">Loading projects…</div>;
   }
 
   return (
+    <>
+    {pendingDelete && (
+      <ConfirmModal
+        message={`Delete "${pendingDelete.name}"? This cannot be undone.`}
+        confirmLabel="Delete"
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingDelete(null)}
+      />
+    )}
     <div className="project-browser">
       {/* Toolbar */}
       <div className="project-browser-toolbar">
@@ -201,5 +214,6 @@ export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
         </div>
       )}
     </div>
+    </>
   );
 }

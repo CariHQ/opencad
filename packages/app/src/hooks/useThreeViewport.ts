@@ -88,6 +88,16 @@ const ELEMENT_TYPE_COLORS: Record<string, number> = {
   curtain_wall: 0x88c0e0,
 };
 
+/**
+ * 2D-only drafting/annotation types that should never be extruded to 3D geometry.
+ * Drawing a rectangle or circle in the floor plan produces a flat 2D annotation —
+ * it has no height and should not appear as a box in the 3D view.
+ */
+const SKETCH_2D_TYPES = new Set([
+  'annotation', 'rectangle', 'circle', 'arc', 'dimension',
+  'text', 'polyline', 'polygon', 'spline',
+]);
+
 const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; distance: number }> = {
   top: { azimuth: 0, elevation: 0.01, distance: 10000 },
   front: { azimuth: 0, elevation: Math.PI / 2, distance: 10000 },
@@ -155,30 +165,47 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
   const createMeshFromElement = useCallback(
     (element: ElementSchema, lod: LodLevel = 'high'): THREE.Mesh | null => {
+      // 2D drafting elements (rectangle, circle, arc, etc.) live only in the
+      // floor-plan view — skip them in the 3D scene entirely.
+      if (SKETCH_2D_TYPES.has(element.type)) return null;
+
       const bb = element.boundingBox;
-      let width = bb.max.x - bb.min.x || 200;
-      let depth = bb.max.y - bb.min.y || 200;
-      let height = bb.max.z - bb.min.z || 3000;
+      // Architectural coords: X = east-west, Y = plan north-south, Z = elevation.
+      // Three.js scene convention: X = east-west, Y = up, Z = plan depth.
+      // Remap: arch-X → three-X, arch-Z → three-Y, arch-Y → three-Z.
+      let width = bb.max.x - bb.min.x;    // three-X extent
+      let planDepth = bb.max.y - bb.min.y; // three-Z extent
+      let height = bb.max.z - bb.min.z;   // three-Y extent
 
-      if (width < 1) width = 200;
-      if (depth < 1) depth = 200;
-      if (height < 1) height = 3000;
+      // Fall back to sensible defaults for flat/missing geometry
+      if (width < 50) width = 200;
+      if (planDepth < 50) planDepth = 200;
+      // For height: only use property or 3000 default if bounding box gives < 100mm
+      if (height < 100) {
+        const props = element.properties as Record<string, { value: unknown }>;
+        height = (props['Height']?.value as number | undefined)
+          ?? (props['TotalRise']?.value as number | undefined)
+          ?? 3000;
+      }
 
-      // At 'low' LOD, use a simple bounding-box geometry.
-      // At 'medium', use simplified geometry (1 segment per axis).
-      // At 'high', use default BoxGeometry.
+      // BoxGeometry(x-width, y-height, z-depth) — three.js axis order
       let geometry: THREE.BoxGeometry;
       if (lod === 'low' || lod === 'medium') {
-        geometry = new THREE.BoxGeometry(width, depth, height, 1, 1, 1);
+        geometry = new THREE.BoxGeometry(width, height, planDepth, 1, 1, 1);
       } else {
-        geometry = new THREE.BoxGeometry(width, depth, height);
+        geometry = new THREE.BoxGeometry(width, height, planDepth);
       }
 
       const colorHex = ELEMENT_TYPE_COLORS[element.type] ?? 0x8888aa;
       const material = createMaterial(colorHex);
 
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(bb.min.x + width / 2, bb.min.y + depth / 2, bb.min.z + height / 2);
+      // Remap arch (x, y, z) → three (x, z, y)
+      mesh.position.set(
+        bb.min.x + width / 2,
+        bb.min.z + height / 2,
+        bb.min.y + planDepth / 2,
+      );
       mesh.castShadow = true;
       mesh.receiveShadow = true;
 
@@ -256,7 +283,9 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     const centerY = (minY + maxY) / 2;
     const size = Math.max(maxX - minX, maxY - minY);
 
-    cameraStateRef.current.target.set(centerX, centerY, 0);
+    // Remap arch (x, y) plan coords → three (x, z) ground-plane coords.
+    // Three.js Y axis is vertical; keep camera target at Y=0 (ground).
+    cameraStateRef.current.target.set(centerX, 0, centerY);
     cameraStateRef.current.distance = size * 2;
     updateCamera();
   }, [doc, updateCamera, setViewPreset]);
@@ -265,7 +294,7 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     const { scene } = stateRef.current;
     if (!scene || !doc) return;
 
-    Object.values(elementMeshesRef.current).forEach((mesh) => {
+    elementMeshesRef.current.forEach((mesh) => {
       scene.remove(mesh);
       mesh.geometry.dispose();
       if (mesh.material instanceof THREE.Material) {
@@ -662,12 +691,11 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     if (!renderer) return;
 
     if (sectionBox) {
-      // Normal points in the negative axis direction so the plane clips
-      // elements "above" the cut position (in the selected axis direction).
+      // Architectural direction → three.js normal (arch-Z is vertical / three-Y).
       let normal: THREE.Vector3;
       if (sectionDirection === 'x')      normal = new THREE.Vector3(-1, 0, 0);
-      else if (sectionDirection === 'y') normal = new THREE.Vector3(0, -1, 0);
-      else                               normal = new THREE.Vector3(0, 0, -1);
+      else if (sectionDirection === 'y') normal = new THREE.Vector3(0, 0, -1);
+      else                               normal = new THREE.Vector3(0, -1, 0);
 
       renderer.clippingPlanes = [new THREE.Plane(normal, sectionPosition)];
       renderer.localClippingEnabled = true;

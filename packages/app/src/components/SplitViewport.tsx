@@ -64,7 +64,7 @@ interface ThreeDViewProps {
 
 function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
   const {
-    containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraState,
+    containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
     contextMenuState, closeContextMenu,
   } = useThreeViewport({ isViewOnly });
@@ -84,9 +84,9 @@ function ThreeDView({ viewType, label, isViewOnly = false }: ThreeDViewProps) {
   useEffect(() => {
     if (viewType === 'section') {
       setSectionBox(true);
-      // Default cut at camera target — put the slice through the model centre
-      const t = getCameraState()?.target;
-      if (t) setSectionPosition(Math.round(t.z));
+      // Default the horizontal cut to mid-wall height (~1.5 m) so a typical
+      // building shows an interior cutaway rather than being fully clipped.
+      setSectionPosition(1500);
     } else {
       setSectionBox(false);
     }

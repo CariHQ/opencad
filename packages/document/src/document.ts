@@ -151,9 +151,31 @@ export function computeBoundingBox(
   let maxX = 0, maxY = 0, maxZ = 0;
 
   switch (elementType) {
-    case 'wall':
+    case 'wall': {
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX'), ey = num('EndY');
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      minZ = 0; maxZ = num('Height', 3000);
+      break;
+    }
+    case 'curtain_wall': {
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX'), ey = num('EndY');
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      minZ = 0; maxZ = num('Height', 3000);
+      break;
+    }
+    case 'beam': {
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX'), ey = num('EndY');
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      minZ = 0; maxZ = 300; // beam depth ~ 300mm
+      break;
+    }
     case 'line':
-    case 'beam':
     case 'dimension': {
       const sx = num('StartX'), sy = num('StartY');
       const ex = num('EndX'), ey = num('EndY');
@@ -165,7 +187,7 @@ export function computeBoundingBox(
     case 'slab': {
       const x = num('X'), y = num('Y');
       const w = num('Width'), h = num('Height');
-      const depth = num('Depth', 200);
+      const depth = num('Depth', num('Thickness', 200));
       minX = x; maxX = x + w;
       minY = y; maxY = y + h;
       minZ = 0; maxZ = depth;
@@ -220,14 +242,65 @@ export function computeBoundingBox(
       const d = num('Diameter', 400);
       minX = x - d / 2; maxX = x + d / 2;
       minY = y - d / 2; maxY = y + d / 2;
+      minZ = 0; maxZ = num('Height', 3000);
       break;
     }
-    case 'door':
-    case 'window': {
+    case 'door': {
       const x = num('X'), y = num('Y');
       const w = num('Width', 900), h = num('Height', 2100);
       minX = x; maxX = x + w;
-      minY = y; maxY = y + h;
+      minY = y - 50; maxY = y + 200; // thin in plan
+      minZ = 0; maxZ = h;
+      break;
+    }
+    case 'window': {
+      const x = num('X'), y = num('Y');
+      const w = num('Width', 1200), h = num('Height', 1200);
+      const sill = num('SillHeight', 900);
+      minX = x; maxX = x + w;
+      minY = y - 50; maxY = y + 200;
+      minZ = sill; maxZ = sill + h;
+      break;
+    }
+    case 'stair': {
+      const x = num('X'), y = num('Y');
+      const w = num('Width2D', num('Width', 1200));
+      const l = num('Length', 3000);
+      minX = x; maxX = x + w;
+      minY = y; maxY = y + l;
+      minZ = 0; maxZ = num('TotalRise', 3000);
+      break;
+    }
+    case 'railing': {
+      const ptsVal = properties['Points']?.value;
+      if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+        try {
+          const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+          if (pts.length > 0) {
+            minX = Math.min(...pts.map((p) => p.x));
+            maxX = Math.max(...pts.map((p) => p.x));
+            minY = Math.min(...pts.map((p) => p.y));
+            maxY = Math.max(...pts.map((p) => p.y));
+          }
+        } catch { /* fall through */ }
+      }
+      minZ = 0; maxZ = num('Height', 1000);
+      break;
+    }
+    case 'roof': {
+      const ptsVal = properties['Points']?.value;
+      if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+        try {
+          const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+          if (pts.length > 0) {
+            minX = Math.min(...pts.map((p) => p.x));
+            maxX = Math.max(...pts.map((p) => p.x));
+            minY = Math.min(...pts.map((p) => p.y));
+            maxY = Math.max(...pts.map((p) => p.y));
+          }
+        } catch { /* fall through */ }
+      }
+      minZ = 0; maxZ = num('Thickness', 300);
       break;
     }
     case 'text': {

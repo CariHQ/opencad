@@ -123,9 +123,10 @@ describe('T-2D-011: text tool — drawingText state', () => {
       result.current.handleCanvasMouseDown(makeMouseEvent(400, 300));
     });
 
-    // screenToWorld(400, 300, 800, 600) = { x: (400-400)*20 - 5000 = -5000, y: (300-300)*20 - 5000 = -5000 }
-    expect(result.current.drawingText!.x).toBe(-5000);
-    expect(result.current.drawingText!.y).toBe(-5000);
+    // screenToWorld(400, 300, 800, 600) = { x: (400-400)*20 = 0, y: -(300-300)*20 = 0 }
+    // Canvas centre maps to world origin (0, 0) — Y is flipped.
+    expect(result.current.drawingText!.x).toBe(0);
+    expect(result.current.drawingText!.y).toBe(0);
   });
 
   it('T-2D-011-004: textInputRef is returned from the hook', () => {
@@ -226,8 +227,9 @@ describe('T-2D-011: text tool — confirmText adds element', () => {
     expect(textEl).toBeDefined();
     const data = textEl!.geometry.data as { content: string; x: number; y: number; fontSize: number; fontFamily: string };
     expect(data.content).toBe('OpenCAD');
-    expect(data.x).toBe(-5000);
-    expect(data.y).toBe(-5000);
+    // Canvas centre (400, 300) → world (0, 0) with Y-flipped coordinate system
+    expect(data.x).toBe(0);
+    expect(data.y).toBe(0);
     expect(data.fontSize).toBe(14);
     expect(data.fontFamily).toBe('sans-serif');
   });

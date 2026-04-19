@@ -6,9 +6,6 @@ import { ProjectDashboard } from './ProjectDashboard';
 import { useProjectStore } from '../stores/projectStore';
 expect.extend(jestDomMatchers);
 
-// T-DOC-010 tests use window.confirm for delete confirmation
-vi.stubGlobal('confirm', vi.fn().mockReturnValue(true));
-
 vi.mock('../stores/projectStore');
 
 function makeStore(overrides = {}) {
@@ -288,16 +285,21 @@ describe('T-DOC-010: ProjectDashboard', () => {
     const deleteBtns = screen.getAllByTitle(/delete/i);
     expect(deleteBtns.length).toBeGreaterThanOrEqual(1);
     fireEvent.click(deleteBtns[0]);
+    // ConfirmModal appears — click the confirm button
+    const confirmBtn = screen.getByRole('button', { name: /^delete$/i });
+    fireEvent.click(confirmBtn);
     expect(store.deleteProject).toHaveBeenCalledWith('p1');
   });
 
   it('does not delete project when confirmation is cancelled', () => {
-    vi.mocked(window.confirm).mockReturnValueOnce(false);
     const store = makeStore();
     vi.mocked(useProjectStore).mockReturnValue(store);
     render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
     const deleteBtns = screen.getAllByTitle(/delete/i);
     fireEvent.click(deleteBtns[0]);
+    // ConfirmModal appears — click Cancel
+    const cancelBtn = screen.getByRole('button', { name: /cancel/i });
+    fireEvent.click(cancelBtn);
     expect(store.deleteProject).not.toHaveBeenCalled();
   });
 });

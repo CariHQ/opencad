@@ -34,7 +34,8 @@ describe('T-MKTPL-001: MarketplacePanel', () => {
 
   it('shows Installed badge for installed items', () => {
     render(<MarketplacePanel items={items} onInstall={onInstall} onPublish={onPublish} />);
-    expect(screen.getByText(/installed/i)).toBeInTheDocument();
+    // installed-badge element has exact text "Installed"
+    expect(screen.getAllByText('Installed').length).toBeGreaterThan(0);
   });
 
   it('calls onInstall with item when Install clicked', () => {
@@ -60,14 +61,8 @@ describe('T-MKTPL-001: MarketplacePanel', () => {
     expect(screen.getAllByText(/1,200|1200|downloads/i).length).toBeGreaterThan(0);
   });
 
-  it('shows Publish button', () => {
+  it('does not show a Publish button (removed from panel header)', () => {
     render(<MarketplacePanel items={items} onInstall={onInstall} onPublish={onPublish} />);
-    expect(screen.getByRole('button', { name: /publish/i })).toBeInTheDocument();
-  });
-
-  it('calls onPublish when Publish clicked', () => {
-    render(<MarketplacePanel items={items} onInstall={onInstall} onPublish={onPublish} />);
-    fireEvent.click(screen.getByRole('button', { name: /publish/i }));
-    expect(onPublish).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /publish/i })).not.toBeInTheDocument();
   });
 });

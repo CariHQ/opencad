@@ -107,10 +107,15 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, updateElement } = useDocumentStore();
+  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, updateElement, renameProject } = useDocumentStore();
   const leftPanelRef = React.useRef<HTMLElement>(null);
   const rightPanelRef = React.useRef<HTMLElement>(null);
   const wsRef = React.useRef<WebSocket | null>(null);
+
+  // Inline project rename state
+  const [isRenamingProject, setIsRenamingProject] = React.useState(false);
+  const [renameValue, setRenameValue] = React.useState('');
+  const renameInputRef = React.useRef<HTMLInputElement>(null);
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
@@ -306,6 +311,42 @@ export function AppLayout() {
             </button>
             <img src="/favicon.svg" alt="OpenCAD" className="brand-logo-img" />
             <button className="toolbar-btn" onClick={() => navigate('/')} title="Back to projects"><Home size={14} strokeWidth={2} /></button>
+            <div className="toolbar-sep" />
+            {isRenamingProject ? (
+              <input
+                ref={renameInputRef}
+                className="project-name-input"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => {
+                  const trimmed = renameValue.trim();
+                  if (trimmed) renameProject(trimmed);
+                  setIsRenamingProject(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const trimmed = renameValue.trim();
+                    if (trimmed) renameProject(trimmed);
+                    setIsRenamingProject(false);
+                  } else if (e.key === 'Escape') {
+                    setIsRenamingProject(false);
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <button
+                className="toolbar-btn project-name-btn"
+                title="Click to rename project"
+                onClick={() => {
+                  setRenameValue(doc?.name ?? 'Untitled Project');
+                  setIsRenamingProject(true);
+                  setTimeout(() => renameInputRef.current?.select(), 0);
+                }}
+              >
+                <span className="project-name-text">{doc?.name ?? 'Untitled Project'}</span>
+              </button>
+            )}
           </div>
 
           <div className="toolbar-tabs">
