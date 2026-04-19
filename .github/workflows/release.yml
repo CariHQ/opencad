@@ -72,14 +72,9 @@ jobs:
             exit 1
           fi
 
-      - name: Verify CHANGELOG updated
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG#v}
-          if ! grep -q "## $VERSION" CHANGELOG.md; then
-            echo "Error: CHANGELOG.md does not have entry for $VERSION"
-            exit 1
-          fi
+      # CHANGELOG.md is no longer committed to the repo — semantic-release
+      # writes the changelog directly into the GitHub Release body via
+      # @semantic-release/github. Nothing to check here.
 
   # ──────────────────────────────────────────────────────────────
   # 2. Build Desktop Apps
