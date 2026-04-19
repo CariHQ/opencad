@@ -63,7 +63,21 @@ import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import { BillingPanel } from './components/BillingPanel';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { MobileViewer } from './components/MobileViewer';
-import { VersionHistoryPanel } from './components/VersionHistoryPanel';
+import { FeedbackWidget } from './components/FeedbackWidget';
+import { AdminPanel } from './components/AdminPanel';
+import { PanelResizer } from './components/PanelResizer';
+import { ProjectHomeScreen } from './components/ProjectHomeScreen';
+import {
+  isTauri,
+  openFile,
+  saveFile,
+  saveFileDialog,
+  openFileDialog,
+  onFileDrop,
+  tauriToggleMaximize,
+  checkForUpdates,
+} from './hooks/useTauri';
+import type { TauriUpdateInfo } from './hooks/useTauri';
 import { usePresence } from './hooks/usePresence';
 import './styles/app.css';
 
@@ -125,6 +139,7 @@ export function AppLayout() {
     return id;
   }, []);
   const { users: presenceUsers } = usePresence({ userId: localUserId, displayName: 'You' });
+  const { can, allowedViews } = useRole();
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
   const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>(
     'opencad-activeView',
@@ -134,10 +149,6 @@ export function AppLayout() {
     'opencad-selectedLevel',
     null
   );
-
-  const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
-  const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>('opencad-activeView', '3d');
-  const [selectedLevel, setSelectedLevel] = useLocalStorage<string | null>('opencad-selectedLevel', null);
   const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   const [theme, setTheme] = useLocalStorage<'light' | 'dark'>('opencad-theme', systemTheme);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 768px)').matches);
@@ -428,15 +439,6 @@ export function AppLayout() {
                     activeTool: u.activeTool,
                   }))}
               />
-              {chromeVisible && (
-                <div className="floating-level-selector">
-                  <LevelSelector
-                    levels={doc?.organization.levels || {}}
-                    selectedLevel={selectedLevel}
-                    onSelectLevel={setSelectedLevel}
-                  />
-                </div>
-              )}
               {(activeTool === 'door' || activeTool === 'window') && (
                 <div className="floating-placement-panel">
                   <PlacementPanel elementType={activeTool as 'door' | 'window'} onClose={() => setActiveTool('select')} />
