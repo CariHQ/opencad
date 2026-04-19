@@ -96,9 +96,11 @@ jobs:
             --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},CLOUD_SQL_INSTANCE=opencad-prod:us-central1:opencad-db,AUTH_ENABLED=true,FIREBASE_PROJECT_ID=${{ vars.VITE_FIREBASE_PROJECT_ID }},JWT_SECRET=${{ secrets.JWT_SECRET }},STORAGE_BACKEND=gcs,GCS_BUCKET=${{ vars.GCS_BUCKET }},CORS_ORIGINS=https://opencad.archi,GITHUB_TOKEN=${{ secrets.OPENCAD_GITHUB_TOKEN }},GITHUB_REPO=CariHQ/opencad" \
             --quiet
 
-  # ── 3. Build frontend & deploy to Firebase Hosting ───────────────────────────
+  # ── 3. Build app & deploy to GCS ─────────────────────────────────────────────
+  # Infrastructure: Cloud LB → opencad-landing bucket (opencad.archi root)
+  #                           → opencad-app bucket     (app.opencad.archi)
   deploy-frontend:
-    name: Deploy Frontend (Firebase Hosting)
+    name: Deploy Frontend (GCS)
     needs: ci
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -110,6 +112,15 @@ jobs:
           node-version: 20
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
 
       - name: Build workspace dependencies
         run: |
@@ -126,24 +137,31 @@ jobs:
           VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         run: pnpm --filter=@opencad/app build
 
-      - name: Copy landing pages into dist
+      - name: Deploy app to GCS (app.opencad.archi)
         run: |
-          # Role-specific landing pages → /for/<role>/
-          cp -r packages/landing/for packages/app/dist/for
-          # Legal pages
-          cp packages/landing/privacy.html packages/app/dist/privacy.html
-          cp packages/landing/terms.html packages/app/dist/terms.html
-          # Download page
-          cp packages/landing/download.html packages/app/dist/download.html
-          # Marketing root — served as the homepage (replaces the SPA catch-all at /)
-          cp packages/landing/index.html packages/app/dist/landing.html
-          # OG social images
-          cp packages/landing/og*.png packages/app/dist/ 2>/dev/null || true
+          gsutil -m rsync -r -d packages/app/dist gs://opencad-app
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
-        with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_OPENCAD_PROD }}
-          channelId: live
-          projectId: opencad-prod
+      - name: Deploy landing pages to GCS (opencad.archi)
+        run: |
+          # Marketing homepage
+          gsutil cp packages/landing/index.html gs://opencad-landing/index.html
+          # Legal pages
+          gsutil cp packages/landing/privacy.html gs://opencad-landing/privacy.html
+          gsutil cp packages/landing/terms.html gs://opencad-landing/terms.html
+          # Download page
+          gsutil cp packages/landing/download.html gs://opencad-landing/download.html
+          # Role-specific pages
+          gsutil -m rsync -r packages/landing/for gs://opencad-landing/for
+          # OG social images
+          gsutil -m cp packages/landing/og*.png gs://opencad-landing/ 2>/dev/null || true
+          gsutil -m rsync -r packages/landing/screenshots gs://opencad-landing/screenshots
+
+      - name: Invalidate CDN cache
+        env:
+          GCP_PROJECT: ${{ vars.GCP_PROJECT }}
+        run: |
+          gcloud compute url-maps invalidate-cdn-cache opencad-url-map \
+            --path "/*" \
+            --project="$GCP_PROJECT" \
+            --async \
+            --quiet
