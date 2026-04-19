@@ -213,7 +213,9 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build packages
-        run: pnpm build
+        # Exclude sync-rs: it requires wasm-pack (Rust toolchain) which is not
+        # available on this runner. sync-rs is private and not published to npm.
+        run: pnpm build --filter '!@opencad/sync-rs' --filter '!@opencad/desktop'
 
       - name: Publish to npm
         run: pnpm publish -r --no-git-checks
