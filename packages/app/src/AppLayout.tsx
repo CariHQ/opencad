@@ -118,11 +118,12 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo } = useDocumentStore();
-  const { projects, renameProject } = useProjectStore();
-  const currentProject = projects.find((p) => p.id === projectId);
-  const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState('');
+  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, updateElement, renameProject } = useDocumentStore();
+  const leftPanelRef = React.useRef<HTMLElement>(null);
+  const rightPanelRef = React.useRef<HTMLElement>(null);
+  const [isRenamingProject, setIsRenamingProject] = React.useState(false);
+  const [renameValue, setRenameValue] = React.useState('');
+  const renameInputRef = React.useRef<HTMLInputElement>(null);
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
@@ -358,44 +359,18 @@ export function AppLayout() {
                 }}
                 autoFocus
               />
-            </button>
-            <span className="brand-name">OpenCAD</span>
-            <button
-              className="toolbar-btn"
-              onClick={() => navigate('/')}
-              title="Back to projects"
-            >
-              <Plus size={14} strokeWidth={2} />
-            </button>
-            {currentProject && (
-              editingName ? (
-                <input
-                  className="project-name-input"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onBlur={() => {
-                    if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
-                    setEditingName(false);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
-                      setEditingName(false);
-                    } else if (e.key === 'Escape') {
-                      setEditingName(false);
-                    }
-                  }}
-                  autoFocus
-                />
-              ) : (
-                <button
-                  className="project-name-btn"
-                  onClick={() => { setNameInput(currentProject.name); setEditingName(true); }}
-                  title="Click to rename project"
-                >
-                  {currentProject.name}
-                </button>
-              )
+            ) : (
+              <button
+                className="toolbar-btn project-name-btn"
+                title="Click to rename project"
+                onClick={() => {
+                  setRenameValue(doc?.name ?? 'Untitled Project');
+                  setIsRenamingProject(true);
+                  setTimeout(() => renameInputRef.current?.select(), 0);
+                }}
+              >
+                <span className="project-name-text">{doc?.name ?? 'Untitled Project'}</span>
+              </button>
             )}
           </div>
 
