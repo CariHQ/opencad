@@ -6,6 +6,7 @@
  * T-DSK-002: openFile(path) — read a native file and return parsed DocumentSchema
  * T-DSK-005: onFileDrop(handler) — register OS drag-and-drop handler
  * T-DSK-006: saveFile(path, content), saveFileDialog, openFileDialog — native FS writes
+ * T-DSK-012: checkForUpdates() — call Tauri updater plugin
  */
 
 import type { DocumentSchema } from '@opencad/document';
@@ -161,17 +162,51 @@ export async function tauriOpenNewWindow(route: string, title: string): Promise<
   return invoke('open_new_window', { route, title });
 }
 
-// ─── Updates ─────────────────────────────────────────────────
+// ─── T-DSK-012: Updates via Tauri updater plugin ─────────────────────────────
 
+/** Shape returned by the Tauri updater plugin (plugin:updater|check). */
 export interface TauriUpdateInfo {
+  version: string;
+  body: string;
+  date: string;
+}
+
+/**
+ * T-DSK-012: Check for updates via the Tauri updater plugin.
+ * Returns null when not in Tauri or when the updater plugin throws.
+ */
+export async function checkForUpdates(): Promise<TauriUpdateInfo | null> {
+  if (!isTauri()) return null;
+  try {
+    return await window.__TAURI__!.core.invoke<TauriUpdateInfo>('plugin:updater|check');
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * T-DSK-012: Install the pending update via the Tauri updater plugin.
+ * No-op outside of Tauri.
+ */
+export async function installUpdate(): Promise<void> {
+  if (!isTauri()) return;
+  try {
+    await window.__TAURI__!.core.invoke<void>('plugin:updater|install');
+  } catch {
+    // Ignore — app will restart on success
+  }
+}
+
+/** Legacy update status from the custom check_for_update Tauri command. */
+interface TauriUpdateStatus {
   available: boolean;
   version: string | null;
   notes: string | null;
   url: string | null;
 }
 
-export async function tauriCheckForUpdate(): Promise<TauriUpdateInfo> {
-  return invoke<TauriUpdateInfo>('check_for_update');
+export async function tauriCheckForUpdate(): Promise<TauriUpdateStatus> {
+  return invoke<TauriUpdateStatus>('check_for_update');
 }
 
 // ─── React hook ──────────────────────────────────────────────
@@ -181,7 +216,7 @@ import { useState, useEffect } from 'react';
 export interface TauriState {
   isDesktop: boolean;
   localAI: TauriLocalAIStatus | null;
-  updateInfo: TauriUpdateInfo | null;
+  updateInfo: TauriUpdateStatus | null;
   storageUsed: number;
   storageTotal: number;
 }
@@ -189,7 +224,7 @@ export interface TauriState {
 export function useTauri(): TauriState {
   const isDesktop = isTauri();
   const [localAI, setLocalAI] = useState<TauriLocalAIStatus | null>(null);
-  const [updateInfo, setUpdateInfo] = useState<TauriUpdateInfo | null>(null);
+  const [updateInfo, setUpdateInfo] = useState<TauriUpdateStatus | null>(null);
   const [storageUsed, setStorageUsed] = useState(0);
   const [storageTotal, setStorageTotal] = useState(0);
 

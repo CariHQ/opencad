@@ -25,6 +25,18 @@ interface HistoryEntry {
   description: string;
 }
 
+/** T-HIST-001: A record of a single document change for the history panel. */
+export interface ChangeRecord {
+  id: string;
+  timestamp: number;
+  type: 'add' | 'update' | 'delete';
+  elementId: string;
+  elementType: string;
+  userId: string;
+}
+
+const MAX_CHANGE_HISTORY = 200;
+
 interface DocumentState {
   document: DocumentSchema | null;
   model: DocumentModel | null;
@@ -44,6 +56,13 @@ interface DocumentState {
   userRole: RoleId | null;
 
   toolParams: Record<string, Record<string, unknown>>;
+
+  /** T-HIST-001: Ordered list of recent change records (capped at MAX_CHANGE_HISTORY). */
+  changeHistory: ChangeRecord[];
+
+  /** T-REVIEW-001: Current design review status. */
+  reviewStatus: 'none' | 'pending' | 'approved' | 'changes_requested';
+  setReviewStatus: (status: 'none' | 'pending' | 'approved' | 'changes_requested') => void;
 
   initProject: (projectId: string, userId: string) => void;
   loadProject: (projectId: string, userId: string) => void;
@@ -116,6 +135,11 @@ export const useDocumentStore = create<DocumentState>()(
         door: { height: 2100, width: 900, swing: 90 },
         window: { height: 1200, width: 1200, sillHeight: 900 },
       },
+
+      changeHistory: [],
+
+      reviewStatus: 'none',
+      setReviewStatus: (status) => set({ reviewStatus: status }),
 
       initProject: (projectId, userId) => {
         let model: DocumentModel;
@@ -252,7 +276,7 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       addElement: (params) => {
-        const { model } = get();
+        const { model, changeHistory } = get();
         if (!model) throw new Error('No document loaded');
 
         const props = (params.properties || {}) as Record<string, PropertyValue>;
@@ -274,9 +298,18 @@ export const useDocumentStore = create<DocumentState>()(
 
         const newDoc = { ...model.documentData };
         const newDocJson = JSON.stringify(newDoc);
+        const addRecord: ChangeRecord = {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          type: 'add',
+          elementId,
+          elementType: params.type,
+          userId: model.client,
+        };
         set({
           document: newDoc,
           lastSaved: Date.now(),
+          changeHistory: [...changeHistory, addRecord].slice(-MAX_CHANGE_HISTORY),
         });
         try {
           localStorage.setItem('opencad-document', newDocJson);
@@ -287,24 +320,45 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       updateElement: (elementId, updates) => {
-        const { model } = get();
+        const { model, changeHistory } = get();
         if (!model) return;
 
         const element = model.getElementById(elementId);
         if (element) {
+          const updateRecord: ChangeRecord = {
+            id: crypto.randomUUID(),
+            timestamp: Date.now(),
+            type: 'update',
+            elementId,
+            elementType: element.type ?? 'unknown',
+            userId: model.client,
+          };
           Object.assign(element, updates);
-          set({ document: { ...model.documentData } });
+          set({
+            document: { ...model.documentData },
+            changeHistory: [...changeHistory, updateRecord].slice(-MAX_CHANGE_HISTORY),
+          });
         }
       },
 
       deleteElement: (elementId) => {
-        const { model, document } = get();
+        const { model, document, changeHistory } = get();
         if (!model || !document) return;
 
+        const deletedEl = document.content.elements[elementId];
+        const deleteRecord: ChangeRecord = {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          type: 'delete',
+          elementId,
+          elementType: deletedEl?.type ?? 'unknown',
+          userId: model.client,
+        };
         delete document.content.elements[elementId];
         set({
           document: { ...document },
           lastSaved: Date.now(),
+          changeHistory: [...changeHistory, deleteRecord].slice(-MAX_CHANGE_HISTORY),
         });
       },
 
