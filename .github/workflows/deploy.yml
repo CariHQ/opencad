@@ -110,6 +110,9 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
+      - name: Build workspace dependencies
+        run: pnpm --filter=!@opencad/app --filter=!@opencad/desktop --filter=!@opencad/e2e build
+
       - name: Build frontend
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
