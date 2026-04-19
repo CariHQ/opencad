@@ -84,27 +84,44 @@ jobs:
   # 2. Build Desktop Apps
   # ──────────────────────────────────────────────────────────────
   build-desktop:
-    name: Build Desktop (${{ matrix.os }})
+    name: Build Desktop (${{ matrix.platform }})
     needs: validate
+    permissions:
+      contents: write
     strategy:
+      fail-fast: false   # don't cancel macOS/Linux if Windows fails
       matrix:
         include:
-          - os: macos-latest
-            target: aarch64-apple-darwin
-            artifact: dmg
-          - os: macos-latest
-            target: x86_64-apple-darwin
-            artifact: dmg
-          - os: windows-latest
-            target: x86_64-pc-windows-msvc
-            artifact: exe
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            artifact: deb
-    runs-on: ${{ matrix.os }}
+          # macOS universal binary (arm64 + x86_64 in one .dmg)
+          - platform: macos-latest
+            args: --target universal-apple-darwin
+
+          # Windows x64 — NSIS avoids WiX MAX_PATH / large-payload issues
+          - platform: windows-latest
+            args: --target x86_64-pc-windows-msvc --bundles nsis
+
+          # Linux x64
+          - platform: ubuntu-22.04
+            args: ""
+
+    runs-on: ${{ matrix.platform }}
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+
+      - name: Install Linux system dependencies
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            pkg-config
 
       - uses: pnpm/action-setup@v4
 
@@ -114,100 +131,76 @@ jobs:
           node-version: 20
           cache: 'pnpm'
 
-      - name: Setup Rust
+      # Both targets required for universal-apple-darwin
+      - name: Setup Rust stable + macOS targets
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          targets: ${{ matrix.target }}
+          targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - name: Install system dependencies (Linux)
-        if: matrix.os == 'ubuntu-latest'
+      # Belt-and-suspenders: ensure both arches are present on the runner
+      - name: Add macOS cross-compile targets
+        if: matrix.platform == 'macos-latest'
         run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev build-essential curl wget file libxdo-dev libssl-dev libayatana-appindicator3-dev librsvg2-dev
+          rustup target add aarch64-apple-darwin
+          rustup target add x86_64-apple-darwin
 
-      - name: Install dependencies
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: packages/desktop/src-tauri -> target
+
+      - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Import code signing cert (macOS)
-        if: matrix.os == 'macos-latest'
-        env:
-          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
-          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
-          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      # Windows: node's rmSync can silently fail on paths > 260 chars inside
+      # pnpm's content-addressable store. Use .NET Directory.Delete (extended-
+      # length path aware) to guarantee cleanup before NSIS packs the bundle.
+      - name: Clean up long paths before NSIS bundle (Windows MAX_PATH fix)
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
         run: |
-          echo $APPLE_CERTIFICATE | base64 --decode > certificate.p12
-          security create-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security default-keychain -s build.keychain
-          security unlock-keychain -p "$KEYCHAIN_PASSWORD" build.keychain
-          security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
-          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PASSWORD" build.keychain
+          function Remove-DeepDirs([string]$root, [string]$dirName) {
+            try {
+              foreach ($dir in [System.IO.Directory]::GetDirectories($root)) {
+                $name = [System.IO.Path]::GetFileName($dir)
+                if ($name -eq $dirName) {
+                  Write-Host "Removing: $dir"
+                  [System.IO.Directory]::Delete($dir, $true)
+                } else {
+                  Remove-DeepDirs $dir $dirName
+                }
+              }
+            } catch { Write-Host "Warning: $_" }
+          }
+          Remove-DeepDirs "$env:GITHUB_WORKSPACE" ".pnpm"
+          Write-Host "Done."
 
-      - name: Build desktop app
+      - name: Build and publish Tauri app
+        uses: tauri-apps/tauri-action@v0.6
         env:
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
-          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-        run: pnpm --filter @opencad/desktop tauri build --target ${{ matrix.target }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS code signing (uncomment when Apple Developer certs are set up)
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
-          name: desktop-${{ matrix.os }}-${{ matrix.target }}
-          path: packages/desktop/src-tauri/target/${{ matrix.target }}/release/bundle/
-          retention-days: 30
-
-  # ──────────────────────────────────────────────────────────────
-  # 3. Create GitHub Release
-  # ──────────────────────────────────────────────────────────────
-  release:
-    name: Create GitHub Release
-    needs: [validate, build-desktop]
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v8
-        with:
-          path: artifacts/
-
-      - name: Generate release notes
-        id: notes
-        run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          VERSION=${TAG#v}
-          echo "Extracting changelog for $VERSION..."
-
-          # Extract section from CHANGELOG.md
-          awk "/## $VERSION/{flag=1;next}/## [0-9]/{flag=0}flag" CHANGELOG.md > RELEASE_NOTES.md
-
-          echo "notes<<EOF" >> $GITHUB_OUTPUT
-          cat RELEASE_NOTES.md >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: "OpenCAD ${{ github.ref_name }}"
-          body: ${{ steps.notes.outputs.notes }}
-          files: |
-            artifacts/**/*.dmg
-            artifacts/**/*.exe
-            artifacts/**/*.msi
-            artifacts/**/*.deb
-            artifacts/**/*.rpm
-            artifacts/**/*.AppImage
-          draft: false
+          projectPath: packages/desktop
+          tagName: ${{ github.ref_name }}
+          releaseName: OpenCAD ${{ github.ref_name }}
+          releaseBody: ""
+          releaseDraft: false
           prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
-          generate_release_notes: true
+          args: ${{ matrix.args }}
+
+  # Note: tauri-action@v0.6 creates the GitHub Release and uploads all
+  # platform artifacts automatically — no separate release job needed.
 
   # ──────────────────────────────────────────────────────────────
-  # 4. Publish to Package Registries
+  # 3. Publish to Package Registries
   # ──────────────────────────────────────────────────────────────
   publish-npm:
     name: Publish to npm
@@ -288,7 +281,7 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   notify:
     name: Notify Community
-    needs: [release, docker]
+    needs: [build-desktop, docker]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
