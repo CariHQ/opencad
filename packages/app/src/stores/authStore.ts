@@ -22,7 +22,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore';
 import { firebaseAuth, firebaseDb, isFirebaseConfigured } from '../lib/firebase';
-import { authApi } from '../lib/serverApi';
+import { authApi, registerTokenProvider } from '../lib/serverApi';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 export type TrialStatus = 'active' | 'expired' | 'none';
@@ -122,16 +122,36 @@ export const useAuthStore = create<AuthState>((set, _get) => {
   // Subscribe to Firebase auth state once
   if (isFirebaseConfigured) {
     const auth = firebaseAuth();
+
+    // Wire the Firebase ID token into every serverApi request.
+    // The provider is registered once at store initialisation so all API
+    // calls made anywhere in the app automatically include the Bearer token.
+    registerTokenProvider(async () => {
+      const currentUser = auth.currentUser;
+      if (!currentUser) return null;
+      return currentUser.getIdToken(/* forceRefresh */ true).catch(() => null);
+    });
+
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         const profile = await upsertProfile(user);
-        // Upsert user row in the server DB (fire-and-forget; non-blocking)
-        authApi.me().catch(() => {});
+        // Fetch the server-side user profile and merge it into the local state.
+        // Falls back to the Firestore profile if the backend is unreachable.
+        const serverProfile = await authApi.me().catch(() => null);
+        const mergedProfile: UserProfile = serverProfile
+          ? {
+              ...profile,
+              plan: (serverProfile.role === 'admin' ? 'team' : profile.plan),
+              trialExpiresAt: serverProfile.trialEndsAt
+                ? new Date(serverProfile.trialEndsAt)
+                : profile.trialExpiresAt,
+            }
+          : profile;
         set({
           status: 'authenticated',
           user,
-          profile,
-          trialStatus: computeTrialStatus(profile),
+          profile: mergedProfile,
+          trialStatus: computeTrialStatus(mergedProfile),
           error: null,
         });
       } else {
