@@ -213,6 +213,7 @@ describe('T-AUTH-P0-003: authStore wires token provider and profile is stored af
     expect(capturedProvider).toBeDefined();
     const token = await capturedProvider!();
     expect(token).toBe('live-firebase-token');
-    expect(mockGetIdToken).toHaveBeenCalledWith(/* force refresh */ true);
+    // Token refresh is managed by Firebase internally — no force-refresh arg
+    expect(mockGetIdToken).toHaveBeenCalledWith();
   });
 });

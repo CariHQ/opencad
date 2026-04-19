@@ -124,36 +124,55 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     const auth = firebaseAuth();
 
     // Wire the Firebase ID token into every serverApi request.
-    // The provider is registered once at store initialisation so all API
-    // calls made anywhere in the app automatically include the Bearer token.
+    // Let Firebase manage token refresh automatically — do not force-refresh
+    // on every call, as that causes unnecessary network round-trips and can
+    // transiently fail, dropping the user back to the login screen.
     registerTokenProvider(async () => {
       const currentUser = auth.currentUser;
       if (!currentUser) return null;
-      return currentUser.getIdToken(/* forceRefresh */ true).catch(() => null);
+      return currentUser.getIdToken().catch(() => null);
     });
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const profile = await upsertProfile(user);
-        // Fetch the server-side user profile and merge it into the local state.
-        // Falls back to the Firestore profile if the backend is unreachable.
-        const serverProfile = await authApi.me().catch(() => null);
-        const mergedProfile: UserProfile = serverProfile
-          ? {
-              ...profile,
-              plan: (serverProfile.role === 'admin' ? 'team' : profile.plan),
-              trialExpiresAt: serverProfile.trialEndsAt
-                ? new Date(serverProfile.trialEndsAt)
-                : profile.trialExpiresAt,
-            }
-          : profile;
-        set({
-          status: 'authenticated',
-          user,
-          profile: mergedProfile,
-          trialStatus: computeTrialStatus(mergedProfile),
-          error: null,
-        });
+        try {
+          const profile = await upsertProfile(user);
+          // Fetch the server-side user profile and merge it into local state.
+          // Falls back to the Firestore profile if the backend is unreachable.
+          const serverProfile = await authApi.me().catch(() => null);
+          const mergedProfile: UserProfile = serverProfile
+            ? {
+                ...profile,
+                plan: (serverProfile.role === 'admin' ? 'team' : profile.plan),
+                trialExpiresAt: serverProfile.trialEndsAt
+                  ? new Date(serverProfile.trialEndsAt)
+                  : profile.trialExpiresAt,
+              }
+            : profile;
+          set({
+            status: 'authenticated',
+            user,
+            profile: mergedProfile,
+            trialStatus: computeTrialStatus(mergedProfile),
+            error: null,
+          });
+        } catch {
+          // Firestore/network error — still mark the user as authenticated
+          // so they're not stranded on the login screen.
+          set({
+            status: 'authenticated',
+            user,
+            profile: {
+              uid: user.uid,
+              email: user.email ?? '',
+              name: user.displayName ?? '',
+              plan: 'trial',
+              trialExpiresAt: null,
+            },
+            trialStatus: 'active',
+            error: null,
+          });
+        }
       } else {
         set({ status: 'unauthenticated', user: null, profile: null, trialStatus: 'none' });
       }
