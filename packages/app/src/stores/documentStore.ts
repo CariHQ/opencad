@@ -66,6 +66,7 @@ interface DocumentState {
 
   initProject: (projectId: string, userId: string) => void;
   loadProject: (projectId: string, userId: string) => void;
+  closeProject: () => void;
   setSelectedIds: (ids: string[]) => void;
   setActiveTool: (tool: string) => void;
   setOnlineStatus: (online: boolean) => void;
@@ -225,6 +226,21 @@ export const useDocumentStore = create<DocumentState>()(
                 }
               : undefined,
           );
+        });
+      },
+
+      /** Clear the active document so the ProjectHomeScreen is shown. */
+      closeProject: () => {
+        set({
+          document: null,
+          model: null,
+          selectedIds: [],
+          activeTool: 'select',
+          history: [],
+          historyIndex: -1,
+          canUndo: false,
+          canRedo: false,
+          lastSaved: null,
         });
       },
 

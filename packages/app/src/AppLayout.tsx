@@ -66,6 +66,7 @@ import { PanelResizer } from './components/PanelResizer';
 import { AdminPanel } from './components/AdminPanel';
 import { isTauri, openFile, saveFile, saveFileDialog, openFileDialog, onFileDrop, tauriToggleMaximize, checkForUpdates } from './hooks/useTauri';
 import type { TauriUpdateInfo } from './hooks/useTauri';
+import { ProjectHomeScreen } from './components/ProjectHomeScreen';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -254,6 +255,25 @@ export function AppLayout() {
     const levels = doc?.organization.levels ? Object.values(doc.organization.levels).map((l) => ({ id: l.id, name: l.name })) : [];
     const elementCount = doc?.content.elements ? Object.keys(doc.content.elements).length : undefined;
     return <MobileViewer projectName={doc?.name ?? 'Project'} levels={levels} elementCount={elementCount} />;
+  }
+
+  // No active project → show the full-screen project browser / home screen
+  if (!doc) {
+    return (
+      <ProjectHomeScreen
+        onImport={(file) => {
+          // Attempt to parse as JSON schema; fall back to import modal for binary formats
+          void (async () => {
+            const text = await file.text();
+            try {
+              loadDocumentSchema(JSON.parse(text));
+            } catch {
+              setShowModal('import');
+            }
+          })();
+        }}
+      />
+    );
   }
 
   return (
