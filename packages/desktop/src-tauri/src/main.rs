@@ -8,8 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 
 struct AppState {
@@ -485,7 +485,13 @@ fn build_menu(handle: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         &[
             &MenuItem::with_id(handle, "file-new", "New Project", true, Some("CmdOrCtrl+N"))?,
-            &MenuItem::with_id(handle, "file-open", "Open\u{2026}", true, Some("CmdOrCtrl+O"))?,
+            &MenuItem::with_id(
+                handle,
+                "file-open",
+                "Open\u{2026}",
+                true,
+                Some("CmdOrCtrl+O"),
+            )?,
             &PredefinedMenuItem::separator(handle)?,
             &MenuItem::with_id(handle, "file-save", "Save", true, Some("CmdOrCtrl+S"))?,
             &MenuItem::with_id(
@@ -520,13 +526,7 @@ fn build_menu(handle: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
                     )?,
                 ],
             )?,
-            &MenuItem::with_id(
-                handle,
-                "file-export",
-                "Export\u{2026}",
-                true,
-                None::<&str>,
-            )?,
+            &MenuItem::with_id(handle, "file-export", "Export\u{2026}", true, None::<&str>)?,
             &PredefinedMenuItem::separator(handle)?,
             &MenuItem::with_id(handle, "file-recent", "Recent Files", false, None::<&str>)?,
             &PredefinedMenuItem::separator(handle)?,
@@ -541,13 +541,7 @@ fn build_menu(handle: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         true,
         &[
             &MenuItem::with_id(handle, "edit-undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
-            &MenuItem::with_id(
-                handle,
-                "edit-redo",
-                "Redo",
-                true,
-                Some("CmdOrCtrl+Shift+Z"),
-            )?,
+            &MenuItem::with_id(handle, "edit-redo", "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
             &PredefinedMenuItem::separator(handle)?,
             &PredefinedMenuItem::cut(handle, None)?,
             &PredefinedMenuItem::copy(handle, None)?,
@@ -649,13 +643,7 @@ fn build_menu(handle: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
         "Help",
         true,
         &[
-            &MenuItem::with_id(
-                handle,
-                "help-about",
-                "About OpenCAD",
-                true,
-                None::<&str>,
-            )?,
+            &MenuItem::with_id(handle, "help-about", "About OpenCAD", true, None::<&str>)?,
             &MenuItem::with_id(
                 handle,
                 "help-check-updates",
