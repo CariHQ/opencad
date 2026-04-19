@@ -53,6 +53,7 @@ import { AuthModal } from './components/AuthModal';
 import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
+import { BillingPanel } from './components/BillingPanel';
 import { MobileViewer } from './components/MobileViewer';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { PanelResizer } from './components/PanelResizer';
@@ -115,7 +116,7 @@ export function AppLayout() {
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
+  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso' | 'billing'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>('opencad-rightPanelTab', 'layers');
   const [currentFilePath, setCurrentFilePath] = useLocalStorage<string | null>('opencad-currentFilePath', null);
 
@@ -409,11 +410,13 @@ export function AppLayout() {
               <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
               <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
               <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+              <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
             </div>
             <div className="settings-content">
               {settingsTab === 'apikeys' && <APIKeyPanel />}
               {settingsTab === 'permissions' && <PermissionsPanel />}
               {settingsTab === 'sso' && <SSOSettingsPanel />}
+              {settingsTab === 'billing' && <BillingPanel />}
             </div>
           </div>
         </div>
