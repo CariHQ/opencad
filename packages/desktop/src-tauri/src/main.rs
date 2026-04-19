@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
-use tauri::{AppHandle, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::{AppHandle, Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri_plugin_dialog::{DialogExt, FilePath};
 
 struct AppState {
@@ -473,6 +474,214 @@ fn get_synced_document() -> Result<Option<String>, String> {
     Ok(None)
 }
 
+/// T-DSK-007: Build the native OS menu bar.
+/// Uses Tauri v2 `tauri::menu` API.  All menu item IDs are lowercase-hyphen
+/// strings that the frontend listens for via the Tauri window global.
+fn build_menu(handle: &AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
+    // ── File menu ─────────────────────────────────────────────────────────────
+    let file_menu = Submenu::with_items(
+        handle,
+        "File",
+        true,
+        &[
+            &MenuItem::with_id(handle, "file-new", "New Project", true, Some("CmdOrCtrl+N"))?,
+            &MenuItem::with_id(handle, "file-open", "Open\u{2026}", true, Some("CmdOrCtrl+O"))?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(handle, "file-save", "Save", true, Some("CmdOrCtrl+S"))?,
+            &MenuItem::with_id(
+                handle,
+                "file-save-as",
+                "Save As\u{2026}",
+                true,
+                Some("CmdOrCtrl+Shift+S"),
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &Submenu::with_items(
+                handle,
+                "Import",
+                true,
+                &[
+                    &MenuItem::with_id(handle, "import-ifc", "IFC\u{2026}", true, None::<&str>)?,
+                    &MenuItem::with_id(handle, "import-dwg", "DWG\u{2026}", true, None::<&str>)?,
+                    &MenuItem::with_id(handle, "import-pdf", "PDF\u{2026}", true, None::<&str>)?,
+                    &MenuItem::with_id(
+                        handle,
+                        "import-revit",
+                        "Revit (RVT)\u{2026}",
+                        true,
+                        None::<&str>,
+                    )?,
+                    &MenuItem::with_id(
+                        handle,
+                        "import-sketchup",
+                        "SketchUp (SKP)\u{2026}",
+                        true,
+                        None::<&str>,
+                    )?,
+                ],
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "file-export",
+                "Export\u{2026}",
+                true,
+                None::<&str>,
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(handle, "file-recent", "Recent Files", false, None::<&str>)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(handle, "file-close", "Close", true, Some("CmdOrCtrl+W"))?,
+        ],
+    )?;
+
+    // ── Edit menu ─────────────────────────────────────────────────────────────
+    let edit_menu = Submenu::with_items(
+        handle,
+        "Edit",
+        true,
+        &[
+            &MenuItem::with_id(handle, "edit-undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
+            &MenuItem::with_id(
+                handle,
+                "edit-redo",
+                "Redo",
+                true,
+                Some("CmdOrCtrl+Shift+Z"),
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::cut(handle, None)?,
+            &PredefinedMenuItem::copy(handle, None)?,
+            &PredefinedMenuItem::paste(handle, None)?,
+            &MenuItem::with_id(handle, "edit-delete", "Delete", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &PredefinedMenuItem::select_all(handle, None)?,
+        ],
+    )?;
+
+    // ── View menu ─────────────────────────────────────────────────────────────
+    let view_menu = Submenu::with_items(
+        handle,
+        "View",
+        true,
+        &[
+            &MenuItem::with_id(
+                handle,
+                "view-zoom-in",
+                "Zoom In",
+                true,
+                Some("CmdOrCtrl+Plus"),
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "view-zoom-out",
+                "Zoom Out",
+                true,
+                Some("CmdOrCtrl+Minus"),
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "view-zoom-fit",
+                "Zoom to Fit",
+                true,
+                Some("CmdOrCtrl+0"),
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(
+                handle,
+                "view-toggle-2d-3d",
+                "Toggle 2D / 3D",
+                true,
+                Some("CmdOrCtrl+Shift+3"),
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(
+                handle,
+                "view-panel-layers",
+                "Show/Hide Layers",
+                true,
+                None::<&str>,
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "view-panel-properties",
+                "Show/Hide Properties",
+                true,
+                None::<&str>,
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "view-panel-ai-chat",
+                "Show/Hide AI Chat",
+                true,
+                None::<&str>,
+            )?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(handle, "view-dark-mode", "Dark Mode", true, None::<&str>)?,
+            &MenuItem::with_id(handle, "view-light-mode", "Light Mode", true, None::<&str>)?,
+        ],
+    )?;
+
+    // ── Tools menu ────────────────────────────────────────────────────────────
+    let tools_menu = Submenu::with_items(
+        handle,
+        "Tools",
+        true,
+        &[
+            &MenuItem::with_id(handle, "tool-select", "Select", true, Some("V"))?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(handle, "tool-line", "Line", true, Some("L"))?,
+            &MenuItem::with_id(handle, "tool-rectangle", "Rectangle", true, Some("R"))?,
+            &MenuItem::with_id(handle, "tool-circle", "Circle", true, Some("C"))?,
+            &MenuItem::with_id(handle, "tool-arc", "Arc", true, Some("A"))?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(handle, "tool-wall", "Wall", true, Some("W"))?,
+            &MenuItem::with_id(handle, "tool-door", "Door", true, Some("D"))?,
+            &MenuItem::with_id(handle, "tool-window", "Window", true, None::<&str>)?,
+            &PredefinedMenuItem::separator(handle)?,
+            &MenuItem::with_id(handle, "tool-dimension", "Dimension", true, None::<&str>)?,
+            &MenuItem::with_id(handle, "tool-text", "Text", true, Some("T"))?,
+        ],
+    )?;
+
+    // ── Help menu ─────────────────────────────────────────────────────────────
+    let help_menu = Submenu::with_items(
+        handle,
+        "Help",
+        true,
+        &[
+            &MenuItem::with_id(
+                handle,
+                "help-about",
+                "About OpenCAD",
+                true,
+                None::<&str>,
+            )?,
+            &MenuItem::with_id(
+                handle,
+                "help-check-updates",
+                "Check for Updates\u{2026}",
+                true,
+                None::<&str>,
+            )?,
+            &MenuItem::with_id(handle, "help-docs", "Documentation", true, None::<&str>)?,
+        ],
+    )?;
+
+    Menu::with_items(
+        handle,
+        &[&file_menu, &edit_menu, &view_menu, &tools_menu, &help_menu],
+    )
+}
+
+/// T-DSK-007: Route menu events to the frontend via Tauri events.
+/// The frontend listens for `"menu"` events with a string payload (the menu item ID).
+fn handle_menu_event(app: &AppHandle, id: &str) {
+    info!("Menu event: {}", id);
+    if let Err(e) = app.emit("menu", id) {
+        warn!("Failed to emit menu event '{}': {}", id, e);
+    }
+}
+
 fn main() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
 
@@ -491,7 +700,16 @@ fn main() {
     let db_for_sync = Arc::clone(&db);
 
     tauri::Builder::default()
-        .setup(move |_app| {
+        .setup(move |app| {
+            // ── T-DSK-007: Native OS Menu Bar ─────────────────────────────────
+            let menu = build_menu(app.handle())?;
+            app.set_menu(menu)?;
+
+            let app_handle = app.handle().clone();
+            app.on_menu_event(move |_app, event| {
+                handle_menu_event(&app_handle, event.id().as_ref());
+            });
+
             // Spawn the local WebSocket sync server so both the Tauri webview
             // and any browser tabs on the same machine can sync document data.
             tauri::async_runtime::spawn(sync_server::run_sync_server(db_for_sync));
