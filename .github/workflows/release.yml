@@ -153,29 +153,6 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
-      # Windows: node's rmSync can silently fail on paths > 260 chars inside
-      # pnpm's content-addressable store. Use .NET Directory.Delete (extended-
-      # length path aware) to guarantee cleanup before NSIS packs the bundle.
-      - name: Clean up long paths before NSIS bundle (Windows MAX_PATH fix)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        run: |
-          function Remove-DeepDirs([string]$root, [string]$dirName) {
-            try {
-              foreach ($dir in [System.IO.Directory]::GetDirectories($root)) {
-                $name = [System.IO.Path]::GetFileName($dir)
-                if ($name -eq $dirName) {
-                  Write-Host "Removing: $dir"
-                  [System.IO.Directory]::Delete($dir, $true)
-                } else {
-                  Remove-DeepDirs $dir $dirName
-                }
-              }
-            } catch { Write-Host "Warning: $_" }
-          }
-          Remove-DeepDirs "$env:GITHUB_WORKSPACE" ".pnpm"
-          Write-Host "Done."
-
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0.6
         env:
