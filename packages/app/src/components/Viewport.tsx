@@ -105,7 +105,6 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
                   }
                 }}
                 onBlur={(e) => confirmText(e.currentTarget.value)}
-                // eslint-disable-next-line jsx-a11y/no-autofocus
                 autoFocus
               />
             );
