@@ -27,7 +27,7 @@ const PLANS: PlanConfig[] = [
   {
     tier: 'free',
     label: 'Free',
-    price: '£0',
+    price: '$0',
     priceDetail: 'forever',
     features: [
       '1 project',
@@ -39,7 +39,7 @@ const PLANS: PlanConfig[] = [
   {
     tier: 'pro',
     label: 'Pro',
-    price: '£29',
+    price: '$29',
     priceDetail: 'per user / month',
     features: [
       'Unlimited projects',
@@ -51,7 +51,7 @@ const PLANS: PlanConfig[] = [
   {
     tier: 'business',
     label: 'Business',
-    price: '£99',
+    price: '$99',
     priceDetail: 'per user / month',
     features: [
       'Everything in Pro',
