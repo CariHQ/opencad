@@ -147,7 +147,8 @@ jobs:
       #   @opencad/sync-rs  → needs wasm-pack
       #   @opencad/geometry → needs wasm-bindgen CLI (cargo build + wasm-bindgen)
       - name: Install wasm tooling
-        run: cargo install wasm-pack wasm-bindgen-cli --locked
+        # wasm-bindgen-cli version MUST match wasm-bindgen in packages/geometry/Cargo.toml (=0.2.93)
+        run: cargo install wasm-pack --locked && cargo install wasm-bindgen-cli --version 0.2.93 --locked
 
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
