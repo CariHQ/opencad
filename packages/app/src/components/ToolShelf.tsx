@@ -18,6 +18,7 @@ import {
   StretchHorizontal,
   Triangle,
   Spline,
+  LayoutGrid,
 } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 import { useRole } from '../hooks/useRole';
@@ -59,8 +60,9 @@ const tools: Tool[] = [
   { id: 'stair',     name: 'Stair',     icon: ArrowUpDown,        shortcut: 'T' },
   { id: 'door',      name: 'Door',      icon: DoorOpen,           shortcut: 'D' },
   { id: 'window',    name: 'Window',    icon: AppWindow,          shortcut: 'N' },
-  { id: 'railing',   name: 'Railing',   icon: Fence,              shortcut: 'G' },
-  { id: 'dimension', name: 'Dimension', icon: Ruler,              shortcut: 'M' },
+  { id: 'railing',      name: 'Railing',      icon: Fence,       shortcut: 'G' },
+  { id: 'curtain_wall', name: 'Curtain Wall', icon: LayoutGrid, shortcut: 'J' },
+  { id: 'dimension',    name: 'Dimension',    icon: Ruler,       shortcut: 'M' },
   { id: 'text',      name: 'Text',      icon: Type,               shortcut: 'X' },
   { id: 'polyline',  name: 'Polyline',  icon: PenLine,            shortcut: 'Y' },
 ];

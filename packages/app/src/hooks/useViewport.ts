@@ -67,7 +67,7 @@ const SCALE = 20;
 const OFFSET = 5000;
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
-const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
+const DRAG_TOOLS = new Set(['line', 'wall', 'curtain_wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
 // Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing, spline)
 const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing', 'spline']);
 
@@ -263,6 +263,27 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         },
       });
       getStoreActions().pushHistory('Add wall');
+    }
+
+    if (tool === 'curtain_wall') {
+      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
+      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
+      if (maxX - minX < 100 && maxY - minY < 100) return;
+      const cwp = (toolParams?.['curtain_wall'] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: 'curtain_wall', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Curtain Wall' },
+          StartX: { type: 'number', value: minX }, StartY: { type: 'number', value: minY },
+          EndX: { type: 'number', value: maxX }, EndY: { type: 'number', value: maxY },
+          Width: { type: 'number', value: maxX - minX },
+          Height: { type: 'number', value: cwp['height'] ?? 3000 },
+          FrameDepth: { type: 'number', value: cwp['frameDepth'] ?? 150 },
+          GlazingType: { type: 'enum', value: cwp['glazingType'] ?? 'double' },
+          FrameColor: { type: 'string', value: cwp['frameColor'] ?? '#888888' },
+        },
+      });
+      getStoreActions().pushHistory('Add curtain wall');
     }
 
     if (tool === 'rectangle') {
@@ -541,7 +562,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       const props = element.properties as Record<string, { value: unknown }>;
       const type = element.type;
 
-      if (type === 'annotation' || type === 'wall' || type === 'dimension') {
+      if (type === 'annotation' || type === 'wall' || type === 'curtain_wall' || type === 'dimension') {
         // Lines and walls drawn as bounding rect or line
         if (props['StartX'] && props['EndX']) {
           const p1 = worldToScreen(props['StartX'].value as number, props['StartY']!.value as number, width, height);
@@ -555,6 +576,28 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
             ctx.fill(); ctx.stroke();
             ctx.fillStyle = color; ctx.font = '10px sans-serif';
             ctx.fillText('Wall', Math.min(p1.x, p2.x) + 4, Math.min(p1.y, p2.y) + 12);
+          } else if (type === 'curtain_wall') {
+            const rx = Math.min(p1.x, p2.x), ry = Math.min(p1.y, p2.y);
+            const rw = Math.abs(p2.x - p1.x), rh = Math.abs(p2.y - p1.y);
+            ctx.fillStyle = isSelected ? theme.selectedFill : 'rgba(112, 168, 216, 0.15)';
+            ctx.beginPath();
+            ctx.rect(rx, ry, rw, rh);
+            ctx.fill(); ctx.stroke();
+            // Draw mullion grid lines
+            ctx.save();
+            ctx.strokeStyle = isSelected ? theme.selected : '#5090b8';
+            ctx.lineWidth = 0.75;
+            const mullionSpacing = Math.max(8, rw / 5);
+            for (let mx = rx + mullionSpacing; mx < rx + rw; mx += mullionSpacing) {
+              ctx.beginPath(); ctx.moveTo(mx, ry); ctx.lineTo(mx, ry + rh); ctx.stroke();
+            }
+            const transomSpacing = Math.max(8, rh / 3);
+            for (let my = ry + transomSpacing; my < ry + rh; my += transomSpacing) {
+              ctx.beginPath(); ctx.moveTo(rx, my); ctx.lineTo(rx + rw, my); ctx.stroke();
+            }
+            ctx.restore();
+            ctx.fillStyle = color; ctx.font = '10px sans-serif';
+            ctx.fillText('CW', rx + 4, ry + 12);
           } else if (type === 'dimension') {
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
             const d = props['Value']?.value as number ?? 0;
@@ -639,7 +682,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       }
     }
 
-    if (activeTool === 'wall' || activeTool === 'rectangle') {
+    if (activeTool === 'wall' || activeTool === 'rectangle' || activeTool === 'curtain_wall') {
       if (currentPoint) {
         const x = Math.min(sp.x, cp.x), y = Math.min(sp.y, cp.y);
         const w = Math.abs(cp.x - sp.x), h = Math.abs(cp.y - sp.y);
@@ -827,7 +870,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     const shortcuts: Record<string, string> = {
       v: 'select', w: 'wall', d: 'door', n: 'window', s: 'slab', o: 'roof',
       k: 'column', b: 'beam', t: 'stair', l: 'line', r: 'rectangle',
-      c: 'circle', a: 'arc', p: 'polygon', m: 'dimension', x: 'text',
+      c: 'circle', a: 'arc', p: 'polygon', m: 'dimension', x: 'text', j: 'curtain_wall',
     };
     const key = event.key.toLowerCase();
     if (shortcuts[key]) setActiveTool(shortcuts[key]);

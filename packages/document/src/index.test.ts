@@ -1194,4 +1194,136 @@ EOF`;
       expect(result.startsWith('data:application/pdf;base64,')).toBe(true);
     });
   });
+
+    describe('T-BIM-010: Curtain Wall Element', () => {
+    describe('T-BIM-010-a: curtain_wall is a valid ElementType', () => {
+      it('should accept curtain_wall as a valid element type in createProject addElement', async () => {
+        const { createProject, addElement } = await import('./document');
+
+        const doc = createProject('test', 'user');
+        const layerId = Object.keys(doc.organization.layers)[0];
+        const levelId = Object.keys(doc.organization.levels)[0];
+
+        const id = addElement(doc, {
+          type: 'curtain_wall',
+          layerId,
+          levelId,
+          points: [{ x: 0, y: 0, z: 0 }, { x: 5000, y: 0, z: 0 }],
+        });
+
+        expect(id).toBeTruthy();
+        expect(doc.content.elements[id]).toBeDefined();
+        expect(doc.content.elements[id]!.type).toBe('curtain_wall');
+      });
+
+      it('should allow curtain_wall with standard BIM properties', async () => {
+        const { createProject, addElement } = await import('./document');
+
+        const doc = createProject('test', 'user');
+        const layerId = Object.keys(doc.organization.layers)[0];
+
+        const id = addElement(doc, {
+          type: 'curtain_wall',
+          layerId,
+          properties: {
+            Width: { type: 'number', value: 5000, unit: 'mm' },
+            Height: { type: 'number', value: 3000, unit: 'mm' },
+            FrameDepth: { type: 'number', value: 150, unit: 'mm' },
+            GlazingType: { type: 'enum', value: 'double' },
+            FrameColor: { type: 'string', value: '#888888' },
+          },
+        });
+
+        const el = doc.content.elements[id]!;
+        expect(el.type).toBe('curtain_wall');
+        expect(el.properties['Width']?.value).toBe(5000);
+        expect(el.properties['Height']?.value).toBe(3000);
+        expect(el.properties['GlazingType']?.value).toBe('double');
+        expect(el.properties['FrameColor']?.value).toBe('#888888');
+      });
+    });
+
+    describe('T-BIM-010-b: IFC IfcCurtainWall maps to curtain_wall type', () => {
+      it('should map IFCCURTAINWALL entity to curtain_wall element type', () => {
+        const ifcData = `
+          ISO-10303-21;
+          HEADER;
+          ENDSEC;
+          DATA;
+          #1=IFCCURTAINWALL('cw1',$,'Curtain Wall 1',$,$,$,$,$,$);
+          ENDSEC;
+          END-ISO-10303-21;
+        `;
+
+        const model = DocumentModel.fromIFC(ifcData);
+        const elements = Object.values(model.document.content.elements);
+
+        const curtainWall = elements.find((e) => e.type === 'curtain_wall');
+        expect(curtainWall).toBeDefined();
+        expect(curtainWall!.type).toBe('curtain_wall');
+      });
+
+      it('should parse curtain_wall name from IFC', () => {
+        const ifcData = `
+          ISO-10303-21;
+          HEADER;
+          ENDSEC;
+          DATA;
+          #1=IFCCURTAINWALL('cw-guid',$,'Lobby Curtain Wall',$,$,$,$,$,$);
+          ENDSEC;
+          END-ISO-10303-21;
+        `;
+
+        const model = DocumentModel.fromIFC(ifcData);
+        const cwElement = model.getElementByName('Lobby Curtain Wall');
+        expect(cwElement).toBeDefined();
+        expect(cwElement!.type).toBe('curtain_wall');
+      });
+
+      it('should export curtain_wall elements as IFCCURTAINWALL in IFC output', () => {
+        const project = createProject('test', 'user');
+        const layerId = Object.keys(project.organization.layers)[0];
+        const wallId = crypto.randomUUID();
+        const now = Date.now();
+
+        project.content.elements[wallId] = {
+          id: wallId,
+          type: 'curtain_wall',
+          properties: {
+            Name: { type: 'string', value: 'Facade Curtain Wall' },
+            Width: { type: 'number', value: 6000, unit: 'mm' },
+            Height: { type: 'number', value: 4000, unit: 'mm' },
+            FrameDepth: { type: 'number', value: 100, unit: 'mm' },
+            GlazingType: { type: 'enum', value: 'triple' },
+            FrameColor: { type: 'string', value: '#444444' },
+          },
+          propertySets: [],
+          geometry: { type: 'brep', data: null },
+          layerId,
+          levelId: null,
+          transform: {
+            translation: { x: 0, y: 0, z: 0 },
+            rotation: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+          },
+          boundingBox: {
+            min: { x: 0, y: 0, z: 0, _type: 'Point3D' as const },
+            max: { x: 6000, y: 100, z: 4000, _type: 'Point3D' as const },
+          },
+          metadata: {
+            id: wallId,
+            createdBy: 'user',
+            createdAt: now,
+            updatedAt: now,
+            version: { clock: {} },
+          },
+          visible: true,
+          locked: false,
+        };
+
+        const ifcString = DocumentModel.toIFC(project);
+        expect(ifcString).toContain('IFCCURTAINWALL');
+      });
+    });
+  });
 });
