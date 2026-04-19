@@ -4,12 +4,12 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
+  release:
+    types: [published]   # fires when semantic-release publishes a GitHub Release
   workflow_dispatch:
     inputs:
-      version:
-        description: "Version to release (e.g., 0.3.1)"
+      tag:
+        description: "Tag to build (e.g., v1.0.2)"
         required: true
         type: string
 
@@ -56,25 +56,18 @@ jobs:
   # ──────────────────────────────────────────────────────────────
   validate:
     name: Validate Release
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Verify tag follows semver
         run: |
-          TAG=${GITHUB_REF#refs/tags/}
-          if [[ ! $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+          TAG=${{ github.event_name == 'release' && github.event.release.tag_name || inputs.tag }}
+          if [[ ! $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-z]+(\.[0-9]+)?)?$ ]]; then
             echo "Error: Tag $TAG does not follow semver (expected vX.Y.Z)"
             exit 1
           fi
-
-      # CHANGELOG.md is no longer committed to the repo — semantic-release
-      # writes the changelog directly into the GitHub Release body via
-      # @semantic-release/github. Nothing to check here.
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
 
   # ──────────────────────────────────────────────────────────────
   # 2. Build Desktop Apps
@@ -105,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ github.event.release.tag_name || inputs.tag }}
 
       - name: Install Linux system dependencies
         if: matrix.platform == 'ubuntu-22.04'
@@ -185,11 +178,11 @@ jobs:
           # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         with:
           projectPath: packages/desktop
-          tagName: ${{ github.ref_name }}
-          releaseName: OpenCAD ${{ github.ref_name }}
+          tagName: ${{ github.event.release.tag_name || inputs.tag }}
+          releaseName: OpenCAD ${{ github.event.release.tag_name || inputs.tag }}
           releaseBody: ""
           releaseDraft: false
-          prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-beta') || contains(github.ref_name, '-alpha') }}
+          prerelease: ${{ github.event.release.prerelease || false }}
           args: ${{ matrix.args }}
 
   # Note: tauri-action@v0.6 creates the GitHub Release and uploads all
@@ -203,7 +196,7 @@ jobs:
     needs: [validate]
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: ${{ !contains(github.ref_name, '-rc') && !contains(github.ref_name, '-beta') }}
+    if: (github.event_name == 'release' || github.event_name == 'workflow_dispatch') && !github.event.release.prerelease
     steps:
       - uses: actions/checkout@v4
 
@@ -235,7 +228,7 @@ jobs:
     needs: [validate]
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.event_name == 'release' || github.event_name == 'workflow_dispatch'
     steps:
       - uses: actions/checkout@v4
 
@@ -286,11 +279,11 @@ jobs:
         with:
           webhook: ${{ secrets.DISCORD_WEBHOOK }}
           status: Success
-          title: "OpenCAD ${{ github.ref_name }} Released!"
+          title: "OpenCAD ${{ github.event.release.tag_name || inputs.tag }} Released!"
           description: |
             A new version of OpenCAD is now available.
 
-            **Download:** [GitHub Releases](https://github.com/CariHQ/opencad/releases/tag/${{ github.ref_name }})
+            **Download:** [GitHub Releases](https://github.com/CariHQ/opencad/releases/tag/${{ github.event.release.tag_name || inputs.tag }})
             **Changelog:** See release notes
 
             Thank you to all contributors!
