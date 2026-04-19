@@ -2,8 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Columns, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
-import { ContextMenu } from './contextMenu/ContextMenu';
-import { useDocumentStore } from '../stores/documentStore';
 
 // ─── Floor Plan pane ──────────────────────────────────────────────────────────
 // Always mounted — CSS visibility controls show/hide so canvas state is never lost.
@@ -154,10 +152,14 @@ function ThreeDView({ viewType, label }: ThreeDViewProps) {
 // ─── SplitViewport ────────────────────────────────────────────────────────────
 
 interface SplitViewportProps {
-  viewType: 'floor-plan' | '3d' | 'section';
+  viewType?: 'floor-plan' | '3d' | 'section';
 }
 
-// ─── Floor Plan pane ──────────────────────────────────────────────────────────
+export function SplitViewport({ viewType = '3d' }: SplitViewportProps) {
+  const [isSplit, setIsSplit] = useState(false);
+  const [splitRatio, setSplitRatio] = useState(0.5);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
 
   const handleDividerMouseDown = useCallback((e: React.MouseEvent) => {
     e.preventDefault();
@@ -255,132 +257,6 @@ interface SplitViewportProps {
       >
         <Columns size={14} />
       </button>
-    </div>
-  );
-}
-
-// ─── Pane renderer ───────────────────────────────────────────────────────────
-
-interface ViewPaneProps {
-  pane: PaneDefinition;
-  isViewOnly: boolean;
-}
-
-function ViewPane({ pane, isViewOnly }: ViewPaneProps) {
-  if (pane.type === 'floor-plan') {
-    return <FloorPlanCanvas isViewOnly={isViewOnly} />;
-  }
-  return <ThreeDView viewType={pane.type} label={pane.label} isViewOnly={isViewOnly} />;
-}
-
-// ─── Pane definitions per layout ─────────────────────────────────────────────
-
-function getPanes(layout: LayoutMode, viewType: SplitViewportProps['viewType']): PaneDefinition[] {
-  switch (layout) {
-    case 'single':
-      return [{ type: viewType, label: viewType === 'section' ? 'Section' : viewType === '3d' ? '3D View' : 'Floor Plan' }];
-    case 'split':
-      return [
-        { type: 'floor-plan', label: '2D' },
-        { type: '3d', label: '3D' },
-      ];
-    case 'quad':
-      return [
-        { type: 'floor-plan', label: 'Floor Plan' },
-        { type: '3d', label: '3D View' },
-        { type: 'section', label: 'Section' },
-        { type: '3d', label: 'Perspective' },
-      ];
-  }
-}
-
-// ─── CSS grid style per layout ────────────────────────────────────────────────
-
-function getGridStyle(layout: LayoutMode): React.CSSProperties {
-  switch (layout) {
-    case 'single':
-      return { gridTemplateColumns: '1fr' };
-    case 'split':
-      return { gridTemplateColumns: '1fr 1fr' };
-    case 'quad':
-      return { gridTemplateColumns: '1fr 1fr', gridTemplateRows: '1fr 1fr' };
-  }
-}
-
-// ─── SplitViewport ────────────────────────────────────────────────────────────
-
-export function SplitViewport({ viewType = '3d' }: SplitViewportProps) {
-  const [layout, setLayout] = useState<LayoutMode>('single');
-  const [activePane, setActivePane] = useState<number>(0);
-
-  const panes = getPanes(layout, viewType);
-
-  const handleLayoutChange = useCallback((newLayout: LayoutMode) => {
-    setLayout(newLayout);
-    setActivePane(0);
-  }, []);
-
-  const handlePaneClick = useCallback((index: number) => {
-    setActivePane(index);
-  }, []);
-
-  return (
-    <div className="split-viewport-container">
-      {/* ── Layout picker toolbar ── */}
-      <div className="split-viewport-layout-picker" data-testid="split-viewport-layout-picker">
-        <button
-          className={`viewport-control-btn${layout === 'single' ? ' active' : ''}`}
-          title="Single view"
-          onClick={() => handleLayoutChange('single')}
-        >
-          <Square size={14} />
-        </button>
-        <button
-          className={`viewport-control-btn${layout === 'split' ? ' active' : ''}`}
-          title="2-up split view"
-          onClick={() => handleLayoutChange('split')}
-        >
-          <Columns size={14} />
-        </button>
-        <button
-          className={`viewport-control-btn${layout === 'quad' ? ' active' : ''}`}
-          title="4-up quad view"
-          onClick={() => handleLayoutChange('quad')}
-        >
-          <LayoutGrid size={14} />
-        </button>
-      </div>
-
-      {/* ── Viewport grid ── */}
-      <div
-        style={{
-          display: 'grid',
-          width: '100%',
-          height: '100%',
-          ...getGridStyle(layout),
-        }}
-      >
-        {panes.map((pane, index) => {
-          const isActive = index === activePane;
-          const isViewOnly = !isActive;
-          // Include pane.type in the key so React cleanly remounts when the
-          // view type changes (prevents stale section state from flashing).
-          // For quad layout two panes share type '3d', so keep the index there.
-          const paneKey = layout === 'single' ? pane.type : `${layout}-${pane.type}-${index}`;
-
-          return (
-            <div
-              key={paneKey}
-              data-testid="split-viewport-pane"
-              data-view-only={String(isViewOnly)}
-              className={`split-viewport-pane${isActive ? ' split-viewport-pane--active' : ''}`}
-              onClick={() => handlePaneClick(index)}
-            >
-              <ViewPane pane={pane} isViewOnly={isViewOnly} />
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }

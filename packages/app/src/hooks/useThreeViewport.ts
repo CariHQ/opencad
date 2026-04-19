@@ -3,7 +3,6 @@ import * as THREE from 'three';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import { useDocumentStore } from '../stores/documentStore';
 import { type ElementSchema } from '@opencad/document';
-import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 
 // Patch Three.js prototypes once at module level for BVH-accelerated raycasting
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -15,23 +14,11 @@ THREE.Mesh.prototype.raycast = acceleratedRaycast;
   disposeBoundsTree: typeof disposeBoundsTree;
 }).disposeBoundsTree = disposeBoundsTree;
 
-// LOD constants
-const LOD_ELEMENT_THRESHOLD = 500;
-const LOD_DEFAULT_DISTANCE = 50000; // mm — elements beyond this are simplified when LOD active
-const FPS_WINDOW = 10; // rolling window for FPS computation
-const FPS_LOW_THRESHOLD = 40; // below this, auto-reduce detail
-
 // ─── LOD Types & Frame Stats (status bar) ────────────────────────────────────
 
 /** Level of detail tier for 3D geometry rendering */
 export type LodLevel = 'high' | 'medium' | 'low';
 
-/**
- * T-PERF-001/002/003/004: Return the appropriate LOD level for a given camera distance.
- * - distance < 5000   → 'high'   (full geometry)
- * - distance < 20000  → 'medium' (simplified geometry)
- * - distance >= 20000 → 'low'    (bounding box only)
- */
 export function getLodLevel(distance: number): LodLevel {
   if (distance < 5000) return 'high';
   if (distance < 20000) return 'medium';
@@ -43,15 +30,12 @@ export interface FrameStats {
   currentLod: LodLevel;
 }
 
-/** Module-level shared frame stats written by the active 3D viewport. */
 let _sharedFrameStats: FrameStats = { avgFrameMs: 16.67, currentLod: 'high' };
 
-/** Read latest frame stats written by the active useThreeViewport instance. */
 export function getSharedFrameStats(): FrameStats {
   return _sharedFrameStats;
 }
 
-/** Internal: publish frame stats from inside the render loop. */
 export function _publishFrameStats(stats: FrameStats): void {
   _sharedFrameStats = stats;
 }
@@ -64,10 +48,10 @@ const LIGHT_THEME = {
 };
 
 const DARK_THEME = {
-  sceneBackground: 0x1a1b1f,
-  gridColor: 0x2e2f38,
-  gridColor2: 0x232429,
-  selectionEmissive: 0x0066cc,
+  sceneBackground: 0x1a1a2e,
+  gridColor: 0x444466,
+  gridColor2: 0x333355,
+  selectionEmissive: 0x1a1a2e,
 };
 
 let _cachedTheme = typeof window !== 'undefined' && localStorage.getItem('opencad-theme') === 'light'
@@ -87,14 +71,6 @@ interface ViewportState {
   scene: THREE.Scene | null;
 }
 
-/** Per-element LOD metadata stored in mesh.userData */
-interface ElementUserData {
-  elementId: string;
-  elementType: string;
-  baseColor: number;
-  isLod: boolean; // true when rendered as simplified placeholder
-}
-
 export type ViewPreset = 'top' | 'front' | 'right' | '3d' | 'perspective';
 
 interface CameraState {
@@ -103,21 +79,6 @@ interface CameraState {
   azimuth: number;
   elevation: number;
 }
-
-// Color per element type — module-level constant (not recreated each render)
-const ELEMENT_TYPE_COLORS: Record<string, number> = {
-  wall:         0xc4c8d0,
-  slab:         0xa0a8b8,
-  column:       0xe08040,
-  beam:         0xd07030,
-  door:         0x8090b8,
-  window:       0x70a8d8,
-  stair:        0xb0b870,
-  railing:      0x90a060,
-  roof:         0x909098,
-  space:        0x80c8a8,
-  curtain_wall: 0xc8d0d8,
-};
 
 const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; distance: number }> = {
   top:         { azimuth: 0,           elevation: 0.01,        distance: 10000 },
@@ -368,9 +329,6 @@ export function useThreeViewport() {
   const [sectionPosition,  setSectionPosition]  = useState(0);
   const [sectionDirection, setSectionDirection] = useState<'x' | 'y' | 'z'>('z');
 
-  const [contextMenuState, setContextMenuState] = useState<{ x: number; y: number; items: ContextMenuGroup } | null>(null);
-  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
-
   const saveSectionView = useCallback(() => {
     try {
       localStorage.setItem('opencad-section-view',
@@ -537,20 +495,8 @@ export function useThreeViewport() {
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z, 1000);
 
-    for (const element of elements) {
-      const bb = element.boundingBox;
-      minX = Math.min(minX, bb.min.x);
-      minY = Math.min(minY, bb.min.y);
-      maxX = Math.max(maxX, bb.max.x);
-      maxY = Math.max(maxY, bb.max.y);
-    }
-
-    const centerX = (minX + maxX) / 2;
-    const centerY = (minY + maxY) / 2;
-    const size = Math.max(maxX - minX, maxY - minY);
-
-    cameraStateRef.current.target.set(centerX, centerY, 0);
-    cameraStateRef.current.distance = size * 2;
+    cameraStateRef.current.target.copy(center);
+    cameraStateRef.current.distance = maxDim * 2.5;
     updateCamera();
   }, [doc, updateCamera, setViewPreset]);
 
@@ -558,7 +504,7 @@ export function useThreeViewport() {
   const getCameraTarget = useCallback(() => ({ ...cameraStateRef.current.target }), []);
 
   const updateScene = useCallback(() => {
-    const { scene, camera } = stateRef.current;
+    const { scene } = stateRef.current;
     if (!scene || !doc) return;
 
     const docElements = doc.content.elements;
@@ -698,13 +644,6 @@ export function useThreeViewport() {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
-      // Don't consume keys when user is typing in an input
-      const tag = (event.target as HTMLElement).tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-
-      const cs = cameraStateRef.current;
-      const panStep = cs.distance * 0.05;
-
       switch (event.key) {
         case '1': setViewPreset('top');   break;
         case '2': setViewPreset('front'); break;
@@ -715,26 +654,16 @@ export function useThreeViewport() {
         case '-':            zoomOut(); break;
       }
     },
-    [setViewPreset, zoomIn, zoomOut, zoomToFit, updateCamera]
+    [setViewPreset, zoomIn, zoomOut, zoomToFit]
   );
 
   const isDragging   = useRef(false);
   const lastMouse    = useRef({ x: 0, y: 0 });
 
-  // Stable ref — never changes, so it won't invalidate the main setup effect
   const handleMouseDown = useCallback(
     (event: MouseEvent) => {
       const container = containerRef.current;
       if (!container) return;
-
-      if (event.button === 1 || event.button === 2) {
-        // Middle or right button → pan
-        isDragging.current = true;
-        dragMode.current = 'pan';
-        lastMouse.current = { x: event.clientX, y: event.clientY };
-        event.preventDefault();
-        return;
-      }
 
       if (event.button === 0) {
         const { camera, scene, renderer } = stateRef.current;
@@ -768,8 +697,9 @@ export function useThreeViewport() {
           } else {
             setSelectedIds([elementId]);
           }
+        } else if (!event.shiftKey) {
+          setSelectedIds([]);
         } else {
-          // Empty space → start orbit drag; deselect if not shift
           isDragging.current = true;
           lastMouse.current  = { x: event.clientX, y: event.clientY };
         }
@@ -799,7 +729,7 @@ export function useThreeViewport() {
       const deltaX = event.clientX - lastMouse.current.x;
       const deltaY = event.clientY - lastMouse.current.y;
 
-      if (dragMode.current === 'orbit') {
+      if (event.buttons === 1) {
         const cs = cameraStateRef.current;
         cs.azimuth   -= deltaX * 0.005;
         cs.elevation -= deltaY * 0.005;
@@ -930,8 +860,6 @@ export function useThreeViewport() {
       container.removeEventListener('mousemove',   handleMouseMove);
       container.removeEventListener('wheel',       handleWheel);
       container.removeEventListener('contextmenu', handleContextMenu);
-      container.removeEventListener('mouseup', onMouseUp);
-      container.removeEventListener('mouseleave', onMouseLeave);
       window.removeEventListener('keydown', handleKeyDown);
       const { renderer } = stateRef.current;
       if (renderer) {
@@ -960,71 +888,6 @@ export function useThreeViewport() {
     };
   }, []);
 
-  /**
-   * T-3D-003: Simulate an orbit drag: deltaX rotates azimuth, deltaY changes elevation.
-   * Elevation is clamped to [0.01, π-0.01] to prevent gimbal lock.
-   * Units: pixels (same as mouse delta — 1 px ≈ 0.005 rad).
-   */
-  const simulateOrbit = useCallback(
-    (deltaX: number, deltaY: number) => {
-      const cs = cameraStateRef.current;
-      cs.azimuth   -= deltaX * 0.005;
-      cs.elevation -= deltaY * 0.005;
-      cs.elevation  = Math.max(0.01, Math.min(Math.PI - 0.01, cs.elevation));
-      updateCamera();
-    },
-    [updateCamera]
-  );
-
-  /**
-   * T-3D-003: Simulate a pan: translate the camera target by (dx, dy) world units
-   * relative to the camera's horizontal plane.
-   */
-  const simulatePan = useCallback(
-    (dx: number, dy: number) => {
-      const cs = cameraStateRef.current;
-      cs.target.x -= dx;
-      cs.target.z -= dy;
-      updateCamera();
-    },
-    [updateCamera]
-  );
-
-  /**
-   * T-3D-003: Simulate a zoom: positive delta zooms out, negative zooms in.
-   * Distance is clamped to [500, 50000].
-   */
-  const simulateZoom = useCallback(
-    (delta: number) => {
-      const cs = cameraStateRef.current;
-      cs.distance = Math.max(500, Math.min(50000, cs.distance + delta));
-      updateCamera();
-    },
-    [updateCamera]
-  );
-
-  /**
-   * T-3D-005: Return a snapshot of the current camera spherical state.
-   * Useful for assertions in tests.
-   */
-  const getCameraState = useCallback(
-    () => ({
-      azimuth:   cameraStateRef.current.azimuth,
-      elevation: cameraStateRef.current.elevation,
-      distance:  cameraStateRef.current.distance,
-      target: {
-        x: cameraStateRef.current.target.x,
-        y: cameraStateRef.current.target.y,
-        z: cameraStateRef.current.target.z,
-      },
-    }),
-    []
-  );
-
-  const setLodDistance = useCallback((distance: number) => {
-    lodDistanceRef.current = distance;
-  }, []);
-
   return {
     containerRef,
     setViewPreset,
@@ -1039,11 +902,5 @@ export function useThreeViewport() {
     sectionDirection,
     setSectionDirection,
     saveSectionView,
-    contextMenuState,
-    closeContextMenu,
-    // Performance / LOD
-    currentFps,
-    lodActive,
-    setLodDistance,
   };
 }

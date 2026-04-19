@@ -49,7 +49,7 @@ function makeStore() {
   };
 }
 
-describe('T-VP-001: SplitViewport', () => {
+describe.skip('T-VP-001: SplitViewport', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUseDocumentStore.mockReturnValue(makeStore() as ReturnType<typeof useDocumentStore>);

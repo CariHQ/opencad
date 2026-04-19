@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { computeBoundingBox, ElementSchema, PropertyValue } from '@opencad/document';
 import { SpatialGrid } from '../utils/spatialIndex';
@@ -96,12 +96,7 @@ function dist(p1: Point, p2: Point): number {
 export function useViewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams, updateElement, pushHistory, deleteElement } = useDocumentStore();
-
-  // Spatial index for O(1) average-case snap candidate lookup.
-  // Cell size matches GRID_SIZE (500 world units) so each cell covers roughly
-  // one grid square — a good balance between cell count and bucket size.
-  const snapIndexRef = useRef(new SpatialGrid(GRID_SIZE));
+  const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams } = useDocumentStore();
 
   // Spatial index for O(1) average-case snap candidate lookup.
   // Cell size matches GRID_SIZE (500 world units) so each cell covers roughly
@@ -126,12 +121,6 @@ export function useViewport() {
 
   // Pan state (middle-mouse drag) — tracked via ref to avoid re-renders mid-drag
   const panRef = useRef({ active: false, lastX: 0, lastY: 0 });
-
-  // ── Select-tool interaction ─────────────────────────────────────────────────
-  const interactionRef = useRef<SelectInteraction>({ mode: 'idle' });
-  // Clipboard (copy/paste) — stores serialised element properties
-  const clipboardRef = useRef<ElementSchema[]>([]);
-  const pasteCountRef = useRef(0);
 
   /** Update view transform — syncs both state (for effects) and ref (for callbacks) */
   const setView = useCallback((v: ViewTransform) => {
@@ -508,19 +497,6 @@ export function useViewport() {
       const props = element.properties as Record<string, { value: unknown }>;
       const type = element.type;
 
-      // Apply material hatch pattern as fill for solid shapes when not selected
-      if (!isSelected) {
-        const appliedMatName = props['Material']?.value as string | undefined;
-        if (appliedMatName) {
-          const appliedMat = BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName);
-          if (appliedMat) {
-            const pattern = _getHatchPattern(ctx, appliedMat.category, appliedMat.color);
-            if (pattern) ctx.fillStyle = pattern;
-            ctx.strokeStyle = appliedMat.color;
-          }
-        }
-      }
-
       if (type === 'annotation' || type === 'wall' || type === 'dimension') {
         if (props['StartX'] && props['EndX']) {
           const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
@@ -567,21 +543,6 @@ export function useViewport() {
           ctx.moveTo(pts[0]!.x, pts[0]!.y);
           for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
-          ctx.stroke();
-        }
-      } else if (type === 'space') {
-        if (props['StartX'] && props['EndX']) {
-          const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
-          const x2 = props['EndX'].value as number, y2 = props['EndY']!.value as number;
-          const rx = Math.min(x1, x2), ry = Math.min(y1, y2);
-          const rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
-          ctx.fillStyle = isSelected ? theme.selectedFill : 'rgba(99,179,237,0.10)';
-          ctx.strokeStyle = isSelected ? theme.selected : 'rgba(99,179,237,0.70)';
-          ctx.lineWidth = (isSelected ? 2 : 1) * v.scale;
-          ctx.setLineDash([]);
-          ctx.beginPath();
-          ctx.rect(rx, ry, rw, rh);
-          ctx.fill();
           ctx.stroke();
         }
       } else {
@@ -656,38 +617,6 @@ export function useViewport() {
       ctx.beginPath(); ctx.arc(currentSnap.point.x, currentSnap.point.y, 6 * v.scale, 0, Math.PI * 2); ctx.stroke();
     }
 
-    // ── Resize handles for selected elements ────────────────────────────────
-    if (activeTool === 'select' && doc) {
-      const handleHalfW = HANDLE_SIZE_PX * v.scale;
-      for (const id of selectedIds) {
-        const el = doc.content.elements[id];
-        if (!el) continue;
-        const handles = getHandles(el as ElementSchema);
-        for (const h of handles) {
-          ctx.fillStyle   = theme.selected;
-          ctx.strokeStyle = '#ffffff';
-          ctx.lineWidth   = 0.8 * v.scale;
-          ctx.beginPath();
-          ctx.rect(h.x - handleHalfW, h.y - handleHalfW, handleHalfW * 2, handleHalfW * 2);
-          ctx.fill(); ctx.stroke();
-        }
-      }
-    }
-
-    // ── Rubber-band selection rect ───────────────────────────────────────────
-    const inter = interactionRef.current;
-    if (inter.mode === 'rubber-band') {
-      const { startWorld: sw, currentWorld: cw2 } = inter;
-      const rx = Math.min(sw.x, cw2.x), ry = Math.min(sw.y, cw2.y);
-      const rw = Math.abs(cw2.x - sw.x), rh = Math.abs(cw2.y - sw.y);
-      ctx.strokeStyle = theme.accent;
-      ctx.fillStyle   = theme.selectedFill;
-      ctx.lineWidth   = 1 * v.scale;
-      ctx.setLineDash([4 * v.scale, 4 * v.scale]);
-      ctx.beginPath(); ctx.rect(rx, ry, rw, rh); ctx.fill(); ctx.stroke();
-      ctx.setLineDash([]);
-    }
-
     ctx.restore();
 
     // ── Screen-space text labels — uses pre-collected visible elements from first pass ──
@@ -738,11 +667,6 @@ export function useViewport() {
       }
     }
   }, [doc, selectedIds, drawingState, activeTool, currentSnap]);
-
-  // Stable ref so the ResizeObserver (which has [] deps) can always call the
-  // latest draw() without capturing a stale closure.
-  const drawRef = useRef(draw);
-  useLayoutEffect(() => { drawRef.current = draw; });
 
   // ─── Wheel: zoom centred on cursor ────────────────────────────────────────
 
@@ -811,38 +735,6 @@ export function useViewport() {
       } else {
         setSelectedIds([]);
       }
-
-      // 2. Check if clicking any element
-      const hitEl = elements.find((el) => hitTestElement(rawWp, el, HIT));
-      if (hitEl) {
-        // If shift is held, toggle this element in/out of the selection
-        const newSel = event.shiftKey
-          ? (currentSelected.includes(hitEl.id)
-              ? currentSelected.filter((x) => x !== hitEl.id)
-              : [...currentSelected, hitEl.id])
-          : (currentSelected.includes(hitEl.id)
-              ? currentSelected  // already selected → don't reset
-              : [hitEl.id]);
-        if (!event.shiftKey && !currentSelected.includes(hitEl.id)) setSelectedIds([hitEl.id]);
-        else if (event.shiftKey) setSelectedIds(newSel);
-
-        // Start a drag-pending so a subsequent move becomes a drag
-        const selIds = getStoreActions().selectedIds.length > 0
-          ? getStoreActions().selectedIds
-          : [hitEl.id];
-        interactionRef.current = {
-          mode: 'drag-pending',
-          startScreen: { x: event.clientX, y: event.clientY },
-          elementIds: selIds,
-        };
-        dirtyRef.current = true;
-        return;
-      }
-
-      // 3. Click on empty space → start rubber-band selection
-      if (!event.shiftKey) setSelectedIds([]);
-      interactionRef.current = { mode: 'rubber-band', startWorld: rawWp, currentWorld: rawWp };
-      dirtyRef.current = true;
       return;
     }
 
@@ -890,79 +782,12 @@ export function useViewport() {
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const v = viewTransformRef.current;
-    const rawWp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
+    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
+    wp = applySnapping(wp);
 
-    // ── Select-tool interactions ──────────────────────────────────────────────
-    const inter = interactionRef.current;
-
-    if (inter.mode === 'drag-pending') {
-      const dx = event.clientX - inter.startScreen.x;
-      const dy = event.clientY - inter.startScreen.y;
-      if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_PX) {
-        interactionRef.current = { mode: 'dragging', lastWorld: rawWp, elementIds: inter.elementIds };
-        canvas.style.cursor = 'grabbing';
-      }
-      return;
-    }
-
-    if (inter.mode === 'dragging') {
-      const snapped = applySnapping(rawWp);
-      const dxW = snapped.x - inter.lastWorld.x;
-      const dyW = snapped.y - inter.lastWorld.y;
-      interactionRef.current = { ...inter, lastWorld: snapped };
-      const docNow = getStoreActions().document;
-      if (docNow && (dxW !== 0 || dyW !== 0)) {
-        for (const id of inter.elementIds) {
-          const el = docNow.content.elements[id];
-          if (!el) continue;
-          const moved = moveElementProps(el as ElementSchema, dxW, dyW);
-          updateElement(id, { properties: { ...el.properties, ...moved } });
-        }
-      }
-      dirtyRef.current = true;
-      return;
-    }
-
-    if (inter.mode === 'resizing') {
-      const snapped = applySnapping(rawWp);
-      const docNow = getStoreActions().document;
-      if (docNow) {
-        const el = docNow.content.elements[inter.elementId];
-        if (el) {
-          const resized = resizeElementProps(el as ElementSchema, inter.handle, snapped);
-          updateElement(inter.elementId, { properties: { ...el.properties, ...resized } });
-        }
-      }
-      dirtyRef.current = true;
-      return;
-    }
-
-    if (inter.mode === 'rubber-band') {
-      interactionRef.current = { ...inter, currentWorld: rawWp };
-      dirtyRef.current = true;
-      return;
-    }
-
-    // ── Update cursor when hovering over handles ───────────────────────────
-    if (activeTool === 'select') {
-      const docNow = getStoreActions().document;
-      if (docNow) {
-        const HNDL = HANDLE_SIZE_PX * v.scale;
-        for (const id of getStoreActions().selectedIds) {
-          const el = docNow.content.elements[id];
-          if (!el) continue;
-          const hh = hitHandle(rawWp, getHandles(el as ElementSchema), HNDL * 1.5);
-          if (hh) { canvas.style.cursor = hh.cursor; return; }
-        }
-        canvas.style.cursor = 'default';
-      }
-    }
-
-    // ── Drawing tool preview ───────────────────────────────────────────────
-    const wp = applySnapping(rawWp);
     if (!drawingState.isDrawing) return;
     setDrawingState((prev) => ({ ...prev, currentPoint: wp }));
-  }, [drawingState.isDrawing, applySnapping, setView, updateElement, activeTool]);
+  }, [drawingState.isDrawing, applySnapping, setView]);
 
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     // End pan
@@ -973,61 +798,6 @@ export function useViewport() {
       return;
     }
 
-    // ── Commit select-tool interactions ──────────────────────────────────────
-    const inter = interactionRef.current;
-
-    if (inter.mode === 'drag-pending') {
-      // Mouseup without drag → just a click, already handled in mousedown
-      interactionRef.current = { mode: 'idle' };
-      const canvas = canvasRef.current;
-      if (canvas) canvas.style.cursor = 'default';
-      return;
-    }
-
-    if (inter.mode === 'dragging') {
-      pushHistory('Move elements');
-      interactionRef.current = { mode: 'idle' };
-      const canvas = canvasRef.current;
-      if (canvas) canvas.style.cursor = 'default';
-      dirtyRef.current = true;
-      return;
-    }
-
-    if (inter.mode === 'resizing') {
-      pushHistory('Resize element');
-      interactionRef.current = { mode: 'idle' };
-      const canvas = canvasRef.current;
-      if (canvas) canvas.style.cursor = 'default';
-      dirtyRef.current = true;
-      return;
-    }
-
-    if (inter.mode === 'rubber-band') {
-      const { startWorld: sw, currentWorld: cw2 } = inter;
-      const minX = Math.min(sw.x, cw2.x), maxX = Math.max(sw.x, cw2.x);
-      const minY = Math.min(sw.y, cw2.y), maxY = Math.max(sw.y, cw2.y);
-      if (maxX - minX > 5 && maxY - minY > 5) {
-        const docNow = getStoreActions().document;
-        if (docNow) {
-          const hits = (Object.values(docNow.content.elements) as ElementSchema[])
-            .filter((el) => {
-              const bb = el.boundingBox;
-              return bb.min.x >= minX && bb.max.x <= maxX && bb.min.y >= minY && bb.max.y <= maxY;
-            })
-            .map((el) => el.id);
-          if (event.shiftKey) {
-            setSelectedIds([...new Set([...getStoreActions().selectedIds, ...hits])]);
-          } else {
-            setSelectedIds(hits);
-          }
-        }
-      }
-      interactionRef.current = { mode: 'idle' };
-      dirtyRef.current = true;
-      return;
-    }
-
-    // ── Drawing tool commit ───────────────────────────────────────────────────
     const canvas = canvasRef.current;
     if (!canvas || !drawingState.isDrawing || !drawingState.startPoint) {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
@@ -1070,165 +840,31 @@ export function useViewport() {
   // ─── Keyboard shortcuts ───────────────────────────────────────────────────
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    // Ignore shortcuts when typing in an input / textarea
-    const tag = (event.target as HTMLElement)?.tagName?.toLowerCase();
-    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
-
-    const ctrl = event.ctrlKey || event.metaKey;
-
     if (event.key === 'Escape') {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
       setActiveTool('select');
     }
+    if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) { event.preventDefault(); getStoreActions().undo(); return; }
+    if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) { event.preventDefault(); getStoreActions().redo(); return; }
+    if ((event.ctrlKey || event.metaKey) && event.key === 's') { event.preventDefault(); getStoreActions().pushHistory('Manual save'); return; }
 
-    // ── Undo / redo / save ──────────────────────────────────────────────────
-    if (ctrl && event.key === 'z' && !event.shiftKey) { event.preventDefault(); getStoreActions().undo(); return; }
-    if (ctrl && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) { event.preventDefault(); getStoreActions().redo(); return; }
-    if (ctrl && event.key === 's') { event.preventDefault(); getStoreActions().pushHistory('Manual save'); return; }
+    if (event.ctrlKey || event.metaKey || event.altKey) return;
 
-    // ── Select all ──────────────────────────────────────────────────────────
-    if (ctrl && event.key === 'a') {
-      event.preventDefault();
-      const docNow = getStoreActions().document;
-      if (docNow) setSelectedIds(Object.keys(docNow.content.elements));
-      return;
-    }
-
-    // ── Deselect all ────────────────────────────────────────────────────────
-    if (ctrl && event.key === 'd') {
-      event.preventDefault();
-      setSelectedIds([]);
-      return;
-    }
-
-    // ── Copy ────────────────────────────────────────────────────────────────
-    if (ctrl && event.key === 'c') {
-      event.preventDefault();
-      const docNow = getStoreActions().document;
-      const selIds = getStoreActions().selectedIds;
-      if (docNow && selIds.length > 0) {
-        clipboardRef.current = selIds
-          .map((id) => docNow.content.elements[id])
-          .filter((el): el is ElementSchema => !!el)
-          .map((el) => JSON.parse(JSON.stringify(el)) as ElementSchema);
-        pasteCountRef.current = 0;
-      }
-      return;
-    }
-
-    // ── Cut ─────────────────────────────────────────────────────────────────
-    if (ctrl && event.key === 'x') {
-      event.preventDefault();
-      const docNow = getStoreActions().document;
-      const selIds = getStoreActions().selectedIds;
-      if (docNow && selIds.length > 0) {
-        clipboardRef.current = selIds
-          .map((id) => docNow.content.elements[id])
-          .filter((el): el is ElementSchema => !!el)
-          .map((el) => JSON.parse(JSON.stringify(el)) as ElementSchema);
-        pasteCountRef.current = 0;
-        selIds.forEach((id) => deleteElement(id));
-        pushHistory('Cut elements');
-        setSelectedIds([]);
-      }
-      return;
-    }
-
-    // ── Paste ────────────────────────────────────────────────────────────────
-    if (ctrl && event.key === 'v') {
-      event.preventDefault();
-      if (clipboardRef.current.length === 0) return;
-      pasteCountRef.current += 1;
-      const offset = pasteCountRef.current * PASTE_OFFSET;
-      const docNow = getStoreActions().document;
-      if (!docNow) return;
-      const layerId = Object.keys(docNow.organization.layers)[0] || 'default';
-      const newIds: string[] = [];
-      for (const src of clipboardRef.current) {
-        const moved = moveElementProps(src, offset, offset);
-        const newId = getStoreActions().addElement({
-          type: src.type,
-          layerId,
-          properties: { ...src.properties, ...moved },
-        });
-        newIds.push(newId);
-      }
-      pushHistory('Paste elements');
-      setSelectedIds(newIds);
-      return;
-    }
-
-    // ── Duplicate (Ctrl+Shift+D or Ctrl+J) ────────────────────────────────
-    if (ctrl && (event.key === 'j' || (event.shiftKey && event.key === 'd'))) {
-      event.preventDefault();
-      const docNow = getStoreActions().document;
-      const selIds = getStoreActions().selectedIds;
-      if (!docNow || selIds.length === 0) return;
-      const layerId = Object.keys(docNow.organization.layers)[0] || 'default';
-      const newIds: string[] = [];
-      for (const id of selIds) {
-        const src = docNow.content.elements[id];
-        if (!src) continue;
-        const moved = moveElementProps(src as ElementSchema, PASTE_OFFSET, PASTE_OFFSET);
-        const newId = getStoreActions().addElement({
-          type: src.type,
-          layerId,
-          properties: { ...src.properties, ...moved },
-        });
-        newIds.push(newId);
-      }
-      pushHistory('Duplicate elements');
-      setSelectedIds(newIds);
-      return;
-    }
-
-    if (ctrl || event.altKey) return;
-
-    // ── Tool shortcuts ──────────────────────────────────────────────────────
     const shortcuts: Record<string, string> = {
       v: 'select', w: 'wall', d: 'door', n: 'window', s: 'slab', o: 'roof',
       k: 'column', b: 'beam', t: 'stair', l: 'line', r: 'rectangle',
       c: 'circle', a: 'arc', p: 'polygon', m: 'dimension', x: 'text',
     };
     const key = event.key.toLowerCase();
-    if (shortcuts[key]) { setActiveTool(shortcuts[key]); return; }
+    if (shortcuts[key]) setActiveTool(shortcuts[key]);
 
-    // ── Delete / Backspace ──────────────────────────────────────────────────
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const state = getStoreActions();
-      if (state.selectedIds.length === 0) return;
-      event.preventDefault();
       state.selectedIds.forEach((id) => state.deleteElement(id));
       state.pushHistory('Delete elements');
-      state.setSelectedIds([]);
-      return;
     }
-
-    // ── Arrow-key nudge ─────────────────────────────────────────────────────
-    const ARROW_MAP: Record<string, [number, number]> = {
-      ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
-    };
-    if (ARROW_MAP[event.key]) {
-      event.preventDefault();
-      const [ddx, ddy] = ARROW_MAP[event.key]!;
-      const nudge = event.shiftKey ? GRID_SIZE : 100; // shift = 500mm, normal = 100mm
-      const dxW = ddx * nudge, dyW = ddy * nudge;
-      const docNow = getStoreActions().document;
-      const selIds = getStoreActions().selectedIds;
-      if (!docNow || selIds.length === 0) return;
-      for (const id of selIds) {
-        const el = docNow.content.elements[id];
-        if (!el) continue;
-        const moved = moveElementProps(el as ElementSchema, dxW, dyW);
-        updateElement(id, { properties: { ...el.properties, ...moved } });
-      }
-      pushHistory('Nudge elements');
-      return;
-    }
-
-    // ── Snap toggle (hold Ctrl) ──────────────────────────────────────────────
     if (event.key === 'Control') setSnapEnabled(false);
-  }, [setActiveTool, setSelectedIds, deleteElement, pushHistory, updateElement]);
+  }, [setActiveTool]);
 
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Control') setSnapEnabled(true);
@@ -1258,10 +894,7 @@ export function useViewport() {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width;
         canvas.height = entry.contentRect.height;
-        // Redraw immediately — setting canvas.width/height clears it, so waiting
-        // for the next rAF produces a one-frame blank flash on every resize tick.
-        drawRef.current();
-        dirtyRef.current = false;
+        dirtyRef.current = true;
       }
     });
     ro.observe(container);

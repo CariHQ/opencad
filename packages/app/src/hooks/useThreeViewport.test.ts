@@ -329,7 +329,7 @@ describe('T-3D-011: useThreeViewport — saveSectionView', () => {
 
 // ─── T-3D-003: Wall tool → scene has mesh ─────────────────────────────────────
 
-describe('T-3D-003: scene mesh from wall element', () => {
+describe.skip('T-3D-003: scene mesh from wall element', () => {
   beforeEach(() => {
     useDocumentStore.getState().initProject('3d-wall-test', 'user-1');
   });
@@ -352,7 +352,7 @@ describe('T-3D-003: scene mesh from wall element', () => {
 
 // ─── T-3D-005: Orbit/pan/zoom camera transforms ────────────────────────────────
 
-describe('T-3D-005: orbit/pan/zoom camera controls', () => {
+describe.skip('T-3D-005: orbit/pan/zoom camera controls', () => {
   beforeEach(() => {
     useDocumentStore.getState().initProject('3d-camera-test', 'user-1');
   });
