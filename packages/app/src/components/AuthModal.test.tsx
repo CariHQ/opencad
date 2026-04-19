@@ -12,6 +12,7 @@ vi.mock('../stores/authStore', () => ({
   useAuthStore: () => ({
     signIn: mockSignIn,
     signUp: mockSignUp,
+    resolveMfaChallenge: vi.fn(),
   }),
 }));
 
