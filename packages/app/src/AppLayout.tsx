@@ -31,6 +31,10 @@ import {
   User,
   Settings,
   History,
+  MessageCirclePlus,
+  GitPullRequest,
+  Shield,
+  Plus,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from './stores/projectStore';
@@ -129,7 +133,10 @@ type RightPanelTab =
   | 'photo'
   | 'marketplace'
   | 'wind'
-  | 'history';
+  | 'admin'
+  | 'history'
+  | 'review'
+  | 'layers';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
@@ -164,6 +171,9 @@ export function AppLayout() {
   const [isRenamingProject, setIsRenamingProject] = React.useState(false);
   const [renameValue, setRenameValue] = React.useState('');
   const renameInputRef = React.useRef<HTMLInputElement>(null);
+  const [showUpgrade, setShowUpgrade] = React.useState(false);
+  const [showFeedback, setShowFeedback] = React.useState(false);
+  const [tauriUpdateInfo, setTauriUpdateInfo] = React.useState<TauriUpdateInfo | null>(null);
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
@@ -198,7 +208,7 @@ export function AppLayout() {
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
   const { status: authStatus, profile: authProfile, signOut: authSignOut } = useAuthStore();
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
+  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso' | 'billing'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>(
     'opencad-rightPanelTab',
     'properties'
@@ -427,7 +437,7 @@ export function AppLayout() {
                 <PanelLeft size={15} strokeWidth={2} />
               </span>
             </button>
-            <span className="brand-name">OpenCAD</span>
+            <img src="/favicon.svg" alt="OpenCAD" className="brand-logo-img" />
             <button
               className="toolbar-btn"
               onClick={() => navigate('/')}
@@ -437,35 +447,40 @@ export function AppLayout() {
                 <Home size={15} strokeWidth={2} />
               </span>
             </button>
-            {currentProject && (
-              editingName ? (
-                <input
-                  className="project-name-input"
-                  value={nameInput}
-                  onChange={(e) => setNameInput(e.target.value)}
-                  onBlur={() => {
-                    if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
-                    setEditingName(false);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      if (nameInput.trim()) renameProject(projectId!, nameInput.trim());
-                      setEditingName(false);
-                    } else if (e.key === 'Escape') {
-                      setEditingName(false);
-                    }
-                  }}
-                  autoFocus
-                />
-              ) : (
-                <button
-                  className="project-name-btn"
-                  onClick={() => { setNameInput(currentProject.name); setEditingName(true); }}
-                  title="Click to rename project"
-                >
-                  {currentProject.name}
-                </button>
-              )
+            {isRenamingProject ? (
+              <input
+                ref={renameInputRef}
+                className="project-name-input"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => {
+                  const trimmed = renameValue.trim();
+                  if (trimmed) renameProject(trimmed);
+                  setIsRenamingProject(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const trimmed = renameValue.trim();
+                    if (trimmed) renameProject(trimmed);
+                    setIsRenamingProject(false);
+                  } else if (e.key === 'Escape') {
+                    setIsRenamingProject(false);
+                  }
+                }}
+                autoFocus
+              />
+            ) : (
+              <button
+                className="toolbar-btn project-name-btn"
+                title="Click to rename project"
+                onClick={() => {
+                  setRenameValue(doc?.name ?? 'Untitled Project');
+                  setIsRenamingProject(true);
+                  setTimeout(() => renameInputRef.current?.select(), 0);
+                }}
+              >
+                <span className="project-name-text">{doc?.name ?? 'Untitled Project'}</span>
+              </button>
             )}
           </div>
 
@@ -484,8 +499,8 @@ export function AppLayout() {
           <div className="toolbar-right">
             <button className="toolbar-btn" onClick={() => setShowFeedback(true)} title="Send feedback" style={{ color: 'var(--accent-primary)' }}><span className="tool-icon"><MessageCirclePlus size={15} /></span></button>
             <button className="toolbar-btn" onClick={toggleTheme} title="Toggle Theme"><span className="tool-icon">{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</span></button>
-            <button className="toolbar-btn" onClick={isTauri() ? () => void handleNativeOpen() : () => setShowModal('import')} title={isTauri() ? 'Open file (⌘O)' : 'Import IFC'}><span className="tool-icon"><FolderOpen size={15} /></span></button>
-            <button className="toolbar-btn" onClick={isTauri() ? () => void handleNativeSave() : () => setShowModal('export')} title={isTauri() ? 'Save file (⌘S)' : 'Export IFC'}><span className="tool-icon"><FileDown size={15} /></span></button>
+            <button className="toolbar-btn" onClick={() => setShowModal('import')} title="Import IFC"><span className="tool-icon"><FolderOpen size={15} /></span></button>
+            <button className="toolbar-btn" onClick={() => setShowModal('export')} title="Export IFC"><span className="tool-icon"><FileDown size={15} /></span></button>
             {can('panel:ai') && (
               <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant"><span className="tool-icon"><Bot size={15} /></span></button>
             )}

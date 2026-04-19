@@ -44,6 +44,7 @@ interface Tool {
   name: string;
   icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
   shortcut: string;
+  category?: string;
 }
 
 const tools: Tool[] = [
@@ -78,6 +79,10 @@ export function ToolShelf() {
   const { activeTool, setActiveTool } = useDocumentStore();
   const { can } = useRole();
   const [expanded, setExpanded] = useState<boolean>(() => readStoredExpanded());
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const handleSetCategory = useCallback((id: string) => {
+    setActiveCategory((prev) => (prev === id ? null : id));
+  }, []);
 
   const handleDoubleClick = useCallback(() => {
     const next = !expanded;

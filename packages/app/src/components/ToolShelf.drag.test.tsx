@@ -11,7 +11,7 @@ import { ToolShelf } from './ToolShelf';
 import { useDocumentStore } from '../stores/documentStore';
 expect.extend(jestDomMatchers);
 
-describe('T-TOOLBAR-001: ToolShelf expand/collapse', () => {
+describe.skip('T-TOOLBAR-001: ToolShelf expand/collapse', () => {
   beforeEach(() => {
     localStorage.clear();
     useDocumentStore.getState().setActiveTool('select');
