@@ -35,7 +35,7 @@ RUN pnpm install --frozen-lockfile
 
 # Copy source and build
 COPY . .
-RUN pnpm build --filter '@opencad/app...'
+RUN pnpm build --filter '...@opencad/app'
 
 # ─── Stage 2: Serve the SPA on Cloud Run ────────────────────────────────────────
 FROM node:22-alpine AS runner
