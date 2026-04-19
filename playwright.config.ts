@@ -12,10 +12,13 @@ export default defineConfig({
     ['list'],
   ],
   webServer: {
-    command: 'pnpm --filter=@opencad/app exec vite preview --port 5173',
-    port: 5173,
+    // In CI: serve the pre-built dist; locally: use the Vite dev server
+    command: process.env.CI
+      ? 'pnpm --filter=@opencad/app exec vite preview --port 5173'
+      : 'pnpm dev:browser',
+    url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
-    timeout: 60000,
+    timeout: 120000,
   },
   use: {
     baseURL: 'http://localhost:5173',
@@ -45,10 +48,4 @@ export default defineConfig({
       use: { ...devices['iPhone 12'] },
     },
   ],
-  webServer: {
-    command: 'pnpm dev:browser',
-    url: 'http://localhost:5173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 120000,
-  },
 });

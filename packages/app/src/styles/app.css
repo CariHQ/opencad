@@ -2241,6 +2241,29 @@ input[type='range'] {
   color: var(--text-primary);
 }
 
+.settings-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-signout {
+  background: none;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.settings-signout:hover {
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
 .settings-close {
   background: none;
   border: none;

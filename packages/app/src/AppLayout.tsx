@@ -470,7 +470,10 @@ export function AppLayout() {
           <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="settings-modal-header">
               <h2 className="settings-modal-title">Settings</h2>
-              <button className="settings-close" aria-label="Close settings" onClick={() => setShowSettings(false)}>×</button>
+              <div className="settings-header-actions">
+                <button className="settings-signout" aria-label="Sign out" onClick={() => { setShowSettings(false); void authSignOut(); }}>Sign out</button>
+                <button className="settings-close" aria-label="Close settings" onClick={() => setShowSettings(false)}>×</button>
+              </div>
             </div>
             <div className="settings-tabs">
               <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
