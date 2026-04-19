@@ -37,29 +37,15 @@ RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build --filter '@opencad/app...'
 
-# ─── Stage 2: Serve with nginx ──────────────────────────────────────────────────
-FROM nginx:1.27-alpine AS runner
+# ─── Stage 2: Serve the SPA on Cloud Run ────────────────────────────────────────
+FROM node:22-alpine AS runner
 
-# Copy built app
-COPY --from=builder /app/packages/app/dist /usr/share/nginx/html
+RUN npm install -g serve@14
 
-# SPA routing: all paths fall back to index.html
-RUN printf 'server {\n\
-    listen 8080;\n\
-    root /usr/share/nginx/html;\n\
-    index index.html;\n\
-    location / {\n\
-        try_files $uri $uri/ /index.html;\n\
-    }\n\
-    # Forward /api requests upstream (Cloud Run sidecar / backend service)\n\
-    location /api/ {\n\
-        proxy_pass http://localhost:8081;\n\
-        proxy_set_header Host $host;\n\
-        proxy_set_header X-Real-IP $remote_addr;\n\
-    }\n\
-    gzip on;\n\
-    gzip_types text/plain text/css application/javascript application/json application/wasm;\n\
-}\n' > /etc/nginx/conf.d/default.conf
+COPY --from=builder /app/packages/app/dist /app
 
+# Cloud Run injects $PORT at runtime (default 8080).
+# `serve -s` enables SPA mode: unknown paths fall back to index.html.
+ENV PORT=8080
 EXPOSE 8080
-CMD ["nginx", "-g", "daemon off;"]
+CMD ["sh", "-c", "serve -s /app -l $PORT"]
