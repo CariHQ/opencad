@@ -5,7 +5,11 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
   updateProfile,
+  multiFactor,
+  TotpMultiFactorGenerator,
   type User,
+  type TotpSecret,
+  type MultiFactorResolver,
 } from 'firebase/auth';
 import {
   doc,
@@ -28,6 +32,11 @@ export interface UserProfile {
   trialExpiresAt: Date | null;
 }
 
+export interface TotpEnrollmentResult {
+  secret: TotpSecret;
+  qrCodeUrl: string;
+}
+
 interface AuthState {
   status: AuthStatus;
   user: User | null;
@@ -38,6 +47,12 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
+  /** Start TOTP enrollment: generates a secret and returns the QR code URL. */
+  enrollTotp: (user: User) => Promise<TotpEnrollmentResult | null>;
+  /** Complete TOTP enrollment by verifying a one-time code. */
+  verifyTotpEnrollment: (user: User, secret: TotpSecret, otp: string) => Promise<void>;
+  /** Resolve a pending MFA sign-in challenge with a TOTP one-time code. */
+  resolveMfaChallenge: (resolver: MultiFactorResolver, otp: string) => Promise<void>;
 }
 
 const TRIAL_DAYS = 14;
@@ -165,5 +180,32 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     },
 
     clearError: () => set({ error: null }),
+
+    enrollTotp: async (user: User): Promise<TotpEnrollmentResult | null> => {
+      if (!isFirebaseConfigured) return null;
+      // firebaseAuth() keeps the auth instance active
+      firebaseAuth();
+      const session = await multiFactor(user).getSession();
+      const secret = await TotpMultiFactorGenerator.generateSecret(session);
+      const qrCodeUrl = secret.generateQrCodeUrl(
+        user.email ?? 'user',
+        'OpenCAD',
+      );
+      return { secret, qrCodeUrl };
+    },
+
+    verifyTotpEnrollment: async (user: User, secret: TotpSecret, otp: string): Promise<void> => {
+      if (!isFirebaseConfigured) return;
+      const assertion = TotpMultiFactorGenerator.assertionForEnrollment(secret, otp);
+      await multiFactor(user).enroll(assertion, 'Authenticator');
+    },
+
+    resolveMfaChallenge: async (resolver: MultiFactorResolver, otp: string): Promise<void> => {
+      if (!isFirebaseConfigured) return;
+      // Use the first TOTP hint (apps with a single second factor)
+      const hint = resolver.hints[0];
+      const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, otp);
+      await resolver.resolveSignIn(assertion);
+    },
   };
 });
