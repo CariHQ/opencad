@@ -7,6 +7,8 @@
  * 2-bedroom house template when no API key is provided or the call fails.
  */
 
+import { validateElement, type ValidationResult } from './validation';
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
 /** Mirror of DocumentSchema property value (avoid cross-package import in tests). */
@@ -49,6 +51,12 @@ export interface GenerateProjectOptions {
   apiKey?: string; // Anthropic API key (optional — falls back to template)
 }
 
+/** Per-element BIM validation result returned alongside the generated document. */
+export interface ElementValidationSummary {
+  elementId: string;
+  result: ValidationResult;
+}
+
 export interface GenerateProjectResult {
   document: {
     id?: string;
@@ -73,6 +81,8 @@ export interface GenerateProjectResult {
   };
   description: string;
   warnings: string[];
+  /** BIM validation results per element. Empty when no elements were validated. */
+  validation: ElementValidationSummary[];
 }
 
 // ─── System Prompt ────────────────────────────────────────────────────────────
@@ -282,6 +292,43 @@ function isValidDocumentSchema(obj: unknown): obj is GenerateProjectResult['docu
   );
 }
 
+// ─── BIM Validation Helper ────────────────────────────────────────────────────
+
+/**
+ * Run validateElement on every element in the generated document.
+ * The document's WallElement shape is structurally compatible with validateElement's
+ * expected BimElement interface (duck typing).
+ */
+function validateGeneratedDocument(
+  doc: GenerateProjectResult['document'],
+): ElementValidationSummary[] {
+  const elements = Object.values(doc.content?.elements ?? {});
+  if (elements.length === 0) return [];
+
+  const layers = (doc.organization?.layers ?? {}) as Record<
+    string,
+    { name: string; locked: boolean }
+  >;
+
+  const minimalDoc = {
+    organization: { layers },
+    content: {
+      elements: doc.content?.elements as unknown as Record<
+        string,
+        Parameters<typeof validateElement>[0]
+      > ?? {},
+    },
+  };
+
+  return elements.map((el) => ({
+    elementId: el.id,
+    result: validateElement(
+      el as unknown as Parameters<typeof validateElement>[0],
+      minimalDoc,
+    ),
+  }));
+}
+
 // ─── Main Export ──────────────────────────────────────────────────────────────
 
 export async function generateProject(
@@ -299,6 +346,7 @@ export async function generateProject(
       document: doc,
       description: `Fallback 2-bedroom house template (${elementCount} elements). Provide an Anthropic API key to generate a custom floor plan.`,
       warnings,
+      validation: validateGeneratedDocument(doc),
     };
   }
 
@@ -330,6 +378,7 @@ export async function generateProject(
         document: doc,
         description: `Fallback 2-bedroom house template (${Object.keys(doc.content?.elements ?? {}).length} elements).`,
         warnings,
+        validation: validateGeneratedDocument(doc),
       };
     }
 
@@ -342,6 +391,7 @@ export async function generateProject(
         document: doc,
         description: `Fallback 2-bedroom house template.`,
         warnings,
+        validation: validateGeneratedDocument(doc),
       };
     }
 
@@ -373,6 +423,7 @@ export async function generateProject(
       document: doc,
       description: `Fallback 2-bedroom house template (${Object.keys(doc.content?.elements ?? {}).length} elements).`,
       warnings,
+      validation: validateGeneratedDocument(doc),
     };
   }
 
@@ -386,6 +437,7 @@ export async function generateProject(
       document: doc,
       description: `Fallback 2-bedroom house template (${Object.keys(doc.content?.elements ?? {}).length} elements).`,
       warnings,
+      validation: validateGeneratedDocument(doc),
     };
   }
 
@@ -395,9 +447,17 @@ export async function generateProject(
     (e) => (e as WallElement).type === 'wall'
   ).length;
 
+  const validation = validateGeneratedDocument(doc);
+  // Surface BIM errors/warnings in the top-level warnings array for easy display
+  for (const { result } of validation) {
+    for (const err of result.errors) warnings.push(`[BIM Error] ${err}`);
+    for (const warn of result.warnings) warnings.push(`[BIM Warning] ${warn}`);
+  }
+
   return {
     document: doc,
     description: `Generated "${doc.name ?? 'project'}" with ${elementCount} elements (${wallCount} walls).`,
     warnings,
+    validation,
   };
 }

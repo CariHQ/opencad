@@ -374,3 +374,131 @@ export function runOfflineCompliance(rooms: Room[]): ComplianceViolation[] {
   // Fully deterministic, synchronous — same as IBC rules, no network
   return runIBCCompliance(rooms);
 }
+
+// ─── T-AI-005/006/007: BIM Element Validation ────────────────────────────────
+
+/**
+ * Result of validating a single BIM element against document rules.
+ * - `valid`: false if any hard errors are present
+ * - `errors`: blocking rule violations (element should not be added)
+ * - `warnings`: non-blocking advisory notices
+ */
+export interface ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+}
+
+// Minimal BIM element bounding box shape (avoids importing full ElementSchema in this file)
+interface BimBBox {
+  min: { x: number; y: number; z: number };
+  max: { x: number; y: number; z: number };
+}
+
+interface BimElement {
+  id: string;
+  type: string;
+  layerId: string;
+  properties: Record<string, { type: string; value: string | number | boolean | string[] }>;
+  boundingBox: BimBBox;
+}
+
+interface BimDoc {
+  organization: {
+    layers: Record<string, { locked: boolean; name: string }>;
+  };
+  content: {
+    elements: Record<string, BimElement>;
+  };
+}
+
+/**
+ * Validate a single BIM element against the rules of the given document.
+ *
+ * Rules checked (T-AI-005, T-AI-006, T-AI-007):
+ *   - Walls must have Height > 0
+ *   - Doors/Windows must be contained within at least one wall bounding box
+ *   - Beams must have both StartX/StartY and EndX/EndY properties
+ *   - Elements on locked layers → warning
+ *   - Overlapping elements of same type on same layer → warning
+ */
+export function validateElement(element: BimElement, doc: BimDoc): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  // ── Rule: locked layer warning ────────────────────────────────────────────
+  const layer = doc.organization.layers[element.layerId];
+  if (layer?.locked) {
+    warnings.push(`Element "${element.id}" is on locked layer "${layer.name}".`);
+  }
+
+  // ── Rule: wall must have positive height ──────────────────────────────────
+  if (element.type === 'wall') {
+    const heightProp = element.properties['Height'];
+    const height = typeof heightProp?.value === 'number' ? heightProp.value : null;
+    if (height === null || height <= 0) {
+      errors.push(
+        `Wall "${element.id}" must have a positive Height (got ${height ?? 'none'}).`,
+      );
+    }
+  }
+
+  // ── Rule: door/window must be contained within a wall ────────────────────
+  if (element.type === 'door' || element.type === 'window') {
+    const walls = Object.values(doc.content.elements).filter((e) => e.type === 'wall');
+    const contained = walls.some((wall) =>
+      _bim3DContains(wall.boundingBox, element.boundingBox),
+    );
+    if (!contained) {
+      const kind = element.type === 'door' ? 'Door' : 'Window';
+      warnings.push(`${kind} "${element.id}" is not contained within any wall.`);
+    }
+  }
+
+  // ── Rule: beam must have start/end points ────────────────────────────────
+  if (element.type === 'beam') {
+    const hasStart = 'StartX' in element.properties && 'StartY' in element.properties;
+    const hasEnd = 'EndX' in element.properties && 'EndY' in element.properties;
+    if (!hasStart || !hasEnd) {
+      errors.push(
+        `Beam "${element.id}" must have start and end point properties (StartX/StartY and EndX/EndY) to span between supports.`,
+      );
+    }
+  }
+
+  // ── Rule: overlapping same-type elements on same layer → warning ──────────
+  const sameTypeAndLayer = Object.values(doc.content.elements).filter(
+    (e) =>
+      e.id !== element.id &&
+      e.type === element.type &&
+      e.layerId === element.layerId,
+  );
+  for (const other of sameTypeAndLayer) {
+    if (_bim3DOverlaps(element.boundingBox, other.boundingBox)) {
+      warnings.push(
+        `Element "${element.id}" overlaps with "${other.id}" (same type "${element.type}" on layer "${element.layerId}").`,
+      );
+      break; // one warning per element is sufficient
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings };
+}
+
+function _bim3DOverlaps(a: BimBBox, b: BimBBox): boolean {
+  return (
+    a.min.x < b.max.x &&
+    a.max.x > b.min.x &&
+    a.min.y < b.max.y &&
+    a.max.y > b.min.y
+  );
+}
+
+function _bim3DContains(outer: BimBBox, inner: BimBBox): boolean {
+  return (
+    inner.min.x >= outer.min.x &&
+    inner.max.x <= outer.max.x &&
+    inner.min.y >= outer.min.y &&
+    inner.max.y <= outer.max.y
+  );
+}
