@@ -59,14 +59,6 @@ interface AIChatPanelProps {
   onClose: () => void;
 }
 
-interface AIConfig {
-  provider: 'anthropic' | 'ollama' | 'openai';
-  apiKey: string;
-  ollamaBaseUrl: string;
-}
-
-const STORAGE_KEY = 'opencad-ai-config';
-
 const suggestedPrompts = [
   'Design a residential floor plan',
   'Check building code compliance',
@@ -74,18 +66,6 @@ const suggestedPrompts = [
   'Generate quantity takeoff',
   'What elements are in my model?',
 ];
-
-function loadConfig(): AIConfig | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw) as AIConfig;
-  } catch { /* ignore */ }
-  return null;
-}
-
-function saveConfig(config: AIConfig): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-}
 
 export function AIChatPanel({ onClose }: AIChatPanelProps) {
   const { document: doc } = useDocumentStore();
@@ -104,10 +84,6 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
   const [configDraft, setConfigDraft] = useState<AIConfig>(loadConfig);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<(() => void) | null>(null);
-
-  const isConfigured = Boolean(
-    config.apiKey || config.provider === 'ollama'
-  );
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -150,6 +126,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    setInput('');
     setIsLoading(true);
 
     if (!isConfigured) {
@@ -223,16 +200,6 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       abortRef.current = null;
     }
   }, [input, isLoading, isConfigured, messages, buildClient, doc]);
-
-  const handleSend = () => {
-    void doSend(input);
-    setInput('');
-  };
-
-  const handleSuggestion = (prompt: string) => {
-    void doSend(prompt);
-    // Input stays empty — suggestion auto-sends
-  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
@@ -399,7 +366,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
 
       <div className="chat-suggestions">
         {suggestedPrompts.map((prompt) => (
-          <button key={prompt} className="suggestion-btn" onClick={() => handleSuggestion(prompt)}>
+          <button key={prompt} className="suggestion-btn" onClick={() => setInput(prompt)}>
             {prompt}
           </button>
         ))}

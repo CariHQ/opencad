@@ -116,14 +116,12 @@ describe('T-AI-006: AIChatPanel', () => {
     expect((textarea as HTMLTextAreaElement).value).toBe('How many walls?');
   });
 
-  it('clicking a suggestion sends it immediately (input stays empty)', () => {
+  it('clicking a suggestion fills the input', () => {
     render(<AIChatPanel onClose={onClose} />);
     fireEvent.click(screen.getByText(/Check building code compliance/i));
-    // Suggestions auto-send — input is NOT filled; it stays empty
-    const textarea = screen.getByRole('textbox');
-    expect((textarea as HTMLTextAreaElement).value).toBe('');
-    // The suggestion text appears in the chat as a user message
-    expect(screen.getAllByText(/Check building code compliance/i).length).toBeGreaterThan(0);
+    // feat branch: suggestions fill the input (not auto-send)
+    const textarea = screen.getByRole('textbox') as HTMLTextAreaElement;
+    expect(textarea.value).toMatch(/Check building code compliance/i);
   });
 
   it('Send button is disabled when input is empty', () => {
@@ -148,7 +146,7 @@ describe('T-AI-006: AIChatPanel', () => {
     it('shows API key field for Anthropic provider', () => {
       render(<AIChatPanel onClose={onClose} />);
       fireEvent.click(screen.getByRole('button', { name: /configure AI/i }));
-      expect(screen.getByLabelText(/Anthropic API Key/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/API Key/i)).toBeInTheDocument();
     });
 
     it('shows Save Configuration button', () => {
@@ -160,7 +158,7 @@ describe('T-AI-006: AIChatPanel', () => {
     it('saves config to localStorage on save', () => {
       render(<AIChatPanel onClose={onClose} />);
       fireEvent.click(screen.getByRole('button', { name: /configure AI/i }));
-      const apiKeyInput = screen.getByLabelText(/Anthropic API Key/i);
+      const apiKeyInput = screen.getByLabelText(/API Key/i);
       fireEvent.change(apiKeyInput, { target: { value: 'sk-ant-test-key' } });
       fireEvent.click(screen.getByRole('button', { name: /save ai configuration/i }));
       const stored = localStorage.getItem('opencad-ai-config');
