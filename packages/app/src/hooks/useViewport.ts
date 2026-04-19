@@ -59,8 +59,8 @@ const OFFSET = 5000;
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
 const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
-// Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing)
-const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing']);
+// Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing, spline)
+const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing', 'spline']);
 
 function screenToWorld(sx: number, sy: number, cw: number, ch: number): Point {
   return { x: (sx - cw / 2) * SCALE - OFFSET, y: (sy - ch / 2) * SCALE - OFFSET };
@@ -97,6 +97,81 @@ function findSnapPoints(elements: unknown[], currentPoint: Point, tolerance: num
     }
   }
   return snaps;
+}
+
+// ─── Viewport culling helpers ─────────────────────────────────────────────────
+
+interface BBox {
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
+ * Return a 2D bounding box (in world coordinates) for an element.
+ * Handles line/annotation, rectangle, circle, polygon, and the general
+ * bounding-box fallback for all other types.
+ */
+export function getBoundingBox(element: unknown): BBox {
+  const el = element as {
+    type: string;
+    boundingBox: { min: { x: number; y: number }; max: { x: number; y: number } };
+    properties: Record<string, { value: unknown }>;
+  };
+  const props = el.properties;
+  const type = el.type;
+
+  if ((type === 'annotation' || type === 'wall' || type === 'dimension') && props['StartX'] && props['EndX']) {
+    const sx = props['StartX'].value as number;
+    const sy = (props['StartY']?.value as number) ?? 0;
+    const ex = props['EndX'].value as number;
+    const ey = (props['EndY']?.value as number) ?? 0;
+    return { minX: Math.min(sx, ex), minY: Math.min(sy, ey), maxX: Math.max(sx, ex), maxY: Math.max(sy, ey) };
+  }
+
+  if (type === 'rectangle' && props['X']) {
+    const x = props['X'].value as number;
+    const y = (props['Y']?.value as number) ?? 0;
+    const w = (props['Width']?.value as number) ?? 0;
+    const h = (props['Height']?.value as number) ?? 0;
+    return { minX: x, minY: y, maxX: x + w, maxY: y + h };
+  }
+
+  if ((type === 'circle' || type === 'arc') && props['CenterX']) {
+    const cx = props['CenterX'].value as number;
+    const cy = (props['CenterY']?.value as number) ?? 0;
+    const r = (props['Radius']?.value as number) ?? 0;
+    return { minX: cx - r, minY: cy - r, maxX: cx + r, maxY: cy + r };
+  }
+
+  if ((type === 'polygon' || type === 'polyline') && props['Points']) {
+    const pts = JSON.parse(props['Points'].value as string) as Array<{ x: number; y: number }>;
+    if (pts.length > 0) {
+      const xs = pts.map((p) => p.x);
+      const ys = pts.map((p) => p.y);
+      return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
+    }
+  }
+
+  // Fallback: use element's own bounding box
+  const bb = el.boundingBox;
+  return { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y };
+}
+
+/**
+ * Returns true when the element bounding box (world coords) intersects the
+ * canvas viewport rect (also in world coords).
+ */
+function isInViewport(
+  element: unknown,
+  viewMinX: number,
+  viewMinY: number,
+  viewMaxX: number,
+  viewMaxY: number,
+): boolean {
+  const bb = getBoundingBox(element);
+  return bb.maxX >= viewMinX && bb.minX <= viewMaxX && bb.maxY >= viewMinY && bb.minY <= viewMaxY;
 }
 
 interface UseViewportOptions {
@@ -396,8 +471,18 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
 
     if (!doc) return;
 
+    // ── Compute canvas viewport rect in world coordinates for culling ──
+    const vTopLeft = screenToWorld(0, 0, width, height);
+    const vBottomRight = screenToWorld(width, height, width, height);
+    const vpMinX = Math.min(vTopLeft.x, vBottomRight.x);
+    const vpMinY = Math.min(vTopLeft.y, vBottomRight.y);
+    const vpMaxX = Math.max(vTopLeft.x, vBottomRight.x);
+    const vpMaxY = Math.max(vTopLeft.y, vBottomRight.y);
+
     // ── Render existing elements ──
     for (const element of Object.values(doc.content.elements)) {
+      // Viewport culling: skip elements whose bounding box is outside the canvas
+      if (!isInViewport(element, vpMinX, vpMinY, vpMaxX, vpMaxY)) continue;
       const isSelected = selectedIds.includes(element.id);
       const color = isSelected ? theme.selected : theme.element;
       const fillColor = isSelected ? theme.selectedFill : theme.elementFill;

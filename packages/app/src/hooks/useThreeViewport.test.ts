@@ -413,3 +413,38 @@ describe('T-3D-005: orbit/pan/zoom camera controls', () => {
     expect(Math.abs(finalAzimuth - originalAzimuth)).toBeLessThan(0.01);
   });
 });
+
+// ─── T-PERF: LOD level function ───────────────────────────────────────────────
+
+import { getLodLevel } from './useThreeViewport';
+
+describe('T-PERF-001: getLodLevel returns high for close distance', () => {
+  it('T-PERF-001: getLodLevel(3000) returns high', () => {
+    expect(getLodLevel(3000)).toBe('high');
+  });
+});
+
+describe('T-PERF-002: getLodLevel returns medium for mid distance', () => {
+  it('T-PERF-002: getLodLevel(10000) returns medium', () => {
+    expect(getLodLevel(10000)).toBe('medium');
+  });
+});
+
+describe('T-PERF-003: getLodLevel returns low for far distance', () => {
+  it('T-PERF-003: getLodLevel(25000) returns low', () => {
+    expect(getLodLevel(25000)).toBe('low');
+  });
+});
+
+describe('T-PERF-004: getLodLevel is monotonically decreasing', () => {
+  it('T-PERF-004: LOD transitions high → medium → low as distance increases', () => {
+    const close = getLodLevel(100);
+    const mid = getLodLevel(10000);
+    const far = getLodLevel(25000);
+
+    // Ordering by detail level: high > medium > low
+    const rank: Record<string, number> = { high: 2, medium: 1, low: 0 };
+    expect(rank[close]!).toBeGreaterThan(rank[mid]!);
+    expect(rank[mid]!).toBeGreaterThan(rank[far]!);
+  });
+});
