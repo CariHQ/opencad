@@ -39,9 +39,9 @@ export interface InvoiceRow {
 }
 
 const MOCK_INVOICES: InvoiceRow[] = [
-  { id: 'inv-001', date: '2026-03-01', amount: '£29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-001.pdf' },
-  { id: 'inv-002', date: '2026-02-01', amount: '£29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-002.pdf' },
-  { id: 'inv-003', date: '2026-01-01', amount: '£29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-003.pdf' },
+  { id: 'inv-001', date: '2026-03-01', amount: '$29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-001.pdf' },
+  { id: 'inv-002', date: '2026-02-01', amount: '$29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-002.pdf' },
+  { id: 'inv-003', date: '2026-01-01', amount: '$29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-003.pdf' },
 ];
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -64,7 +64,11 @@ const CANCELLABLE_TIERS = new Set<SubscriptionTier | 'trial'>(['trial', 'pro', '
 
 // ── Component ────────────────────────────────────────────────────────────────
 
-export function BillingPanel(): React.ReactElement {
+interface BillingPanelProps {
+  onUpgrade?: () => void;
+}
+
+export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.ReactElement {
   const { tier, validUntil, isLoading, openPortal } = useSubscription();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
 
@@ -84,7 +88,11 @@ export function BillingPanel(): React.ReactElement {
   const canCancel = CANCELLABLE_TIERS.has(effectiveTier);
 
   const handleUpgrade = (): void => {
-    window.open('https://opencad.archi/pricing', '_blank');
+    if (onUpgrade) {
+      onUpgrade();
+    } else {
+      window.open('https://opencad.archi/pricing', '_blank');
+    }
   };
 
   const handleCancelConfirm = (): void => {

@@ -5108,3 +5108,659 @@ input[type='range'] {
   padding: 0 12px;
   line-height: 1.4;
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Settings panel shared styles
+   ───────────────────────────────────────────────────────────────────────── */
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.panel-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Settings panel form primitives
+   ───────────────────────────────────────────────────────────────────────── */
+
+.settings-content input[type="text"],
+.settings-content input[type="email"],
+.settings-content input[type="url"],
+.settings-content input[type="password"],
+.settings-content select,
+.settings-content textarea {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.settings-content input[type="text"]:focus,
+.settings-content input[type="email"]:focus,
+.settings-content input[type="url"]:focus,
+.settings-content input[type="password"]:focus,
+.settings-content select:focus,
+.settings-content textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.settings-content select {
+  cursor: pointer;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Billing Panel
+   ───────────────────────────────────────────────────────────────────────── */
+
+.billing-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.billing-loading-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 24px 0;
+}
+
+.billing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.billing-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.billing-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.billing-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.billing-plan-badge--trial { background: rgba(245, 158, 11, 0.15); color: #b45309; }
+.billing-plan-badge--free  { background: var(--bg-tertiary);        color: var(--text-secondary); }
+.billing-plan-badge--pro   { background: rgba(13, 153, 255, 0.12);  color: var(--accent-primary); }
+.billing-plan-badge--business,
+.billing-plan-badge--team  { background: rgba(99, 102, 241, 0.12);  color: #6366f1; }
+
+.billing-trial-countdown {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.billing-upgrade-btn {
+  align-self: flex-start;
+  padding: 8px 20px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 100px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.billing-upgrade-btn:hover { opacity: 0.85; }
+
+/* Invoice table */
+.billing-invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.billing-invoice-table th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.billing-invoice-table td {
+  padding: 10px 12px;
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.billing-invoice-table tbody tr:last-child td { border-bottom: none; }
+
+.invoice-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.invoice-status--paid    { background: rgba(34, 197, 94, 0.12); color: #15803d; }
+.invoice-status--pending { background: rgba(245, 158, 11, 0.12); color: #b45309; }
+.invoice-status--failed  { background: rgba(239, 68, 68, 0.12);  color: #b91c1c; }
+
+.invoice-pdf-link {
+  font-size: 12px;
+  color: var(--accent-primary);
+  text-decoration: none;
+}
+
+.invoice-pdf-link:hover { text-decoration: underline; }
+
+/* Cancel subscription */
+.billing-cancel-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.billing-cancel-btn {
+  align-self: flex-start;
+  padding: 8px 20px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid #ef4444;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.billing-cancel-btn:hover { background: #ef4444; color: #fff; }
+
+.billing-cancel-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 3000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.billing-cancel-dialog {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.billing-cancel-dialog-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.billing-cancel-dialog-body {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.billing-cancel-dialog-actions {
+  display: flex;
+  gap: 12px;
+}
+
+.billing-cancel-confirm-yes {
+  flex: 1;
+  padding: 9px 16px;
+  background: #ef4444;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.billing-cancel-confirm-no {
+  flex: 1;
+  padding: 9px 16px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.billing-cancel-confirm-no:hover { background: var(--bg-tertiary); }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   API Key Panel
+   ───────────────────────────────────────────────────────────────────────── */
+
+.api-key-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.btn-create-key {
+  padding: 6px 14px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-create-key:hover { opacity: 0.85; }
+
+.create-key-form {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.key-name-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.key-name-input:focus { border-color: var(--accent-primary); }
+
+.scope-checkboxes {
+  display: flex;
+  gap: 16px;
+}
+
+.scope-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-transform: capitalize;
+}
+
+.create-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-generate {
+  padding: 7px 16px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  padding: 7px 16px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.api-keys-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.api-key-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  background: var(--bg-secondary);
+}
+
+.api-key-row:not(:last-child) { border-bottom: 1px solid var(--border-subtle); }
+
+.key-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.key-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.key-prefix {
+  font-size: 12px;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  color: var(--text-secondary);
+  letter-spacing: 0.02em;
+}
+
+.key-scopes {
+  font-size: 11px;
+  color: var(--accent-primary);
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.key-meta {
+  font-size: 11px;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.btn-revoke {
+  padding: 5px 12px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-revoke:hover { background: rgba(239, 68, 68, 0.08); }
+
+.keys-empty {
+  padding: 20px 16px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  text-align: center;
+  background: var(--bg-secondary);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Permissions Panel
+   ───────────────────────────────────────────────────────────────────────── */
+
+.permissions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.members-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+  background: var(--bg-secondary);
+}
+
+.member-row:not(:last-child) { border-bottom: 1px solid var(--border-subtle); }
+
+.member-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.member-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.member-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.role-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.role-badge.owner {
+  background: rgba(99, 102, 241, 0.12);
+  color: #6366f1;
+}
+
+.role-select {
+  padding: 5px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+
+.role-select:focus { border-color: var(--accent-primary); }
+
+.btn-remove {
+  padding: 5px 12px;
+  background: transparent;
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-remove:hover { background: rgba(239, 68, 68, 0.08); }
+
+.invite-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.invite-email-input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+}
+
+.invite-email-input:focus { border-color: var(--accent-primary); }
+
+.invite-role-select {
+  padding: 8px 10px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.invite-role-select:focus { border-color: var(--accent-primary); }
+
+.btn-invite {
+  padding: 8px 18px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btn-invite:hover { opacity: 0.85; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   SSO Settings Panel
+   ───────────────────────────────────────────────────────────────────────── */
+
+.sso-settings-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.sso-field {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  align-items: center;
+  gap: 12px;
+}
+
+.sso-field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.sso-field input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  justify-self: start;
+}
+
+.sso-field input[type="text"],
+.sso-field input[type="url"],
+.sso-field input[type="password"],
+.sso-field select,
+.sso-field textarea {
+  padding: 8px 12px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+}
+
+.sso-field textarea {
+  resize: vertical;
+  min-height: 80px;
+  grid-column: 2;
+}
+
+.sso-field input:focus,
+.sso-field select:focus,
+.sso-field textarea:focus { border-color: var(--accent-primary); }
+
+.saml-fields,
+.oidc-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+}
+
+.saml-fields h4,
+.oidc-fields h4 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+
+.btn-save {
+  align-self: flex-start;
+  padding: 8px 20px;
+  background: var(--accent-primary);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btn-save:hover { opacity: 0.85; }

@@ -3,7 +3,7 @@ import {
   FolderOpen, FileDown, Bot, Home, Sun, Moon, PanelLeft, PanelRight, History, GitPullRequest,
   Layers, Settings2, Table2, LayoutDashboard, AlertTriangle, Camera, Sheet,
   MessageSquareWarning, Package, MessageCircle, Leaf, DollarSign, Palette,
-  Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Settings, Shield,
+  Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Shield,
   MessageCirclePlus,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -61,6 +61,7 @@ import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
 import { BillingPanel } from './components/BillingPanel';
+import { SubscriptionModal } from './components/SubscriptionModal';
 import { MobileViewer } from './components/MobileViewer';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { PanelResizer } from './components/PanelResizer';
@@ -134,6 +135,7 @@ export function AppLayout() {
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
   const { status: authStatus, profile: authProfile, signOut: authSignOut } = useAuthStore();
   const [showSettings, setShowSettings] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso' | 'billing'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>('opencad-rightPanelTab', 'layers');
@@ -339,7 +341,6 @@ export function AppLayout() {
             ) : (
               <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In"><span className="tool-icon"><User size={15} /></span></button>
             )}
-            <button className="toolbar-btn" onClick={() => setShowSettings(true)} title="Settings"><span className="tool-icon"><Settings size={15} /></span></button>
             <div className="toolbar-sep" />
             <button className={`toolbar-btn panel-toggle-btn${rightVisible ? ' panel-on' : ''}`} onClick={() => setShowRightPanel((v) => !v)} title="Toggle properties (⌘])">
               <PanelRight size={16} strokeWidth={2} color={rightVisible ? (theme === 'dark' ? '#18a0fb' : '#0d99ff') : (theme === 'dark' ? '#a0a0a0' : '#6b6b6b')} />
@@ -481,11 +482,15 @@ export function AppLayout() {
               {settingsTab === 'apikeys' && <APIKeyPanel />}
               {settingsTab === 'permissions' && <PermissionsPanel />}
               {settingsTab === 'sso' && <SSOSettingsPanel />}
-              {settingsTab === 'billing' && <BillingPanel />}
+              {settingsTab === 'billing' && (
+                <BillingPanel onUpgrade={() => { setShowSettings(false); setShowUpgrade(true); }} />
+              )}
             </div>
           </div>
         </div>
       )}
+
+      {showUpgrade && <SubscriptionModal onClose={() => setShowUpgrade(false)} />}
     </div>
   );
 }
