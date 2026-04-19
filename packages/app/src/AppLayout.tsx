@@ -34,6 +34,8 @@ import { SheetPanel } from './components/SheetPanel';
 import { BCFPanel } from './components/BCFPanel';
 import { MaterialLibrary } from './components/MaterialLibrary';
 import { PresenceOverlay } from './components/PresenceOverlay';
+import { EditNotifications } from './components/EditNotifications';
+import { useEditNotifications } from './hooks/useEditNotifications';
 import { CommandPalette } from './components/CommandPalette';
 import { CommentsPanel } from './components/CommentsPanel';
 import { CarbonPanel } from './components/CarbonPanel';
@@ -96,10 +98,16 @@ export function AppLayout() {
   const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, updateElement } = useDocumentStore();
   const leftPanelRef = React.useRef<HTMLElement>(null);
   const rightPanelRef = React.useRef<HTMLElement>(null);
+  const wsRef = React.useRef<WebSocket | null>(null);
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
   const { can, allowedViews } = useRole();
+  const { editingMap } = useEditNotifications({
+    wsRef,
+    selectedIds,
+    activeTool,
+  });
 
   const [showAIChat, setShowAIChat] = useLocalStorage('opencad-showAIChat', false);
   const [activeView, setActiveView] = useLocalStorage<'floor-plan' | '3d' | 'section'>('opencad-activeView', '3d');
@@ -305,6 +313,7 @@ export function AppLayout() {
             <div className="viewport-wrapper">
               <SplitViewport viewType={activeView} />
               <PresenceOverlay collaborators={[]} />
+              <EditNotifications editingMap={editingMap} />
               {(activeTool === 'door' || activeTool === 'window') && (
                 <div className="floating-placement-panel">
                   <PlacementPanel elementType={activeTool as 'door' | 'window'} onClose={() => setActiveTool('select')} />
