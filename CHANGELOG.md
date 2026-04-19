@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/CariHQ/opencad/compare/v1.0.3...v1.0.4) (2026-04-19)
+
+
+### Bug Fixes
+
+* **release:** fix Tauri script, wasm-pack build exclusion, and Dockerfile ([f271104](https://github.com/CariHQ/opencad/commit/f2711046f74f37cf6f0ff6c7235a9bf2200cf3e8))
+
 ## [1.0.3](https://github.com/CariHQ/opencad/compare/v1.0.2...v1.0.3) (2026-04-19)
 
 
