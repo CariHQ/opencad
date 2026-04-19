@@ -56,6 +56,7 @@ vi.mock('../lib/firebase', () => ({
 
 vi.mock('../lib/serverApi', () => ({
   authApi: { me: vi.fn(() => Promise.resolve()) },
+  registerTokenProvider: vi.fn(),
 }));
 
 // ─── Shared mock user ───────────────────────────────────────────────────────
