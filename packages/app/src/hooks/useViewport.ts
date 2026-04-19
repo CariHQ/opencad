@@ -1,48 +1,202 @@
-import { useEffect, useRef, useCallback, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
-import { catmullRomToBezier } from './splineUtils';
-import type { Point2D } from './splineUtils';
+import { ElementSchema } from '@opencad/document';
+import { SpatialGrid } from '../utils/spatialIndex';
+import {
+  getHandles, hitHandle, hitTestElement,
+  moveElementProps, resizeElementProps,
+  type HandleKind,
+} from '../utils/elementMath';
+import { BUILT_IN_MATERIALS } from '../lib/materials';
 
-// ── Text geometry data stored inside ElementSchema.geometry.data ──────────────
-export interface TextGeometryData {
-  x: number;
-  y: number;
-  content: string;
-  fontSize: number;
-  fontFamily: string;
+// ─── 2D material hatch patterns ───────────────────────────────────────────────
+// Patterns are cached after first creation (keyed by "category:color").
+// Each is a 16×16 px tile drawn on an offscreen canvas.
+
+const _hatchCache = new Map<string, CanvasPattern>();
+
+function _hexToRgb(hex: string): [number, number, number] {
+  const n = parseInt(hex.replace('#', ''), 16);
+  return [(n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff];
+}
+
+function _getHatchPattern(
+  ctx: CanvasRenderingContext2D,
+  category: string,
+  color: string,
+): CanvasPattern | null {
+  const key = `${category}:${color}`;
+  const cached = _hatchCache.get(key);
+  if (cached) return cached;
+
+  const S = 16;
+  const oc = document.createElement('canvas');
+  oc.width = S; oc.height = S;
+  const oc2 = oc.getContext('2d');
+  if (!oc2) return null;
+
+  const [r, g, b] = _hexToRgb(color);
+  oc2.fillStyle = `rgba(${r},${g},${b},0.14)`;
+  oc2.fillRect(0, 0, S, S);
+  oc2.strokeStyle = `rgba(${r},${g},${b},0.55)`;
+
+  switch (category) {
+    case 'Concrete':
+    case 'Waterproofing': {
+      // Diagonal lines at 45°, 4px pitch
+      oc2.lineWidth = 0.8;
+      for (let x = -S; x < S * 2; x += 4) {
+        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S); oc2.stroke();
+      }
+      break;
+    }
+    case 'Masonry': {
+      // Brick coursing — horizontal mortar + offset vertical joints
+      oc2.lineWidth = 0.7;
+      // mortar bed
+      oc2.beginPath(); oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2); oc2.stroke();
+      // joints — bottom course offset by half-brick
+      oc2.beginPath();
+      oc2.moveTo(S / 4,     0); oc2.lineTo(S / 4,     S / 2);
+      oc2.moveTo(3 * S / 4, 0); oc2.lineTo(3 * S / 4, S / 2);
+      oc2.moveTo(0,         S / 2); oc2.lineTo(0,       S);
+      oc2.moveTo(S / 2,     S / 2); oc2.lineTo(S / 2,   S);
+      oc2.stroke();
+      break;
+    }
+    case 'Timber': {
+      // Parallel horizontal grain lines
+      oc2.lineWidth = 0.5;
+      const offsets = [2, 5, 8, 11, 14]; // fixed offsets — no random
+      for (const y of offsets) {
+        oc2.beginPath(); oc2.moveTo(0, y); oc2.lineTo(S, y); oc2.stroke();
+      }
+      break;
+    }
+    case 'Metal': {
+      // Cross-hatch at 45° and 135°, fine pitch
+      oc2.lineWidth = 0.55;
+      for (let x = -S; x < S * 2; x += 4) {
+        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S);  oc2.stroke();
+        oc2.beginPath(); oc2.moveTo(x, S); oc2.lineTo(x + S, 0);  oc2.stroke();
+      }
+      break;
+    }
+    case 'Glass': {
+      // Sparse single diagonal
+      oc2.lineWidth = 0.4;
+      oc2.strokeStyle = `rgba(${r},${g},${b},0.3)`;
+      oc2.beginPath(); oc2.moveTo(0, 0); oc2.lineTo(S, S); oc2.stroke();
+      oc2.beginPath(); oc2.moveTo(S, 0); oc2.lineTo(0, S); oc2.stroke();
+      break;
+    }
+    case 'Insulation': {
+      // Zigzag across the tile
+      oc2.lineWidth = 0.8;
+      oc2.beginPath();
+      oc2.moveTo(0, S / 2);
+      for (let x = 0; x <= S; x += 4) {
+        oc2.lineTo(x, x % 8 === 0 ? S * 0.25 : S * 0.75);
+      }
+      oc2.stroke();
+      break;
+    }
+    case 'Plaster':
+    case 'Paint': {
+      // Very sparse horizontal lines
+      oc2.lineWidth = 0.4;
+      oc2.strokeStyle = `rgba(${r},${g},${b},0.25)`;
+      oc2.beginPath(); oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2); oc2.stroke();
+      break;
+    }
+    case 'Roofing': {
+      // Arc-scales (roof tile silhouette)
+      oc2.lineWidth = 0.7;
+      oc2.beginPath();
+      oc2.arc(0,     S,     S / 2, Math.PI, 0);
+      oc2.arc(S / 2, S / 2, S / 2, Math.PI, 0);
+      oc2.stroke();
+      break;
+    }
+    case 'Flooring':
+    case 'Tile': {
+      // Grid — tile joints
+      oc2.lineWidth = 0.6;
+      oc2.beginPath();
+      oc2.moveTo(S / 2, 0); oc2.lineTo(S / 2, S);
+      oc2.moveTo(0, S / 2); oc2.lineTo(S, S / 2);
+      oc2.stroke();
+      break;
+    }
+    case 'Acoustic': {
+      // Diagonal dots (perforation pattern)
+      oc2.fillStyle = `rgba(${r},${g},${b},0.45)`;
+      oc2.beginPath(); oc2.arc(S / 4, S / 4, 1.2, 0, Math.PI * 2); oc2.fill();
+      oc2.beginPath(); oc2.arc(3 * S / 4, 3 * S / 4, 1.2, 0, Math.PI * 2); oc2.fill();
+      break;
+    }
+    case 'Cladding': {
+      // Horizontal laps
+      oc2.lineWidth = 0.7;
+      for (let y = 2; y < S; y += 4) {
+        oc2.beginPath(); oc2.moveTo(0, y); oc2.lineTo(S, y); oc2.stroke();
+      }
+      break;
+    }
+    default: {
+      // Sparse 45° diagonal
+      oc2.lineWidth = 0.5;
+      for (let x = -S; x < S * 2; x += 6) {
+        oc2.beginPath(); oc2.moveTo(x, 0); oc2.lineTo(x + S, S); oc2.stroke();
+      }
+    }
+  }
+
+  const pattern = ctx.createPattern(oc, 'repeat');
+  if (pattern) {
+    _hatchCache.set(key, pattern);
+    return pattern;
+  }
+  return null;
 }
 
 const LIGHT_THEME = {
-  background: '#e8e8e8',
-  grid: '#d0d0d0',
-  gridMajor: '#c0c0c0',
-  axis: '#a0a0a0',
-  element: '#6b6b6b',
-  elementFill: 'rgba(107, 107, 107, 0.1)',
+  background: '#fafaf8',          // drafting-paper off-white
+  grid: 'rgba(0,0,0,0.06)',       // barely-there minor grid
+  gridMajor: 'rgba(0,0,0,0.11)',  // subtle major grid
+  axis: 'rgba(0,0,0,0.18)',       // axis slightly more present
+  element: '#3a3a3a',             // dark ink on white paper
+  elementFill: 'rgba(0,0,0,0.04)',
   selected: '#0d99ff',
-  selectedFill: 'rgba(13, 153, 255, 0.2)',
+  selectedFill: 'rgba(13,153,255,0.12)',
   accent: '#0d99ff',
   snap: '#0d99ff',
 };
 
 const DARK_THEME = {
-  background: '#1a1b1f',
-  grid: '#25262c',
-  gridMajor: '#2e2f36',
-  axis: '#3a3b44',
-  element: '#9899aa',
-  elementFill: 'rgba(152, 153, 170, 0.08)',
+  background: '#141414',          // true CAD dark — like AutoCAD Model Space
+  grid: 'rgba(255,255,255,0.05)', // barely-there minor grid
+  gridMajor: 'rgba(255,255,255,0.09)', // subtle major grid
+  axis: 'rgba(255,255,255,0.15)', // axis readable but not glowing
+  element: '#c8c8c8',             // bright enough on near-black
+  elementFill: 'rgba(255,255,255,0.05)',
   selected: '#18a0fb',
-  selectedFill: 'rgba(24, 160, 251, 0.15)',
+  selectedFill: 'rgba(24,160,251,0.15)',
   accent: '#18a0fb',
   snap: '#18a0fb',
 };
 
-const getTheme = () => {
-  if (typeof window === 'undefined') return DARK_THEME;
-  const theme = localStorage.getItem('opencad-theme');
-  return theme === 'light' ? LIGHT_THEME : DARK_THEME;
-};
+// Module-level theme cache — avoids localStorage read on every rAF frame
+let _cachedTheme = typeof window !== 'undefined' && localStorage.getItem('opencad-theme') === 'light'
+  ? LIGHT_THEME : DARK_THEME;
+const getTheme = () => _cachedTheme;
+if (typeof window !== 'undefined') {
+  const _updateThemeCache = () => {
+    _cachedTheme = localStorage.getItem('opencad-theme') === 'light' ? LIGHT_THEME : DARK_THEME;
+  };
+  window.addEventListener('storage', _updateThemeCache);
+  window.addEventListener('theme-change', _updateThemeCache);
+}
 
 const getStoreActions = () => useDocumentStore.getState();
 
@@ -72,32 +226,19 @@ const MIN_SCALE = 0.5;       // max zoom-in
 const MAX_SCALE = 5000;      // max zoom-out
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
-const DRAG_TOOLS = new Set(['line', 'wall', 'curtain_wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
-// Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing, spline)
-const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing', 'spline']);
+const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
+// Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing)
+const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing']);
 
-/**
- * Convert a canvas screen coordinate to world (mm) coordinates.
- * Origin (0,0) is at canvas centre. Y is flipped: screen-up = world-positive-Y.
- * panX/panY are screen-pixel offsets (positive panX shifts content right).
- */
-function screenToWorld(sx: number, sy: number, cw: number, ch: number, zoom = 1, panX = 0, panY = 0): Point {
-  return {
-    x: (sx - cw / 2 - panX) * SCALE / zoom,
-    y: (ch / 2 + panY - sy) * SCALE / zoom,
-  };
+interface ViewTransform { scale: number; panX: number; panY: number; }
+const DEFAULT_VIEW: ViewTransform = { scale: DEFAULT_SCALE, panX: DEFAULT_PAN_X, panY: DEFAULT_PAN_Y };
+
+function screenToWorld(sx: number, sy: number, cw: number, ch: number, v: ViewTransform = DEFAULT_VIEW): Point {
+  return { x: (sx - cw / 2) * v.scale + v.panX, y: (sy - ch / 2) * v.scale + v.panY };
 }
 
-/**
- * Convert a world (mm) coordinate to canvas screen coordinates.
- * Inverse of screenToWorld — Y is flipped.
- * panX/panY are screen-pixel offsets (positive panX shifts content right).
- */
-function worldToScreen(wx: number, wy: number, cw: number, ch: number, zoom = 1, panX = 0, panY = 0): Point {
-  return {
-    x: wx * zoom / SCALE + cw / 2 + panX,
-    y: ch / 2 + panY - wy * zoom / SCALE,
-  };
+function worldToScreen(wx: number, wy: number, cw: number, ch: number, v: ViewTransform = DEFAULT_VIEW): Point {
+  return { x: (wx - v.panX) / v.scale + cw / 2, y: (wy - v.panY) / v.scale + ch / 2 };
 }
 
 function snapToGrid(point: Point, gridSize: number = GRID_SIZE): Point {
@@ -108,111 +249,29 @@ function dist(p1: Point, p2: Point): number {
   return Math.sqrt((p2.x - p1.x) ** 2 + (p2.y - p1.y) ** 2);
 }
 
-function findSnapPoints(elements: unknown[], currentPoint: Point, scale: number, tolerance: number = SNAP_TOLERANCE): SnapResult[] {
-  const snaps: SnapResult[] = [];
-  const snapDistWorld = tolerance * scale;
-  for (const element of elements) {
-    const el = element as { boundingBox: { min: Point; max: Point } };
-    const bb = el.boundingBox;
-    const corners: Point[] = [
-      { x: bb.min.x, y: bb.min.y }, { x: bb.max.x, y: bb.min.y },
-      { x: bb.min.x, y: bb.max.y }, { x: bb.max.x, y: bb.max.y },
-    ];
-    for (const corner of corners) {
-      if (dist(corner, currentPoint) < snapDistWorld) snaps.push({ point: corner, type: 'endpoint' });
-    }
-    const midX = (bb.min.x + bb.max.x) / 2;
-    const midY = (bb.min.y + bb.max.y) / 2;
-    for (const mp of [{ x: midX, y: bb.min.y }, { x: midX, y: bb.max.y }, { x: bb.min.x, y: midY }, { x: bb.max.x, y: midY }]) {
-      if (dist(mp, currentPoint) < snapDistWorld) snaps.push({ point: mp, type: 'midpoint' });
-    }
-  }
-  return snaps;
-}
 
-// ─── Viewport culling helpers ─────────────────────────────────────────────────
+// ─── Select-tool interaction state machine ─────────────────────────────────────
 
-interface BBox {
-  minX: number;
-  minY: number;
-  maxX: number;
-  maxY: number;
-}
+type SelectInteraction =
+  | { mode: 'idle' }
+  | { mode: 'drag-pending'; startScreen: Point; elementIds: string[] }
+  | { mode: 'dragging';     lastWorld: Point;   elementIds: string[] }
+  | { mode: 'resizing';     handle: HandleKind; elementId: string }
+  | { mode: 'rubber-band';  startWorld: Point;  currentWorld: Point };
 
-/**
- * Return a 2D bounding box (in world coordinates) for an element.
- * Handles line/annotation, rectangle, circle, polygon, and the general
- * bounding-box fallback for all other types.
- */
-export function getBoundingBox(element: unknown): BBox {
-  const el = element as {
-    type: string;
-    boundingBox: { min: { x: number; y: number }; max: { x: number; y: number } };
-    properties: Record<string, { value: unknown }>;
-  };
-  const props = el.properties;
-  const type = el.type;
+const DRAG_THRESHOLD_PX = 4;  // pixels before a click becomes a drag
+const HANDLE_SIZE_PX    = 5;  // half-size of handle square in screen pixels
+const PASTE_OFFSET      = 500; // world-unit offset applied per paste cycle
 
-  if ((type === 'annotation' || type === 'wall' || type === 'dimension') && props['StartX'] && props['EndX']) {
-    const sx = props['StartX'].value as number;
-    const sy = (props['StartY']?.value as number) ?? 0;
-    const ex = props['EndX'].value as number;
-    const ey = (props['EndY']?.value as number) ?? 0;
-    return { minX: Math.min(sx, ex), minY: Math.min(sy, ey), maxX: Math.max(sx, ex), maxY: Math.max(sy, ey) };
-  }
-
-  if (type === 'rectangle' && props['X']) {
-    const x = props['X'].value as number;
-    const y = (props['Y']?.value as number) ?? 0;
-    const w = (props['Width']?.value as number) ?? 0;
-    const h = (props['Height']?.value as number) ?? 0;
-    return { minX: x, minY: y, maxX: x + w, maxY: y + h };
-  }
-
-  if ((type === 'circle' || type === 'arc') && props['CenterX']) {
-    const cx = props['CenterX'].value as number;
-    const cy = (props['CenterY']?.value as number) ?? 0;
-    const r = (props['Radius']?.value as number) ?? 0;
-    return { minX: cx - r, minY: cy - r, maxX: cx + r, maxY: cy + r };
-  }
-
-  if ((type === 'polygon' || type === 'polyline') && props['Points']) {
-    const pts = JSON.parse(props['Points'].value as string) as Array<{ x: number; y: number }>;
-    if (pts.length > 0) {
-      const xs = pts.map((p) => p.x);
-      const ys = pts.map((p) => p.y);
-      return { minX: Math.min(...xs), minY: Math.min(...ys), maxX: Math.max(...xs), maxY: Math.max(...ys) };
-    }
-  }
-
-  // Fallback: use element's own bounding box
-  const bb = el.boundingBox;
-  return { minX: bb.min.x, minY: bb.min.y, maxX: bb.max.x, maxY: bb.max.y };
-}
-
-/**
- * Returns true when the element bounding box (world coords) intersects the
- * canvas viewport rect (also in world coords).
- */
-function isInViewport(
-  element: unknown,
-  viewMinX: number,
-  viewMinY: number,
-  viewMaxX: number,
-  viewMaxY: number,
-): boolean {
-  const bb = getBoundingBox(element);
-  return bb.maxX >= viewMinX && bb.minX <= viewMaxX && bb.maxY >= viewMinY && bb.minY <= viewMaxY;
-}
-
-interface UseViewportOptions {
-  isViewOnly?: boolean;
-}
-
-export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
+export function useViewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams } = useDocumentStore();
+  const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams, updateElement, pushHistory, deleteElement } = useDocumentStore();
+
+  // Spatial index for O(1) average-case snap candidate lookup.
+  // Cell size matches GRID_SIZE (500 world units) so each cell covers roughly
+  // one grid square — a good balance between cell count and bucket size.
+  const snapIndexRef = useRef(new SpatialGrid(GRID_SIZE));
 
   const [drawingState, setDrawingState] = useState<DrawingState>({
     isDrawing: false, startPoint: null, currentPoint: null, points: [],
@@ -227,8 +286,17 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   // Dirty flag: only redraw when something actually changed
   const dirtyRef = useRef(true);
 
+  // Cached elements array — recomputed only when doc changes, not on every rAF frame / mousemove
+  const elementsRef = useRef<ElementSchema[]>([]);
+
   // Pan state (middle-mouse drag) — tracked via ref to avoid re-renders mid-drag
   const panRef = useRef({ active: false, lastX: 0, lastY: 0 });
+
+  // ── Select-tool interaction ─────────────────────────────────────────────────
+  const interactionRef = useRef<SelectInteraction>({ mode: 'idle' });
+  // Clipboard (copy/paste) — stores serialised element properties
+  const clipboardRef = useRef<ElementSchema[]>([]);
+  const pasteCountRef = useRef(0);
 
   /** Update view transform — syncs both state (for effects) and ref (for callbacks) */
   const setView = useCallback((v: ViewTransform) => {
@@ -237,18 +305,56 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     setViewTransform(v);
   }, []);
 
+  // Keep elementsRef in sync with doc — O(n) allocation only when doc changes
+  useEffect(() => {
+    elementsRef.current = doc ? Object.values(doc.content.elements) : [];
+  }, [doc]);
+
+  // Rebuild snap spatial index on document change — O(n) once, then O(1) queries
+  useEffect(() => {
+    const idx = snapIndexRef.current;
+    idx.clear();
+    if (!doc) return;
+    for (const element of Object.values(doc.content.elements)) {
+      const el = element as { boundingBox: { min: Point; max: Point } };
+      const bb = el.boundingBox;
+      const corners: Point[] = [
+        { x: bb.min.x, y: bb.min.y }, { x: bb.max.x, y: bb.min.y },
+        { x: bb.min.x, y: bb.max.y }, { x: bb.max.x, y: bb.max.y },
+      ];
+      for (const corner of corners) {
+        idx.insert(corner.x, corner.y, { point: corner, type: 'endpoint' } satisfies SnapResult);
+      }
+      const midX = (bb.min.x + bb.max.x) / 2;
+      const midY = (bb.min.y + bb.max.y) / 2;
+      for (const mp of [
+        { x: midX, y: bb.min.y }, { x: midX, y: bb.max.y },
+        { x: bb.min.x, y: midY }, { x: bb.max.x, y: midY },
+      ]) {
+        idx.insert(mp.x, mp.y, { point: mp, type: 'midpoint' } satisfies SnapResult);
+      }
+    }
+  }, [doc]);
+
   const applySnapping = useCallback((point: Point): Point => {
     const scale = viewTransformRef.current.scale;
     if (!doc || !snapEnabled) return point;
-    const elements = Object.values(doc.content.elements);
-    const snaps = findSnapPoints(elements, point, scale);
-    if (snaps.length > 0) {
-      const closest = snaps.reduce((a, b) => dist(point, a.point) < dist(point, b.point) ? a : b);
-      setCurrentSnap(closest);
-      return closest.point;
+    const snapRadius = SNAP_TOLERANCE * scale;
+    const candidates = snapIndexRef.current.query(point.x, point.y, snapRadius);
+    if (candidates.length > 0) {
+      let best = candidates[0]!;
+      let bestDist2 = (best.x - point.x) ** 2 + (best.y - point.y) ** 2;
+      for (let i = 1; i < candidates.length; i++) {
+        const c = candidates[i]!;
+        const d2 = (c.x - point.x) ** 2 + (c.y - point.y) ** 2;
+        if (d2 < bestDist2) { bestDist2 = d2; best = c; }
+      }
+      const snapResult = best.payload as SnapResult;
+      setCurrentSnap(snapResult);
+      return snapResult.point;
     }
     const snapped = snapToGrid(point);
-    if (dist(point, snapped) < SNAP_TOLERANCE * scale) {
+    if (dist(point, snapped) < snapRadius) {
       setCurrentSnap({ point: snapped, type: 'grid' });
       return snapped;
     }
@@ -279,16 +385,15 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     }
 
     if (tool === 'wall') {
-      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
-      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
-      if (maxX - minX < 100 && maxY - minY < 100) return;
+      const dx = end.x - start.x, dy = end.y - start.y;
+      if (Math.sqrt(dx * dx + dy * dy) < 100) return;
       const wp = (toolParams?.['wall'] ?? {}) as Record<string, unknown>;
       addElement({
         type: 'wall', layerId,
         properties: {
           Name: { type: 'string', value: 'Wall' },
-          StartX: { type: 'number', value: minX }, StartY: { type: 'number', value: minY },
-          EndX: { type: 'number', value: maxX }, EndY: { type: 'number', value: maxY },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX: { type: 'number', value: end.x }, EndY: { type: 'number', value: end.y },
           Height: { type: 'number', value: wp['height'] ?? 3000 },
           Width: { type: 'number', value: wp['thickness'] ?? 200 },
           Material: { type: 'string', value: wp['material'] ?? 'Concrete' },
@@ -296,27 +401,6 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         },
       });
       getStoreActions().pushHistory('Add wall');
-    }
-
-    if (tool === 'curtain_wall') {
-      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
-      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
-      if (maxX - minX < 100 && maxY - minY < 100) return;
-      const cwp = (toolParams?.['curtain_wall'] ?? {}) as Record<string, unknown>;
-      addElement({
-        type: 'curtain_wall', layerId,
-        properties: {
-          Name: { type: 'string', value: 'Curtain Wall' },
-          StartX: { type: 'number', value: minX }, StartY: { type: 'number', value: minY },
-          EndX: { type: 'number', value: maxX }, EndY: { type: 'number', value: maxY },
-          Width: { type: 'number', value: maxX - minX },
-          Height: { type: 'number', value: cwp['height'] ?? 3000 },
-          FrameDepth: { type: 'number', value: cwp['frameDepth'] ?? 150 },
-          GlazingType: { type: 'enum', value: cwp['glazingType'] ?? 'double' },
-          FrameColor: { type: 'string', value: cwp['frameColor'] ?? '#888888' },
-        },
-      });
-      getStoreActions().pushHistory('Add curtain wall');
     }
 
     if (tool === 'rectangle') {
@@ -388,19 +472,6 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         },
       });
       getStoreActions().pushHistory(`Add ${tool}`);
-    }
-
-    if (tool === 'spline' && extraPoints && extraPoints.length >= 2) {
-      addElement({
-        type: 'polyline',
-        layerId,
-        geometry: { type: 'curve', data: { points: extraPoints as Point2D[], smooth: true } },
-        properties: {
-          Name: { type: 'string', value: 'Spline' },
-          Points: { type: 'string', value: JSON.stringify(extraPoints) },
-        },
-      });
-      getStoreActions().pushHistory('Add spline');
     }
 
     if ((tool === 'slab' || tool === 'roof') && extraPoints && extraPoints.length >= 3) {
@@ -521,8 +592,6 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     }
   }, [doc, addElement, toolParams]);
 
-  // ─── Text tool: confirm / cancel ──────────────────────────────────────────
-
   // ─── Canvas draw loop ─────────────────────────────────────────────────────
 
   const draw = useCallback(() => {
@@ -586,9 +655,14 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     if (!doc) { ctx.restore(); return; }
 
     // ── Render existing elements in world space ──
-    for (const element of Object.values(doc.content.elements)) {
-      // Viewport culling: skip elements whose bounding box is outside the canvas
-      if (!isInViewport(element, vpMinX, vpMinY, vpMaxX, vpMaxY)) continue;
+    const visibleLabelTargets: { element: ElementSchema }[] = [];
+    for (const element of elementsRef.current) {
+      // Viewport culling — skip elements entirely outside visible area
+      const ebb = element.boundingBox;
+      if (ebb.max.x < worldMinX || ebb.min.x > worldMaxX || ebb.max.y < worldMinY || ebb.min.y > worldMaxY) continue;
+      // Collect visible elements for the text label pass (avoids a second full iteration)
+      visibleLabelTargets.push({ element });
+
       const isSelected = selectedIds.includes(element.id);
       const color = isSelected ? theme.selected : theme.element;
       const fillColor = isSelected ? theme.selectedFill : theme.elementFill;
@@ -598,6 +672,19 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
 
       const props = element.properties as Record<string, { value: unknown }>;
       const type = element.type;
+
+      // Apply material hatch pattern as fill for solid shapes when not selected
+      if (!isSelected) {
+        const appliedMatName = props['Material']?.value as string | undefined;
+        if (appliedMatName) {
+          const appliedMat = BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName);
+          if (appliedMat) {
+            const pattern = _getHatchPattern(ctx, appliedMat.category, appliedMat.color);
+            if (pattern) ctx.fillStyle = pattern;
+            ctx.strokeStyle = appliedMat.color;
+          }
+        }
+      }
 
       if (type === 'annotation' || type === 'wall' || type === 'dimension') {
         if (props['StartX'] && props['EndX']) {
@@ -635,22 +722,32 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         }
       } else if (type === 'polygon' || type === 'polyline') {
         if (props['Points']) {
-          const pts = JSON.parse(props['Points'].value as string) as Point[];
-          if (pts.length < 2) continue;
+          let pts: Point[];
+          try {
+            const parsed = JSON.parse(props['Points'].value as string);
+            if (!Array.isArray(parsed) || parsed.length < 2) continue;
+            pts = parsed as Point[];
+          } catch { continue; }
           ctx.beginPath();
           ctx.moveTo(pts[0]!.x, pts[0]!.y);
           for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i]!.x, pts[i]!.y);
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
           ctx.stroke();
         }
-      } else if (type === 'text') {
-        // Text elements use geometry.data (TextGeometryData) for position/content.
-        const td = element.geometry.data as TextGeometryData | null;
-        if (td) {
-          const tp = toS(td.x, td.y);
-          ctx.fillStyle = color;
-          ctx.font = `${td.fontSize}px ${td.fontFamily}`;
-          ctx.fillText(td.content, tp.x, tp.y);
+      } else if (type === 'space') {
+        if (props['StartX'] && props['EndX']) {
+          const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
+          const x2 = props['EndX'].value as number, y2 = props['EndY']!.value as number;
+          const rx = Math.min(x1, x2), ry = Math.min(y1, y2);
+          const rw = Math.abs(x2 - x1), rh = Math.abs(y2 - y1);
+          ctx.fillStyle = isSelected ? theme.selectedFill : 'rgba(99,179,237,0.10)';
+          ctx.strokeStyle = isSelected ? theme.selected : 'rgba(99,179,237,0.70)';
+          ctx.lineWidth = (isSelected ? 2 : 1) * v.scale;
+          ctx.setLineDash([]);
+          ctx.beginPath();
+          ctx.rect(rx, ry, rw, rh);
+          ctx.fill();
+          ctx.stroke();
         }
       } else {
         // Fallback: bounding box in world space
@@ -724,32 +821,84 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       ctx.beginPath(); ctx.arc(currentSnap.point.x, currentSnap.point.y, 6 * v.scale, 0, Math.PI * 2); ctx.stroke();
     }
 
+    // ── Resize handles for selected elements ────────────────────────────────
+    if (activeTool === 'select' && doc) {
+      const handleHalfW = HANDLE_SIZE_PX * v.scale;
+      for (const id of selectedIds) {
+        const el = doc.content.elements[id];
+        if (!el) continue;
+        const handles = getHandles(el as ElementSchema);
+        for (const h of handles) {
+          ctx.fillStyle   = theme.selected;
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth   = 0.8 * v.scale;
+          ctx.beginPath();
+          ctx.rect(h.x - handleHalfW, h.y - handleHalfW, handleHalfW * 2, handleHalfW * 2);
+          ctx.fill(); ctx.stroke();
+        }
+      }
+    }
+
+    // ── Rubber-band selection rect ───────────────────────────────────────────
+    const inter = interactionRef.current;
+    if (inter.mode === 'rubber-band') {
+      const { startWorld: sw, currentWorld: cw2 } = inter;
+      const rx = Math.min(sw.x, cw2.x), ry = Math.min(sw.y, cw2.y);
+      const rw = Math.abs(cw2.x - sw.x), rh = Math.abs(cw2.y - sw.y);
+      ctx.strokeStyle = theme.accent;
+      ctx.fillStyle   = theme.selectedFill;
+      ctx.lineWidth   = 1 * v.scale;
+      ctx.setLineDash([4 * v.scale, 4 * v.scale]);
+      ctx.beginPath(); ctx.rect(rx, ry, rw, rh); ctx.fill(); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
     ctx.restore();
 
-    // ── Screen-space text labels (drawn after restoring transform) ──
+    // ── Screen-space text labels — uses pre-collected visible elements from first pass ──
     ctx.font = '10px sans-serif';
-    if (doc) {
-      for (const element of Object.values(doc.content.elements)) {
-        const props = element.properties as Record<string, { value: unknown }>;
-        const type = element.type;
-        if (type === 'wall' && props['StartX']) {
-          const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
-          const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
-          const p1s = worldToScreen(x1, y1, cw, ch, v);
-          const p2s = worldToScreen(x2, y2, cw, ch, v);
-          ctx.fillStyle = element.properties['Name'] ? theme.element : theme.element;
-          ctx.fillText('Wall', Math.min(p1s.x, p2s.x) + 4, Math.min(p1s.y, p2s.y) + 12);
+    for (const { element: el } of visibleLabelTargets) {
+      const typedEl = el as { id: string; type: string; properties: Record<string, { value: unknown }> };
+      const props = typedEl.properties;
+      const type = typedEl.type;
+      if (type === 'wall' && props['StartX']) {
+        const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
+        const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+        const p1s = worldToScreen(x1, y1, cw, ch, v);
+        const p2s = worldToScreen(x2, y2, cw, ch, v);
+        ctx.fillStyle = theme.element;
+        ctx.fillText('Wall', Math.min(p1s.x, p2s.x) + 4, Math.min(p1s.y, p2s.y) + 12);
+      }
+      if (type === 'dimension' && props['Value']) {
+        const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
+        const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+        const d = props['Value']!.value as number;
+        const p1s = worldToScreen(x1, y1, cw, ch, v);
+        const p2s = worldToScreen(x2, y2, cw, ch, v);
+        ctx.fillStyle = selectedIds.includes(typedEl.id) ? theme.selected : theme.element;
+        ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
+      }
+      if (type === 'space' && props['StartX'] && props['Name']) {
+        const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
+        const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
+        const roomName = props['Name'].value as string;
+        const areaSqft = props['AreaSqft']?.value as number | undefined;
+        const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+        const cs = worldToScreen(cx, cy, cw, ch, v);
+        const isRoomSelected = selectedIds.includes(typedEl.id);
+        ctx.fillStyle = isRoomSelected ? theme.selected : theme.element;
+        ctx.textAlign = 'center';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText(roomName, cs.x, cy < y1 ? cs.y : cs.y - (areaSqft ? 7 : 0));
+        if (areaSqft) {
+          ctx.font = '9px sans-serif';
+          ctx.fillStyle = isRoomSelected ? theme.selected : theme.element;
+          ctx.globalAlpha = 0.6;
+          ctx.fillText(`${Math.round(areaSqft)} sqft`, cs.x, cs.y + 7);
+          ctx.globalAlpha = 1.0;
         }
-        if (type === 'dimension' && props['Value']) {
-          const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
-          const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
-          const d = props['Value'].value as number;
-          const p1s = worldToScreen(x1, y1, cw, ch, v);
-          const p2s = worldToScreen(x2, y2, cw, ch, v);
-          const selectedEl = selectedIds.includes(element.id);
-          ctx.fillStyle = selectedEl ? theme.selected : theme.element;
-          ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
-        }
+        ctx.textAlign = 'left';
+        ctx.font = '10px sans-serif';
       }
     }
 
@@ -776,6 +925,11 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       }
     }
   }, [doc, selectedIds, drawingState, activeTool, currentSnap]);
+
+  // Stable ref so the ResizeObserver (which has [] deps) can always call the
+  // latest draw() without capturing a stale closure.
+  const drawRef = useRef(draw);
+  useLayoutEffect(() => { drawRef.current = draw; });
 
   // ─── Wheel: zoom centred on cursor ────────────────────────────────────────
 
@@ -820,31 +974,69 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const v = viewTransformRef.current;
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
-    wp = applySnapping(wp);
+    // Raw world point — no snapping applied here; snapping only makes sense for drawing, not selection
+    const rawWp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
 
     if (activeTool === 'select') {
       if (!doc) return;
-      const elements = Object.values(doc.content.elements);
-      const clicked = elements.filter((el) => {
-        const bb = el.boundingBox;
-        return wp.x >= bb.min.x && wp.x <= bb.max.x && wp.y >= bb.min.y && wp.y <= bb.max.y;
-      });
-      if (clicked.length > 0) {
-        setSelectedIds(event.shiftKey ? [...selectedIds, clicked[0]!.id] : [clicked[0]!.id]);
-      } else {
-        setSelectedIds([]);
+      const HIT  = 8  * v.scale;  // hit tolerance in world units
+      const HNDL = HANDLE_SIZE_PX * v.scale; // handle half-size in world units
+      const elements = Object.values(doc.content.elements) as ElementSchema[];
+      const currentSelected = getStoreActions().selectedIds;
+
+      // 1. Check if clicking a resize handle on a currently-selected element
+      for (const id of currentSelected) {
+        const el = doc.content.elements[id];
+        if (!el) continue;
+        const handles = getHandles(el as ElementSchema);
+        const hit = hitHandle(rawWp, handles, HNDL * 1.5);
+        if (hit) {
+          interactionRef.current = { mode: 'resizing', handle: hit.kind, elementId: id };
+          dirtyRef.current = true;
+          return;
+        }
       }
+
+      // 2. Check if clicking any element
+      const hitEl = elements.find((el) => hitTestElement(rawWp, el, HIT));
+      if (hitEl) {
+        // If shift is held, toggle this element in/out of the selection
+        const newSel = event.shiftKey
+          ? (currentSelected.includes(hitEl.id)
+              ? currentSelected.filter((x) => x !== hitEl.id)
+              : [...currentSelected, hitEl.id])
+          : (currentSelected.includes(hitEl.id)
+              ? currentSelected  // already selected → don't reset
+              : [hitEl.id]);
+        if (!event.shiftKey && !currentSelected.includes(hitEl.id)) setSelectedIds([hitEl.id]);
+        else if (event.shiftKey) setSelectedIds(newSel);
+
+        // Start a drag-pending so a subsequent move becomes a drag
+        const selIds = getStoreActions().selectedIds.length > 0
+          ? getStoreActions().selectedIds
+          : [hitEl.id];
+        interactionRef.current = {
+          mode: 'drag-pending',
+          startScreen: { x: event.clientX, y: event.clientY },
+          elementIds: selIds,
+        };
+        dirtyRef.current = true;
+        return;
+      }
+
+      // 3. Click on empty space → start rubber-band selection
+      if (!event.shiftKey) setSelectedIds([]);
+      interactionRef.current = { mode: 'rubber-band', startWorld: rawWp, currentWorld: rawWp };
+      dirtyRef.current = true;
       return;
     }
 
-    if (activeTool === 'text') {
-      setDrawingText(wp);
-      return;
-    }
+    let wp = rawWp;
+    wp = applySnapping(wp);
 
     if (activeTool === 'column') {
       commitShape('column', wp, wp);
+      setActiveTool('select');
       return;
     }
 
@@ -854,7 +1046,6 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     }
 
     if (MULTICLICK_TOOLS.has(activeTool)) {
-      console.log('[DEBUG-MULTICLICK] hit MULTICLICK handler, activeTool:', activeTool);
       setDrawingState((prev) => {
         const scale = viewTransformRef.current.scale;
         const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
@@ -866,7 +1057,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         return { isDrawing: true, startPoint: newPoints[0]!, currentPoint: wp, points: newPoints };
       });
     }
-  }, [isViewOnly, activeTool, doc, selectedIds, setSelectedIds, applySnapping, commitShape]);
+  }, [activeTool, doc, setSelectedIds, setActiveTool, applySnapping, commitShape]);
 
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     // Pan via middle mouse drag
@@ -884,12 +1075,79 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
     const v = viewTransformRef.current;
-    let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
-    wp = applySnapping(wp);
+    const rawWp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
 
+    // ── Select-tool interactions ──────────────────────────────────────────────
+    const inter = interactionRef.current;
+
+    if (inter.mode === 'drag-pending') {
+      const dx = event.clientX - inter.startScreen.x;
+      const dy = event.clientY - inter.startScreen.y;
+      if (Math.sqrt(dx * dx + dy * dy) > DRAG_THRESHOLD_PX) {
+        interactionRef.current = { mode: 'dragging', lastWorld: rawWp, elementIds: inter.elementIds };
+        canvas.style.cursor = 'grabbing';
+      }
+      return;
+    }
+
+    if (inter.mode === 'dragging') {
+      const snapped = applySnapping(rawWp);
+      const dxW = snapped.x - inter.lastWorld.x;
+      const dyW = snapped.y - inter.lastWorld.y;
+      interactionRef.current = { ...inter, lastWorld: snapped };
+      const docNow = getStoreActions().document;
+      if (docNow && (dxW !== 0 || dyW !== 0)) {
+        for (const id of inter.elementIds) {
+          const el = docNow.content.elements[id];
+          if (!el) continue;
+          const moved = moveElementProps(el as ElementSchema, dxW, dyW);
+          updateElement(id, { properties: { ...el.properties, ...moved } });
+        }
+      }
+      dirtyRef.current = true;
+      return;
+    }
+
+    if (inter.mode === 'resizing') {
+      const snapped = applySnapping(rawWp);
+      const docNow = getStoreActions().document;
+      if (docNow) {
+        const el = docNow.content.elements[inter.elementId];
+        if (el) {
+          const resized = resizeElementProps(el as ElementSchema, inter.handle, snapped);
+          updateElement(inter.elementId, { properties: { ...el.properties, ...resized } });
+        }
+      }
+      dirtyRef.current = true;
+      return;
+    }
+
+    if (inter.mode === 'rubber-band') {
+      interactionRef.current = { ...inter, currentWorld: rawWp };
+      dirtyRef.current = true;
+      return;
+    }
+
+    // ── Update cursor when hovering over handles ───────────────────────────
+    if (activeTool === 'select') {
+      const docNow = getStoreActions().document;
+      if (docNow) {
+        const HNDL = HANDLE_SIZE_PX * v.scale;
+        for (const id of getStoreActions().selectedIds) {
+          const el = docNow.content.elements[id];
+          if (!el) continue;
+          const hh = hitHandle(rawWp, getHandles(el as ElementSchema), HNDL * 1.5);
+          if (hh) { canvas.style.cursor = hh.cursor; return; }
+        }
+        canvas.style.cursor = 'default';
+      }
+    }
+
+    // ── Drawing tool preview ───────────────────────────────────────────────
+    const wp = applySnapping(rawWp);
     if (!drawingState.isDrawing) return;
     setDrawingState((prev) => ({ ...prev, currentPoint: wp }));
-  }, [drawingState.isDrawing, applySnapping, setView]);
+  }, [drawingState.isDrawing, applySnapping, setView, updateElement, activeTool]);
 
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     // End pan
@@ -900,6 +1158,61 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       return;
     }
 
+    // ── Commit select-tool interactions ──────────────────────────────────────
+    const inter = interactionRef.current;
+
+    if (inter.mode === 'drag-pending') {
+      // Mouseup without drag → just a click, already handled in mousedown
+      interactionRef.current = { mode: 'idle' };
+      const canvas = canvasRef.current;
+      if (canvas) canvas.style.cursor = 'default';
+      return;
+    }
+
+    if (inter.mode === 'dragging') {
+      pushHistory('Move elements');
+      interactionRef.current = { mode: 'idle' };
+      const canvas = canvasRef.current;
+      if (canvas) canvas.style.cursor = 'default';
+      dirtyRef.current = true;
+      return;
+    }
+
+    if (inter.mode === 'resizing') {
+      pushHistory('Resize element');
+      interactionRef.current = { mode: 'idle' };
+      const canvas = canvasRef.current;
+      if (canvas) canvas.style.cursor = 'default';
+      dirtyRef.current = true;
+      return;
+    }
+
+    if (inter.mode === 'rubber-band') {
+      const { startWorld: sw, currentWorld: cw2 } = inter;
+      const minX = Math.min(sw.x, cw2.x), maxX = Math.max(sw.x, cw2.x);
+      const minY = Math.min(sw.y, cw2.y), maxY = Math.max(sw.y, cw2.y);
+      if (maxX - minX > 5 && maxY - minY > 5) {
+        const docNow = getStoreActions().document;
+        if (docNow) {
+          const hits = (Object.values(docNow.content.elements) as ElementSchema[])
+            .filter((el) => {
+              const bb = el.boundingBox;
+              return bb.min.x >= minX && bb.max.x <= maxX && bb.min.y >= minY && bb.max.y <= maxY;
+            })
+            .map((el) => el.id);
+          if (event.shiftKey) {
+            setSelectedIds([...new Set([...getStoreActions().selectedIds, ...hits])]);
+          } else {
+            setSelectedIds(hits);
+          }
+        }
+      }
+      interactionRef.current = { mode: 'idle' };
+      dirtyRef.current = true;
+      return;
+    }
+
+    // ── Drawing tool commit ───────────────────────────────────────────────────
     const canvas = canvasRef.current;
     if (!canvas || !drawingState.isDrawing || !drawingState.startPoint) {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
@@ -914,9 +1227,10 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     if (DRAG_TOOLS.has(activeTool)) {
       commitShape(activeTool, drawingState.startPoint, wp);
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
+      setActiveTool('select');
     }
     // Multi-click tools don't commit on mouseUp, only on next click or double-click
-  }, [activeTool, drawingState, applySnapping, commitShape]);
+  }, [activeTool, drawingState, applySnapping, commitShape, setActiveTool, pushHistory, setSelectedIds]);
 
   // Double-click finishes polyline
   const handleCanvasDoubleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -935,36 +1249,173 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       }
       return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
     });
-  }, [activeTool, applySnapping, commitShape]);
+    setActiveTool('select');
+  }, [activeTool, applySnapping, commitShape, setActiveTool]);
 
   // ─── Keyboard shortcuts ───────────────────────────────────────────────────
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    // Ignore shortcuts when typing in an input / textarea
+    const tag = (event.target as HTMLElement)?.tagName?.toLowerCase();
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+    const ctrl = event.ctrlKey || event.metaKey;
+
     if (event.key === 'Escape') {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
-      setDrawingText(null);
+      interactionRef.current = { mode: 'idle' };
+      setActiveTool('select');
+      dirtyRef.current = true;
     }
-    if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) { event.preventDefault(); getStoreActions().undo(); return; }
-    if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) { event.preventDefault(); getStoreActions().redo(); return; }
-    if ((event.ctrlKey || event.metaKey) && event.key === 's') { event.preventDefault(); getStoreActions().pushHistory('Manual save'); return; }
 
-    if (event.ctrlKey || event.metaKey || event.altKey) return;
+    // ── Undo / redo / save ──────────────────────────────────────────────────
+    if (ctrl && event.key === 'z' && !event.shiftKey) { event.preventDefault(); getStoreActions().undo(); return; }
+    if (ctrl && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) { event.preventDefault(); getStoreActions().redo(); return; }
+    if (ctrl && event.key === 's') { event.preventDefault(); getStoreActions().pushHistory('Manual save'); return; }
 
+    // ── Select all ──────────────────────────────────────────────────────────
+    if (ctrl && event.key === 'a') {
+      event.preventDefault();
+      const docNow = getStoreActions().document;
+      if (docNow) setSelectedIds(Object.keys(docNow.content.elements));
+      return;
+    }
+
+    // ── Deselect all ────────────────────────────────────────────────────────
+    if (ctrl && event.key === 'd') {
+      event.preventDefault();
+      setSelectedIds([]);
+      return;
+    }
+
+    // ── Copy ────────────────────────────────────────────────────────────────
+    if (ctrl && event.key === 'c') {
+      event.preventDefault();
+      const docNow = getStoreActions().document;
+      const selIds = getStoreActions().selectedIds;
+      if (docNow && selIds.length > 0) {
+        clipboardRef.current = selIds
+          .map((id) => docNow.content.elements[id])
+          .filter((el): el is ElementSchema => !!el)
+          .map((el) => JSON.parse(JSON.stringify(el)) as ElementSchema);
+        pasteCountRef.current = 0;
+      }
+      return;
+    }
+
+    // ── Cut ─────────────────────────────────────────────────────────────────
+    if (ctrl && event.key === 'x') {
+      event.preventDefault();
+      const docNow = getStoreActions().document;
+      const selIds = getStoreActions().selectedIds;
+      if (docNow && selIds.length > 0) {
+        clipboardRef.current = selIds
+          .map((id) => docNow.content.elements[id])
+          .filter((el): el is ElementSchema => !!el)
+          .map((el) => JSON.parse(JSON.stringify(el)) as ElementSchema);
+        pasteCountRef.current = 0;
+        selIds.forEach((id) => deleteElement(id));
+        pushHistory('Cut elements');
+        setSelectedIds([]);
+      }
+      return;
+    }
+
+    // ── Paste ────────────────────────────────────────────────────────────────
+    if (ctrl && event.key === 'v') {
+      event.preventDefault();
+      if (clipboardRef.current.length === 0) return;
+      pasteCountRef.current += 1;
+      const offset = pasteCountRef.current * PASTE_OFFSET;
+      const docNow = getStoreActions().document;
+      if (!docNow) return;
+      const layerId = Object.keys(docNow.organization.layers)[0] || 'default';
+      const newIds: string[] = [];
+      for (const src of clipboardRef.current) {
+        const moved = moveElementProps(src, offset, offset);
+        const newId = getStoreActions().addElement({
+          type: src.type,
+          layerId,
+          properties: { ...src.properties, ...moved },
+        });
+        newIds.push(newId);
+      }
+      pushHistory('Paste elements');
+      setSelectedIds(newIds);
+      return;
+    }
+
+    // ── Duplicate (Ctrl+Shift+D or Ctrl+J) ────────────────────────────────
+    if (ctrl && (event.key === 'j' || (event.shiftKey && event.key === 'd'))) {
+      event.preventDefault();
+      const docNow = getStoreActions().document;
+      const selIds = getStoreActions().selectedIds;
+      if (!docNow || selIds.length === 0) return;
+      const layerId = Object.keys(docNow.organization.layers)[0] || 'default';
+      const newIds: string[] = [];
+      for (const id of selIds) {
+        const src = docNow.content.elements[id];
+        if (!src) continue;
+        const moved = moveElementProps(src as ElementSchema, PASTE_OFFSET, PASTE_OFFSET);
+        const newId = getStoreActions().addElement({
+          type: src.type,
+          layerId,
+          properties: { ...src.properties, ...moved },
+        });
+        newIds.push(newId);
+      }
+      pushHistory('Duplicate elements');
+      setSelectedIds(newIds);
+      return;
+    }
+
+    if (ctrl || event.altKey) return;
+
+    // ── Tool shortcuts ──────────────────────────────────────────────────────
     const shortcuts: Record<string, string> = {
       v: 'select', w: 'wall', d: 'door', n: 'window', s: 'slab', o: 'roof',
       k: 'column', b: 'beam', t: 'stair', l: 'line', r: 'rectangle',
-      c: 'circle', a: 'arc', p: 'polygon', m: 'dimension', x: 'text', j: 'curtain_wall',
+      c: 'circle', a: 'arc', p: 'polygon', m: 'dimension', x: 'text',
     };
     const key = event.key.toLowerCase();
-    if (shortcuts[key]) setActiveTool(shortcuts[key]);
+    if (shortcuts[key]) { setActiveTool(shortcuts[key]); return; }
 
+    // ── Delete / Backspace ──────────────────────────────────────────────────
     if (event.key === 'Delete' || event.key === 'Backspace') {
       const state = getStoreActions();
+      if (state.selectedIds.length === 0) return;
+      event.preventDefault();
       state.selectedIds.forEach((id) => state.deleteElement(id));
       state.pushHistory('Delete elements');
+      state.setSelectedIds([]);
+      return;
     }
+
+    // ── Arrow-key nudge ─────────────────────────────────────────────────────
+    const ARROW_MAP: Record<string, [number, number]> = {
+      ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1],
+    };
+    if (ARROW_MAP[event.key]) {
+      event.preventDefault();
+      const [ddx, ddy] = ARROW_MAP[event.key]!;
+      const nudge = event.shiftKey ? GRID_SIZE : 100; // shift = 500mm, normal = 100mm
+      const dxW = ddx * nudge, dyW = ddy * nudge;
+      const docNow = getStoreActions().document;
+      const selIds = getStoreActions().selectedIds;
+      if (!docNow || selIds.length === 0) return;
+      for (const id of selIds) {
+        const el = docNow.content.elements[id];
+        if (!el) continue;
+        const moved = moveElementProps(el as ElementSchema, dxW, dyW);
+        updateElement(id, { properties: { ...el.properties, ...moved } });
+      }
+      pushHistory('Nudge elements');
+      return;
+    }
+
+    // ── Snap toggle (hold Ctrl) ──────────────────────────────────────────────
     if (event.key === 'Control') setSnapEnabled(false);
-  }, [setActiveTool]);
+  }, [setActiveTool, setSelectedIds, deleteElement, pushHistory, updateElement]);
 
   const handleKeyUp = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Control') setSnapEnabled(true);
@@ -994,7 +1445,10 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       for (const entry of entries) {
         canvas.width = entry.contentRect.width;
         canvas.height = entry.contentRect.height;
-        dirtyRef.current = true;
+        // Redraw immediately — setting canvas.width/height clears it, so waiting
+        // for the next rAF produces a one-frame blank flash on every resize tick.
+        drawRef.current();
+        dirtyRef.current = false;
       }
     });
     ro.observe(container);
@@ -1025,86 +1479,11 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   // Mark dirty when drawing state or snap changes
   useEffect(() => { dirtyRef.current = true; }, [drawingState, currentSnap, activeTool, selectedIds]);
 
-  // Update canvas cursor based on active tool (isViewOnly always uses 'default')
+  // Update canvas cursor based on active tool
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    if (isViewOnly) {
-      canvas.style.cursor = 'default';
-    } else {
-      canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
-    }
-  }, [activeTool, isViewOnly]);
-
-  // Wheel: zoom-to-cursor (Ctrl/pinch) or two-finger pan — always active
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const handleWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      const { zoom, panX, panY } = viewRef.current;
-      const cw = canvas.offsetWidth;
-      const ch = canvas.offsetHeight;
-      const rect = canvas.getBoundingClientRect();
-      const mx = event.clientX - rect.left;
-      const my = event.clientY - rect.top;
-
-      if (event.ctrlKey) {
-        // Pinch-to-zoom or Ctrl+scroll: zoom toward cursor
-        const factor = event.deltaY > 0 ? 1 / 1.08 : 1.08;
-        const newZoom = Math.max(0.05, Math.min(50, zoom * factor));
-        // Keep the world point under the cursor fixed
-        const newPanX = mx - cw / 2 - (mx - cw / 2 - panX) * newZoom / zoom;
-        const newPanY = (ch / 2 + panY - my) * newZoom / zoom - ch / 2 + my;
-        viewRef.current = { zoom: newZoom, panX: newPanX, panY: newPanY };
-      } else {
-        // Two-finger scroll / regular scroll → pan
-        viewRef.current = {
-          zoom,
-          panX: panX - event.deltaX,
-          panY: panY - event.deltaY,
-        };
-      }
-    };
-    canvas.addEventListener('wheel', handleWheel, { passive: false });
-    return () => canvas.removeEventListener('wheel', handleWheel);
-  }, []);
-
-  // Middle-mouse button panning — always active
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button !== 1) return;
-      e.preventDefault();
-      isPanningRef.current = true;
-      lastMousePos.current = { x: e.clientX, y: e.clientY };
-      canvas.style.cursor = 'grabbing';
-    };
-    const onMouseMove = (e: MouseEvent) => {
-      if (!isPanningRef.current) return;
-      const dx = e.clientX - lastMousePos.current.x;
-      const dy = e.clientY - lastMousePos.current.y;
-      lastMousePos.current = { x: e.clientX, y: e.clientY };
-      viewRef.current = {
-        zoom: viewRef.current.zoom,
-        panX: viewRef.current.panX + dx,
-        panY: viewRef.current.panY + dy,
-      };
-    };
-    const onMouseUp = (e: MouseEvent) => {
-      if (e.button !== 1) return;
-      isPanningRef.current = false;
-      canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
-    };
-    canvas.addEventListener('mousedown', onMouseDown);
-    window.addEventListener('mousemove', onMouseMove);
-    window.addEventListener('mouseup', onMouseUp);
-    return () => {
-      canvas.removeEventListener('mousedown', onMouseDown);
-      window.removeEventListener('mousemove', onMouseMove);
-      window.removeEventListener('mouseup', onMouseUp);
-    };
+    canvas.style.cursor = activeTool === 'select' ? 'default' : 'crosshair';
   }, [activeTool]);
 
   return {
