@@ -1,7 +1,50 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Bot, User, X, Settings } from 'lucide-react';
-import { FloorPlanGenerator } from '@opencad/ai';
+import { FloorPlanGenerator, validateElement } from '@opencad/ai';
 import { useDocumentStore } from '../stores/documentStore';
+import type { DocumentSchema } from '@opencad/document';
+
+/**
+ * Run BIM validation on all elements in a generated schema.
+ * Returns a human-readable summary of errors and warnings, or null if all pass.
+ */
+function buildValidationSummary(schema: DocumentSchema): string | null {
+  const layers = schema.organization.layers as Record<string, { name: string; locked: boolean }>;
+  const elements = Object.values(schema.content.elements);
+  if (elements.length === 0) return null;
+
+  const minimalDoc = {
+    organization: { layers },
+    content: {
+      elements: schema.content.elements as Parameters<typeof validateElement>[1]['content']['elements'],
+    },
+  };
+
+  const allErrors: string[] = [];
+  const allWarnings: string[] = [];
+
+  for (const el of elements) {
+    const result = validateElement(
+      el as Parameters<typeof validateElement>[0],
+      minimalDoc,
+    );
+    allErrors.push(...result.errors);
+    allWarnings.push(...result.warnings);
+  }
+
+  if (allErrors.length === 0 && allWarnings.length === 0) return null;
+
+  const lines: string[] = [];
+  if (allErrors.length > 0) {
+    lines.push(`BIM Validation — ${allErrors.length} error(s):`);
+    allErrors.forEach((e) => lines.push(`  • ${e}`));
+  }
+  if (allWarnings.length > 0) {
+    lines.push(`BIM Validation — ${allWarnings.length} warning(s):`);
+    allWarnings.forEach((w) => lines.push(`  ⚠ ${w}`));
+  }
+  return lines.join('\n');
+}
 
 /** Returns true when the message looks like a floor-plan generation request. */
 function isFloorPlanRequest(text: string): boolean {
@@ -108,10 +151,15 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       try {
         const schema = await generator.generateFloorPlan(text);
         loadDocumentSchema(schema);
+        const validationSummary = buildValidationSummary(schema);
+        const baseContent = 'Floor plan generated and loaded into the canvas. Switch to 2D view to see the layout.';
+        const content = validationSummary
+          ? `${baseContent}\n\n${validationSummary}`
+          : baseContent;
         setMessages((prev) =>
           prev.map((m) =>
             m.id === assistantId
-              ? { ...m, content: 'Floor plan generated and loaded into the canvas. Switch to 2D view to see the layout.' }
+              ? { ...m, content }
               : m
           )
         );

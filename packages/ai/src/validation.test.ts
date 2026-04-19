@@ -1,6 +1,6 @@
 /**
  * AI Validation Tests
- * T-AI-002 through T-AI-005, T-AI-010 through T-AI-012, T-AI-020 through T-AI-024
+ * T-AI-002 through T-AI-007, T-AI-010 through T-AI-012, T-AI-020 through T-AI-024
  */
 
 import { describe, it, expect } from 'vitest';
@@ -17,10 +17,12 @@ import {
   getCitationForRule,
   suggestFix,
   runOfflineCompliance,
+  validateElement,
   type Room,
   type FloorPlan,
   type ModelDocument,
   type ComplianceViolation,
+  type ValidationResult,
 } from './validation';
 
 // ─── Fixtures ─────────────────────────────────────────────────────────────────
@@ -498,5 +500,218 @@ describe('T-AI-024: Offline Code Compliance', () => {
     const result = runOfflineCompliance(rooms);
     expect(result).not.toBeInstanceOf(Promise);
     expect(Array.isArray(result)).toBe(true);
+  });
+});
+
+// ─── BIM Element Validation Fixtures ─────────────────────────────────────────
+
+type PropValue = { type: 'string' | 'number' | 'boolean' | 'enum' | 'reference'; value: string | number | boolean | string[] };
+
+function makeTestDoc(elements: Record<string, ReturnType<typeof makeTestWall>> = {}) {
+  return {
+    organization: {
+      layers: {
+        'layer-walls': { name: 'Walls', locked: false },
+        'layer-locked': { name: 'Locked Layer', locked: true },
+      },
+    },
+    content: { elements },
+  };
+}
+
+function makeTestWall(id: string, heightMm: number, layerId = 'layer-walls', extraProps: Record<string, PropValue> = {}) {
+  return {
+    id,
+    type: 'wall' as const,
+    layerId,
+    properties: {
+      Height: { type: 'number' as const, value: heightMm },
+      StartX: { type: 'number' as const, value: 0 },
+      StartY: { type: 'number' as const, value: 0 },
+      EndX: { type: 'number' as const, value: 5000 },
+      EndY: { type: 'number' as const, value: 0 },
+      ...extraProps,
+    },
+    boundingBox: {
+      min: { x: 0, y: 0, z: 0 },
+      max: { x: 5000, y: 200, z: heightMm },
+    },
+  };
+}
+
+function makeTestDoor(id: string, x: number, y: number, w: number, h: number, layerId = 'layer-walls') {
+  return {
+    id,
+    type: 'door' as const,
+    layerId,
+    properties: {} as Record<string, PropValue>,
+    boundingBox: {
+      min: { x, y, z: 0 },
+      max: { x: x + w, y: y + h, z: 2100 },
+    },
+  };
+}
+
+function makeTestBeam(id: string, hasStartEnd: boolean, layerId = 'layer-walls') {
+  const props: Record<string, PropValue> = hasStartEnd
+    ? {
+        StartX: { type: 'number', value: 0 },
+        StartY: { type: 'number', value: 0 },
+        EndX: { type: 'number', value: 5000 },
+        EndY: { type: 'number', value: 0 },
+      }
+    : {};
+  return {
+    id,
+    type: 'beam' as const,
+    layerId,
+    properties: props,
+    boundingBox: {
+      min: { x: 0, y: 0, z: 2500 },
+      max: { x: 5000, y: 200, z: 2800 },
+    },
+  };
+}
+
+// ─── T-AI-005: Wall with height=0 fails validation ──────────────────────────��─
+
+describe('T-AI-005: Wall height=0 fails BIM validation', () => {
+  it('should return valid=false for a wall with height=0', () => {
+    const wall = makeTestWall('wall-zero', 0);
+    const doc = makeTestDoc();
+    const result: ValidationResult = validateElement(wall, doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.length).toBeGreaterThan(0);
+    expect(result.errors.some((e) => e.toLowerCase().includes('height'))).toBe(true);
+  });
+
+  it('should return valid=false for a wall with negative height', () => {
+    const wall = makeTestWall('wall-neg', -100);
+    const doc = makeTestDoc();
+    const result = validateElement(wall, doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) => e.toLowerCase().includes('height'))).toBe(true);
+  });
+
+  it('should return no height errors for a wall with positive height', () => {
+    const wall = makeTestWall('wall-ok', 3000);
+    const doc = makeTestDoc();
+    const result = validateElement(wall, doc);
+    expect(result.errors.filter((e) => e.toLowerCase().includes('height'))).toHaveLength(0);
+  });
+});
+
+// ─── T-AI-006: Door outside any wall gets a warning ──────────────────────────
+
+describe('T-AI-006: Door outside any wall gets a warning', () => {
+  it('should warn when a door is not within any wall bounding box', () => {
+    const doorFar = makeTestDoor('door-far', 10000, 10000, 900, 200);
+    const doc = makeTestDoc({ 'wall-1': makeTestWall('wall-1', 3000) });
+    const result = validateElement(doorFar, doc);
+    expect(result.warnings.some((w) => w.toLowerCase().includes('wall'))).toBe(true);
+  });
+
+  it('should not warn when door is contained within a wall bounding box', () => {
+    // Wall bbox: x:[0..5000], y:[0..200], z:[0..3000]
+    // Door must be fully inside: x:[500..1400], y:[0..200]
+    const door = makeTestDoor('door-in', 500, 0, 900, 200);
+    const wall = makeTestWall('wall-1', 3000);
+    const doc = makeTestDoc({ 'wall-1': wall });
+    const result = validateElement(door, doc);
+    expect(result.warnings.filter((w) => w.toLowerCase().includes('wall'))).toHaveLength(0);
+  });
+
+  it('should warn when no walls exist in the document', () => {
+    const door = makeTestDoor('door-1', 0, 0, 900, 200);
+    const doc = makeTestDoc(); // no walls
+    const result = validateElement(door, doc);
+    expect(result.warnings.some((w) => w.toLowerCase().includes('wall'))).toBe(true);
+  });
+});
+
+// ─── T-AI-007: Valid wall passes all checks ───────────────────────────────────
+
+describe('T-AI-007: Valid wall passes all BIM checks', () => {
+  it('should return valid=true and no errors for a well-formed wall', () => {
+    const wall = makeTestWall('wall-good', 3000);
+    const doc = makeTestDoc();
+    const result = validateElement(wall, doc);
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should produce no errors and no warnings for a standard unlocked wall', () => {
+    const wall = makeTestWall('wall-good', 2700);
+    const doc = makeTestDoc();
+    const result = validateElement(wall, doc);
+    expect(result.errors).toHaveLength(0);
+    expect(result.warnings).toHaveLength(0);
+  });
+
+  it('ValidationResult type has valid, errors, and warnings fields', () => {
+    const wall = makeTestWall('w1', 3000);
+    const doc = makeTestDoc();
+    const result = validateElement(wall, doc);
+    expect(typeof result.valid).toBe('boolean');
+    expect(Array.isArray(result.errors)).toBe(true);
+    expect(Array.isArray(result.warnings)).toBe(true);
+  });
+});
+
+// ─── Additional BIM validation rules ─────────────────────────────────────────
+
+describe('BIM validation: locked layer warning', () => {
+  it('should warn when an element is placed on a locked layer', () => {
+    const wall = makeTestWall('wall-locked', 3000, 'layer-locked');
+    const doc = makeTestDoc();
+    const result = validateElement(wall, doc);
+    expect(result.warnings.some((w) => w.toLowerCase().includes('lock'))).toBe(true);
+  });
+
+  it('should not warn for an element on an unlocked layer', () => {
+    const wall = makeTestWall('wall-unlocked', 3000, 'layer-walls');
+    const doc = makeTestDoc();
+    const result = validateElement(wall, doc);
+    expect(result.warnings.filter((w) => w.toLowerCase().includes('lock'))).toHaveLength(0);
+  });
+});
+
+describe('BIM validation: overlapping elements of same type', () => {
+  it('should warn when two walls of same type overlap on same layer', () => {
+    const wall1 = makeTestWall('w1', 3000, 'layer-walls');
+    const wall2 = makeTestWall('w2', 3000, 'layer-walls'); // same bbox
+    const doc = makeTestDoc({ w1: wall1, w2: wall2 });
+    const result = validateElement(wall1, doc);
+    expect(result.warnings.some((w) => w.toLowerCase().includes('overlap'))).toBe(true);
+  });
+
+  it('should not warn when walls are on different layers', () => {
+    const wall1 = makeTestWall('w1', 3000, 'layer-walls');
+    const wall2 = makeTestWall('w2', 3000, 'layer-locked');
+    const doc = makeTestDoc({ w1: wall1, w2: wall2 });
+    const result = validateElement(wall1, doc);
+    expect(result.warnings.filter((w) => w.toLowerCase().includes('overlap'))).toHaveLength(0);
+  });
+});
+
+describe('BIM validation: beam must have start/end points', () => {
+  it('should error when beam has no start/end point properties', () => {
+    const beam = makeTestBeam('beam-1', false);
+    const doc = makeTestDoc();
+    const result = validateElement(beam, doc);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some((e) =>
+      e.toLowerCase().includes('start') || e.toLowerCase().includes('end') || e.toLowerCase().includes('span')
+    )).toBe(true);
+  });
+
+  it('should pass when beam has start and end point properties', () => {
+    const beam = makeTestBeam('beam-ok', true);
+    const doc = makeTestDoc();
+    const result = validateElement(beam, doc);
+    expect(result.errors.filter((e) =>
+      e.toLowerCase().includes('span') ||
+      (e.toLowerCase().includes('start') && e.toLowerCase().includes('end'))
+    )).toHaveLength(0);
   });
 });
