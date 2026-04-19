@@ -1,3 +1,10 @@
+## [1.0.8](https://github.com/CariHQ/opencad/compare/v1.0.7...v1.0.8) (2026-04-19)
+
+
+### Bug Fixes
+
+* **ci:** pin wasm-bindgen-cli to 0.2.93 to match Cargo.toml ([1572487](https://github.com/CariHQ/opencad/commit/1572487cfae5377f1b7eeab80c8d23640cbea540))
+
 ## [1.0.7](https://github.com/CariHQ/opencad/compare/v1.0.6...v1.0.7) (2026-04-19)
 
 
