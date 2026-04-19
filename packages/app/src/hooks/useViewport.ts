@@ -1,5 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
+import { catmullRomToBezier } from './splineUtils';
+import type { Point2D } from './splineUtils';
 
 // ── Text geometry data stored inside ElementSchema.geometry.data ──────────────
 export interface TextGeometryData {
@@ -69,6 +71,8 @@ const OFFSET = 5000;
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
 const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
 // Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing, spline)
+=======
+// Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing)
 const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing', 'spline']);
 
 function screenToWorld(sx: number, sy: number, cw: number, ch: number): Point {
@@ -334,6 +338,19 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
         },
       });
       getStoreActions().pushHistory(`Add ${tool}`);
+    }
+
+    if (tool === 'spline' && extraPoints && extraPoints.length >= 2) {
+      addElement({
+        type: 'polyline',
+        layerId,
+        geometry: { type: 'curve', data: { points: extraPoints as Point2D[], smooth: true } },
+        properties: {
+          Name: { type: 'string', value: 'Spline' },
+          Points: { type: 'string', value: JSON.stringify(extraPoints) },
+        },
+      });
+      getStoreActions().pushHistory('Add spline');
     }
 
     if ((tool === 'slab' || tool === 'roof') && extraPoints && extraPoints.length >= 3) {
@@ -689,6 +706,40 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
       }
     }
 
+    // Spline: Catmull-Rom smooth curve + dotted rubber-band to cursor
+    if (activeTool === 'spline' && points.length > 0) {
+      const screenPts = points.map((pt) => worldToScreen(pt.x, pt.y, width, height));
+      if (screenPts.length === 1) {
+        ctx.setLineDash([]);
+        ctx.fillStyle = theme.accent;
+        const s0 = screenPts[0]!;
+        ctx.beginPath(); ctx.arc(s0.x, s0.y, 4, 0, Math.PI * 2); ctx.fill();
+      } else {
+        const segs = catmullRomToBezier(screenPts);
+        ctx.setLineDash([]);
+        ctx.strokeStyle = theme.accent;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(screenPts[0]!.x, screenPts[0]!.y);
+        for (const seg of segs) {
+          ctx.bezierCurveTo(seg.cp1.x, seg.cp1.y, seg.cp2.x, seg.cp2.y, seg.end.x, seg.end.y);
+        }
+        ctx.stroke();
+      }
+      if (currentPoint) {
+        const lastS = worldToScreen(points[points.length - 1]!.x, points[points.length - 1]!.y, width, height);
+        ctx.setLineDash([4, 4]);
+        ctx.strokeStyle = theme.accent;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.moveTo(lastS.x, lastS.y); ctx.lineTo(cp.x, cp.y); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      ctx.fillStyle = theme.accent;
+      for (const s of screenPts) {
+        ctx.beginPath(); ctx.arc(s.x, s.y, 4, 0, Math.PI * 2); ctx.fill();
+      }
+    }
+
     ctx.setLineDash([]);
 
     // Snap indicator
@@ -751,6 +802,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     }
 
     if (MULTICLICK_TOOLS.has(activeTool)) {
+      console.log('[DEBUG-MULTICLICK] hit MULTICLICK handler, activeTool:', activeTool);
       setDrawingState((prev) => {
         // Close polygon/slab/roof if clicking near start
         const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
