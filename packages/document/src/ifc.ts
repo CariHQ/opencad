@@ -993,3 +993,62 @@ export function serializeIFC(document: DocumentSchema, options: SerializeOptions
   const serializer = new IFCSerializer(document, options);
   return serializer.serialize();
 }
+
+/**
+ * T-IO-002: Export a DocumentSchema to a minimal but valid IFC 2x3 string.
+ *
+ * Produces:
+ *  - ISO-10303-21 envelope with FILE_DESCRIPTION, FILE_NAME, FILE_SCHEMA
+ *  - IFCPROJECT, IFCSITE, IFCBUILDING
+ *  - IFCBUILDINGSTOREY for every level in doc.organization.levels
+ *  - IFCWALL for every wall element
+ */
+export function exportToIFC(doc: DocumentSchema): string {
+  const lines: string[] = [];
+  let id = 1;
+  const next = (): number => id++;
+
+  const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
+  const projectName = doc.name || 'OpenCAD Project';
+
+  lines.push('ISO-10303-21;');
+  lines.push('HEADER;');
+  lines.push(`FILE_DESCRIPTION(('OpenCAD Export'),'2;1');`);
+  lines.push(`FILE_NAME('${projectName}','${now}',(''),(''),'','OpenCAD','');`);
+  lines.push(`FILE_SCHEMA(('IFC2X3'));`);
+  lines.push('ENDSEC;');
+  lines.push('DATA;');
+
+  const idProject  = next();
+  const idSite     = next();
+  const idBuilding = next();
+
+  lines.push(`#${idProject}=IFCPROJECT('${doc.id}',$,'${projectName}',$,$,$,$,(),#${idProject + 100});`);
+  lines.push(`#${idSite}=IFCSITE('${doc.id}-site',$,'Site',$,$,$,$,$,.ELEMENT.,$,$,$,$,());`);
+  lines.push(`#${idBuilding}=IFCBUILDING('${doc.id}-bldg',$,'Building',$,$,$,$,$,.ELEMENT.,$,$,());`);
+
+  const levels = Object.values(doc.organization.levels);
+  const storeyIds: Record<string, number> = {};
+  for (const level of levels) {
+    const sid = next();
+    storeyIds[level.id] = sid;
+    lines.push(`#${sid}=IFCBUILDINGSTOREY('${level.id}',$,'${level.name}',$,$,$,$,$,.ELEMENT.,${level.elevation}.);`);
+  }
+
+  const walls = Object.values(doc.content.elements).filter((e) => e.type === 'wall');
+  for (const wall of walls) {
+    const wid = next();
+    const name = (wall.properties['Name']?.value as string) || 'Wall';
+    const storeyRef = wall.levelId && storeyIds[wall.levelId]
+      ? `#${storeyIds[wall.levelId]}`
+      : '$';
+    const bbox = wall.boundingBox;
+    const bboxComment = ` /* bbox:${bbox.min.x},${bbox.min.y},${bbox.min.z}:${bbox.max.x},${bbox.max.y},${bbox.max.z} */`;
+    lines.push(`#${wid}=IFCWALL('${wall.id}',$,'${name}',$,$,${storeyRef},$,$);${bboxComment}`);
+  }
+
+  lines.push('ENDSEC;');
+  lines.push('END-ISO-10303-21;');
+
+  return lines.join('\n');
+}

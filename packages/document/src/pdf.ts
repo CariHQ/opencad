@@ -174,6 +174,111 @@ export function renderDocumentToPDF(
   return new Blob([textBefore + textAfterImage], { type: 'application/pdf' });
 }
 
+/**
+ * T-IO-004: Export a DocumentSchema to a base64 data URL of a minimal PDF.
+ *
+ * Generates a content stream from 2D line/wall elements in the document
+ * and embeds it inside a minimal PDF 1.4 file.
+ * Returns `data:application/pdf;base64,...`.
+ */
+export function exportToPDFDataURL(doc: DocumentSchema): string {
+  const pageW = 595;
+  const pageH = 842;
+
+  const elements = Object.values(doc.content.elements);
+  const streamLines: string[] = [];
+  streamLines.push('q');
+
+  for (const el of elements) {
+    const t = el.transform?.translation ?? { x: 0, y: 0, z: 0 };
+
+    if (el.type === 'line' || el.type === 'wall') {
+      const sx = (el.properties['StartX']?.value as number) ?? t.x;
+      const sy = (el.properties['StartY']?.value as number) ?? t.y;
+      const ex = (el.properties['EndX']?.value as number) ?? (el.boundingBox?.max.x ?? sx + 100);
+      const ey = (el.properties['EndY']?.value as number) ?? (el.boundingBox?.max.y ?? sy);
+      const scale = 0.2;
+      streamLines.push(`${(sx * scale).toFixed(3)} ${(pageH - sy * scale).toFixed(3)} m`);
+      streamLines.push(`${(ex * scale).toFixed(3)} ${(pageH - ey * scale).toFixed(3)} l`);
+      streamLines.push('S');
+    } else if (el.type === 'circle') {
+      const cx = (el.properties['CenterX']?.value as number) ?? t.x;
+      const cy = (el.properties['CenterY']?.value as number) ?? t.y;
+      const r  = (el.properties['Radius']?.value as number) ?? 25;
+      const scale = 0.2;
+      const pcx = cx * scale;
+      const pcy = pageH - cy * scale;
+      const pr  = r * scale;
+      const k   = 0.5523 * pr;
+      streamLines.push(`${(pcx - pr).toFixed(3)} ${pcy.toFixed(3)} m`);
+      streamLines.push(`${(pcx - pr).toFixed(3)} ${(pcy + k).toFixed(3)} ${(pcx - k).toFixed(3)} ${(pcy + pr).toFixed(3)} ${pcx.toFixed(3)} ${(pcy + pr).toFixed(3)} c`);
+      streamLines.push(`${(pcx + k).toFixed(3)} ${(pcy + pr).toFixed(3)} ${(pcx + pr).toFixed(3)} ${(pcy + k).toFixed(3)} ${(pcx + pr).toFixed(3)} ${pcy.toFixed(3)} c`);
+      streamLines.push(`${(pcx + pr).toFixed(3)} ${(pcy - k).toFixed(3)} ${(pcx + k).toFixed(3)} ${(pcy - pr).toFixed(3)} ${pcx.toFixed(3)} ${(pcy - pr).toFixed(3)} c`);
+      streamLines.push(`${(pcx - k).toFixed(3)} ${(pcy - pr).toFixed(3)} ${(pcx - pr).toFixed(3)} ${(pcy - k).toFixed(3)} ${(pcx - pr).toFixed(3)} ${pcy.toFixed(3)} c`);
+      streamLines.push('S');
+    }
+  }
+
+  streamLines.push('Q');
+  const contentStream = streamLines.join('\n') + '\n';
+
+  const parts: string[] = [];
+  const offsets: number[] = [];
+  let byteOffset = 0;
+
+  function append(s: string): void {
+    parts.push(s);
+    byteOffset += s.length;
+  }
+
+  append('%PDF-1.4\n');
+  offsets[1] = byteOffset;
+  append('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  offsets[2] = byteOffset;
+  append('2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n');
+  offsets[3] = byteOffset;
+  append(
+    `3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${pageW} ${pageH}] ` +
+    `/Contents 4 0 R /Resources << >> >>\nendobj\n`,
+  );
+  offsets[4] = byteOffset;
+  append(`4 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}endstream\nendobj\n`);
+  offsets[5] = byteOffset;
+  const docTitle = doc.name || 'OpenCAD Export';
+  const infoStr = `5 0 obj\n<< /Title (${_pdfEscape(docTitle)}) /Producer (OpenCAD) >>\nendobj\n`;
+  append(infoStr);
+
+  const xrefOffset = byteOffset;
+  const objCount = 6;
+  const xrefLines = ['xref', `0 ${objCount}`, '0000000000 65535 f \n'];
+  for (let i = 1; i < objCount; i++) {
+    xrefLines.push(`${String(offsets[i] ?? 0).padStart(10, '0')} 00000 n \n`);
+  }
+  const xrefStr = xrefLines.join('\n') + '\n';
+  const trailerStr =
+    `trailer\n<< /Size ${objCount} /Root 1 0 R /Info 5 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`;
+
+  const pdfStr = parts.join('') + xrefStr + trailerStr;
+
+  let base64: string;
+  if (typeof btoa === 'function') {
+    const bytes = new TextEncoder().encode(pdfStr);
+    let binaryStr = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binaryStr += String.fromCharCode(bytes[i]);
+    }
+    base64 = btoa(binaryStr);
+  } else {
+    base64 = Buffer.from(pdfStr, 'utf-8').toString('base64');
+  }
+
+  return `data:application/pdf;base64,${base64}`;
+}
+
+function _pdfEscape(s: string): string {
+  return s.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
 function base64ToUint8Array(base64: string): Uint8Array {
   if (typeof atob === 'function') {
     const binary = atob(base64);
