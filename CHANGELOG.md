@@ -1,3 +1,10 @@
+## [1.0.10](https://github.com/CariHQ/opencad/compare/v1.0.9...v1.0.10) (2026-04-19)
+
+
+### Bug Fixes
+
+* **ci:** increase Docker job timeout to 60 min for arm64 QEMU build ([0680ad1](https://github.com/CariHQ/opencad/commit/0680ad10e021f2002759fac9487e163b10638a22))
+
 ## [1.0.9](https://github.com/CariHQ/opencad/compare/v1.0.8...v1.0.9) (2026-04-19)
 
 

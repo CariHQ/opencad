@@ -1,6 +1,6 @@
 {
   "name": "opencad",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "private": true,
   "description": "Browser-native, AI-powered, open-source BIM platform",
   "license": "Apache-2.0",
