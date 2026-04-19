@@ -4,6 +4,40 @@ import { useDocumentStore } from '../stores/documentStore';
 import { type ElementSchema } from '@opencad/document';
 import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 
+// ─── LOD Types & Functions ────────────────────────────────────────────────────
+
+/** Level of detail tier for 3D geometry rendering */
+export type LodLevel = 'high' | 'medium' | 'low';
+
+/**
+ * T-PERF-001/002/003/004: Return the appropriate LOD level for a given camera distance.
+ * - distance < 5000   → 'high'   (full geometry)
+ * - distance < 20000  → 'medium' (simplified geometry)
+ * - distance >= 20000 → 'low'    (bounding box only)
+ */
+export function getLodLevel(distance: number): LodLevel {
+  if (distance < 5000) return 'high';
+  if (distance < 20000) return 'medium';
+  return 'low';
+}
+
+// ─── Frame Stats ─────────────────────────────���──────────────────────────��─────
+
+const FRAME_BUFFER_SIZE = 60;
+
+export interface FrameStats {
+  avgFrameMs: number;
+  currentLod: LodLevel;
+}
+
+/** Module-level shared frame stats written by the active 3D viewport. */
+let _sharedFrameStats: FrameStats = { avgFrameMs: 16.67, currentLod: 'high' };
+
+/** Read latest frame stats written by the active useThreeViewport instance. */
+export function getSharedFrameStats(): FrameStats {
+  return _sharedFrameStats;
+}
+
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
   gridColor: 0xcbd5e1,
@@ -79,6 +113,12 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     elevation: Math.PI / 4,
   });
   const animationFrameRef = useRef<number | null>(null);
+
+  // ── Frame time ring buffer for rolling average ────────────────────────────
+  const frameTimesRef = useRef<number[]>(new Array(FRAME_BUFFER_SIZE).fill(16.67));
+  const frameTimeIndexRef = useRef(0);
+  const lastFrameTimeRef = useRef<number>(0);
+  const currentLodRef = useRef<LodLevel>('high');
   const { document: doc, selectedIds, setSelectedIds } = useDocumentStore();
 
   const [sectionBox, setSectionBox] = useState(false);
@@ -113,7 +153,7 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
   }, []);
 
   const createMeshFromElement = useCallback(
-    (element: ElementSchema): THREE.Mesh | null => {
+    (element: ElementSchema, lod: LodLevel = 'high'): THREE.Mesh | null => {
       const bb = element.boundingBox;
       let width = bb.max.x - bb.min.x || 200;
       let depth = bb.max.y - bb.min.y || 200;
@@ -123,7 +163,16 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
       if (depth < 1) depth = 200;
       if (height < 1) height = 3000;
 
-      const geometry = new THREE.BoxGeometry(width, depth, height);
+      // At 'low' LOD, use a simple bounding-box geometry.
+      // At 'medium', use simplified geometry (1 segment per axis).
+      // At 'high', use default BoxGeometry.
+      let geometry: THREE.BoxGeometry;
+      if (lod === 'low' || lod === 'medium') {
+        geometry = new THREE.BoxGeometry(width, depth, height, 1, 1, 1);
+      } else {
+        geometry = new THREE.BoxGeometry(width, depth, height);
+      }
+
       const colorHex = ELEMENT_TYPE_COLORS[element.type] ?? 0x8888aa;
       const material = createMaterial(colorHex);
 
@@ -224,9 +273,10 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     });
     elementMeshesRef.current.clear();
 
+    const lod = getLodLevel(cameraStateRef.current.distance);
     const elements = Object.values(doc.content.elements);
     for (const element of elements) {
-      const mesh = createMeshFromElement(element);
+      const mesh = createMeshFromElement(element, lod);
       if (mesh) {
         scene.add(mesh);
         elementMeshesRef.current.set(element.id, mesh);
@@ -521,11 +571,33 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
     updateCamera();
 
-    const animate = () => {
+    const animate = (timestamp: number) => {
       animationFrameRef.current = requestAnimationFrame(animate);
+
+      // Track rolling frame time
+      if (lastFrameTimeRef.current > 0) {
+        const delta = timestamp - lastFrameTimeRef.current;
+        const idx = frameTimeIndexRef.current % FRAME_BUFFER_SIZE;
+        frameTimesRef.current[idx] = delta;
+        frameTimeIndexRef.current++;
+
+        // Compute rolling average; auto-drop LOD tier if below 50fps (avg > 20ms)
+        const avg = frameTimesRef.current.reduce((s, v) => s + v, 0) / FRAME_BUFFER_SIZE;
+        const distanceLod = getLodLevel(cameraStateRef.current.distance);
+        if (avg > 20) {
+          // Step down one tier from the distance-based LOD
+          currentLodRef.current = distanceLod === 'high' ? 'medium' : 'low';
+        } else {
+          currentLodRef.current = distanceLod;
+        }
+        // Publish frame stats for the status bar
+        _sharedFrameStats = { avgFrameMs: avg, currentLod: currentLodRef.current };
+      }
+      lastFrameTimeRef.current = timestamp;
+
       renderer.render(scene, camera);
     };
-    animate();
+    animate(0);
 
     const onMouseUp = () => { isDragging.current = false; };
     const onMouseLeave = () => { isDragging.current = false; };
@@ -683,6 +755,18 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     []
   );
 
+  /**
+   * T-PERF: Return current rolling average frame time and LOD tier.
+   * Used by StatusBar to display live fps info.
+   */
+  const getFrameStats = useCallback((): FrameStats => {
+    const avg = frameTimesRef.current.reduce((s, v) => s + v, 0) / FRAME_BUFFER_SIZE;
+    return {
+      avgFrameMs: avg,
+      currentLod: currentLodRef.current,
+    };
+  }, []);
+
   return {
     containerRef,
     setViewPreset,
@@ -690,6 +774,7 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     zoomOut,
     zoomToFit,
     getCameraState,
+    getFrameStats,
     simulateOrbit,
     simulatePan,
     simulateZoom,

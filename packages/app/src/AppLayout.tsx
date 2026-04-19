@@ -381,7 +381,7 @@ export function AppLayout() {
         )}
       </div>
 
-      {chromeVisible && <StatusBar />}
+      {chromeVisible && <StatusBar viewType={activeView} />}
       <FeedbackWidget open={showFeedback} onClose={() => setShowFeedback(false)} />
 
       {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
