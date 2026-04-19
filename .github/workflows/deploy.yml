@@ -111,7 +111,9 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Build workspace dependencies
-        run: pnpm --filter=!@opencad/app --filter=!@opencad/desktop --filter=!@opencad/e2e build
+        run: |
+          # Build only pure-JS packages — sync-rs needs wasm-pack which isn't available here
+          pnpm --filter=@opencad/shared --filter=@opencad/document --filter=@opencad/ai --filter=@opencad/geometry build
 
       - name: Build frontend
         env:
