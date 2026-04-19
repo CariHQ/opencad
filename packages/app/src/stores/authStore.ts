@@ -5,11 +5,15 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
   updateProfile,
+<<<<<<< HEAD
   multiFactor,
   TotpMultiFactorGenerator,
   type User,
   type TotpSecret,
   type MultiFactorResolver,
+=======
+  type User,
+>>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
 } from 'firebase/auth';
 import {
   doc,
@@ -32,11 +36,14 @@ export interface UserProfile {
   trialExpiresAt: Date | null;
 }
 
+<<<<<<< HEAD
 export interface TotpEnrollmentResult {
   secret: TotpSecret;
   qrCodeUrl: string;
 }
 
+=======
+>>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
 interface AuthState {
   status: AuthStatus;
   user: User | null;
@@ -47,12 +54,15 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
+<<<<<<< HEAD
   /** Start TOTP enrollment: generates a secret and returns the QR code URL. */
   enrollTotp: (user: User) => Promise<TotpEnrollmentResult | null>;
   /** Complete TOTP enrollment by verifying a one-time code. */
   verifyTotpEnrollment: (user: User, secret: TotpSecret, otp: string) => Promise<void>;
   /** Resolve a pending MFA sign-in challenge with a TOTP one-time code. */
   resolveMfaChallenge: (resolver: MultiFactorResolver, otp: string) => Promise<void>;
+=======
+>>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
 }
 
 const TRIAL_DAYS = 14;
@@ -180,6 +190,7 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     },
 
     clearError: () => set({ error: null }),
+<<<<<<< HEAD
 
     enrollTotp: async (user: User): Promise<TotpEnrollmentResult | null> => {
       if (!isFirebaseConfigured) return null;
@@ -207,5 +218,7 @@ export const useAuthStore = create<AuthState>((set, _get) => {
       const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, otp);
       await resolver.resolveSignIn(assertion);
     },
+=======
+>>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
   };
 });
