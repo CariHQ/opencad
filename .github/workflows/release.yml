@@ -48,6 +48,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          HUSKY: '0'   # disable pre-commit hook — wasm-pack not available on this runner
         run: pnpm exec semantic-release
 
   # ──────────────────────────────────────────────────────────────
