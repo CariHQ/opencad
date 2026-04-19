@@ -93,7 +93,7 @@ jobs:
             --min-instances=0 \
             --max-instances=10 \
             --add-cloudsql-instances=opencad-prod:us-central1:opencad-db \
-            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},CLOUD_SQL_INSTANCE=opencad-prod:us-central1:opencad-db,AUTH_ENABLED=true,JWT_SECRET=${{ secrets.JWT_SECRET }},STORAGE_BACKEND=gcs,GCS_BUCKET=${{ vars.GCS_BUCKET }},CORS_ORIGINS=https://opencad.archi" \
+            --set-env-vars="DATABASE_URL=${{ secrets.DATABASE_URL }},CLOUD_SQL_INSTANCE=opencad-prod:us-central1:opencad-db,AUTH_ENABLED=true,FIREBASE_PROJECT_ID=${{ vars.VITE_FIREBASE_PROJECT_ID }},JWT_SECRET=${{ secrets.JWT_SECRET }},STORAGE_BACKEND=gcs,GCS_BUCKET=${{ vars.GCS_BUCKET }},CORS_ORIGINS=https://opencad.archi,GITHUB_TOKEN=${{ secrets.OPENCAD_GITHUB_TOKEN }},GITHUB_REPO=CariHQ/opencad" \
             --quiet
 
   # ── 3. Build frontend & deploy to Firebase Hosting ───────────────────────────
