@@ -150,14 +150,14 @@ describe('T-PAY-003: SubscriptionModal', () => {
     expect(screen.getByText(/most popular/i)).toBeInTheDocument();
   });
 
-  it('shows price for Pro plan (£29)', () => {
+  it('shows price for Pro plan ($29)', () => {
     render(<SubscriptionModal onClose={onClose} />);
-    expect(screen.getByText(/£29/)).toBeInTheDocument();
+    expect(screen.getByText(/\$29/)).toBeInTheDocument();
   });
 
-  it('shows price for Business plan (£99)', () => {
+  it('shows price for Business plan ($99)', () => {
     render(<SubscriptionModal onClose={onClose} />);
-    expect(screen.getByText(/£99/)).toBeInTheDocument();
+    expect(screen.getByText(/\$99/)).toBeInTheDocument();
   });
 
   it('calls onClose when close button clicked', () => {
