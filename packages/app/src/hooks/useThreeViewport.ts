@@ -21,6 +21,41 @@ const LOD_DEFAULT_DISTANCE = 50000; // mm — elements beyond this are simplifie
 const FPS_WINDOW = 10; // rolling window for FPS computation
 const FPS_LOW_THRESHOLD = 40; // below this, auto-reduce detail
 
+// ─── LOD Types & Frame Stats (status bar) ────────────────────────────────────
+
+/** Level of detail tier for 3D geometry rendering */
+export type LodLevel = 'high' | 'medium' | 'low';
+
+/**
+ * T-PERF-001/002/003/004: Return the appropriate LOD level for a given camera distance.
+ * - distance < 5000   → 'high'   (full geometry)
+ * - distance < 20000  → 'medium' (simplified geometry)
+ * - distance >= 20000 → 'low'    (bounding box only)
+ */
+export function getLodLevel(distance: number): LodLevel {
+  if (distance < 5000) return 'high';
+  if (distance < 20000) return 'medium';
+  return 'low';
+}
+
+export interface FrameStats {
+  avgFrameMs: number;
+  currentLod: LodLevel;
+}
+
+/** Module-level shared frame stats written by the active 3D viewport. */
+let _sharedFrameStats: FrameStats = { avgFrameMs: 16.67, currentLod: 'high' };
+
+/** Read latest frame stats written by the active useThreeViewport instance. */
+export function getSharedFrameStats(): FrameStats {
+  return _sharedFrameStats;
+}
+
+/** Internal: publish frame stats from inside the render loop. */
+export function _publishFrameStats(stats: FrameStats): void {
+  _sharedFrameStats = stats;
+}
+
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
   gridColor: 0xcbd5e1,
