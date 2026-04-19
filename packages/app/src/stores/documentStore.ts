@@ -78,7 +78,7 @@ interface DocumentState {
     type: string;
     layerId: string;
     properties?: Record<string, unknown>;
-    geometry?: { type: string; data: Record<string, unknown> };
+    geometry?: { type: string; data: unknown };
   }) => string;
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
@@ -108,6 +108,10 @@ interface DocumentState {
   deleteLevel: (levelId: string) => void;
   renameLevel: (levelId: string, name: string) => void;
   renameProject: (name: string) => void;
+
+  /** Design review workflow status */
+  reviewStatus: 'none' | 'pending' | 'approved' | 'changes_requested';
+  setReviewStatus: (status: 'none' | 'pending' | 'approved' | 'changes_requested') => void;
 }
 
 export const useDocumentStore = create<DocumentState>()(
@@ -129,6 +133,9 @@ export const useDocumentStore = create<DocumentState>()(
       selectedLevelId: null,
 
       userRole: null,
+
+      reviewStatus: 'none' as const,
+      setReviewStatus: (status) => set({ reviewStatus: status }),
 
       toolParams: {
         wall: { height: 3000, thickness: 200, material: 'Concrete', wallType: 'interior' },
