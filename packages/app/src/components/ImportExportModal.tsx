@@ -7,6 +7,9 @@ import {
   parseDWG,
   parseRVT,
   serializePDF,
+  exportToIFC,
+  exportToDXF,
+  exportToPDFDataURL,
 } from '@opencad/document';
 
 interface ImportExportModalProps {
@@ -72,11 +75,33 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
     const name = doc.name || 'export';
 
     if (format === 'ifc') {
-      triggerDownload(serializeIFC(doc), `${name}.ifc`, 'text/plain');
+      const ifcContent = exportToIFC(doc) || serializeIFC(doc);
+      triggerDownload(ifcContent, `${name}.ifc`, 'text/plain');
     } else if (format === 'dxf') {
-      triggerDownload(serializeDXF(doc), `${name}.dxf`, 'application/dxf');
+      const dxfContent = exportToDXF(doc) || serializeDXF(doc);
+      triggerDownload(dxfContent, `${name}.dxf`, 'application/dxf');
     } else if (format === 'pdf') {
-      triggerDownload(serializePDF(doc), `${name}.pdf`, 'application/pdf');
+      const dataUrl = exportToPDFDataURL(doc);
+      const base64 = dataUrl.replace('data:application/pdf;base64,', '');
+      let pdfContent: string;
+      try {
+        pdfContent = atob(base64);
+      } catch {
+        pdfContent = serializePDF(doc);
+      }
+      const bytes = new Uint8Array(pdfContent.length);
+      for (let i = 0; i < pdfContent.length; i++) {
+        bytes[i] = pdfContent.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'application/pdf' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      onClose();
+      return;
     }
 
     onClose();

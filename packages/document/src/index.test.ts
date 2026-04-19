@@ -1002,4 +1002,196 @@ EOF`;
       });
     });
   });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // T-IO-002 / T-IO-003 / T-IO-004 — Export pipeline
+  // ──────────────────────────────────────────────────────────────────────────
+
+  describe('T-IO-002: exportToIFC — doc with one wall → contains IFCWALL', () => {
+    function makeWallDoc(id: string) {
+      const doc = createProject(id, 'user');
+      const layerId = Object.keys(doc.organization.layers)[0];
+      const levelId = Object.keys(doc.organization.levels)[0];
+      const wallId = 'wall-' + id;
+      doc.content.elements[wallId] = {
+        id: wallId,
+        type: 'wall',
+        properties: {
+          Name: { type: 'string', value: 'Test Wall' },
+          StartX: { type: 'number', value: 0 },
+          StartY: { type: 'number', value: 0 },
+          EndX: { type: 'number', value: 5000 },
+          EndY: { type: 'number', value: 0 },
+        },
+        propertySets: [],
+        geometry: { type: 'brep', data: null },
+        layerId,
+        levelId,
+        transform: { translation: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+        boundingBox: {
+          min: { x: 0, y: 0, z: 0, _type: 'Point3D' as const },
+          max: { x: 5000, y: 200, z: 3000, _type: 'Point3D' as const },
+        },
+        metadata: {
+          id: wallId, createdBy: 'user', createdAt: 0, updatedAt: 0, version: { clock: {} },
+        },
+        visible: true,
+        locked: false,
+      };
+      return doc;
+    }
+
+    it('should produce a string that contains IFCWALL', async () => {
+      const { exportToIFC } = await import('./ifc');
+      const result = exportToIFC(makeWallDoc('ifc-001'));
+      expect(typeof result).toBe('string');
+      expect(result).toContain('IFCWALL');
+    });
+
+    it('should include ISO-10303-21 header tokens', async () => {
+      const { exportToIFC } = await import('./ifc');
+      const result = exportToIFC(makeWallDoc('ifc-002'));
+      expect(result).toContain('ISO-10303-21');
+      expect(result).toContain('FILE_DESCRIPTION');
+      expect(result).toContain('FILE_NAME');
+      expect(result).toContain('FILE_SCHEMA');
+    });
+
+    it('should include IFCBUILDINGSTOREY for each level', async () => {
+      const { exportToIFC } = await import('./ifc');
+      const doc = createProject('ifc-003', 'user');
+      const result = exportToIFC(doc);
+      expect(result).toContain('IFCBUILDINGSTOREY');
+    });
+
+    it('should include IFCPROJECT and IFCBUILDING', async () => {
+      const { exportToIFC } = await import('./ifc');
+      const doc = createProject('ifc-004', 'user');
+      const result = exportToIFC(doc);
+      expect(result).toContain('IFCPROJECT');
+      expect(result).toContain('IFCBUILDING');
+    });
+  });
+
+  describe('T-IO-003: exportToDXF — doc with one wall → contains LINE', () => {
+    function makeWallDoc(id: string) {
+      const doc = createProject(id, 'user');
+      const layerId = Object.keys(doc.organization.layers)[0];
+      const levelId = Object.keys(doc.organization.levels)[0];
+      const wallId = 'wall-' + id;
+      doc.content.elements[wallId] = {
+        id: wallId,
+        type: 'wall',
+        properties: {
+          Name: { type: 'string', value: 'DXF Wall' },
+          StartX: { type: 'number', value: 0 },
+          StartY: { type: 'number', value: 0 },
+          EndX: { type: 'number', value: 3000 },
+          EndY: { type: 'number', value: 0 },
+        },
+        propertySets: [],
+        geometry: { type: 'brep', data: null },
+        layerId,
+        levelId,
+        transform: { translation: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+        boundingBox: {
+          min: { x: 0, y: 0, z: 0, _type: 'Point3D' as const },
+          max: { x: 3000, y: 200, z: 3000, _type: 'Point3D' as const },
+        },
+        metadata: {
+          id: wallId, createdBy: 'user', createdAt: 0, updatedAt: 0, version: { clock: {} },
+        },
+        visible: true,
+        locked: false,
+      };
+      return doc;
+    }
+
+    it('should produce a string that contains LINE', async () => {
+      const { exportToDXF } = await import('./dwg');
+      const result = exportToDXF(makeWallDoc('dxf-001'));
+      expect(typeof result).toBe('string');
+      expect(result).toContain('LINE');
+    });
+
+    it('should include DXF HEADER and ENTITIES sections', async () => {
+      const { exportToDXF } = await import('./dwg');
+      const result = exportToDXF(makeWallDoc('dxf-002'));
+      expect(result).toContain('HEADER');
+      expect(result).toContain('ENTITIES');
+      expect(result).toContain('ENDSEC');
+    });
+
+    it('should emit CIRCLE for column elements', async () => {
+      const { exportToDXF } = await import('./dwg');
+      const doc = createProject('dxf-003', 'user');
+      const layerId = Object.keys(doc.organization.layers)[0];
+      const levelId = Object.keys(doc.organization.levels)[0];
+      const colId = 'col-001';
+      doc.content.elements[colId] = {
+        id: colId,
+        type: 'column',
+        properties: { CenterX: { type: 'number', value: 1000 }, CenterY: { type: 'number', value: 1000 }, Radius: { type: 'number', value: 150 } },
+        propertySets: [],
+        geometry: { type: 'brep', data: null },
+        layerId,
+        levelId,
+        transform: { translation: { x: 1000, y: 1000, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+        boundingBox: {
+          min: { x: 850, y: 850, z: 0, _type: 'Point3D' as const },
+          max: { x: 1150, y: 1150, z: 3000, _type: 'Point3D' as const },
+        },
+        metadata: { id: colId, createdBy: 'user', createdAt: 0, updatedAt: 0, version: { clock: {} } },
+        visible: true,
+        locked: false,
+      };
+      const result = exportToDXF(doc);
+      expect(result).toContain('CIRCLE');
+    });
+  });
+
+  describe('T-IO-004: exportToPDFDataURL → returns data:application/pdf;base64,...', () => {
+    it('should return a string starting with data:application/pdf', async () => {
+      const { exportToPDFDataURL } = await import('./pdf');
+      const doc = createProject('pdf-001', 'user');
+      const result = exportToPDFDataURL(doc);
+      expect(typeof result).toBe('string');
+      expect(result.startsWith('data:application/pdf;base64,')).toBe(true);
+    });
+
+    it('should contain valid base64 after the header', async () => {
+      const { exportToPDFDataURL } = await import('./pdf');
+      const doc = createProject('pdf-002', 'user');
+      const result = exportToPDFDataURL(doc);
+      const b64Part = result.replace('data:application/pdf;base64,', '');
+      expect(/^[A-Za-z0-9+/]+=*$/.test(b64Part)).toBe(true);
+    });
+
+    it('should not throw when doc has wall elements', async () => {
+      const { exportToPDFDataURL } = await import('./pdf');
+      const doc = createProject('pdf-003', 'user');
+      const layerId = Object.keys(doc.organization.layers)[0];
+      const levelId = Object.keys(doc.organization.levels)[0];
+      const lineId = 'wall-pdf-001';
+      doc.content.elements[lineId] = {
+        id: lineId,
+        type: 'wall',
+        properties: { StartX: { type: 'number', value: 0 }, StartY: { type: 'number', value: 0 }, EndX: { type: 'number', value: 2000 }, EndY: { type: 'number', value: 0 } },
+        propertySets: [],
+        geometry: { type: 'brep', data: null },
+        layerId,
+        levelId,
+        transform: { translation: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+        boundingBox: {
+          min: { x: 0, y: 0, z: 0, _type: 'Point3D' as const },
+          max: { x: 2000, y: 200, z: 3000, _type: 'Point3D' as const },
+        },
+        metadata: { id: lineId, createdBy: 'user', createdAt: 0, updatedAt: 0, version: { clock: {} } },
+        visible: true,
+        locked: false,
+      };
+      const result = exportToPDFDataURL(doc);
+      expect(result.startsWith('data:application/pdf;base64,')).toBe(true);
+    });
+  });
 });

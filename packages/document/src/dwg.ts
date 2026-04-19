@@ -1013,3 +1013,104 @@ export function exportDXF(document: DocumentSchema): string {
 
   return lines.join('\n');
 }
+
+/**
+ * T-IO-003: Export a DocumentSchema to a minimal DXF string.
+ *
+ * Produces:
+ *  - HEADER section with $ACADVER and $INSUNITS
+ *  - ENTITIES section with LINE for walls, CIRCLE for columns,
+ *    and appropriate entities for other element types
+ */
+export function exportToDXF(doc: DocumentSchema): string {
+  const lines: string[] = [];
+  let handle = 1;
+  const nextHandle = (): string => `${(handle++).toString(16).toUpperCase()}`;
+
+  lines.push('0', 'SECTION', '2', 'HEADER');
+  lines.push('9', '$ACADVER', '1', 'AC1015');
+  lines.push('9', '$INSUNITS', '70', '4');
+  lines.push('0', 'ENDSEC');
+
+  lines.push('0', 'SECTION', '2', 'ENTITIES');
+
+  for (const element of Object.values(doc.content.elements)) {
+    const layerName = doc.organization.layers[element.layerId]?.name ?? '0';
+    const t = element.transform?.translation ?? { x: 0, y: 0, z: 0 };
+    const h = nextHandle();
+
+    if (element.type === 'wall') {
+      const sx = (element.properties['StartX']?.value as number) ?? t.x;
+      const sy = (element.properties['StartY']?.value as number) ?? t.y;
+      const ex = (element.properties['EndX']?.value as number) ?? element.boundingBox.max.x;
+      const ey = (element.properties['EndY']?.value as number) ?? t.y;
+      lines.push(
+        '0', 'LINE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbLine',
+        '10', String(sx), '20', String(sy), '30', String(t.z),
+        '11', String(ex), '21', String(ey), '31', String(t.z),
+      );
+    } else if (element.type === 'column') {
+      const cx = (element.properties['CenterX']?.value as number) ?? t.x;
+      const cy = (element.properties['CenterY']?.value as number) ?? t.y;
+      const r  = (element.properties['Radius']?.value as number) ?? 100;
+      lines.push(
+        '0', 'CIRCLE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbCircle',
+        '10', String(cx), '20', String(cy), '30', String(t.z),
+        '40', String(r),
+      );
+    } else if (element.type === 'line') {
+      const pts = (element as { points?: Array<{ x: number; y: number; z: number }> }).points ?? [];
+      const sx = pts[0]?.x ?? t.x;
+      const sy = pts[0]?.y ?? t.y;
+      const sz = pts[0]?.z ?? t.z;
+      const ex = pts[1]?.x ?? (element.properties['EndX']?.value as number ?? sx);
+      const ey = pts[1]?.y ?? (element.properties['EndY']?.value as number ?? sy);
+      const ez = pts[1]?.z ?? sz;
+      lines.push(
+        '0', 'LINE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbLine',
+        '10', String(sx), '20', String(sy), '30', String(sz),
+        '11', String(ex), '21', String(ey), '31', String(ez),
+      );
+    } else if (element.type === 'circle') {
+      const cx = (element.properties['CenterX']?.value as number) ?? t.x;
+      const cy = (element.properties['CenterY']?.value as number) ?? t.y;
+      const r  = (element.properties['Radius']?.value as number) ?? 25;
+      lines.push(
+        '0', 'CIRCLE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbCircle',
+        '10', String(cx), '20', String(cy), '30', String(t.z),
+        '40', String(r),
+      );
+    } else if (element.type === 'polyline') {
+      const pts = (element as { points?: Array<{ x: number; y: number }> }).points ?? [];
+      lines.push(
+        '0', 'LWPOLYLINE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbPolyline',
+        '90', String(pts.length),
+        '70', '0',
+      );
+      for (const pt of pts) {
+        lines.push('10', String(pt.x), '20', String(pt.y));
+      }
+    } else {
+      lines.push(
+        '0', element.type.toUpperCase(), '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '10', String(t.x), '20', String(t.y), '30', String(t.z),
+      );
+    }
+  }
+
+  lines.push('0', 'ENDSEC');
+  lines.push('0', 'EOF');
+
+  return lines.join('\n');
+}
