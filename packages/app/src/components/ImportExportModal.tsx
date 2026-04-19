@@ -31,9 +31,8 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
     setError(null);
 
     try {
-      const ext = file.name.toLowerCase().split('.').pop();
-
       if (file.name.toLowerCase().endsWith('.ifc')) {
+        const content = await file.text();
         const parsed = parseIFC(content);
         loadDocumentSchema(parsed);
       } else {

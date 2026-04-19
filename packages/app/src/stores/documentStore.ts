@@ -102,8 +102,6 @@ interface DocumentState {
   getVersionList: () => Array<{ version: number; timestamp: number; message?: string }>;
   loadDocumentSchema: (schema: DocumentSchema) => void;
 
-  loadDocumentSchema: (schema: DocumentSchema) => void;
-
   setActiveLevel: (levelId: string) => void;
   addLevel: (params: { name: string; elevation: number; height?: number }) => string;
   updateLevel: (levelId: string, updates: { name?: string; elevation?: number; height?: number }) => void;
@@ -522,16 +520,6 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       loadDocumentSchema: (schema) => {
-        const { model } = get();
-        if (model) {
-          model.loadDocument(schema);
-          set({ document: { ...model.documentData } });
-        } else {
-          set({ document: schema });
-        }
-      },
-
-      loadDocumentSchema: (schema) => {
         const existing = get().model;
         const userId = existing ? existing.documentData.metadata.createdBy : 'user-1';
         const newModel = new DocumentModel(schema.id, userId);
@@ -539,7 +527,6 @@ export const useDocumentStore = create<DocumentState>()(
         set({
           document: { ...newModel.documentData },
           model: newModel,
-          currentProjectId: schema.id,
           lastSaved: Date.now(),
           history: [],
           historyIndex: -1,
