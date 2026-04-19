@@ -50,6 +50,7 @@ import { WindAnalysisPanel } from './components/WindAnalysisPanel';
 import { SplitViewport } from './components/SplitViewport';
 import { PlacementPanel } from './components/PlacementPanel';
 import { AuthModal } from './components/AuthModal';
+import { useAuthStore } from './stores/authStore';
 import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
@@ -108,6 +109,7 @@ export function AppLayout() {
   const [showModal, setShowModal] = useState<'import' | 'export' | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
+  const { status: authStatus, profile: authProfile, signOut: authSignOut } = useAuthStore();
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>('opencad-rightPanelTab', 'layers');
@@ -230,7 +232,19 @@ export function AppLayout() {
             {can('panel:ai') && (
               <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant"><span className="tool-icon"><Bot size={15} /></span></button>
             )}
-            <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In"><span className="tool-icon"><User size={15} /></span></button>
+            {authStatus === 'authenticated' && authProfile ? (
+              <button
+                className="toolbar-btn toolbar-btn--user"
+                onClick={() => setShowSettings(true)}
+                title={authProfile.name || authProfile.email}
+              >
+                <span className="tool-icon user-avatar">
+                  {(authProfile.name || authProfile.email).charAt(0).toUpperCase()}
+                </span>
+              </button>
+            ) : (
+              <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In"><span className="tool-icon"><User size={15} /></span></button>
+            )}
             <button className="toolbar-btn" onClick={() => setShowSettings(true)} title="Settings"><span className="tool-icon"><Settings size={15} /></span></button>
             <div className="toolbar-sep" />
             <button className={`toolbar-btn panel-toggle-btn${rightVisible ? ' panel-on' : ''}`} onClick={() => setShowRightPanel((v) => !v)} title="Toggle properties (⌘])">
