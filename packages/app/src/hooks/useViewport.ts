@@ -1,6 +1,15 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 
+// ── Text geometry data stored inside ElementSchema.geometry.data ──────────────
+export interface TextGeometryData {
+  x: number;
+  y: number;
+  content: string;
+  fontSize: number;
+  fontFamily: string;
+}
+
 const LIGHT_THEME = {
   background: '#e8e8e8',
   grid: '#d0d0d0',
@@ -114,6 +123,12 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [currentSnap, setCurrentSnap] = useState<SnapResult | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
+
+  // ─── Text tool state ────────────────────────────────────────────────────────
+  // When the user clicks with the text tool active, drawingText records the
+  // world-space insertion point so the Viewport can show a floating <input>.
+  const [drawingText, setDrawingText] = useState<{ x: number; y: number } | null>(null);
+  const textInputRef = useRef<HTMLInputElement>(null);
 
   const applySnapping = useCallback((point: Point): Point => {
     if (!doc || !snapEnabled) return point;
@@ -369,6 +384,39 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     }
   }, [doc, addElement, toolParams]);
 
+  // ─── Text tool: confirm / cancel ──────────────────────────────────────────
+
+  /** Called when the user presses Enter or blurs the text overlay input. */
+  const confirmText = useCallback((content: string) => {
+    if (!drawingText) return;
+    const pos = drawingText;
+    setDrawingText(null);
+
+    const trimmed = content.trim();
+    if (!trimmed) return; // empty input — cancel silently
+
+    if (!doc) return;
+    const layerId = Object.keys(doc.organization.layers)[0] || 'default';
+    const textData: TextGeometryData = {
+      x: pos.x, y: pos.y,
+      content: trimmed,
+      fontSize: 14,
+      fontFamily: 'sans-serif',
+    };
+    addElement({
+      type: 'text',
+      layerId,
+      geometry: { type: 'point', data: textData as unknown as Record<string, unknown> },
+      properties: { Name: { type: 'string', value: 'Text' } },
+    });
+    getStoreActions().pushHistory('Add text');
+  }, [drawingText, doc, addElement]);
+
+  /** Called when the user presses Escape on the text overlay input. */
+  const cancelText = useCallback(() => {
+    setDrawingText(null);
+  }, []);
+
   // ─── Canvas draw loop ─────────────────────────────────────────────────────
 
   const draw = useCallback(() => {
@@ -463,6 +511,15 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
           }
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
           ctx.stroke();
+        }
+      } else if (type === 'text') {
+        // Text elements use geometry.data (TextGeometryData) for position/content.
+        const td = element.geometry.data as TextGeometryData | null;
+        if (td) {
+          const tp = worldToScreen(td.x, td.y, width, height);
+          ctx.fillStyle = color;
+          ctx.font = `${td.fontSize}px ${td.fontFamily}`;
+          ctx.fillText(td.content, tp.x, tp.y);
         }
       } else {
         // Fallback: bounding box
@@ -562,6 +619,21 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
 
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     if (isViewOnly) return;
+
+    // Text tool: compute world position using canvas dimensions (with fallbacks for test env).
+    if (activeTool === 'text') {
+      const canvas = canvasRef.current;
+      const rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0 };
+      const cw = canvas?.width ?? 800;
+      const ch = canvas?.height ?? 600;
+      let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, cw, ch);
+      wp = applySnapping(wp);
+      setDrawingText({ x: wp.x, y: wp.y });
+      // Focus the input overlay on the next tick (it's rendered by Viewport once drawingText is set)
+      setTimeout(() => textInputRef.current?.focus(), 0);
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const rect = canvas.getBoundingClientRect();
@@ -659,6 +731,7 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'Escape') {
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
+      setDrawingText(null);
     }
     if ((event.ctrlKey || event.metaKey) && event.key === 'z' && !event.shiftKey) { event.preventDefault(); getStoreActions().undo(); return; }
     if ((event.ctrlKey || event.metaKey) && (event.key === 'y' || (event.key === 'z' && event.shiftKey))) { event.preventDefault(); getStoreActions().redo(); return; }
@@ -762,5 +835,10 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
     isViewOnly,
     zoomScale,
     viewTransform: { scale: zoomScale / SCALE, panX: OFFSET, panY: OFFSET },
+    // Text tool
+    drawingText,
+    textInputRef,
+    confirmText,
+    cancelText,
   };
 }

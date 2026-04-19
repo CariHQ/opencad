@@ -3,6 +3,10 @@ import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport, ViewPreset } from '../hooks/useThreeViewport';
 import { useRole } from '../hooks/useRole';
 
+// Canvas coordinate constants — must match useViewport.ts
+const VIEWPORT_SCALE = 20;
+const VIEWPORT_OFFSET = 5000;
+
 interface ViewportProps {
   viewType?: 'floor-plan' | '3d' | 'section';
 }
@@ -20,6 +24,10 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     handleCanvasMouseUp,
     handleCanvasDoubleClick,
     activeTool,
+    drawingText,
+    textInputRef,
+    confirmText,
+    cancelText,
   } = useViewport({ isViewOnly });
   const {
     containerRef: threeContainerRef,
@@ -37,6 +45,20 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     }
   };
 
+  // Compute screen position for the text overlay input from world-space coordinates.
+  // Uses the same formula as worldToScreen in useViewport:
+  //   sx = (wx + OFFSET) / SCALE + cw/2
+  const computeTextOverlayPosition = (): { left: number; top: number } => {
+    if (!drawingText) return { left: 0, top: 0 };
+    const canvas = canvasRef.current;
+    const cw = canvas?.offsetWidth ?? 800;
+    const ch = canvas?.offsetHeight ?? 600;
+    return {
+      left: (drawingText.x + VIEWPORT_OFFSET) / VIEWPORT_SCALE + cw / 2,
+      top: (drawingText.y + VIEWPORT_OFFSET) / VIEWPORT_SCALE + ch / 2,
+    };
+  };
+
   return (
     <div className="viewport-container" ref={containerRef}>
       {show3D ? (
@@ -46,15 +68,49 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           style={{ width: '100%', height: '100%' }}
         />
       ) : (
-        <canvas
-          ref={canvasRef}
-          className={`viewport-canvas${isViewOnly ? ' viewport-canvas--view-only' : ''}`}
-          onMouseDown={handleCanvasMouseDown}
-          onMouseMove={handleCanvasMouseMove}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseLeave={handleCanvasMouseUp}
-          onDoubleClick={handleCanvasDoubleClick}
-        />
+        <>
+          <canvas
+            ref={canvasRef}
+            className={`viewport-canvas${isViewOnly ? ' viewport-canvas--view-only' : ''}`}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseLeave={handleCanvasMouseUp}
+            onDoubleClick={handleCanvasDoubleClick}
+          />
+          {drawingText && (() => {
+            const { left, top } = computeTextOverlayPosition();
+            return (
+              <input
+                ref={textInputRef}
+                data-testid="text-tool-input"
+                style={{
+                  position: 'absolute',
+                  left,
+                  top,
+                  background: 'transparent',
+                  border: 'none',
+                  borderBottom: '1px solid currentColor',
+                  outline: 'none',
+                  color: 'inherit',
+                  font: `14px sans-serif`,
+                  minWidth: 80,
+                  zIndex: 100,
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    confirmText(e.currentTarget.value);
+                  } else if (e.key === 'Escape') {
+                    cancelText();
+                  }
+                }}
+                onBlur={(e) => confirmText(e.currentTarget.value)}
+                // eslint-disable-next-line jsx-a11y/no-autofocus
+                autoFocus
+              />
+            );
+          })()}
+        </>
       )}
       <div className="viewport-overlay">
         <div className="viewport-corner top-left">

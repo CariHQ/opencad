@@ -59,6 +59,7 @@ interface DocumentState {
     type: string;
     layerId: string;
     properties?: Record<string, unknown>;
+    geometry?: { type: string; data: Record<string, unknown> };
   }) => string;
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
@@ -265,6 +266,10 @@ export const useDocumentStore = create<DocumentState>()(
         const createdEl = model.documentData.content.elements[elementId];
         if (createdEl) {
           createdEl.boundingBox = computeBoundingBox(params.type, props);
+          // Apply optional geometry override (e.g. text tool, spline curves)
+          if (params.geometry) {
+            createdEl.geometry = params.geometry as typeof createdEl.geometry;
+          }
         }
 
         const newDoc = { ...model.documentData };
