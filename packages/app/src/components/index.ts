@@ -10,3 +10,5 @@ export { AIChatPanel } from './AIChatPanel';
 export { ImportExportModal } from './ImportExportModal';
 export { TemplateSelector } from './TemplateSelector';
 export { VersionHistoryPanel } from './VersionHistoryPanel';
+export { ReviewPanel } from './ReviewPanel';
+export { UpdateBanner } from './UpdateBanner';

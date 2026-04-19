@@ -1,22 +1,26 @@
 /**
  * VersionHistoryPanel component tests
  * T-UI-013: Version history panel creates and restores versions
+ * T-HIST-001: Change tracking history
  */
 import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 expect.extend(jestDomMatchers);
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
+import type { ChangeRecord } from '../stores/documentStore';
 
 const mockCreateVersion = vi.fn();
 const mockRestoreVersion = vi.fn();
 const mockGetVersionList = vi.fn();
+let mockChangeHistory: ChangeRecord[] = [];
 
 vi.mock('../stores/documentStore', () => ({
   useDocumentStore: vi.fn(() => ({
     createVersion: mockCreateVersion,
     restoreVersion: mockRestoreVersion,
     getVersionList: mockGetVersionList,
+    changeHistory: mockChangeHistory,
   })),
 }));
 
@@ -24,6 +28,7 @@ describe('T-UI-013: VersionHistoryPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetVersionList.mockReturnValue([]);
+    mockChangeHistory = [];
   });
 
   it('renders Version History title', () => {
@@ -128,5 +133,102 @@ describe('T-UI-013: VersionHistoryPanel', () => {
       expect(versionNumbers[0].textContent).toBe('v3');
       expect(versionNumbers[versionNumbers.length - 1].textContent).toBe('v1');
     });
+  });
+});
+
+// ─── T-HIST-001: Change history ───────────────────────────────────────────────
+
+describe('T-HIST-001: VersionHistoryPanel — change tracking', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetVersionList.mockReturnValue([]);
+    mockChangeHistory = [];
+  });
+
+  it('renders a Change History section', () => {
+    render(<VersionHistoryPanel />);
+    expect(screen.getByText(/Change History/i)).toBeInTheDocument();
+  });
+
+  it('shows empty state when no change records', () => {
+    render(<VersionHistoryPanel />);
+    expect(screen.getByText(/No changes recorded yet/i)).toBeInTheDocument();
+  });
+
+  it('renders add change record with element type and id', () => {
+    mockChangeHistory = [
+      {
+        id: 'cr-1',
+        timestamp: new Date('2024-01-15T12:30:00').getTime(),
+        type: 'add',
+        elementId: 'wall-001',
+        elementType: 'wall',
+        userId: 'kenroy',
+      },
+    ];
+    render(<VersionHistoryPanel />);
+    expect(screen.getByText(/added/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/wall/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/wall-001/i)).toBeInTheDocument();
+  });
+
+  it('renders update change record', () => {
+    mockChangeHistory = [
+      {
+        id: 'cr-2',
+        timestamp: Date.now(),
+        type: 'update',
+        elementId: 'door-002',
+        elementType: 'door',
+        userId: 'kenroy',
+      },
+    ];
+    render(<VersionHistoryPanel />);
+    expect(screen.getByText(/updated/i)).toBeInTheDocument();
+  });
+
+  it('renders delete change record', () => {
+    mockChangeHistory = [
+      {
+        id: 'cr-3',
+        timestamp: Date.now(),
+        type: 'delete',
+        elementId: 'slab-003',
+        elementType: 'slab',
+        userId: 'kenroy',
+      },
+    ];
+    render(<VersionHistoryPanel />);
+    expect(screen.getByText(/deleted/i)).toBeInTheDocument();
+  });
+
+  it('shows last 50 changes', () => {
+    mockChangeHistory = Array.from({ length: 60 }, (_, i) => ({
+      id: `cr-${i}`,
+      timestamp: 1700000000000 + i * 1000,
+      type: 'add' as const,
+      elementId: `wall-${i}`,
+      elementType: 'wall',
+      userId: 'kenroy',
+    }));
+    render(<VersionHistoryPanel />);
+    // Should show 50 entries (last 50 of 60)
+    const items = screen.getAllByText(/wall-\d+/);
+    expect(items.length).toBe(50);
+  });
+
+  it('shows the userId for each change', () => {
+    mockChangeHistory = [
+      {
+        id: 'cr-1',
+        timestamp: Date.now(),
+        type: 'add',
+        elementId: 'wall-001',
+        elementType: 'wall',
+        userId: 'Kenroy',
+      },
+    ];
+    render(<VersionHistoryPanel />);
+    expect(screen.getByText(/Kenroy/i)).toBeInTheDocument();
   });
 });

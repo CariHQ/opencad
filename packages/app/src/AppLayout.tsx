@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import {
-  FolderOpen, FileDown, Bot, Home, Sun, Moon, PanelLeft, PanelRight,
+  FolderOpen, FileDown, Bot, Home, Sun, Moon, PanelLeft, PanelRight, History, GitPullRequest,
   Layers, Settings2, Table2, LayoutDashboard, AlertTriangle, Camera, Sheet,
   MessageSquareWarning, Package, MessageCircle, Leaf, DollarSign, Palette,
   Stamp, Scissors, SunMedium, MapPin, FileText, Image, Store, Wind, User, Settings, Shield,
@@ -50,6 +50,9 @@ import { WindAnalysisPanel } from './components/WindAnalysisPanel';
 import { SplitViewport } from './components/SplitViewport';
 import { PlacementPanel } from './components/PlacementPanel';
 import { AuthModal } from './components/AuthModal';
+import { VersionHistoryPanel } from './components/VersionHistoryPanel';
+import { ReviewPanel } from './components/ReviewPanel';
+import { UpdateBanner } from './components/UpdateBanner';
 import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
@@ -57,13 +60,15 @@ import { MobileViewer } from './components/MobileViewer';
 import { FeedbackWidget } from './components/FeedbackWidget';
 import { PanelResizer } from './components/PanelResizer';
 import { AdminPanel } from './components/AdminPanel';
-import { isTauri, openFile, saveFile, saveFileDialog, openFileDialog, onFileDrop, tauriToggleMaximize } from './hooks/useTauri';
+import { isTauri, openFile, saveFile, saveFileDialog, openFileDialog, onFileDrop, tauriToggleMaximize, checkForUpdates } from './hooks/useTauri';
+import type { TauriUpdateInfo } from './hooks/useTauri';
 import './styles/app.css';
 
 type RightPanelTab =
   | 'layers' | 'properties' | 'schedule' | 'spaces' | 'clash' | 'render' | 'sheets'
   | 'bcf' | 'materials' | 'comments' | 'carbon' | 'cost' | 'hatch' | 'symbols'
-  | 'shadow' | 'section' | 'site' | 'specs' | 'photo' | 'marketplace' | 'wind' | 'admin';
+  | 'shadow' | 'section' | 'site' | 'specs' | 'photo' | 'marketplace' | 'wind' | 'admin'
+  | 'history' | 'review';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'layers',      title: 'Layers',           icon: <Layers size={16} strokeWidth={2} /> },
@@ -88,6 +93,8 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'marketplace', title: 'Marketplace',        icon: <Store size={16} strokeWidth={2} /> },
   { id: 'wind',        title: 'Wind Analysis',      icon: <Wind size={16} strokeWidth={2} /> },
   { id: 'admin',       title: 'Admin',              icon: <Shield size={16} strokeWidth={2} /> },
+  { id: 'history',     title: 'History',            icon: <History size={16} strokeWidth={2} /> },
+  { id: 'review',      title: 'Review',             icon: <GitPullRequest size={16} strokeWidth={2} /> },
 ];
 
 export function AppLayout() {
@@ -118,6 +125,7 @@ export function AppLayout() {
   const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso'>('apikeys');
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>('opencad-rightPanelTab', 'layers');
   const [currentFilePath, setCurrentFilePath] = useLocalStorage<string | null>('opencad-currentFilePath', null);
+  const [tauriUpdateInfo, setTauriUpdateInfo] = React.useState<TauriUpdateInfo | null>(null);
 
   const handleNativeSave = useCallback(async (): Promise<void> => {
     if (!doc) return;
@@ -194,6 +202,13 @@ export function AppLayout() {
     });
     return unlisten;
   }, [loadDocumentSchema, setCurrentFilePath]);
+
+  useEffect(() => {
+    if (!isTauri()) return;
+    void checkForUpdates().then((info) => {
+      if (info) setTauriUpdateInfo(info);
+    });
+  }, []);
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -289,6 +304,9 @@ export function AppLayout() {
         </header>
       )}
 
+      {tauriUpdateInfo && (
+        <UpdateBanner info={tauriUpdateInfo} onDismiss={() => setTauriUpdateInfo(null)} />
+      )}
       <div className="app-body">
         <aside ref={leftPanelRef} className={`app-left-panel${leftVisible ? '' : ' panel-collapsed'}`}>
           {can('panel:navigator') && <Navigator />}
@@ -370,6 +388,8 @@ export function AppLayout() {
               {rightPanelTab === 'marketplace' && <MarketplacePanel />}
               {rightPanelTab === 'wind' && <WindAnalysisPanel />}
               {rightPanelTab === 'admin' && <AdminPanel can={can} />}
+              {rightPanelTab === 'history' && <VersionHistoryPanel />}
+              {rightPanelTab === 'review' && <ReviewPanel />}
             </PanelErrorBoundary>
           </div>
         </aside>
