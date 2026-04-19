@@ -9,6 +9,7 @@
  * T-DSK-012: checkForUpdates() — call Tauri updater plugin
  */
 
+import { useState, useEffect } from 'react';
 import type { DocumentSchema } from '@opencad/document';
 
 declare global {
@@ -209,25 +210,7 @@ export async function tauriCheckForUpdate(): Promise<TauriUpdateStatus> {
   return invoke<TauriUpdateStatus>('check_for_update');
 }
 
-/** T-DSK-012: Check for available app updates via the Tauri updater plugin. */
-export interface UpdaterInfo {
-  version: string;
-  body: string;
-  date: string;
-}
-
-export async function checkForUpdates(): Promise<UpdaterInfo | null> {
-  if (!isTauri()) return null;
-  try {
-    return await window.__TAURI__!.core.invoke<UpdaterInfo>('plugin:updater|check');
-  } catch {
-    return null;
-  }
-}
-
 // ─── React hook ──────────────────────────────────────────────
-
-import { useState, useEffect } from 'react';
 
 export interface TauriState {
   isDesktop: boolean;

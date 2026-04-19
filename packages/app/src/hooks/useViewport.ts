@@ -200,8 +200,6 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   const [snapEnabled, setSnapEnabled] = useState(true);
   const [currentSnap, setCurrentSnap] = useState<SnapResult | null>(null);
   const [zoomScale, setZoomScale] = useState(1);
-  const [drawingText, setDrawingText] = useState<Point | null>(null);
-  const textInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Text tool state ────────────────────────────────────────────────────────
   // When the user clicks with the text tool active, drawingText records the
@@ -498,37 +496,6 @@ export function useViewport({ isViewOnly = false }: UseViewportOptions = {}) {
   }, [doc, addElement, toolParams]);
 
   // ─── Text tool: confirm / cancel ──────────────────────────────────────────
-
-  /** Called when the user presses Enter or blurs the text overlay input. */
-  const confirmText = useCallback((content: string) => {
-    if (!drawingText) return;
-    const pos = drawingText;
-    setDrawingText(null);
-
-    const trimmed = content.trim();
-    if (!trimmed) return; // empty input — cancel silently
-
-    if (!doc) return;
-    const layerId = Object.keys(doc.organization.layers)[0] || 'default';
-    const textData: TextGeometryData = {
-      x: pos.x, y: pos.y,
-      content: trimmed,
-      fontSize: 14,
-      fontFamily: 'sans-serif',
-    };
-    addElement({
-      type: 'text',
-      layerId,
-      geometry: { type: 'point', data: textData as unknown as Record<string, unknown> },
-      properties: { Name: { type: 'string', value: 'Text' } },
-    });
-    getStoreActions().pushHistory('Add text');
-  }, [drawingText, doc, addElement]);
-
-  /** Called when the user presses Escape on the text overlay input. */
-  const cancelText = useCallback(() => {
-    setDrawingText(null);
-  }, []);
 
   // ─── Canvas draw loop ─────────────────────────────────────────────────────
 

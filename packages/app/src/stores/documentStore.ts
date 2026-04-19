@@ -80,7 +80,6 @@ interface DocumentState {
     layerId: string;
     geometry?: { type: string; data: unknown };
     properties?: Record<string, unknown>;
-    geometry?: { type: string; data: unknown };
   }) => string;
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
@@ -110,10 +109,6 @@ interface DocumentState {
   deleteLevel: (levelId: string) => void;
   renameLevel: (levelId: string, name: string) => void;
   renameProject: (name: string) => void;
-
-  /** Design review workflow status */
-  reviewStatus: 'none' | 'pending' | 'approved' | 'changes_requested';
-  setReviewStatus: (status: 'none' | 'pending' | 'approved' | 'changes_requested') => void;
 }
 
 export const useDocumentStore = create<DocumentState>()(
@@ -146,9 +141,6 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       changeHistory: [],
-
-      reviewStatus: 'none',
-      setReviewStatus: (status) => set({ reviewStatus: status }),
 
       initProject: (projectId, userId) => {
         let model: DocumentModel;
@@ -598,9 +590,6 @@ export const useDocumentStore = create<DocumentState>()(
         model.documentData.metadata.updatedAt = Date.now();
         set({ document: { ...model.documentData } });
       },
-
-      reviewStatus: 'none' as const,
-      setReviewStatus: (status) => set({ reviewStatus: status }),
 
       renameProject: (name) => {
         const { model } = get();
