@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/CariHQ/opencad/compare/v1.0.5...v1.0.6) (2026-04-19)
+
+
+### Bug Fixes
+
+* **release:** install wasm-pack for desktop builds, fix filter syntax ([3ab1b24](https://github.com/CariHQ/opencad/commit/3ab1b2447bea2cad7149de3371159607c5ed6207))
+
 ## [1.0.5](https://github.com/CariHQ/opencad/compare/v1.0.4...v1.0.5) (2026-04-19)
 
 
