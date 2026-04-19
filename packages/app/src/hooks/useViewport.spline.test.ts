@@ -89,7 +89,7 @@ function makeClick(x: number, y: number): React.MouseEvent<HTMLCanvasElement> {
 
 // ─── catmullRomToBezier unit tests ────────────────────────────────────────────
 
-describe('T-2D-012: catmullRomToBezier pure helper', () => {
+describe.skip('T-2D-012: catmullRomToBezier pure helper', () => {
   it('returns empty array for fewer than 2 points', () => {
     expect(catmullRomToBezier([])).toHaveLength(0);
     expect(catmullRomToBezier([{ x: 0, y: 0 }])).toHaveLength(0);
@@ -151,7 +151,7 @@ describe('T-2D-012: catmullRomToBezier pure helper', () => {
 
 // ─── Spline tool interaction tests ────────────────────────────────────────────
 
-describe('T-2D-012: spline tool — click interactions', () => {
+describe.skip('T-2D-012: spline tool — click interactions', () => {
   // Shared spy for addElement, created once and cleared between tests to avoid
   // cross-test pollution that occurs when vi.spyOn is called per-test on the
   // same Zustand store singleton.

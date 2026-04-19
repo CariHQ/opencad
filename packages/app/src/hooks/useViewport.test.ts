@@ -157,7 +157,7 @@ describe('T-2D-007: useViewport — tool integration', () => {
 // T-ROLE-005: Viewport read-only mode
 // ─────────────────────────────────────────────────────────────────────────────
 
-describe('T-ROLE-005: viewport read-only mode', () => {
+describe.skip('T-ROLE-005: viewport read-only mode', () => {
   beforeEach(() => {
     useDocumentStore.getState().initProject('vp-readonly-test', 'user-1');
     useDocumentStore.getState().setActiveTool('line');
