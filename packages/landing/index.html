@@ -39,9 +39,9 @@
     "url": "https://opencad.archi",
     "description": "AI-powered, open-source BIM platform. Design buildings in your browser, collaborate in real time, export IFC4.",
     "offers": [
-      { "@type": "Offer", "name": "Starter", "price": "0", "priceCurrency": "GBP", "description": "Up to 3 projects, includes 14-day trial of Pro" },
-      { "@type": "Offer", "name": "Pro", "price": "29", "priceCurrency": "GBP", "billingDuration": "P1M" },
-      { "@type": "Offer", "name": "Business", "price": "99", "priceCurrency": "GBP", "billingDuration": "P1M" }
+      { "@type": "Offer", "name": "Starter", "price": "0", "priceCurrency": "USD", "description": "Up to 3 projects, includes 14-day trial of Pro" },
+      { "@type": "Offer", "name": "Pro", "price": "29", "priceCurrency": "USD", "billingDuration": "P1M" },
+      { "@type": "Offer", "name": "Business", "price": "99", "priceCurrency": "USD", "billingDuration": "P1M" }
     ],
     "screenshot": "https://opencad.archi/screenshots/02-editor-floorplan.png",
     "featureList": "2D drafting, 3D BIM, AI floor plan generation, IFC4 import/export, Real-time collaboration, Offline mode, DWG/DXF support",
@@ -592,37 +592,17 @@
     }
 
     /* ─── Footer ────────────────────────────────────────────────────────── */
-    footer {
-      padding: 40px;
-    }
-
-    .footer-inner {
-      max-width: 1120px;
-      margin: 0 auto;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      flex-wrap: wrap;
-      gap: 16px;
-    }
-
-    .footer-copy {
-      font-size: 13px;
-      color: var(--gray-400);
-    }
-
-    .footer-links {
-      display: flex;
-      align-items: center;
-      gap: 24px;
-    }
-
-    .footer-links a {
-      font-size: 13px;
-      color: var(--gray-400);
-      transition: color 0.15s;
-    }
-    .footer-links a:hover { color: var(--black); }
+    footer { border-top:1px solid var(--gray-200);padding:60px 24px 48px; }
+    .footer-grid { max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px; }
+    .footer-brand-logo { font-weight:600;font-size:15px;letter-spacing:-0.02em;color:var(--black);display:block;margin-bottom:10px; }
+    .footer-brand-tagline { font-size:13px;color:var(--gray-400);line-height:1.6;max-width:240px;margin-bottom:24px; }
+    .footer-brand-copy { font-size:12px;color:var(--gray-400); }
+    .footer-brand-copy a { color:inherit; }
+    .footer-col-heading { font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray-400);margin-bottom:14px; }
+    .footer-col a { display:block;font-size:14px;color:var(--gray-600);margin-bottom:10px;transition:color 0.15s; }
+    .footer-col a:hover { color:var(--black); }
+    @media (min-width:600px) { .footer-grid { grid-template-columns:1fr 1fr; } }
+    @media (min-width:900px) { .footer-grid { grid-template-columns:2fr 1fr 1fr 1fr; } }
 
     /* ─── Spinner ────────────────────────────────────────────────────────── */
     @keyframes spin { to { transform: rotate(360deg); } }
@@ -653,7 +633,7 @@
       .cta-section { padding: 0 20px 100px; }
       .cta-inner { grid-template-columns: 1fr; gap: 48px; padding: 48px 32px; }
       .preview-img { height: 280px; }
-      footer { padding: 32px 20px; }
+
       .divider { padding: 0 20px; }
     }
   </style>
@@ -666,7 +646,6 @@
     <a href="/" class="nav-logo">OpenCAD</a>
     <div class="nav-links">
       <a href="#features" class="nav-link">Features</a>
-      <a href="/for/architects" class="nav-link">For Architects</a>
       <a href="#pricing" class="nav-link">Pricing</a>
       <a href="/download" class="nav-link">Download</a>
       <a href="https://github.com/CariHQ/opencad" class="nav-link" target="_blank" rel="noopener">GitHub</a>
@@ -826,7 +805,7 @@
     <!-- Starter -->
     <div style="background:var(--white);padding:44px 40px;">
       <p style="font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-400);margin-bottom:12px;">Starter</p>
-      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:var(--black);line-height:1;margin-bottom:8px;">£0</p>
+      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:var(--black);line-height:1;margin-bottom:8px;">$0</p>
       <p style="font-size:14px;color:var(--gray-600);margin-bottom:32px;">Up to 3 projects</p>
       <ul style="list-style:none;font-size:15px;color:var(--gray-600);line-height:2.1;margin-bottom:36px;">
         <li>✓ 3 projects</li>
@@ -841,7 +820,7 @@
     <div style="background:var(--black);padding:44px 40px;position:relative;">
       <span style="position:absolute;top:20px;right:20px;background:var(--blue);color:white;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:100px;">Most popular</span>
       <p style="font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:12px;">Pro</p>
-      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:white;line-height:1;margin-bottom:8px;">£29</p>
+      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:white;line-height:1;margin-bottom:8px;">$29</p>
       <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:32px;">per user / month</p>
       <ul style="list-style:none;font-size:15px;color:rgba(255,255,255,0.7);line-height:2.1;margin-bottom:36px;">
         <li>✓ Unlimited projects</li>
@@ -855,7 +834,7 @@
     <!-- Business -->
     <div style="background:var(--white);padding:44px 40px;">
       <p style="font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-400);margin-bottom:12px;">Business</p>
-      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:var(--black);line-height:1;margin-bottom:8px;">£99</p>
+      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:var(--black);line-height:1;margin-bottom:8px;">$99</p>
       <p style="font-size:14px;color:var(--gray-600);margin-bottom:32px;">per user / month</p>
       <ul style="list-style:none;font-size:15px;color:var(--gray-600);line-height:2.1;margin-bottom:36px;">
         <li>✓ Everything in Pro</li>
@@ -913,13 +892,29 @@
 
 <!-- Footer -->
 <footer>
-  <div class="footer-inner">
-    <p class="footer-copy">&copy; 2026 OpenCAD by <a href="https://cari.global" target="_blank" rel="noopener" style="color:inherit">CariHQ</a>. All rights reserved.</p>
-    <div class="footer-links">
-      <a href="/for/architects">For Architects</a>
-      <a href="/for/structural-engineers">For Structural Engineers</a>
-      <a href="/for/mep-engineers">For MEP Engineers</a>
-      <a href="/for/contractors">For Contractors</a>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="footer-brand-logo">OpenCAD</a>
+      <p class="footer-brand-tagline">Browser-native BIM. Design, collaborate, and export IFC4 — no install required.</p>
+      <p class="footer-brand-copy">&copy; 2026 OpenCAD by <a href="https://cari.global" target="_blank" rel="noopener">CariHQ</a></p>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">Product</p>
+      <a href="/#features">Features</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/download">Download</a>
+      <a href="https://app.opencad.archi">Open app</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">For Teams</p>
+      <a href="/for/architects">Architects</a>
+      <a href="/for/structural-engineers">Structural Engineers</a>
+      <a href="/for/mep-engineers">MEP Engineers</a>
+      <a href="/for/contractors">Contractors</a>
+      <a href="/for/project-owners">Project Owners</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">Company</p>
       <a href="https://github.com/CariHQ/opencad" target="_blank" rel="noopener">GitHub</a>
       <a href="mailto:hello@opencad.archi">Contact</a>
       <a href="/privacy">Privacy</a>

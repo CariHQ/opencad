@@ -30,12 +30,15 @@
       backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
     }
     .nav-inner {
-      max-width: 760px; margin: 0 auto; padding: 0 40px;
+      max-width: 1120px; margin: 0 auto; padding: 0 40px;
       height: 64px; display: flex; align-items: center; justify-content: space-between;
     }
     .nav-logo { font-weight: 600; font-size: 15px; letter-spacing: -0.02em; color: var(--black); text-decoration: none; }
-    .nav-back { font-size: 13px; color: var(--gray-400); transition: color 0.15s; }
-    .nav-back:hover { color: var(--black); text-decoration: none; }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-link { font-size: 14px; color: var(--gray-400); transition: color 0.15s; text-decoration: none; }
+    .nav-link:hover { color: var(--black); }
+    .btn-nav { font-size: 14px; font-weight: 500; color: #fff; background: var(--black); padding: 8px 20px; border-radius: 100px; transition: opacity 0.15s; text-decoration: none; }
+    .btn-nav:hover { opacity: 0.75; }
 
     .page {
       max-width: 760px; margin: 0 auto; padding: 80px 40px 120px;
@@ -61,22 +64,20 @@
     ul { color: var(--gray-600); padding-left: 20px; margin-bottom: 16px; }
     li { margin-bottom: 6px; }
 
-    footer {
-      border-top: 1px solid var(--gray-200);
-      padding: 32px 40px;
-    }
-    .footer-inner {
-      max-width: 760px; margin: 0 auto;
-      display: flex; align-items: center; justify-content: space-between;
-      flex-wrap: wrap; gap: 16px;
-    }
-    .footer-copy { font-size: 13px; color: var(--gray-400); }
-    .footer-links { display: flex; gap: 24px; }
-    .footer-links a { font-size: 13px; color: var(--gray-400); }
-    .footer-links a:hover { color: var(--black); text-decoration: none; }
+    footer { border-top:1px solid var(--gray-200);padding:60px 24px 48px; }
+    .footer-grid { max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px; }
+    .footer-brand-logo { font-weight:600;font-size:15px;letter-spacing:-0.02em;color:var(--black);display:block;margin-bottom:10px;text-decoration:none; }
+    .footer-brand-tagline { font-size:13px;color:var(--gray-400);line-height:1.6;max-width:240px;margin-bottom:24px; }
+    .footer-brand-copy { font-size:12px;color:var(--gray-400); }
+    .footer-brand-copy a { color:inherit;text-decoration:none; }
+    .footer-col-heading { font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray-400);margin-bottom:14px; }
+    .footer-col a { display:block;font-size:14px;color:var(--gray-600);margin-bottom:10px;transition:color 0.15s;text-decoration:none; }
+    .footer-col a:hover { color:var(--black); }
+    @media (min-width:600px) { .footer-grid { grid-template-columns:1fr 1fr; } }
+    @media (min-width:900px) { .footer-grid { grid-template-columns:2fr 1fr 1fr 1fr; } }
 
     @media (max-width: 600px) {
-      .nav-inner, .page, .footer-inner { padding-left: 24px; padding-right: 24px; }
+      .nav-inner, .page { padding-left: 24px; padding-right: 24px; }
     }
   </style>
 </head>
@@ -85,7 +86,13 @@
 <nav>
   <div class="nav-inner">
     <a href="/" class="nav-logo">OpenCAD</a>
-    <a href="/" class="nav-back">← Back to home</a>
+    <div class="nav-links">
+      <a href="/#features" class="nav-link">Features</a>
+      <a href="/#pricing" class="nav-link">Pricing</a>
+      <a href="/download" class="nav-link">Download</a>
+      <a href="https://github.com/CariHQ/opencad" class="nav-link" target="_blank" rel="noopener">GitHub</a>
+      <a href="/#get-started" class="btn-nav">Get started</a>
+    </div>
   </div>
 </nav>
 
@@ -151,12 +158,33 @@
 </main>
 
 <footer>
-  <div class="footer-inner">
-    <p class="footer-copy">&copy; 2026 OpenCAD. All rights reserved.</p>
-    <div class="footer-links">
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="footer-brand-logo">OpenCAD</a>
+      <p class="footer-brand-tagline">Browser-native BIM. Design, collaborate, and export IFC4 — no install required.</p>
+      <p class="footer-brand-copy">&copy; 2026 OpenCAD by <a href="https://cari.global" target="_blank" rel="noopener">CariHQ</a></p>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">Product</p>
+      <a href="/#features">Features</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/download">Download</a>
+      <a href="https://app.opencad.archi">Open app</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">For Teams</p>
+      <a href="/for/architects">Architects</a>
+      <a href="/for/structural-engineers">Structural Engineers</a>
+      <a href="/for/mep-engineers">MEP Engineers</a>
+      <a href="/for/contractors">Contractors</a>
+      <a href="/for/project-owners">Project Owners</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">Company</p>
+      <a href="https://github.com/CariHQ/opencad" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hello@opencad.archi">Contact</a>
       <a href="/privacy">Privacy</a>
       <a href="/terms">Terms</a>
-      <a href="mailto:hello@opencad.archi">Contact</a>
     </div>
   </div>
 </footer>

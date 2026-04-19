@@ -50,27 +50,53 @@
     html { scroll-behavior: smooth; }
     body { background:var(--white);color:var(--black);font-family:'Inter',-apple-system,sans-serif;font-size:1rem;line-height:1.6;-webkit-font-smoothing:antialiased; }
     a { color:inherit;text-decoration:none; }
+
     nav { position:sticky;top:0;z-index:100;background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border-bottom:1px solid var(--gray-200); }
     .nav-inner { max-width:1120px;margin:0 auto;padding:0 40px;height:64px;display:flex;align-items:center;justify-content:space-between; }
     .nav-logo { font-weight:600;font-size:15px;letter-spacing:-0.02em; }
-    .btn-cta { font-size:14px;font-weight:500;color:var(--white);background:var(--black);padding:8px 20px;border-radius:100px; }
+    .nav-links { display:flex;align-items:center;gap:32px; }
+    .nav-link { font-size:14px;color:var(--gray-600);transition:color 0.15s; }
+    .nav-link:hover { color:var(--black); }
+    .btn-nav { font-size:14px;font-weight:500;color:var(--white);background:var(--accent);padding:8px 20px;border-radius:100px;transition:opacity 0.15s; }
+    .btn-nav:hover { opacity:0.75; }
+
     .hero { max-width:1120px;margin:0 auto;padding:100px 40px 80px; }
     .role-pill { display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:500;color:var(--accent);background:#ecfeff;padding:4px 12px;border-radius:100px;margin-bottom:32px; }
     h1 { font-size:clamp(36px,5vw,64px);font-weight:600;letter-spacing:-0.03em;line-height:1.1;margin-bottom:24px; }
     h1 em { color:var(--accent);font-style:normal; }
-    .hero-sub { font-size:clamp(16px,2vw,20px);color:var(--gray-600);max-width:600px;margin-bottom:44px; }
+    .hero-sub { font-size:clamp(16px,2vw,20px);color:var(--gray-600);max-width:600px;margin-bottom:44px;line-height:1.6; }
     .hero-actions { display:flex;align-items:center;gap:16px;flex-wrap:wrap; }
-    .btn-primary { display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:var(--black);color:white;border-radius:100px;font-size:15px;font-weight:500; }
-    .btn-secondary { display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:1.5px solid var(--gray-200);color:var(--black);border-radius:100px;font-size:15px;font-weight:500; }
+    .btn-primary { display:inline-flex;align-items:center;gap:8px;padding:14px 28px;background:var(--black);color:white;border-radius:100px;font-size:15px;font-weight:500;transition:opacity 0.15s; }
+    .btn-primary:hover { opacity:0.8; }
+    .btn-secondary { display:inline-flex;align-items:center;gap:8px;padding:14px 28px;border:1.5px solid var(--gray-200);color:var(--black);border-radius:100px;font-size:15px;font-weight:500;transition:background 0.15s; }
+    .btn-secondary:hover { background:var(--gray-100); }
+
     .features { max-width:1120px;margin:0 auto;padding:80px 40px; }
     .features h2 { font-size:clamp(24px,3.5vw,40px);font-weight:600;letter-spacing:-0.03em;margin-bottom:48px; }
     .grid-3 { display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gray-200);border:1px solid var(--gray-200);border-radius:16px;overflow:hidden; }
     .card { background:var(--white);padding:40px 36px; }
+    .card-icon { margin-bottom:20px;color:var(--black); }
     .card h3 { font-size:17px;font-weight:600;letter-spacing:-0.02em;margin-bottom:10px; }
-    .card p { font-size:15px;color:var(--gray-600); }
-    footer { border-top:1px solid var(--gray-200);padding:40px;text-align:center;font-size:14px;color:var(--gray-600); }
-    footer a { color:inherit;margin:0 12px; }
-    @media (max-width:768px) { .nav-inner,.hero,.features { padding-left:20px;padding-right:20px; } .grid-3 { grid-template-columns:1fr; } }
+    .card p { font-size:15px;color:var(--gray-600);line-height:1.6; }
+
+    footer { border-top:1px solid var(--gray-200);padding:60px 24px 48px; }
+    .footer-grid { max-width:1120px;margin:0 auto;display:grid;grid-template-columns:1fr;gap:40px; }
+    .footer-brand-logo { font-weight:600;font-size:15px;letter-spacing:-0.02em;color:var(--black);display:block;margin-bottom:10px; }
+    .footer-brand-tagline { font-size:13px;color:var(--gray-400);line-height:1.6;max-width:240px;margin-bottom:24px; }
+    .footer-brand-copy { font-size:12px;color:var(--gray-400); }
+    .footer-brand-copy a { color:inherit; }
+    .footer-col-heading { font-size:11px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:var(--gray-400);margin-bottom:14px; }
+    .footer-col a { display:block;font-size:14px;color:var(--gray-600);margin-bottom:10px;transition:color 0.15s; }
+    .footer-col a:hover { color:var(--black); }
+    @media (min-width:600px) { .footer-grid { grid-template-columns:1fr 1fr; } }
+    @media (min-width:900px) { .footer-grid { grid-template-columns:2fr 1fr 1fr 1fr; } }
+
+    @media (max-width:768px) {
+      .nav-inner { padding:0 20px; }
+      .nav-links .nav-link { display:none; }
+      .hero,.features { padding-left:20px;padding-right:20px; }
+      .grid-3 { grid-template-columns:1fr; }
+    }
   </style>
 </head>
 <body>
@@ -78,13 +104,21 @@
 <nav>
   <div class="nav-inner">
     <a href="/" class="nav-logo">OpenCAD</a>
-    <span style="font-size:13px;color:var(--gray-600);">For MEP Engineers</span>
-    <a href="/#get-started" class="btn-cta">Start free trial</a>
+    <div class="nav-links">
+      <a href="/#features" class="nav-link">Features</a>
+      <a href="/#pricing" class="nav-link">Pricing</a>
+      <a href="/download" class="nav-link">Download</a>
+      <a href="https://github.com/CariHQ/opencad" class="nav-link" target="_blank" rel="noopener">GitHub</a>
+      <a href="/#get-started" class="btn-nav">Get started</a>
+    </div>
   </div>
 </nav>
 
 <div class="hero">
-  <div class="role-pill">🔧 MEP Engineering</div>
+  <div class="role-pill">
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1l1.8 3.6L13 5.3l-3 2.9.7 4.1L7 10.3l-3.7 1.9.7-4.1L1 5.3l4.2-.7L7 1z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+    MEP Engineering
+  </div>
   <h1>MEP coordination that<br/><em>actually works.</em></h1>
   <p class="hero-sub">
     Route ducts and pipes in the same model as the architect and structural engineer.
@@ -103,32 +137,67 @@
   <h2>Everything MEP coordination needs.</h2>
   <div class="grid-3">
     <div class="card">
-      <div style="font-size:28px;margin-bottom:20px;">💥</div>
+      <div class="card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <path d="M20 6L4 34h32L20 6z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 16v9" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <circle cx="20" cy="29" r="1.5" fill="currentColor"/>
+        </svg>
+      </div>
       <h3>MEP clash detection</h3>
       <p>Detect hard clashes (penetrations) and soft clashes (50mm clearance violations) between ducts, pipes, and structural elements. Export to RFI CSV.</p>
     </div>
     <div class="card">
-      <div style="font-size:28px;margin-bottom:20px;">🌡️</div>
-      <h3>Duct & pipe routing</h3>
+      <div class="card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <path d="M6 28h8V12h12v8h8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="6" cy="28" r="3" stroke="currentColor" stroke-width="1.5"/>
+          <circle cx="34" cy="20" r="3" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <h3>Duct &amp; pipe routing</h3>
       <p>Route rectangular and circular ducts with flow-area calculations. Model chilled water, hot water, and drainage pipe runs with slope analysis.</p>
     </div>
     <div class="card">
-      <div style="font-size:28px;margin-bottom:20px;">⚡</div>
+      <div class="card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <path d="M20 8l12 7-12 7-12-7 12-7z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 22l12 7 12-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 28l12 7 12-7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <h3>MEP layer isolation</h3>
       <p>Work in your MEP layer without risk of editing structural or architectural elements. Toggle other disciplines on/off for coordination reviews.</p>
     </div>
     <div class="card">
-      <div style="font-size:28px;margin-bottom:20px;">📊</div>
+      <div class="card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <rect x="6" y="8" width="28" height="24" rx="3" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M6 16h28M6 24h28M18 8v24" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
       <h3>MEP quantity schedules</h3>
       <p>Auto-generate duct area, pipe length, and equipment schedules from your model. Export as Excel for BOQ and procurement.</p>
     </div>
     <div class="card">
-      <div style="font-size:28px;margin-bottom:20px;">🔄</div>
+      <div class="card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <path d="M30 14a12 12 0 10-2 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M28 8l4 6-6 2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
       <h3>IFC4 MEP export</h3>
       <p>Export IFC4 with IfcDuctSegment, IfcPipeSegment, and IfcFlowTerminal classifications and all property sets intact for downstream analysis.</p>
     </div>
     <div class="card">
-      <div style="font-size:28px;margin-bottom:20px;">☁️</div>
+      <div class="card-icon">
+        <svg width="40" height="40" viewBox="0 0 40 40" fill="none">
+          <circle cx="20" cy="20" r="16" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M20 4v32M4 20h32" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" opacity="0.3"/>
+          <circle cx="28" cy="14" r="3" fill="currentColor"/>
+          <circle cx="13" cy="26" r="3" fill="currentColor"/>
+        </svg>
+      </div>
       <h3>Real-time coordination</h3>
       <p>See the architect's and structural engineer's live changes instantly. No more waiting for IFC drops to check if your routes still clear.</p>
     </div>
@@ -136,14 +205,35 @@
 </div>
 
 <footer>
-  <a href="/">Home</a>
-  <a href="/for/architects">For Architects</a>
-  <a href="/for/structural-engineers">For Structural Engineers</a>
-  <a href="/for/contractors">For Contractors</a>
-  <a href="https://github.com/CariHQ/opencad" target="_blank" rel="noopener">GitHub</a>
-  <a href="/privacy">Privacy</a>
-  <a href="/terms">Terms</a>
-  <p style="margin-top:20px;">&copy; 2026 OpenCAD by <a href="https://cari.global" target="_blank" rel="noopener">CariHQ</a></p>
+  <div class="footer-grid">
+    <div class="footer-brand">
+      <a href="/" class="footer-brand-logo">OpenCAD</a>
+      <p class="footer-brand-tagline">Browser-native BIM. Design, collaborate, and export IFC4 — no install required.</p>
+      <p class="footer-brand-copy">&copy; 2026 OpenCAD by <a href="https://cari.global" target="_blank" rel="noopener">CariHQ</a></p>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">Product</p>
+      <a href="/#features">Features</a>
+      <a href="/#pricing">Pricing</a>
+      <a href="/download">Download</a>
+      <a href="https://app.opencad.archi">Open app</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">For Teams</p>
+      <a href="/for/architects">Architects</a>
+      <a href="/for/structural-engineers">Structural Engineers</a>
+      <a href="/for/mep-engineers">MEP Engineers</a>
+      <a href="/for/contractors">Contractors</a>
+      <a href="/for/project-owners">Project Owners</a>
+    </div>
+    <div class="footer-col">
+      <p class="footer-col-heading">Company</p>
+      <a href="https://github.com/CariHQ/opencad" target="_blank" rel="noopener">GitHub</a>
+      <a href="mailto:hello@opencad.archi">Contact</a>
+      <a href="/privacy">Privacy</a>
+      <a href="/terms">Terms</a>
+    </div>
+  </div>
 </footer>
 
 </body>
