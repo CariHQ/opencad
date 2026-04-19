@@ -19,6 +19,10 @@ const FIREBASE_ERRORS: Record<string, string> = {
   'auth/invalid-credential':          'Invalid email or password.',
   'auth/invalid-verification-code':   'Incorrect authentication code. Try again.',
   'auth/code-expired':                'The authentication code has expired. Please retry.',
+  'auth/popup-blocked':               'Pop-up was blocked by your browser. Allow pop-ups and try again.',
+  'auth/popup-closed-by-user':        'Sign-in was cancelled. Please try again.',
+  'auth/cancelled-popup-request':     'Sign-in was cancelled. Please try again.',
+  'auth/account-exists-with-different-credential': 'An account already exists with this email using a different sign-in method.',
 };
 
 function friendlyError(err: unknown): string {
@@ -42,7 +46,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
   const [errorCode, setErrorCode] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const { signIn, signUp, resolveMfaChallenge } = useAuthStore();
+  const { signIn, signUp, signInWithGoogle, signInWithMicrosoft, resolveMfaChallenge } = useAuthStore();
 
   const isLogin = mode === 'login';
 
@@ -95,6 +99,29 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
 
     try {
       await resolveMfaChallenge(mfaResolver, totpCode);
+      setSuccess('Signed in successfully.');
+      setTimeout(() => onClose?.(), 1000);
+    } catch (err) {
+      const code = (err && typeof err === 'object' && 'code' in err)
+        ? (err as { code: string }).code
+        : null;
+      setErrorCode(code);
+      setError(friendlyError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuthSignIn = async (provider: 'google' | 'microsoft') => {
+    setError(null);
+    setSuccess(null);
+    setLoading(true);
+    try {
+      if (provider === 'google') {
+        await signInWithGoogle();
+      } else {
+        await signInWithMicrosoft();
+      }
       setSuccess('Signed in successfully.');
       setTimeout(() => onClose?.(), 1000);
     } catch (err) {
@@ -248,6 +275,29 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
                 )}
               </button>
             </form>
+
+            <div className="auth-divider">
+              <span>or</span>
+            </div>
+
+            <div className="auth-oauth">
+              <button
+                type="button"
+                className="btn-oauth btn-oauth--google"
+                onClick={() => handleOAuthSignIn('google')}
+                disabled={loading}
+              >
+                Continue with Google
+              </button>
+              <button
+                type="button"
+                className="btn-oauth btn-oauth--microsoft"
+                onClick={() => handleOAuthSignIn('microsoft')}
+                disabled={loading}
+              >
+                Continue with Microsoft
+              </button>
+            </div>
 
             <div className="auth-switch">
               {isLogin ? (
