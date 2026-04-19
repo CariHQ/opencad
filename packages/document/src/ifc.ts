@@ -1099,3 +1099,20 @@ export function exportToIFC(doc: DocumentSchema): string {
     lines.push(`#${sid}=IFCBUILDINGSTOREY('${level.id}',$,'${level.name}',$,$,$,$,$,.ELEMENT.,${level.elevation}.);`);
   }
 
+  const walls = Object.values(doc.content.elements).filter((e) => e.type === 'wall');
+  for (const wall of walls) {
+    const wid = next();
+    const name = (wall.properties['Name']?.value as string) || 'Wall';
+    const storeyRef = wall.levelId && storeyIds[wall.levelId]
+      ? `#${storeyIds[wall.levelId]}`
+      : '$';
+    const bbox = wall.boundingBox;
+    const bboxComment = ` /* bbox:${bbox.min.x},${bbox.min.y},${bbox.min.z}:${bbox.max.x},${bbox.max.y},${bbox.max.z} */`;
+    lines.push(`#${wid}=IFCWALL('${wall.id}',$,'${name}',$,$,${storeyRef},$,$);${bboxComment}`);
+  }
+
+  lines.push('ENDSEC;');
+  lines.push('END-ISO-10303-21;');
+
+  return lines.join('\n');
+}
