@@ -1,3 +1,10 @@
+## [1.0.7](https://github.com/CariHQ/opencad/compare/v1.0.6...v1.0.7) (2026-04-19)
+
+
+### Bug Fixes
+
+* **ci:** install wasm-bindgen-cli on all desktop/Docker runners ([259e173](https://github.com/CariHQ/opencad/commit/259e173d080a5a9ca0b74bd6811f0535faa54dc8))
+
 ## [1.0.6](https://github.com/CariHQ/opencad/compare/v1.0.5...v1.0.6) (2026-04-19)
 
 
