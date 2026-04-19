@@ -1,3 +1,10 @@
+## [1.0.9](https://github.com/CariHQ/opencad/compare/v1.0.8...v1.0.9) (2026-04-19)
+
+
+### Bug Fixes
+
+* **ci:** remove Windows .pnpm cleanup step that broke node_modules ([f4bba27](https://github.com/CariHQ/opencad/commit/f4bba2721bd5e422f6ef4c49c6c82a81855574c7))
+
 ## [1.0.8](https://github.com/CariHQ/opencad/compare/v1.0.7...v1.0.8) (2026-04-19)
 
 
