@@ -112,8 +112,8 @@ jobs:
 
       - name: Build workspace dependencies
         run: |
-          # Build only pure-JS packages — sync-rs needs wasm-pack which isn't available here
-          pnpm --filter=@opencad/shared --filter=@opencad/document --filter=@opencad/ai --filter=@opencad/geometry build
+          # Build pure-JS packages only (no WASM — sync-rs and geometry need wasm-pack)
+          pnpm --filter=@opencad/shared --filter=@opencad/document --filter=@opencad/ai build
 
       - name: Build frontend
         env:
