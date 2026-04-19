@@ -5,15 +5,14 @@ import {
   signOut as fbSignOut,
   onAuthStateChanged,
   updateProfile,
-<<<<<<< HEAD
   multiFactor,
   TotpMultiFactorGenerator,
+  GoogleAuthProvider,
+  OAuthProvider,
+  signInWithPopup,
   type User,
   type TotpSecret,
   type MultiFactorResolver,
-=======
-  type User,
->>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
 } from 'firebase/auth';
 import {
   doc,
@@ -32,18 +31,15 @@ export interface UserProfile {
   uid: string;
   email: string;
   name: string;
-  plan: 'trial' | 'pro' | 'team';
+  plan: 'free' | 'trial' | 'pro' | 'team';
   trialExpiresAt: Date | null;
 }
 
-<<<<<<< HEAD
 export interface TotpEnrollmentResult {
   secret: TotpSecret;
   qrCodeUrl: string;
 }
 
-=======
->>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
 interface AuthState {
   status: AuthStatus;
   user: User | null;
@@ -52,28 +48,31 @@ interface AuthState {
   error: string | null;
   signUp: (name: string, email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
+  signInWithMicrosoft: () => Promise<void>;
   signOut: () => Promise<void>;
   clearError: () => void;
-<<<<<<< HEAD
   /** Start TOTP enrollment: generates a secret and returns the QR code URL. */
   enrollTotp: (user: User) => Promise<TotpEnrollmentResult | null>;
   /** Complete TOTP enrollment by verifying a one-time code. */
   verifyTotpEnrollment: (user: User, secret: TotpSecret, otp: string) => Promise<void>;
   /** Resolve a pending MFA sign-in challenge with a TOTP one-time code. */
   resolveMfaChallenge: (resolver: MultiFactorResolver, otp: string) => Promise<void>;
-=======
->>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
 }
 
 const TRIAL_DAYS = 14;
 
-async function upsertProfile(user: User, name?: string): Promise<UserProfile> {
+async function upsertProfile(
+  user: User,
+  name?: string,
+  defaultPlan: UserProfile['plan'] = 'trial',
+): Promise<UserProfile> {
   if (!isFirebaseConfigured) {
     return {
       uid: user.uid,
       email: user.email ?? '',
       name: name ?? user.displayName ?? '',
-      plan: 'trial',
+      plan: defaultPlan,
       trialExpiresAt: null,
     };
   }
@@ -83,20 +82,20 @@ async function upsertProfile(user: User, name?: string): Promise<UserProfile> {
   const snap = await getDoc(ref);
 
   if (!snap.exists()) {
-    const trialExpires = new Date();
-    trialExpires.setDate(trialExpires.getDate() + TRIAL_DAYS);
+    const trialExpires = defaultPlan === 'trial' ? new Date() : null;
+    if (trialExpires) trialExpires.setDate(trialExpires.getDate() + TRIAL_DAYS);
     await setDoc(ref, {
       email: user.email,
       name: name ?? user.displayName ?? '',
       createdAt: serverTimestamp(),
       trialExpiresAt: trialExpires,
-      plan: 'trial',
+      plan: defaultPlan,
     });
     return {
       uid: user.uid,
       email: user.email ?? '',
       name: name ?? user.displayName ?? '',
-      plan: 'trial',
+      plan: defaultPlan,
       trialExpiresAt: trialExpires,
     };
   }
@@ -180,6 +179,36 @@ export const useAuthStore = create<AuthState>((set, _get) => {
       });
     },
 
+    signInWithGoogle: async (): Promise<void> => {
+      if (!isFirebaseConfigured) throw new Error('Firebase not configured');
+      const auth = firebaseAuth();
+      const provider = new GoogleAuthProvider();
+      const cred = await signInWithPopup(auth, provider);
+      const profile = await upsertProfile(cred.user, undefined, 'free');
+      set({
+        status: 'authenticated',
+        user: cred.user,
+        profile,
+        trialStatus: computeTrialStatus(profile),
+        error: null,
+      });
+    },
+
+    signInWithMicrosoft: async (): Promise<void> => {
+      if (!isFirebaseConfigured) throw new Error('Firebase not configured');
+      const auth = firebaseAuth();
+      const provider = new OAuthProvider('microsoft.com');
+      const cred = await signInWithPopup(auth, provider);
+      const profile = await upsertProfile(cred.user, undefined, 'free');
+      set({
+        status: 'authenticated',
+        user: cred.user,
+        profile,
+        trialStatus: computeTrialStatus(profile),
+        error: null,
+      });
+    },
+
     signOut: async () => {
       if (!isFirebaseConfigured) {
         set({ status: 'unauthenticated', user: null, profile: null, trialStatus: 'none' });
@@ -190,7 +219,6 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     },
 
     clearError: () => set({ error: null }),
-<<<<<<< HEAD
 
     enrollTotp: async (user: User): Promise<TotpEnrollmentResult | null> => {
       if (!isFirebaseConfigured) return null;
@@ -218,7 +246,5 @@ export const useAuthStore = create<AuthState>((set, _get) => {
       const assertion = TotpMultiFactorGenerator.assertionForSignIn(hint.uid, otp);
       await resolver.resolveSignIn(assertion);
     },
-=======
->>>>>>> ee34659 (fix(auth): show authenticated user state in toolbar profile button)
   };
 });
