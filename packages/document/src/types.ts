@@ -102,6 +102,7 @@ export type ElementType =
   | 'polygon'
   | 'component'
   | 'group'
+  | 'curtain_wall'
   | 'duct'
   | 'pipe'
   | 'plumbing_fixture'

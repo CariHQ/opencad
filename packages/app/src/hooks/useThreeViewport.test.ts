@@ -9,6 +9,13 @@ expect.extend(jestDomMatchers);
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 
+// Mock three-mesh-bvh — no-ops in test environment
+vi.mock('three-mesh-bvh', () => ({
+  acceleratedRaycast: vi.fn(),
+  computeBoundsTree: vi.fn(),
+  disposeBoundsTree: vi.fn(),
+}));
+
 // Mock Three.js entirely — no WebGL required
 vi.mock('three', () => {
   // Use class syntax so vi.fn() works as a constructor (vitest 4 requirement)
@@ -83,16 +90,33 @@ vi.mock('three', () => {
     emissiveIntensity = 0;
     clone = vi.fn().mockReturnThis();
   }
-  class BoxGeometry { dispose = vi.fn(); }
-  class CylinderGeometry { dispose = vi.fn(); }
+  const Material = class { dispose = vi.fn(); };
+  class BufferGeometry {
+    dispose = vi.fn();
+    computeBoundsTree = vi.fn();
+    disposeBoundsTree = vi.fn();
+    setAttribute = vi.fn();
+  }
+  class BoxGeometry extends BufferGeometry {}
+  class CylinderGeometry extends BufferGeometry {}
+  class TorusGeometry extends BufferGeometry {}
+  class ExtrudeGeometry extends BufferGeometry {}
   class Mesh {
     position = { set: vi.fn() };
     rotation = { x: 0, y: 0, z: 0 };
     material = null;
-    geometry = { dispose: vi.fn() };
+    geometry: BufferGeometry = new BufferGeometry();
     userData = {};
     castShadow = false;
     receiveShadow = false;
+    raycast = vi.fn();
+    traverse = vi.fn();
+  }
+  class Group {
+    userData = {};
+    add = vi.fn();
+    traverse = vi.fn();
+    children: Mesh[] = [];
   }
 
   return {
@@ -110,9 +134,16 @@ vi.mock('three', () => {
     Raycaster,
     Vector2,
     MeshStandardMaterial,
+    BufferGeometry,
     BoxGeometry,
     CylinderGeometry,
+    TorusGeometry,
+    ExtrudeGeometry,
     Mesh,
+    Group,
+    Material,
+    Shape: class { moveTo = vi.fn(); lineTo = vi.fn(); closePath = vi.fn(); },
+    FrontSide: 0,
     DoubleSide: 2,
   };
 });

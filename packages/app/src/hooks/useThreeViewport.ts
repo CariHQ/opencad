@@ -1,42 +1,25 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import * as THREE from 'three';
+import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import { useDocumentStore } from '../stores/documentStore';
 import { type ElementSchema } from '@opencad/document';
 import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 
-// ─── LOD Types & Functions ────────────────────────────────────────────────────
+// Patch Three.js prototypes once at module level for BVH-accelerated raycasting
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+(THREE.BufferGeometry.prototype as THREE.BufferGeometry & {
+  computeBoundsTree: typeof computeBoundsTree;
+  disposeBoundsTree: typeof disposeBoundsTree;
+}).computeBoundsTree = computeBoundsTree;
+(THREE.BufferGeometry.prototype as THREE.BufferGeometry & {
+  disposeBoundsTree: typeof disposeBoundsTree;
+}).disposeBoundsTree = disposeBoundsTree;
 
-/** Level of detail tier for 3D geometry rendering */
-export type LodLevel = 'high' | 'medium' | 'low';
-
-/**
- * T-PERF-001/002/003/004: Return the appropriate LOD level for a given camera distance.
- * - distance < 5000   → 'high'   (full geometry)
- * - distance < 20000  → 'medium' (simplified geometry)
- * - distance >= 20000 → 'low'    (bounding box only)
- */
-export function getLodLevel(distance: number): LodLevel {
-  if (distance < 5000) return 'high';
-  if (distance < 20000) return 'medium';
-  return 'low';
-}
-
-// ─── Frame Stats ─────────────────────────────���──────────────────────────��─────
-
-const FRAME_BUFFER_SIZE = 60;
-
-export interface FrameStats {
-  avgFrameMs: number;
-  currentLod: LodLevel;
-}
-
-/** Module-level shared frame stats written by the active 3D viewport. */
-let _sharedFrameStats: FrameStats = { avgFrameMs: 16.67, currentLod: 'high' };
-
-/** Read latest frame stats written by the active useThreeViewport instance. */
-export function getSharedFrameStats(): FrameStats {
-  return _sharedFrameStats;
-}
+// LOD constants
+const LOD_ELEMENT_THRESHOLD = 500;
+const LOD_DEFAULT_DISTANCE = 50000; // mm — elements beyond this are simplified when LOD active
+const FPS_WINDOW = 10; // rolling window for FPS computation
+const FPS_LOW_THRESHOLD = 40; // below this, auto-reduce detail
 
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
@@ -64,6 +47,14 @@ interface ViewportState {
   scene: THREE.Scene | null;
 }
 
+/** Per-element LOD metadata stored in mesh.userData */
+interface ElementUserData {
+  elementId: string;
+  elementType: string;
+  baseColor: number;
+  isLod: boolean; // true when rendered as simplified placeholder
+}
+
 export type ViewPreset = 'top' | 'front' | 'right' | '3d' | 'perspective';
 
 interface CameraState {
@@ -85,18 +76,8 @@ const ELEMENT_TYPE_COLORS: Record<string, number> = {
   railing:      0x90a060,
   roof:         0x909098,
   space:        0x80c8a8,
-  curtain_wall: 0x88c0e0,
+  curtain_wall: 0xc8d0d8,
 };
-
-/**
- * 2D-only drafting/annotation types that should never be extruded to 3D geometry.
- * Drawing a rectangle or circle in the floor plan produces a flat 2D annotation —
- * it has no height and should not appear as a box in the 3D view.
- */
-const SKETCH_2D_TYPES = new Set([
-  'annotation', 'rectangle', 'circle', 'arc', 'dimension',
-  'text', 'polyline', 'polygon', 'spline',
-]);
 
 const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; distance: number }> = {
   top: { azimuth: 0, elevation: 0.01, distance: 10000 },
@@ -110,6 +91,12 @@ interface UseThreeViewportOptions {
   isViewOnly?: boolean;
 }
 
+/** Compute BVH on a geometry and return it (pure module-level helper). */
+function bvhGeom(g: THREE.BufferGeometry): THREE.BufferGeometry {
+  (g as THREE.BufferGeometry & { computeBoundsTree: () => void }).computeBoundsTree();
+  return g;
+}
+
 export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions = {}) {
   const containerRef = useRef<HTMLDivElement>(null);
   const stateRef = useRef<ViewportState>({
@@ -117,19 +104,36 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     renderer: null,
     scene: null,
   });
-  const cameraStateRef = useRef<CameraState>({
-    target: new THREE.Vector3(0, 0, 0),
-    distance: 10000,
-    azimuth: Math.PI / 4,
-    elevation: Math.PI / 4,
-  });
+  const cameraStateRef = useRef<CameraState>((() => {
+    try {
+      const saved = localStorage.getItem('opencad-camera-state');
+      if (saved) {
+        const p = JSON.parse(saved) as { target?: { x: number; y: number; z: number }; distance?: number; azimuth?: number; elevation?: number };
+        return {
+          target: new THREE.Vector3(p.target?.x ?? 0, p.target?.y ?? 0, p.target?.z ?? 0),
+          distance: p.distance ?? 10000,
+          azimuth: p.azimuth ?? Math.PI / 4,
+          elevation: p.elevation ?? Math.PI / 4,
+        };
+      }
+    } catch { /* ignore */ }
+    return {
+      target: new THREE.Vector3(0, 0, 0),
+      distance: 10000,
+      azimuth: Math.PI / 4,
+      elevation: Math.PI / 4,
+    };
+  })());
   const animationFrameRef = useRef<number | null>(null);
+  // Performance: dirty flag — render only when scene changes
+  const needsRenderRef = useRef(true);
+  // FPS monitor: rolling window of frame timestamps
+  const frameTimesRef = useRef<number[]>([]);
+  const [currentFps, setCurrentFps] = useState<number>(60);
+  const [lodActive, setLodActive] = useState<boolean>(false);
+  // LOD distance (mm): elements beyond this are simplified when element count > threshold
+  const lodDistanceRef = useRef<number>(LOD_DEFAULT_DISTANCE);
 
-  // ── Frame time ring buffer for rolling average ────────────────────────────
-  const frameTimesRef = useRef<number[]>(new Array(FRAME_BUFFER_SIZE).fill(16.67));
-  const frameTimeIndexRef = useRef(0);
-  const lastFrameTimeRef = useRef<number>(0);
-  const currentLodRef = useRef<LodLevel>('high');
   const { document: doc, selectedIds, setSelectedIds } = useDocumentStore();
 
   const [sectionBox, setSectionBox] = useState(false);
@@ -151,12 +155,13 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     }
   }, [sectionPosition, sectionDirection]);
 
-  const elementMeshesRef = useRef<Map<string, THREE.Mesh>>(new Map());
+  const elementMeshesRef = useRef<Map<string, THREE.Object3D>>(new Map());
 
-  const createMaterial = useCallback((colorHex: number) => {
+  const createMaterial = useCallback((colorHex: number, opts?: { transparent?: boolean; opacity?: number }) => {
     return new THREE.MeshStandardMaterial({
       color: colorHex,
-      transparent: false,
+      transparent: opts?.transparent ?? false,
+      opacity: opts?.opacity ?? 1,
       roughness: 0.6,
       metalness: 0.0,
       side: THREE.FrontSide,
@@ -164,56 +169,209 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
   }, []);
 
   const createMeshFromElement = useCallback(
-    (element: ElementSchema, lod: LodLevel = 'high'): THREE.Mesh | null => {
-      // 2D drafting elements (rectangle, circle, arc, etc.) live only in the
-      // floor-plan view — skip them in the 3D scene entirely.
-      if (SKETCH_2D_TYPES.has(element.type)) return null;
-
+    (element: ElementSchema, isLod = false): THREE.Object3D | null => {
       const bb = element.boundingBox;
-      // Architectural coords: X = east-west, Y = plan north-south, Z = elevation.
-      // Three.js scene convention: X = east-west, Y = up, Z = plan depth.
-      // Remap: arch-X → three-X, arch-Z → three-Y, arch-Y → three-Z.
-      let width = bb.max.x - bb.min.x;    // three-X extent
-      let planDepth = bb.max.y - bb.min.y; // three-Z extent
-      let height = bb.max.z - bb.min.z;   // three-Y extent
-
-      // Fall back to sensible defaults for flat/missing geometry
-      if (width < 50) width = 200;
-      if (planDepth < 50) planDepth = 200;
-      // For height: only use property or 3000 default if bounding box gives < 100mm
-      if (height < 100) {
-        const props = element.properties as Record<string, { value: unknown }>;
-        height = (props['Height']?.value as number | undefined)
-          ?? (props['TotalRise']?.value as number | undefined)
-          ?? 3000;
-      }
-
-      // BoxGeometry(x-width, y-height, z-depth) — three.js axis order
-      let geometry: THREE.BoxGeometry;
-      if (lod === 'low' || lod === 'medium') {
-        geometry = new THREE.BoxGeometry(width, height, planDepth, 1, 1, 1);
-      } else {
-        geometry = new THREE.BoxGeometry(width, height, planDepth);
-      }
-
       const colorHex = ELEMENT_TYPE_COLORS[element.type] ?? 0x8888aa;
-      const material = createMaterial(colorHex);
+      const mat = isLod
+        ? new THREE.MeshStandardMaterial({ color: colorHex, transparent: true, opacity: 0.5, roughness: 1, metalness: 0, side: THREE.FrontSide })
+        : createMaterial(colorHex);
 
-      const mesh = new THREE.Mesh(geometry, material);
-      // Remap arch (x, y, z) → three (x, z, y)
-      mesh.position.set(
-        bb.min.x + width / 2,
-        bb.min.z + height / 2,
-        bb.min.y + planDepth / 2,
-      );
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
+      const props = element.properties;
+      const getProp = (key: string, fallback: number): number => {
+        const v = props[key];
+        return v && typeof v.value === 'number' ? v.value : fallback;
+      };
 
-      mesh.userData.elementId = element.id;
-      mesh.userData.elementType = element.type;
-      mesh.userData.baseColor = colorHex;
+      const ud: ElementUserData = { elementId: element.id, elementType: element.type, baseColor: colorHex, isLod };
 
-      return mesh;
+      const finishMesh = (mesh: THREE.Mesh): THREE.Mesh => {
+        mesh.castShadow = !isLod;
+        mesh.receiveShadow = !isLod;
+        Object.assign(mesh.userData, ud);
+        return mesh;
+      };
+
+      const finishObj = (obj: THREE.Object3D): THREE.Object3D => {
+        Object.assign(obj.userData, ud);
+        return obj;
+      };
+
+      switch (element.type) {
+        case 'wall': {
+          const startX = getProp('StartX', bb.min.x);
+          const startY = getProp('StartY', bb.min.y);
+          const endX   = getProp('EndX', bb.max.x);
+          const endY   = getProp('EndY', bb.max.y);
+          const wThick = getProp('Thickness', 200);
+          const wH     = getProp('Height', 3000);
+          const wLen   = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
+          const mesh   = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(wLen, wThick, wH)), mat);
+          mesh.position.set((startX + endX) / 2, (startY + endY) / 2, wH / 2);
+          mesh.rotation.z = Math.atan2(endY - startY, endX - startX);
+          return finishMesh(mesh);
+        }
+
+        case 'curtain_wall': {
+          const startX = getProp('StartX', bb.min.x);
+          const startY = getProp('StartY', bb.min.y);
+          const endX   = getProp('EndX', bb.max.x);
+          const endY   = getProp('EndY', bb.max.y);
+          const cwH    = getProp('Height', 3000);
+          const cwLen  = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
+          const angle  = Math.atan2(endY - startY, endX - startX);
+          const panelW = getProp('PanelWidth', 1200);
+          const numPanels = Math.max(1, Math.round(cwLen / panelW));
+          const group = new THREE.Group();
+          // Frame
+          const frameMat = new THREE.MeshStandardMaterial({ color: 0xa0a8b0, roughness: 0.4, metalness: 0.6, side: THREE.FrontSide });
+          const frameMesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(cwLen, 50, cwH)), frameMat);
+          frameMesh.castShadow = !isLod;
+          group.add(frameMesh);
+          // Glass panels
+          const glassMat = new THREE.MeshStandardMaterial({ color: 0x80c8e8, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0.1, side: THREE.DoubleSide });
+          const pW = cwLen / numPanels - 20;
+          const pH = cwH - 40;
+          for (let i = 0; i < numPanels; i++) {
+            const px = -cwLen / 2 + (i + 0.5) * (cwLen / numPanels);
+            const glMesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(pW, 20, pH)), glassMat);
+            glMesh.position.set(px, 0, 0);
+            group.add(glMesh);
+          }
+          group.position.set((startX + endX) / 2, (startY + endY) / 2, cwH / 2);
+          group.rotation.z = angle;
+          return finishObj(group);
+        }
+
+        case 'column': {
+          const r  = getProp('Radius', 150);
+          const h  = getProp('Height', 3000);
+          const cx = (bb.min.x + bb.max.x) / 2;
+          const cy = (bb.min.y + bb.max.y) / 2;
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.CylinderGeometry(r, r, h, 24)), mat);
+          mesh.rotation.x = Math.PI / 2; // CylinderGeometry is Y-up; align to Z-up
+          mesh.position.set(cx, cy, h / 2);
+          return finishMesh(mesh);
+        }
+
+        case 'circle': {
+          const r  = getProp('Radius', 500);
+          const h  = getProp('Height', 100); // thin flat disk
+          const cx = (bb.min.x + bb.max.x) / 2;
+          const cy = (bb.min.y + bb.max.y) / 2;
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.CylinderGeometry(r, r, h, 32)), mat);
+          mesh.rotation.x = Math.PI / 2;
+          mesh.position.set(cx, cy, h / 2);
+          return finishMesh(mesh);
+        }
+
+        case 'beam': {
+          const startX = getProp('StartX', bb.min.x);
+          const startY = getProp('StartY', bb.min.y);
+          const endX   = getProp('EndX', bb.max.x);
+          const endY   = getProp('EndY', bb.max.y);
+          const bW    = getProp('Width', 200);
+          const bH    = getProp('Depth', 300);
+          const bLen  = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
+          const elev  = getProp('Elevation', 3000);
+          const mesh  = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(bLen, bW, bH)), mat);
+          mesh.position.set((startX + endX) / 2, (startY + endY) / 2, elev);
+          mesh.rotation.z = Math.atan2(endY - startY, endX - startX);
+          return finishMesh(mesh);
+        }
+
+        case 'slab':
+        case 'roof': {
+          const w = Math.max(bb.max.x - bb.min.x, 1);
+          const d = Math.max(bb.max.y - bb.min.y, 1);
+          const t = getProp('Thickness', 200);
+          const elev = bb.min.z || 0;
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, t)), mat);
+          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, elev + t / 2);
+          return finishMesh(mesh);
+        }
+
+        case 'rectangle': {
+          const w = Math.max(bb.max.x - bb.min.x, 1);
+          const d = Math.max(bb.max.y - bb.min.y, 1);
+          const t = getProp('Depth', 100);
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, t)), mat);
+          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, t / 2);
+          return finishMesh(mesh);
+        }
+
+        case 'door':
+        case 'window': {
+          const w = Math.max(bb.max.x - bb.min.x, 1);
+          const h = getProp('Height', 2100);
+          const t = getProp('Thickness', 100);
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, t, h)), mat);
+          mesh.position.set(bb.min.x + w / 2, (bb.min.y + bb.max.y) / 2, bb.min.z + h / 2);
+          return finishMesh(mesh);
+        }
+
+        case 'stair': {
+          const w     = Math.max(bb.max.x - bb.min.x, 1000);
+          const dY    = Math.max(bb.max.y - bb.min.y, 1000);
+          const tH    = Math.max(bb.max.z - bb.min.z, 3000);
+          const steps = Math.max(1, Math.round(tH / 175));
+          const group = new THREE.Group();
+          for (let i = 0; i < steps; i++) {
+            const rH  = tH / steps;
+            const rD  = dY / steps;
+            const m   = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, rD, rH)), mat);
+            m.position.set(bb.min.x + w / 2, bb.min.y + rD * (i + 0.5), bb.min.z + rH * (i + 0.5));
+            m.castShadow = !isLod;
+            m.receiveShadow = !isLod;
+            group.add(m);
+          }
+          return finishObj(group);
+        }
+
+        case 'railing': {
+          const startX = getProp('StartX', bb.min.x);
+          const startY = getProp('StartY', bb.min.y);
+          const endX   = getProp('EndX', bb.max.x);
+          const endY   = getProp('EndY', bb.max.y);
+          const rH   = getProp('Height', 900);
+          const rLen = Math.sqrt((endX - startX) ** 2 + (endY - startY) ** 2) || 1000;
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(rLen, 50, rH)), mat);
+          mesh.position.set((startX + endX) / 2, (startY + endY) / 2, rH / 2);
+          mesh.rotation.z = Math.atan2(endY - startY, endX - startX);
+          return finishMesh(mesh);
+        }
+
+        case 'space': {
+          const w = Math.max(bb.max.x - bb.min.x, 1);
+          const d = Math.max(bb.max.y - bb.min.y, 1);
+          const h = Math.max(bb.max.z - bb.min.z, 100);
+          const spaceMat = new THREE.MeshStandardMaterial({ color: colorHex, transparent: true, opacity: 0.2, roughness: 1, metalness: 0, side: THREE.DoubleSide });
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, h)), spaceMat);
+          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, bb.min.z + h / 2);
+          return finishMesh(mesh);
+        }
+
+        case 'polygon':
+        case 'surface': {
+          const w = Math.max(bb.max.x - bb.min.x, 1);
+          const d = Math.max(bb.max.y - bb.min.y, 1);
+          const t = getProp('Thickness', 100);
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, t)), mat);
+          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, t / 2);
+          return finishMesh(mesh);
+        }
+
+        default: {
+          let w = Math.max(bb.max.x - bb.min.x, 100);
+          let d = Math.max(bb.max.y - bb.min.y, 100);
+          let h = Math.max(bb.max.z - bb.min.z, 100);
+          if (w < 1) w = 200; if (d < 1) d = 200; if (h < 1) h = 100;
+          const mesh = new THREE.Mesh(bvhGeom(new THREE.BoxGeometry(w, d, h)), mat);
+          mesh.position.set(bb.min.x + w / 2, bb.min.y + d / 2, bb.min.z + h / 2);
+          mesh.castShadow = !isLod;
+          mesh.receiveShadow = !isLod;
+          return finishMesh(mesh);
+        }
+      }
     },
     [createMaterial]
   );
@@ -228,6 +386,17 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
     camera.position.copy(cs.target).add(offset);
     camera.lookAt(cs.target);
+    needsRenderRef.current = true;
+
+    // Persist camera state across sessions
+    try {
+      localStorage.setItem('opencad-camera-state', JSON.stringify({
+        target: { x: cs.target.x, y: cs.target.y, z: cs.target.z },
+        distance: cs.distance,
+        azimuth: cs.azimuth,
+        elevation: cs.elevation,
+      }));
+    } catch { /* ignore storage errors */ }
   }, []);
 
   const setViewPreset = useCallback(
@@ -283,55 +452,82 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     const centerY = (minY + maxY) / 2;
     const size = Math.max(maxX - minX, maxY - minY);
 
-    // Remap arch (x, y) plan coords → three (x, z) ground-plane coords.
-    // Three.js Y axis is vertical; keep camera target at Y=0 (ground).
-    cameraStateRef.current.target.set(centerX, 0, centerY);
+    cameraStateRef.current.target.set(centerX, centerY, 0);
     cameraStateRef.current.distance = size * 2;
     updateCamera();
   }, [doc, updateCamera, setViewPreset]);
 
   const updateScene = useCallback(() => {
-    const { scene } = stateRef.current;
+    const { scene, camera } = stateRef.current;
     if (!scene || !doc) return;
 
-    elementMeshesRef.current.forEach((mesh) => {
-      scene.remove(mesh);
-      mesh.geometry.dispose();
-      if (mesh.material instanceof THREE.Material) {
-        mesh.material.dispose();
-      }
+    // Dispose existing meshes/groups
+    elementMeshesRef.current.forEach((obj) => {
+      scene.remove(obj);
+      obj.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.geometry.dispose();
+          if (child.material instanceof THREE.Material) {
+            child.material.dispose();
+          }
+        }
+      });
     });
     elementMeshesRef.current.clear();
 
-    const lod = getLodLevel(cameraStateRef.current.distance);
     const elements = Object.values(doc.content.elements);
+    const elementCount = elements.length;
+    const lodEnabled = elementCount > LOD_ELEMENT_THRESHOLD;
+    const lodDist = lodDistanceRef.current;
+
     for (const element of elements) {
-      const mesh = createMeshFromElement(element, lod);
+      // Determine whether this element is beyond LOD distance from camera
+      let isLod = false;
+      if (lodEnabled && camera) {
+        const bb = element.boundingBox;
+        const cx = (bb.min.x + bb.max.x) / 2;
+        const cy = (bb.min.y + bb.max.y) / 2;
+        const cz = (bb.min.z + bb.max.z) / 2;
+        const dx = cx - camera.position.x;
+        const dy = cy - camera.position.y;
+        const dz = cz - camera.position.z;
+        const distToCamera = Math.sqrt(dx * dx + dy * dy + dz * dz);
+        isLod = distToCamera > lodDist;
+      }
+
+      const mesh = createMeshFromElement(element, isLod);
       if (mesh) {
         scene.add(mesh);
         elementMeshesRef.current.set(element.id, mesh);
       }
     }
+
+    needsRenderRef.current = true;
   }, [doc, createMeshFromElement]);
 
   const updateSelection = useCallback(() => {
     const { scene } = stateRef.current;
     if (!scene) return;
 
-    elementMeshesRef.current.forEach((mesh, id) => {
+    elementMeshesRef.current.forEach((obj, id) => {
       const isSelected = selectedIds.includes(id);
-      const material = mesh.material as THREE.MeshStandardMaterial;
-      if (isSelected) {
-        material.color.setHex(0x4f46e5);
-        material.emissive.setHex(0x1a1a6e);
-        material.emissiveIntensity = 0.25;
-      } else {
-        const baseColor = (mesh.userData.baseColor as number | undefined) ?? 0x8888aa;
-        material.color.setHex(baseColor);
-        material.emissive.setHex(0x000000);
-        material.emissiveIntensity = 0;
-      }
+      const baseColor = (obj.userData.baseColor as number | undefined) ?? 0x8888aa;
+      obj.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          const material = child.material as THREE.MeshStandardMaterial;
+          if (isSelected) {
+            material.color.setHex(0x4f46e5);
+            material.emissive.setHex(0x1a1a6e);
+            material.emissiveIntensity = 0.25;
+          } else {
+            material.color.setHex(baseColor);
+            material.emissive.setHex(0x000000);
+            material.emissiveIntensity = 0;
+          }
+        }
+      });
     });
+    needsRenderRef.current = true;
   }, [selectedIds]);
 
   const handleKeyDown = useCallback(
@@ -411,22 +607,25 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
         const raycaster = new THREE.Raycaster();
         raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
-        const meshes = Array.from(elementMeshesRef.current.values());
-        const intersects = raycaster.intersectObjects(meshes);
+        const objects = Array.from(elementMeshesRef.current.values());
+        const intersects = raycaster.intersectObjects(objects, true);
 
         if (intersects.length > 0 && !isViewOnly) {
-          // Hit an element → select it
-          const mesh = intersects[0].object as THREE.Mesh;
-          const elementId = mesh.userData.elementId as string;
-          const current = selectedIdsRef.current;
-          if (event.shiftKey) {
-            setSelectedIds(
-              current.includes(elementId)
-                ? current.filter((id) => id !== elementId)
-                : [...current, elementId]
-            );
-          } else {
-            setSelectedIds([elementId]);
+          // Walk parent chain to find elementId (handles groups)
+          let hit: THREE.Object3D | null = intersects[0].object;
+          while (hit && !hit.userData.elementId) hit = hit.parent;
+          const elementId = hit?.userData.elementId as string | undefined;
+          if (elementId) {
+            const current = selectedIdsRef.current;
+            if (event.shiftKey) {
+              setSelectedIds(
+                current.includes(elementId)
+                  ? current.filter((id) => id !== elementId)
+                  : [...current, elementId]
+              );
+            } else {
+              setSelectedIds([elementId]);
+            }
           }
         } else {
           // Empty space → start orbit drag; deselect if not shift
@@ -528,14 +727,16 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(nx, ny), camera);
-    const meshes = Array.from(elementMeshesRef.current.values());
-    const intersects = raycaster.intersectObjects(meshes);
+    const objects = Array.from(elementMeshesRef.current.values());
+    const intersects = raycaster.intersectObjects(objects, true);
 
     const ids = selectedIdsRef.current;
     let elementContext: import('../components/contextMenu/contextMenuItems').ElementContext;
     if (intersects.length > 0) {
-      const mesh = intersects[0].object as THREE.Mesh;
-      const eType = mesh.userData.elementType as string;
+      // Walk parent chain to find elementType (handles groups)
+      let hit: THREE.Object3D | null = intersects[0].object;
+      while (hit && !hit.userData.elementType) hit = hit.parent;
+      const eType = (hit?.userData.elementType ?? '') as string;
       if (ids.length > 1) {
         elementContext = 'multi';
       } else if (eType === 'wall' || eType === 'door' || eType === 'window') {
@@ -572,7 +773,8 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(container.clientWidth, container.clientHeight);
-    renderer.setPixelRatio(window.devicePixelRatio);
+    // Cap pixel ratio at 2× to avoid GPU overload on high-DPI displays
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     container.appendChild(renderer.domElement);
 
@@ -601,33 +803,34 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
 
     updateCamera();
 
+    // Throttled render loop — only renders when scene is dirty
     const animate = (timestamp: number) => {
       animationFrameRef.current = requestAnimationFrame(animate);
 
-      // Track rolling frame time
-      if (lastFrameTimeRef.current > 0) {
-        const delta = timestamp - lastFrameTimeRef.current;
-        const idx = frameTimeIndexRef.current % FRAME_BUFFER_SIZE;
-        frameTimesRef.current[idx] = delta;
-        frameTimeIndexRef.current++;
-
-        // Compute rolling average; auto-drop LOD tier if below 50fps (avg > 20ms)
-        const avg = frameTimesRef.current.reduce((s, v) => s + v, 0) / FRAME_BUFFER_SIZE;
-        const distanceLod = getLodLevel(cameraStateRef.current.distance);
-        if (avg > 20) {
-          // Step down one tier from the distance-based LOD
-          currentLodRef.current = distanceLod === 'high' ? 'medium' : 'low';
-        } else {
-          currentLodRef.current = distanceLod;
-        }
-        // Publish frame stats for the status bar
-        _sharedFrameStats = { avgFrameMs: avg, currentLod: currentLodRef.current };
+      // FPS monitor: track rolling window of frame times
+      frameTimesRef.current.push(timestamp);
+      if (frameTimesRef.current.length > FPS_WINDOW) {
+        frameTimesRef.current.shift();
       }
-      lastFrameTimeRef.current = timestamp;
+      if (frameTimesRef.current.length >= 2) {
+        const oldest = frameTimesRef.current[0];
+        const newest = frameTimesRef.current[frameTimesRef.current.length - 1];
+        const elapsed = newest - oldest;
+        if (elapsed > 0) {
+          const fps = ((frameTimesRef.current.length - 1) / elapsed) * 1000;
+          setCurrentFps(Math.round(fps));
+          // Auto-reduce detail when FPS drops below threshold
+          setLodActive(fps < FPS_LOW_THRESHOLD);
+        }
+      }
 
+      if (!needsRenderRef.current) return;
+      needsRenderRef.current = false;
       renderer.render(scene, camera);
     };
-    animate(0);
+    // Mark initial render
+    needsRenderRef.current = true;
+    animate(performance.now());
 
     const onMouseUp = () => { isDragging.current = false; };
     const onMouseLeave = () => { isDragging.current = false; };
@@ -691,11 +894,12 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     if (!renderer) return;
 
     if (sectionBox) {
-      // Architectural direction → three.js normal (arch-Z is vertical / three-Y).
+      // Normal points in the negative axis direction so the plane clips
+      // elements "above" the cut position (in the selected axis direction).
       let normal: THREE.Vector3;
       if (sectionDirection === 'x')      normal = new THREE.Vector3(-1, 0, 0);
-      else if (sectionDirection === 'y') normal = new THREE.Vector3(0, 0, -1);
-      else                               normal = new THREE.Vector3(0, -1, 0);
+      else if (sectionDirection === 'y') normal = new THREE.Vector3(0, -1, 0);
+      else                               normal = new THREE.Vector3(0, 0, -1);
 
       renderer.clippingPlanes = [new THREE.Plane(normal, sectionPosition)];
       renderer.localClippingEnabled = true;
@@ -784,16 +988,8 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     []
   );
 
-  /**
-   * T-PERF: Return current rolling average frame time and LOD tier.
-   * Used by StatusBar to display live fps info.
-   */
-  const getFrameStats = useCallback((): FrameStats => {
-    const avg = frameTimesRef.current.reduce((s, v) => s + v, 0) / FRAME_BUFFER_SIZE;
-    return {
-      avgFrameMs: avg,
-      currentLod: currentLodRef.current,
-    };
+  const setLodDistance = useCallback((distance: number) => {
+    lodDistanceRef.current = distance;
   }, []);
 
   return {
@@ -803,7 +999,6 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     zoomOut,
     zoomToFit,
     getCameraState,
-    getFrameStats,
     simulateOrbit,
     simulatePan,
     simulateZoom,
@@ -816,5 +1011,9 @@ export function useThreeViewport({ isViewOnly = false }: UseThreeViewportOptions
     saveSectionView,
     contextMenuState,
     closeContextMenu,
+    // Performance / LOD
+    currentFps,
+    lodActive,
+    setLodDistance,
   };
 }
