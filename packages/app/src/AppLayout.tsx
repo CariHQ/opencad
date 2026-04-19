@@ -132,7 +132,7 @@ export function AppLayout() {
   const [showModal, setShowModal] = useState<'import' | 'export' | null>(null);
   const [showCommandPalette, setShowCommandPalette] = useState(false);
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
-  const { status: authStatus, profile: authProfile, signOut: authSignOut } = useAuthStore();
+  const { status: authStatus, profile: authProfile } = useAuthStore();
   const [showSettings, setShowSettings] = useState(false);
   const [showFeedback, setShowFeedback] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso' | 'billing'>('apikeys');
