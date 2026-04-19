@@ -61,6 +61,7 @@ const IFC_ENTITY_MAP: Record<string, ElementType> = {
   IFCRAILING: 'railing',
   IFCSPACE: 'space',
   IFCANNOTATION: 'annotation',
+  IFCCURTAINWALL: 'curtain_wall',
 };
 
 // ─── IFCParser (2x3 and base) ─────────────────────────────────────────────────
@@ -276,6 +277,9 @@ export class IFCSerializer {
     if (element.type === 'slab') {
       return this._slabToLines(element);
     }
+    if (element.type === 'curtain_wall') {
+      return this._curtainWallToLines(element);
+    }
 
     // Fallback: stub with bounding-box comment for round-trip fidelity
     const lineNum = this.lineNumber++;
@@ -411,6 +415,63 @@ export class IFCSerializer {
     ];
   }
 
+  /** Emit IFC geometry for a curtain wall element. */
+  private _curtainWallToLines(element: ElementSchema): string[] {
+    const prop = (key: string, def: number): number => {
+      const v = element.properties[key];
+      return v && v.type === 'number' ? (v.value as number) : def;
+    };
+
+    const bbox = element.boundingBox;
+    const width = prop('Width', bbox.max.x - bbox.min.x || 5000);
+    const height = prop('Height', bbox.max.z - bbox.min.z || 3000);
+    const frameDepth = prop('FrameDepth', 150);
+
+    const idPlace = this._nextId();
+    const idOriginPt = this._nextId();
+    const idExtruded = this._nextId();
+    const idProfile = this._nextId();
+    const idExtrudeDir = this._nextId();
+    const idPolyline = this._nextId();
+    const idPt0 = this._nextId();
+    const idPt1 = this._nextId();
+    const idPt2 = this._nextId();
+    const idPt3 = this._nextId();
+    const idShapeRep = this._nextId();
+    const idGeomCtx = this._nextId();
+    const idCtxPlace = this._nextId();
+    const idCtxOrigin = this._nextId();
+    const idProductShape = this._nextId();
+
+    const lineNum = this.lineNumber++;
+    const name = (element.properties['Name']?.value as string) || 'Unnamed';
+    const bboxStr = `/* bbox:${bbox.min.x},${bbox.min.y},${bbox.min.z}:${bbox.max.x},${bbox.max.y},${bbox.max.z} */`;
+
+    const f = (n: number): string => {
+      const s = n.toString();
+      return s.includes('.') ? s : `${s}.`;
+    };
+
+    return [
+      `#${idPlace}=IFCAXIS2PLACEMENT3D(#${idOriginPt},$,$);`,
+      `#${idOriginPt}=IFCCARTESIANPOINT((${f(bbox.min.x)},${f(bbox.min.y)},0.));`,
+      `#${idExtruded}=IFCEXTRUDEDAREASOLID(#${idProfile},#${idPlace},#${idExtrudeDir},${f(height)});`,
+      `#${idProfile}=IFCARBITRARYCLOSEDPROFILEDEF(.AREA.,$,#${idPolyline});`,
+      `#${idExtrudeDir}=IFCDIRECTION((0.,0.,1.));`,
+      `#${idPolyline}=IFCPOLYLINE((#${idPt0},#${idPt1},#${idPt2},#${idPt3},#${idPt0}));`,
+      `#${idPt0}=IFCCARTESIANPOINT((0.,0.));`,
+      `#${idPt1}=IFCCARTESIANPOINT((${f(width)},0.));`,
+      `#${idPt2}=IFCCARTESIANPOINT((${f(width)},${f(frameDepth)}));`,
+      `#${idPt3}=IFCCARTESIANPOINT((0.,${f(frameDepth)}));`,
+      `#${idShapeRep}=IFCSHAPEREPRESENTATION(#${idGeomCtx},'Body','SweptSolid',(#${idExtruded}));`,
+      `#${idGeomCtx}=IFCGEOMETRICREPRESENTATIONCONTEXT($,'Model',3,1.E-5,#${idCtxPlace},$);`,
+      `#${idCtxPlace}=IFCAXIS2PLACEMENT3D(#${idCtxOrigin},$,$);`,
+      `#${idCtxOrigin}=IFCCARTESIANPOINT((0.,0.,0.));`,
+      `#${idProductShape}=IFCPRODUCTDEFINITIONSHAPE($,$,(#${idShapeRep}));`,
+      `#${lineNum}=IFCCURTAINWALL('${element.id}',$,'${name}',$,$,#${idPlace},#${idProductShape},$); ${bboxStr}`,
+    ];
+  }
+
   private _getIFCType(elementType: ElementType): string {
     if (this.schema === 'IFC4') {
       const map4: Partial<Record<ElementType, string>> = {
@@ -424,6 +485,7 @@ export class IFCSerializer {
         stair: 'IFCSTAIR',
         railing: 'IFCRAILING',
         space: 'IFCSPACE',
+        curtain_wall: 'IFCCURTAINWALL',
       };
       if (map4[elementType]) return map4[elementType]!;
     }
@@ -461,6 +523,7 @@ export class IFCSerializer {
       plumbing_fixture: 'IFCFLOWTERMINAL',
       electrical_equipment: 'IFCELECTRICAPPLIANCE',
       mechanical_equipment: 'IFCMECHANICALFASTENER',
+      curtain_wall: 'IFCCURTAINWALL',
     };
 
     return map[elementType] || 'IFCANNOTATION';
@@ -1001,7 +1064,7 @@ export function serializeIFC(document: DocumentSchema, options: SerializeOptions
  *  - ISO-10303-21 envelope with FILE_DESCRIPTION, FILE_NAME, FILE_SCHEMA
  *  - IFCPROJECT, IFCSITE, IFCBUILDING
  *  - IFCBUILDINGSTOREY for every level in doc.organization.levels
- *  - IFCWALL for every wall element
+*  - IFCWALL / IFCWALLSTANDARDCASE for every wall element
  */
 export function exportToIFC(doc: DocumentSchema): string {
   const lines: string[] = [];
@@ -1011,6 +1074,7 @@ export function exportToIFC(doc: DocumentSchema): string {
   const now = new Date().toISOString().replace(/[-:]/g, '').split('.')[0];
   const projectName = doc.name || 'OpenCAD Project';
 
+  // ── Header ────────────────────────────────────────────────────────────────
   lines.push('ISO-10303-21;');
   lines.push('HEADER;');
   lines.push(`FILE_DESCRIPTION(('OpenCAD Export'),'2;1');`);
@@ -1035,20 +1099,3 @@ export function exportToIFC(doc: DocumentSchema): string {
     lines.push(`#${sid}=IFCBUILDINGSTOREY('${level.id}',$,'${level.name}',$,$,$,$,$,.ELEMENT.,${level.elevation}.);`);
   }
 
-  const walls = Object.values(doc.content.elements).filter((e) => e.type === 'wall');
-  for (const wall of walls) {
-    const wid = next();
-    const name = (wall.properties['Name']?.value as string) || 'Wall';
-    const storeyRef = wall.levelId && storeyIds[wall.levelId]
-      ? `#${storeyIds[wall.levelId]}`
-      : '$';
-    const bbox = wall.boundingBox;
-    const bboxComment = ` /* bbox:${bbox.min.x},${bbox.min.y},${bbox.min.z}:${bbox.max.x},${bbox.max.y},${bbox.max.z} */`;
-    lines.push(`#${wid}=IFCWALL('${wall.id}',$,'${name}',$,$,${storeyRef},$,$);${bboxComment}`);
-  }
-
-  lines.push('ENDSEC;');
-  lines.push('END-ISO-10303-21;');
-
-  return lines.join('\n');
-}

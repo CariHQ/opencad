@@ -20,6 +20,7 @@ import { StairRailingPanel } from './components/StairRailingPanel';
 import { useDocumentStore } from './stores/documentStore';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { WallToolPanel } from './components/WallToolPanel';
+import { CurtainWallPanel } from './components/CurtainWallPanel';
 import { SlabToolPanel } from './components/SlabToolPanel';
 import { DoorWindowPanel } from './components/DoorWindowPanel';
 import { useUndoRedo } from './hooks/useUndoRedo';
@@ -359,6 +360,7 @@ export function AppLayout() {
               {rightPanelTab === 'properties' && can('panel:properties') && (
                 <>
                   {activeTool === 'wall' && <WallToolPanel />}
+                  {activeTool === 'curtain_wall' && <CurtainWallPanel />}
                   {activeTool === 'slab' && <SlabToolPanel />}
                   {(activeTool === 'door' || activeTool === 'window') && <DoorWindowPanel />}
                   {(activeTool === 'column' || activeTool === 'beam') && <ColumnBeamPanel />}

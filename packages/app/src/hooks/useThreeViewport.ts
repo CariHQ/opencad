@@ -75,16 +75,17 @@ interface CameraState {
 
 // Color per element type — module-level constant (not recreated each render)
 const ELEMENT_TYPE_COLORS: Record<string, number> = {
-  wall:      0xc4c8d0,
-  slab:      0xa0a8b8,
-  column:    0xe08040,
-  beam:      0xd07030,
-  door:      0x8090b8,
-  window:    0x70a8d8,
-  stair:     0xb0b870,
-  railing:   0x90a060,
-  roof:      0x909098,
-  space:     0x80c8a8,
+  wall:         0xc4c8d0,
+  slab:         0xa0a8b8,
+  column:       0xe08040,
+  beam:         0xd07030,
+  door:         0x8090b8,
+  window:       0x70a8d8,
+  stair:        0xb0b870,
+  railing:      0x90a060,
+  roof:         0x909098,
+  space:        0x80c8a8,
+  curtain_wall: 0x88c0e0,
 };
 
 const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; distance: number }> = {
