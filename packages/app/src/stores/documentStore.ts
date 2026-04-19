@@ -78,6 +78,7 @@ interface DocumentState {
   addElement: (params: {
     type: string;
     layerId: string;
+    geometry?: { type: string; data: unknown };
     properties?: Record<string, unknown>;
     geometry?: { type: string; data: unknown };
   }) => string;
@@ -306,6 +307,7 @@ export const useDocumentStore = create<DocumentState>()(
         const elementId = model.addElement({
           type: params.type as 'wall' | 'door' | 'window' | 'slab',
           layerId: params.layerId,
+          geometry: params.geometry as import('@opencad/document').ElementGeometry | undefined,
           properties: props,
         });
 
@@ -596,6 +598,9 @@ export const useDocumentStore = create<DocumentState>()(
         model.documentData.metadata.updatedAt = Date.now();
         set({ document: { ...model.documentData } });
       },
+
+      reviewStatus: 'none' as const,
+      setReviewStatus: (status) => set({ reviewStatus: status }),
 
       renameProject: (name) => {
         const { model } = get();
