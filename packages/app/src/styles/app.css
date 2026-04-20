@@ -701,17 +701,38 @@ input[type='range']::-moz-range-track {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  padding: 0;
   transition: background 0.12s ease, color 0.12s ease;
   flex-shrink: 0;
 }
 
 .tool-btn:hover {
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
 .tool-btn.active {
-  background: var(--bg-elevated);
-  color: var(--accent-primary);
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+.tool-btn.active:hover {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+/* Expanded mode — tool shows name alongside the icon */
+.toolshelf--expanded .tool-btn {
+  width: 140px;
+  justify-content: flex-start;
+  padding: 0 10px;
+}
+
+.tool-name {
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Active tool: icon color only — no bars, no backgrounds */
