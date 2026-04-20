@@ -247,6 +247,10 @@ function buildWallMesh(
   const x2 = pv('EndX',   x1 + 1000), y2 = pv('EndY', y1);
   const wallH = pv('Height', 3000);
   const wallT = pv('Width',  200);
+  // Per-level vertical offset lets multi-story buildings stack walls at
+  // story heights (e.g. ground floor at 0, second floor at 3000). Defaults
+  // to 0 for single-story plans.
+  const elevOffset = pv('ElevationOffset', 0);
   const len   = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
   const ry    = -Math.atan2(y2 - y1, x2 - x1);
   const cx    = (x1 + x2) / 2;
@@ -269,7 +273,7 @@ function buildWallMesh(
   // ── Solid wall (no openings) ──────────────────────────────────────────────
   if (openings.length === 0) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(lenExt, wallH, wallT), mat);
-    mesh.position.set(cx, wallH / 2, cz);
+    mesh.position.set(cx, elevOffset + wallH / 2, cz);
     mesh.rotation.y = ry;
     tag(mesh);
     return mesh;
@@ -279,7 +283,7 @@ function buildWallMesh(
   // Group is positioned at the wall midpoint; all children are in wall-local space
   // (wall runs along local X from -len/2 to +len/2, Y is up, Z is thickness).
   const group = new THREE.Group();
-  group.position.set(cx, 0, cz);
+  group.position.set(cx, elevOffset, cz);
   group.rotation.y = ry;
   tag(group);
 

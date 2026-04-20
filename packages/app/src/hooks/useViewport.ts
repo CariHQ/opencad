@@ -258,6 +258,7 @@ export function useViewport() {
           Width: { type: 'number', value: wp['thickness'] ?? defaultThickness },
           Material: { type: 'string', value: wp['material'] ?? (wallType === 'exterior' ? 'Concrete' : 'Plasterboard') },
           WallType: { type: 'string', value: wallType },
+          ElevationOffset: { type: 'number', value: wp['elevationOffset'] ?? 0 },
         },
       });
       getStoreActions().pushHistory('Add wall');

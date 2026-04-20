@@ -613,6 +613,56 @@ function modernVilla(): Action[] {
   return a;
 }
 
+// ============================================================================
+// 11 — Sky-Garden Tower: 5 stacked floors with varying widths and open
+// terraces (sky gardens) on the recessed levels. Each floor is drawn at
+// the same plan location and distinguished by ElevationOffset on walls +
+// slab. Floor 1 (ground): full width. Floor 2: same width. Floor 3:
+// narrower (sky garden wraps). Floor 4: narrower still. Floor 5: smallest
+// + roof garden above.
+// ============================================================================
+function skyGardenTower(): Action[] {
+  const a: Action[] = [];
+  // Story height 3000 mm — matches default wall Height
+  const STORY = 3000;
+  // Floor footprints (pixels) — ground/L1 widest, top narrowest
+  const floors = [
+    { id: 1, xL: -200, xR: 200, yT: -150, yB: 150, offset: 0 * STORY, slab: true },
+    { id: 2, xL: -200, xR: 200, yT: -150, yB: 150, offset: 1 * STORY, slab: true },
+    { id: 3, xL: -160, xR: 160, yT: -120, yB: 120, offset: 2 * STORY, slab: true },
+    { id: 4, xL: -120, xR: 120, yT: -100, yB: 100, offset: 3 * STORY, slab: true },
+    { id: 5, xL:  -80, xR:  80, yT:  -70, yB:  70, offset: 4 * STORY, slab: true },
+  ];
+  a.push(setParam('wall', 'wallType', 'exterior'));
+  for (const f of floors) {
+    a.push(setParam('wall', 'elevationOffset', f.offset));
+    a.push(T('w'));
+    a.push(drag(f.xL, f.yT, f.xR, f.yT));
+    a.push(drag(f.xR, f.yT, f.xR, f.yB));
+    a.push(drag(f.xR, f.yB, f.xL, f.yB));
+    a.push(drag(f.xL, f.yB, f.xL, f.yT));
+    // Per-floor slab (becomes the ceiling of the floor below)
+    if (f.slab) {
+      a.push(setParam('slab', 'elevationOffset', f.offset));
+      a.push(T('s'));
+      a.push(click(f.xL + 10, f.yT + 10));
+      a.push(click(f.xR - 10, f.yT + 10));
+      a.push(click(f.xR - 10, f.yB - 10));
+      a.push(dbl  (f.xL + 10, f.yB - 10));
+    }
+  }
+  // Top cap — small pitched roof over floor 5
+  a.push(setParam('slab', 'elevationOffset', 5 * STORY));
+  a.push(T('o'));
+  const top = floors[floors.length - 1];
+  a.push(click(top.xL - 5, top.yT - 5));
+  a.push(click(top.xR + 5, top.yT - 5));
+  a.push(click(top.xR + 5, top.yB + 5));
+  a.push(dbl  (top.xL - 5, top.yB + 5));
+  a.push(T('v'));
+  return a;
+}
+
 export const TEMPLATES: Record<string, HouseTemplate> = {
   simple: {
     id: 'simple',
@@ -683,5 +733,12 @@ export const TEMPLATES: Record<string, HouseTemplate> = {
     description: 'Central spine with bedroom wing west, open-plan living wing east, extensive glazing, 6 columns',
     expected: { wall: 14, door: 11, window: 24, slab: 1, roof: 1, column: 6 },
     actions: modernVilla(),
+  },
+  'sky-garden-tower': {
+    id: 'sky-garden-tower',
+    label: 'Sky-Garden Tower (5 floors, stepped)',
+    description: 'Five stacked levels with decreasing widths — open setbacks become roof-garden terraces',
+    expected: { wall: 20, slab: 5, roof: 1 },
+    actions: skyGardenTower(),
   },
 };
