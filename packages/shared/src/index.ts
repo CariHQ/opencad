@@ -8,3 +8,4 @@ export * from './document';
 export * from './bim';
 export * from './project';
 export * from './events';
+export * from './parseLength';

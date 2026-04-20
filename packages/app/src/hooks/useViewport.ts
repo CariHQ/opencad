@@ -1155,6 +1155,53 @@ export function useViewport() {
     // Multi-click tools don't commit on mouseUp, only on next click or double-click
   }, [activeTool, drawingState, applySnapping, commitShape, pushHistory, setSelectedIds]);
 
+  // ─── Coord-box commit (T-MOD-003 / #296) ──────────────────────────────────
+  //
+  // Called by the CoordBox overlay when the user types a length/angle (or
+  // width/height) and presses Enter. Commits the currently-active drag tool
+  // at the resolved end-point instead of wherever the mouse happened to be.
+  const commitFromCoordBox = useCallback((
+    values: { length?: number; angle?: number; width?: number; height?: number }
+  ) => {
+    const start = drawingState.startPoint;
+    if (!start || !drawingState.isDrawing) return;
+    const current = drawingState.currentPoint ?? start;
+
+    // Decide the end point based on which fields the user supplied. Fall
+    // back to the preview (cursor) values for any missing field so partial
+    // input still commits something sensible.
+    let endX: number, endY: number;
+    if (values.width !== undefined || values.height !== undefined) {
+      // Rectangle/slab mode — width along X, height along Y, signed by cursor.
+      const dirX = Math.sign(current.x - start.x) || 1;
+      const dirY = Math.sign(current.y - start.y) || 1;
+      const w = values.width  ?? Math.abs(current.x - start.x);
+      const h = values.height ?? Math.abs(current.y - start.y);
+      endX = start.x + dirX * w;
+      endY = start.y + dirY * h;
+    } else {
+      // Length/angle mode — length along the angle axis from the start.
+      const previewLen = Math.sqrt((current.x - start.x) ** 2 + (current.y - start.y) ** 2);
+      const previewAng = Math.atan2(current.y - start.y, current.x - start.x);
+      const len = values.length ?? previewLen;
+      const ang = values.angle !== undefined ? (values.angle * Math.PI / 180) : previewAng;
+      endX = start.x + len * Math.cos(ang);
+      endY = start.y + len * Math.sin(ang);
+    }
+
+    if (DRAG_TOOLS.has(activeTool)) {
+      commitShape(activeTool, start, { x: endX, y: endY });
+    }
+    setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
+  }, [activeTool, drawingState, commitShape]);
+
+  // ─── Cancel drawing — same as Esc ─────────────────────────────────────────
+  const cancelDrawing = useCallback(() => {
+    setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
+    interactionRef.current = { mode: 'idle' };
+    dirtyRef.current = true;
+  }, []);
+
   // Double-click finishes polyline
   const handleCanvasDoubleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!MULTICLICK_TOOLS.has(activeTool)) return;
@@ -1419,5 +1466,7 @@ export function useViewport() {
     activeTool,
     drawingState,
     viewTransform,
+    commitFromCoordBox,
+    cancelDrawing,
   };
 }
