@@ -569,7 +569,29 @@ export function useThreeViewport() {
       const cs = cameraStateRef.current;
       cs.azimuth   = view.azimuth;
       cs.elevation = view.elevation;
-      cs.distance  = view.distance;
+
+      // Model-aware distance: frame whatever is in the scene. The
+      // hardcoded 10000mm preset distance worked for a 5m room but
+      // clips or overscales when the model is smaller or much bigger.
+      const meshes = Array.from(elementMeshesRef.current.values());
+      if (meshes.length > 0) {
+        const box = new THREE.Box3();
+        for (const m of meshes) box.expandByObject(m);
+        if (!box.isEmpty()) {
+          const size = new THREE.Vector3();
+          const center = new THREE.Vector3();
+          box.getSize(size);
+          box.getCenter(center);
+          const maxDim = Math.max(size.x, size.y, size.z, 1000);
+          const diagonal = Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
+          cs.target.copy(center);
+          cs.distance = Math.max(2500, Math.min(50000, diagonal * 1.8 + maxDim * 0.5));
+        } else {
+          cs.distance = view.distance;
+        }
+      } else {
+        cs.distance = view.distance;
+      }
       updateCamera();
     },
     [updateCamera]
