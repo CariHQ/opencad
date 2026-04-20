@@ -249,6 +249,11 @@ function buildWallMesh(
   const cx    = (x1 + x2) / 2;
   const cz    = (y1 + y2) / 2;
 
+  // Extend the wall length by half its thickness on each end so adjacent
+  // walls overlap cleanly at corners. Without this, the square notch
+  // (halfT × halfT) at each outside corner shows as a vertical gap.
+  const lenExt = len + wallT;
+
   const tag = (obj: THREE.Object3D) => {
     obj.userData.elementId   = element.id;
     obj.userData.elementType = 'wall';
@@ -260,7 +265,7 @@ function buildWallMesh(
 
   // ── Solid wall (no openings) ──────────────────────────────────────────────
   if (openings.length === 0) {
-    const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, wallH, wallT), mat);
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(lenExt, wallH, wallT), mat);
     mesh.position.set(cx, wallH / 2, cz);
     mesh.rotation.y = ry;
     tag(mesh);
@@ -288,14 +293,19 @@ function buildWallMesh(
   };
 
   const sorted = [...openings].sort((a, b) => a.t - b.t);
-  let cursor = 0; // right edge of last filled segment, in wall-local [0..len]
+  // Wall runs local-X from -lenExt/2 to +lenExt/2 (half-thickness overshoot
+  // on each end for clean corners). Openings live in wall-local [0..len];
+  // the start of the wall shifts left by wallT/2 in local space.
+  const leftOvershoot = wallT / 2;
+  let cursor = -leftOvershoot; // right edge of last filled segment
 
   for (const op of sorted) {
     const opLeft  = Math.max(0,   op.t - op.width / 2);
     const opRight = Math.min(len, op.t + op.width / 2);
     if (opRight <= opLeft) continue;
 
-    // Full-height segment before this opening
+    // Full-height segment before this opening — extends all the way from the
+    // previous cursor (which may be the wall's left overshoot on first pass)
     if (opLeft > cursor) {
       const w = opLeft - cursor;
       addBox(cursor + w / 2 - len / 2, w, 0, wallH);
@@ -314,9 +324,11 @@ function buildWallMesh(
     cursor = opRight;
   }
 
-  // Full-height segment after last opening
-  if (cursor < len) {
-    const w = len - cursor;
+  // Full-height segment after last opening — extended to len + wallT/2 so
+  // the right corner of the wall also overlaps cleanly.
+  const rightExt = len + wallT / 2;
+  if (cursor < rightExt) {
+    const w = rightExt - cursor;
     addBox(cursor + w / 2 - len / 2, w, 0, wallH);
   }
 
