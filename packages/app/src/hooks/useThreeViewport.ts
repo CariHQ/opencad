@@ -935,56 +935,74 @@ export function useThreeViewport() {
     updateCamera();
 
     // ── TransformControls gizmo ──────────────────────────────────────────
-    const tc = new TransformControls(camera, renderer.domElement);
-    tc.setSize(0.8);
+    // Wrapped in try/catch because TransformControls broke its API in
+    // three.js 0.170+ (extends Controls, not Object3D). If the gizmo fails
+    // to attach, the rest of the 3D scene should still render.
+    try {
+      const tc = new TransformControls(camera, renderer.domElement);
+      tc.setSize(0.8);
 
-    tc.addEventListener('dragging-changed', (event) => {
-      const isNowDragging = (event as unknown as { value: boolean }).value;
-      tcDraggingRef.current = isNowDragging;
+      tc.addEventListener('dragging-changed', (event) => {
+        const isNowDragging = (event as unknown as { value: boolean }).value;
+        tcDraggingRef.current = isNowDragging;
 
-      if (isNowDragging) {
-        const obj = tc.object;
-        if (obj) tcInitPosRef.current = obj.position.clone();
-      } else {
-        const id   = tcElementIdRef.current;
-        const obj  = tc.object;
-        const init = tcInitPosRef.current;
-        if (id && obj && init) {
-          const dx = obj.position.x - init.x;
-          const dz = obj.position.z - init.z;
-          if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
-            const st = useDocumentStore.getState();
-            const el = st.document?.content.elements[id];
-            if (el) {
-              const propsUpdate = moveElementProps(el, dx, dz);
-              if (Object.keys(propsUpdate).length > 0) {
-                st.updateElement(id, {
-                  properties: { ...el.properties, ...propsUpdate },
-                });
-                st.pushHistory('Move element');
+        if (isNowDragging) {
+          const obj = tc.object;
+          if (obj) tcInitPosRef.current = obj.position.clone();
+        } else {
+          const id   = tcElementIdRef.current;
+          const obj  = tc.object;
+          const init = tcInitPosRef.current;
+          if (id && obj && init) {
+            const dx = obj.position.x - init.x;
+            const dz = obj.position.z - init.z;
+            if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
+              const st = useDocumentStore.getState();
+              const el = st.document?.content.elements[id];
+              if (el) {
+                const propsUpdate = moveElementProps(el, dx, dz);
+                if (Object.keys(propsUpdate).length > 0) {
+                  st.updateElement(id, {
+                    properties: { ...el.properties, ...propsUpdate },
+                  });
+                  st.pushHistory('Move element');
+                }
               }
             }
           }
+          tcInitPosRef.current = null;
+          tc.detach();
+          tcElementIdRef.current = null;
         }
-        tcInitPosRef.current = null;
-        tc.detach();
-        tcElementIdRef.current = null;
-      }
-    });
+      });
 
-    tc.addEventListener('change', () => { needsRenderRef.current = true; });
+      tc.addEventListener('change', () => { needsRenderRef.current = true; });
 
-    // three.js 0.170+: TransformControls extends Controls (not Object3D).
-    // The visual gizmo lives on tc.getHelper() — that's what goes in the scene.
-    scene.add(tc.getHelper());
-    transformControlsRef.current = tc;
+      // three.js 0.170+: TransformControls extends Controls (not Object3D).
+      // getHelper() returns the visual Object3D that belongs in the scene.
+      const helper = typeof (tc as unknown as { getHelper?: () => THREE.Object3D }).getHelper === 'function'
+        ? (tc as unknown as { getHelper: () => THREE.Object3D }).getHelper()
+        : (tc as unknown as THREE.Object3D);
+      scene.add(helper);
+      transformControlsRef.current = tc;
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn('[3D] TransformControls init failed — gizmo disabled:', err);
+    }
 
-    // ── Animate loop: always render each frame. Dirty-flag rendering was
-    // skipping frames in pathological cases; a simple always-render loop is
-    // cheaper to reason about and easily hits 60 fps at current scene sizes.
+    // ── Animate loop: always render each frame. Errors in render are
+    // caught and logged so one bad frame doesn't kill the whole loop.
+    let renderErrorCount = 0;
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
-      renderer.render(scene, camera);
+      try {
+        renderer.render(scene, camera);
+      } catch (err) {
+        if (renderErrorCount++ < 5) {
+          // eslint-disable-next-line no-console
+          console.error('[3D] renderer.render() threw:', err);
+        }
+      }
     };
     animate();
 
