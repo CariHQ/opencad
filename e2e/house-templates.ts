@@ -185,19 +185,33 @@ function poolHouse(): Action[] {
   a.push(click(xR + 15, yT - 15));
   a.push(click(xR + 15, yB + 15));
   a.push(dbl  (xL - 15, yB + 15));
-  // Pool — rectangular to the east of the cabana. Recessed 300 mm so the
-  // water surface reads as a pool rather than a grey concrete patio, and
-  // painted with the dedicated Pool Water material (low roughness → mirror
-  // reflection, blue colour).
+  // Pool — recessed blue water surface. No concrete deck surround (a full
+  // deck slab at Y=0 would cover the water from above). Coping walls trace
+  // the pool edge at ground level so the pool reads as a clear sunken
+  // rectangle instead of a floating blue patch.
   const pxL = 20, pxR = 180;
   const pyT = -80, pyB = 80;
-  a.push(setParam('slab', 'elevationOffset', -300));
+  // Pool water surface — 600 mm below grade. Shallow enough to stay
+  // visible at iso angle, deep enough for the recess to read clearly.
+  a.push(setParam('slab', 'elevationOffset', -600));
   a.push(setParam('slab', 'material', 'Pool Water'));
   a.push(T('s'));
   a.push(click(pxL, pyT));
   a.push(click(pxR, pyT));
   a.push(click(pxR, pyB));
   a.push(dbl  (pxL, pyB));
+  // Pool coping — partition-type walls (100 mm thick) at the pool edge,
+  // short height so they read as a curb rather than a privacy wall.
+  a.push(setParam('wall', 'wallType', 'partition'));
+  a.push(setParam('wall', 'height', 400));
+  a.push(T('w'));
+  a.push(drag(pxL, pyT, pxR, pyT));
+  a.push(drag(pxR, pyT, pxR, pyB));
+  a.push(drag(pxR, pyB, pxL, pyB));
+  a.push(drag(pxL, pyB, pxL, pyT));
+  // Reset wall + slab params so subsequent runs don't inherit these.
+  a.push(setParam('wall', 'wallType', 'interior'));
+  a.push(setParam('wall', 'height', 3000));
   // Reset slab params so subsequent slabs in other templates (if re-run in
   // the same harness session) don't inherit these.
   a.push(setParam('slab', 'elevationOffset', 0));
@@ -714,7 +728,7 @@ export const TEMPLATES: Record<string, HouseTemplate> = {
     id: 'pool-house',
     label: 'Pool House',
     description: 'Cabana + adjacent rectangular pool',
-    expected: { wall: 4, door: 1, window: 1, slab: 2, roof: 1 },
+    expected: { wall: 8, door: 1, window: 1, slab: 2, roof: 1 },
     actions: poolHouse(),
   },
   'mountain-cabin': {
