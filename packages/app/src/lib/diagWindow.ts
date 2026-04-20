@@ -91,15 +91,20 @@ interface DiagWindow {
     getDocument: () => DocumentSchema | null;
     runCompliance: () => ComplianceViolation[];
     summary: () => DiagSummary;
+    setToolParam: (tool: string, key: string, value: unknown) => void;
   };
 }
 
-export function installDiagWindow(getStoreDocument: () => DocumentSchema | null): void {
+export function installDiagWindow(
+  getStoreDocument: () => DocumentSchema | null,
+  setToolParam?: (tool: string, key: string, value: unknown) => void,
+): void {
   if (!import.meta.env.DEV) return;
   if (typeof window === 'undefined') return;
   const w = window as unknown as DiagWindow;
   w.__opencadDiag = {
     getDocument: () => getStoreDocument(),
+    setToolParam: (t, k, v) => setToolParam?.(t, k, v),
     runCompliance: () => {
       const doc = getStoreDocument();
       return doc ? runComplianceCheck(doc) : [];

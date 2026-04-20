@@ -83,6 +83,15 @@ test(`autonomous house build — iter ${ITER} — ${TEMPLATE.label}`, async ({ p
       case 'wait':
         await page.waitForTimeout(a.ms ?? 200);
         break;
+      case 'setParam':
+        await page.evaluate(([t, k, v]) => {
+          const w = window as unknown as {
+            __opencadDiag?: { setToolParam: (tool: string, key: string, value: unknown) => void };
+          };
+          w.__opencadDiag?.setToolParam(t, k, v);
+        }, [a.paramTool!, a.paramKey!, a.paramValue!] as [string, string, unknown]);
+        await page.waitForTimeout(60);
+        break;
     }
   }
 

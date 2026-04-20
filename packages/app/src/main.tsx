@@ -21,7 +21,10 @@ void initSyncCrdt();
 // Dev-only: expose window.__opencadDiag for the Playwright autonomous-build
 // harness so it can read the live document and run the compliance engine
 // without re-parsing persisted JSON. No-op in production.
-installDiagWindow(() => useDocumentStore.getState().document);
+installDiagWindow(
+  () => useDocumentStore.getState().document,
+  (tool, key, value) => useDocumentStore.getState().setToolParam(tool, key, value),
+);
 
 const container = document.getElementById('root');
 if (!container) {

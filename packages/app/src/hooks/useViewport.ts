@@ -236,6 +236,18 @@ export function useViewport() {
       const dx = end.x - start.x, dy = end.y - start.y;
       if (Math.sqrt(dx * dx + dy * dy) < 100) return;
       const wp = (toolParams?.['wall'] ?? {}) as Record<string, unknown>;
+      const wallType = (wp['wallType'] as string | undefined) ?? 'interior';
+      // ArchiCAD-style thickness defaults by wall type:
+      //   exterior  — 300 mm  (brick/block + insulation + inner drywall)
+      //   interior  — 150 mm  (drywall-stud-drywall partition)
+      //   partition — 100 mm  (lightweight office partition)
+      //   curtain   —  60 mm  (glazed curtain wall)
+      // User can still override via toolParams.thickness.
+      const defaultThickness =
+        wallType === 'exterior'  ? 300 :
+        wallType === 'partition' ? 100 :
+        wallType === 'curtain'   ?  60 :
+        150;
       addElement({
         type: 'wall', layerId,
         properties: {
@@ -243,9 +255,9 @@ export function useViewport() {
           StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
           EndX: { type: 'number', value: end.x }, EndY: { type: 'number', value: end.y },
           Height: { type: 'number', value: wp['height'] ?? 3000 },
-          Width: { type: 'number', value: wp['thickness'] ?? 200 },
-          Material: { type: 'string', value: wp['material'] ?? 'Concrete' },
-          WallType: { type: 'string', value: wp['wallType'] ?? 'interior' },
+          Width: { type: 'number', value: wp['thickness'] ?? defaultThickness },
+          Material: { type: 'string', value: wp['material'] ?? (wallType === 'exterior' ? 'Concrete' : 'Plasterboard') },
+          WallType: { type: 'string', value: wallType },
         },
       });
       getStoreActions().pushHistory('Add wall');
@@ -332,7 +344,10 @@ export function useViewport() {
         properties: {
           Name: { type: 'string', value: tool === 'roof' ? 'Roof' : 'Slab' },
           Points: { type: 'string', value: JSON.stringify(extraPoints) },
-          Thickness: { type: 'number', value: sp['thickness'] ?? (tool === 'roof' ? 150 : 250) },
+          // ArchiCAD-typical slab/roof thicknesses:
+          //   slab (structural floor)  — 200 mm
+          //   roof (tile/shingle + deck + insulation) — 250 mm
+          Thickness: { type: 'number', value: sp['thickness'] ?? (tool === 'roof' ? 250 : 200) },
           Material: { type: 'string', value: sp['material'] ?? defaultMaterial },
           SlopeAngle: { type: 'number', value: sp['slopeAngle'] ?? 0 },
           ElevationOffset: { type: 'number', value: sp['elevationOffset'] ?? 0 },

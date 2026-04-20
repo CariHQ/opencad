@@ -205,11 +205,12 @@ describe('T-BIM-006: Level operations — elevation and height', () => {
 describe('T-BIM-007: toolParams are readable for all BIM tools', () => {
   beforeEach(freshStore);
 
-  it('wall toolParams have default height, thickness, material', () => {
+  it('wall toolParams have default height + wallType (thickness derived by commit logic)', () => {
     const wp = useDocumentStore.getState().toolParams['wall'] as Record<string, unknown>;
     expect(typeof wp?.['height']).toBe('number');
-    expect(typeof wp?.['thickness']).toBe('number');
-    expect(typeof wp?.['material']).toBe('string');
+    expect(typeof wp?.['wallType']).toBe('string');
+    // thickness + material intentionally absent — commit logic picks
+    // ArchiCAD-style defaults by wallType (exterior 300 / interior 150).
   });
 
   it('door toolParams have default height and width', () => {
@@ -222,8 +223,8 @@ describe('T-BIM-007: toolParams are readable for all BIM tools', () => {
     useDocumentStore.getState().setToolParam('wall', 'height', 4000);
     const wp = useDocumentStore.getState().toolParams['wall'] as Record<string, unknown>;
     expect(wp?.['height']).toBe(4000);
-    // thickness should still be there
-    expect(typeof wp?.['thickness']).toBe('number');
+    // wallType should still be there
+    expect(typeof wp?.['wallType']).toBe('string');
   });
 });
 

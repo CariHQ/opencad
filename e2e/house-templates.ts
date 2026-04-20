@@ -14,7 +14,7 @@
 export type ToolKey = 'v' | 'w' | 'd' | 'n' | 's' | 'o' | 'k' | 'b' | 't' | 'g' | 'l' | 'r' | 'c' | 'a' | 'p';
 
 export interface Action {
-  kind: 'tool' | 'drag' | 'click' | 'dblclick' | 'wait';
+  kind: 'tool' | 'drag' | 'click' | 'dblclick' | 'wait' | 'setParam';
   /** tool shortcut */
   tool?: ToolKey;
   /** drag / click / dblclick coords (relative to canvas centre) */
@@ -22,6 +22,10 @@ export interface Action {
   x2?: number; y2?: number;
   /** wait duration in ms */
   ms?: number;
+  /** setParam: which tool + key + value (for setting toolParams mid-template) */
+  paramTool?: string;
+  paramKey?: string;
+  paramValue?: string | number | boolean;
 }
 
 export interface HouseTemplate {
@@ -40,6 +44,8 @@ const drag = (x1: number, y1: number, x2: number, y2: number): Action =>
 const click = (x1: number, y1: number): Action => ({ kind: 'click', x1, y1 });
 const dbl  = (x1: number, y1: number): Action => ({ kind: 'dblclick', x1, y1 });
 const wait = (ms: number): Action => ({ kind: 'wait', ms });
+const setParam = (tool: string, key: string, value: string | number | boolean): Action =>
+  ({ kind: 'setParam', paramTool: tool, paramKey: key, paramValue: value });
 
 // ============================================================================
 // 01 — Simple room (the original baseline)
@@ -107,17 +113,19 @@ function threeBedroom(): Action[] {
   const xO =  160;                                 // corridor east edge (if any)
   const y1 =  40;                                  // horiz divider bed1/bed2
   const yH = -40;                                  // bathroom top
-  const a: Action[] = [T('w')];
-  // Exterior
+  const a: Action[] = [];
+  // Exterior walls — 300mm concrete
+  a.push(setParam('wall', 'wallType', 'exterior'));
+  a.push(T('w'));
   a.push(drag(xL, yT, xR, yT));                    // north
   a.push(drag(xR, yT, xR, yB));                    // east
   a.push(drag(xR, yB, xL, yB));                    // south
   a.push(drag(xL, yB, xL, yT));                    // west
-  // Interior partitions
+  // Interior partitions — 150mm plasterboard
+  a.push(setParam('wall', 'wallType', 'interior'));
   a.push(drag(xM, yT, xM, yB));                    // main north–south divider
   a.push(drag(xL, y1, xM, y1));                    // bed1 / bed2 horizontal
   a.push(drag(xM, yH, xR, yH));                    // living / kitchen horizontal
-  // Corridor forming bathroom nook
   a.push(drag(xN, yT, xN, yH));                    // hall west edge (partial)
   // Doors
   a.push(T('d'));

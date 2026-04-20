@@ -143,7 +143,10 @@ export const useDocumentStore = create<DocumentState>()(
       setReviewStatus: (status) => set({ reviewStatus: status }),
 
       toolParams: {
-        wall: { height: 3000, thickness: 200, material: 'Concrete', wallType: 'interior' },
+        // thickness intentionally omitted — commit logic picks ArchiCAD-style
+        // default by wallType (exterior 300 / interior 150 / partition 100 /
+        // curtain 60). User can still override via the WallToolPanel.
+        wall: { height: 3000, wallType: 'interior' },
         door: { height: 2100, width: 900, swing: 90 },
         window: { height: 1200, width: 1200, sillHeight: 900 },
       },
