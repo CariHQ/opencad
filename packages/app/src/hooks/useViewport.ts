@@ -859,18 +859,22 @@ export function useViewport() {
     }
 
     if (MULTICLICK_TOOLS.has(activeTool)) {
-      setDrawingState((prev) => {
-        const scale = viewTransformRef.current.scale;
-        const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
-        if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * scale) {
-          commitShape(activeTool, prev.points[0], prev.points[prev.points.length - 1]!, prev.points);
-          return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
-        }
-        const newPoints = [...prev.points, wp];
-        return { isDrawing: true, startPoint: newPoints[0]!, currentPoint: wp, points: newPoints };
-      });
+      // Commit logic OUTSIDE the reducer — otherwise React.StrictMode
+      // double-invokes the reducer in dev and we double-commit the element.
+      const scale = viewTransformRef.current.scale;
+      const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
+      const prev = drawingState;
+      if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * scale) {
+        commitShape(activeTool, prev.points[0], prev.points[prev.points.length - 1]!, prev.points);
+        setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
+      } else {
+        setDrawingState((p) => {
+          const newPoints = [...p.points, wp];
+          return { isDrawing: true, startPoint: newPoints[0]!, currentPoint: wp, points: newPoints };
+        });
+      }
     }
-  }, [activeTool, doc, setSelectedIds, setActiveTool, applySnapping, commitShape]);
+  }, [activeTool, doc, drawingState, setSelectedIds, setActiveTool, applySnapping, commitShape]);
 
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     // Pan via middle mouse drag
@@ -1056,16 +1060,17 @@ export function useViewport() {
     const v = viewTransformRef.current;
     let wp = screenToWorld(event.clientX - rect.left, event.clientY - rect.top, canvas.width, canvas.height, v);
     wp = applySnapping(wp);
-    setDrawingState((prev) => {
-      if (prev.points.length >= 2) {
-        const finalPoints = [...prev.points, wp];
-        commitShape(activeTool, prev.points[0]!, finalPoints[finalPoints.length - 1]!, finalPoints);
-      }
-      return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
-    });
+    // Commit OUTSIDE the reducer — impure reducers run twice under StrictMode
+    // in dev and would double-commit the element.
+    const prev = drawingState;
+    if (prev.points.length >= 2) {
+      const finalPoints = [...prev.points, wp];
+      commitShape(activeTool, prev.points[0]!, finalPoints[finalPoints.length - 1]!, finalPoints);
+    }
+    setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
     // Intentionally keep activeTool — user can draw another multi-vertex shape
     // of the same type without re-selecting the tool.
-  }, [activeTool, applySnapping, commitShape]);
+  }, [activeTool, drawingState, applySnapping, commitShape]);
 
   // ─── Keyboard shortcuts ───────────────────────────────────────────────────
 

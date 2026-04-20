@@ -1,0 +1,189 @@
+{
+  "iteration": "002",
+  "projectId": "house-build-002",
+  "projectUrl": "/project/house-build-002",
+  "state": {
+    "counts": {
+      "wall": 4,
+      "door": 1,
+      "window": 1,
+      "slab": 1,
+      "roof": 1,
+      "column": 4
+    },
+    "sample": [
+      {
+        "type": "wall",
+        "props": {
+          "Name": "Wall",
+          "StartX": -9000,
+          "StartY": -8000,
+          "EndX": -1000,
+          "EndY": -8000,
+          "Height": 3000,
+          "Width": 200,
+          "Material": "Concrete",
+          "WallType": "interior"
+        }
+      },
+      {
+        "type": "wall",
+        "props": {
+          "Name": "Wall",
+          "StartX": -1000,
+          "StartY": -8000,
+          "EndX": -1000,
+          "EndY": -2000,
+          "Height": 3000,
+          "Width": 200,
+          "Material": "Concrete",
+          "WallType": "interior"
+        }
+      },
+      {
+        "type": "wall",
+        "props": {
+          "Name": "Wall",
+          "StartX": -1000,
+          "StartY": -2000,
+          "EndX": -9000,
+          "EndY": -2000,
+          "Height": 3000,
+          "Width": 200,
+          "Material": "Concrete",
+          "WallType": "interior"
+        }
+      },
+      {
+        "type": "wall",
+        "props": {
+          "Name": "Wall",
+          "StartX": -9000,
+          "StartY": -2000,
+          "EndX": -9000,
+          "EndY": -8000,
+          "Height": 3000,
+          "Width": 200,
+          "Material": "Concrete",
+          "WallType": "interior"
+        }
+      },
+      {
+        "type": "door",
+        "props": {
+          "Name": "Door",
+          "X": -5000,
+          "Y": -2000.5,
+          "Width": 900,
+          "Height": 2100,
+          "HostWallId": "a855752c-9395-4eed-bab1-b886a6a2ba01",
+          "Swing": 90,
+          "FrameType": "standard"
+        }
+      },
+      {
+        "type": "window",
+        "props": {
+          "Name": "Window",
+          "X": -5000,
+          "Y": -8000.5,
+          "Width": 1200,
+          "Height": 1200,
+          "HostWallId": "0a6aac0b-631e-4609-8497-ba5c46b2c534",
+          "SillHeight": 900,
+          "FrameType": "standard"
+        }
+      },
+      {
+        "type": "slab",
+        "props": {
+          "Name": "Slab",
+          "Points": "[{\"x\":-8500,\"y\":-7500},{\"x\":-1500,\"y\":-7500},{\"x\":-1500,\"y\":-2500},{\"x\":-8500,\"y\":-2500},{\"x\":-8500,\"y\":-2500},{\"x\":-8500,\"y\":-2500}]",
+          "Thickness": 250,
+          "Material": "Concrete",
+          "SlopeAngle": 0,
+          "ElevationOffset": 0,
+          "SlabType": "slab"
+        }
+      },
+      {
+        "type": "roof",
+        "props": {
+          "Name": "Roof",
+          "Points": "[{\"x\":-9000.5,\"y\":-8000},{\"x\":-1000,\"y\":-8000.5},{\"x\":-999.5,\"y\":-2000},{\"x\":-9000.5,\"y\":-2000},{\"x\":-9000.5,\"y\":-2000},{\"x\":-9000.5,\"y\":-2000}]",
+          "Thickness": 250,
+          "Material": "Concrete",
+          "SlopeAngle": 0,
+          "ElevationOffset": 0,
+          "SlabType": "roof"
+        }
+      },
+      {
+        "type": "column",
+        "props": {
+          "Name": "Column",
+          "X": -8000,
+          "Y": -7000,
+          "Height": 3000,
+          "SectionType": "Circular",
+          "Diameter": 300,
+          "Width": 300,
+          "Depth": 300,
+          "Material": "Concrete"
+        }
+      },
+      {
+        "type": "column",
+        "props": {
+          "Name": "Column",
+          "X": -2000,
+          "Y": -7000,
+          "Height": 3000,
+          "SectionType": "Circular",
+          "Diameter": 300,
+          "Width": 300,
+          "Depth": 300,
+          "Material": "Concrete"
+        }
+      },
+      {
+        "type": "column",
+        "props": {
+          "Name": "Column",
+          "X": -2000,
+          "Y": -3000,
+          "Height": 3000,
+          "SectionType": "Circular",
+          "Diameter": 300,
+          "Width": 300,
+          "Depth": 300,
+          "Material": "Concrete"
+        }
+      },
+      {
+        "type": "column",
+        "props": {
+          "Name": "Column",
+          "X": -8000,
+          "Y": -3000,
+          "Height": 3000,
+          "SectionType": "Circular",
+          "Diameter": 300,
+          "Width": 300,
+          "Depth": 300,
+          "Material": "Concrete"
+        }
+      }
+    ]
+  },
+  "pageErrors": [],
+  "warnings": [
+    "[warning] THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead.",
+    "[warning] THREE.WebGLShadowMap: PCFSoftShadowMap has been deprecated. Using PCFShadowMap instead.",
+    "[warning] [.WebGL-0x13c001c9600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x13c001c9600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x13c001c9600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels",
+    "[warning] [.WebGL-0x13c001c9600]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+  ],
+  "timestamp": "2026-04-20T02:30:16.281Z"
+}

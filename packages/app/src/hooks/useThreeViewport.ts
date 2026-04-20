@@ -523,7 +523,13 @@ export function useThreeViewport() {
         posX = bb.min.x + bw / 2; posY = 25; posZ = bb.min.y + bd / 2;
       }
 
-      const opacity = type === 'window' ? 0.35 : type === 'space' ? 0.3 : 0.85;
+      const opacity =
+        type === 'window' ? 0.35 :
+        type === 'space'  ? 0.30 :
+        // Roof partially see-through so the room underneath stays legible;
+        // user can still solo-view by toggling the roof layer visibility.
+        type === 'roof'   ? 0.55 :
+        0.85;
       const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(posX, posY, posZ);
