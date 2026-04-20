@@ -476,10 +476,19 @@ export function useThreeViewport() {
   const updateCamera = useCallback(() => {
     const { camera } = stateRef.current;
     if (!camera) return;
-    const cs  = cameraStateRef.current;
+    const cs = cameraStateRef.current;
+    // Sanitise — any NaN/Infinity here would silently blank the viewport.
+    if (!Number.isFinite(cs.distance) || !Number.isFinite(cs.azimuth) || !Number.isFinite(cs.elevation)) {
+      cs.distance = 10000; cs.azimuth = Math.PI / 4; cs.elevation = Math.PI / 4;
+    }
+    if (!Number.isFinite(cs.target.x) || !Number.isFinite(cs.target.y) || !Number.isFinite(cs.target.z)) {
+      cs.target.set(0, 0, 0);
+    }
+    cs.distance = Math.max(500, Math.min(50000, cs.distance));
     const sph = new THREE.Spherical(cs.distance, cs.elevation, cs.azimuth);
     camera.position.copy(cs.target).add(new THREE.Vector3().setFromSpherical(sph));
     camera.lookAt(cs.target);
+    camera.updateProjectionMatrix();
     needsRenderRef.current = true;
   }, []);
 
@@ -626,9 +635,21 @@ export function useThreeViewport() {
         box.getCenter(center);
         box.getSize(size);
         const maxDim = Math.max(size.x, size.y, size.z, 1000);
-        cameraStateRef.current.target.copy(center);
-        cameraStateRef.current.distance = maxDim * 2.5;
-        updateCamera();
+        // Defensive: if any component is non-finite (NaN/Infinity from
+        // malformed element data), skip the auto-zoom entirely and keep
+        // the camera at its default — otherwise the viewport renders blank
+        // because the camera is pointing at an impossible location.
+        const finite =
+          Number.isFinite(center.x) && Number.isFinite(center.y) && Number.isFinite(center.z) &&
+          Number.isFinite(maxDim);
+        if (finite) {
+          cameraStateRef.current.target.copy(center);
+          cameraStateRef.current.distance = Math.max(500, Math.min(50000, maxDim * 2.5));
+          updateCamera();
+        } else {
+          // eslint-disable-next-line no-console
+          console.warn('[3D] auto-zoom skipped — bounding box was non-finite', { center, size });
+        }
       }
     }
 
@@ -944,15 +965,33 @@ export function useThreeViewport() {
 
     // Set scene + camera, then create renderer synchronously.
     const renderer = createRenderer();
-    renderer.setSize(initW, initH);
+    // Guard against 0×0 initialisation — real canvas size is re-applied by
+    // the ResizeObserver below once layout settles.
+    const safeW = Math.max(100, initW);
+    const safeH = Math.max(100, initH);
+    renderer.setSize(safeW, safeH);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
     // Make the canvas visibly fill the container so CSS can't accidentally hide it.
-    (renderer.domElement as HTMLCanvasElement).style.display = 'block';
-    (renderer.domElement as HTMLCanvasElement).style.width  = '100%';
-    (renderer.domElement as HTMLCanvasElement).style.height = '100%';
+    const canvasEl = renderer.domElement as HTMLCanvasElement;
+    canvasEl.style.display = 'block';
+    canvasEl.style.width  = '100%';
+    canvasEl.style.height = '100%';
+
+    // Re-measure after the browser has committed layout — catches the case
+    // where initial getBoundingClientRect returned 0s because the parent was
+    // still hidden or not yet sized.
+    requestAnimationFrame(() => {
+      const r = container.getBoundingClientRect();
+      if (r.width > 0 && r.height > 0) {
+        const camObj = stateRef.current.camera;
+        if (camObj) { camObj.aspect = r.width / r.height; camObj.updateProjectionMatrix(); }
+        renderer.setSize(r.width, r.height);
+        needsRenderRef.current = true;
+      }
+    });
 
     stateRef.current = { camera, renderer, scene };
     rendererReadyRef.current = true;
