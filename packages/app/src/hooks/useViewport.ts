@@ -617,12 +617,30 @@ export function useViewport() {
         }
       }
 
-      // Polygon / polyline: show committed vertices + rubber-band
-      if ((activeTool === 'polygon' || activeTool === 'polyline') && points.length > 0) {
+      // Multi-click tools (polygon, polyline, slab, roof, railing):
+      // draw committed vertices + rubber-band to current cursor so the user
+      // actually SEES what they're drawing. Without this, slab/roof/railing
+      // felt completely unresponsive — the clicks were being recorded but
+      // produced no visible feedback until commit.
+      if (
+        (activeTool === 'polygon' ||
+         activeTool === 'polyline' ||
+         activeTool === 'slab' ||
+         activeTool === 'roof' ||
+         activeTool === 'railing') &&
+        points.length > 0
+      ) {
+        const isAreaTool = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
         ctx.beginPath();
         ctx.moveTo(points[0]!.x, points[0]!.y);
         for (let i = 1; i < points.length; i++) ctx.lineTo(points[i]!.x, points[i]!.y);
         if (currentPoint) ctx.lineTo(cp.x, cp.y);
+        // Close-back hint: if the area tool already has 3+ points, draw a
+        // dashed guide from the cursor back to the first point.
+        if (isAreaTool && points.length >= 3 && currentPoint) {
+          ctx.moveTo(cp.x, cp.y);
+          ctx.lineTo(points[0]!.x, points[0]!.y);
+        }
         ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = theme.accent;
@@ -827,8 +845,11 @@ export function useViewport() {
     let wp = rawWp;
     wp = applySnapping(wp);
 
-    if (activeTool === 'column') {
-      commitShape('column', wp, wp);
+    // Single-click placement tools — column, door, window all place at
+    // the clicked point (walls are resolved as the nearest host for
+    // doors/windows inside commitShape).
+    if (activeTool === 'column' || activeTool === 'door' || activeTool === 'window') {
+      commitShape(activeTool, wp, wp);
       return;
     }
 

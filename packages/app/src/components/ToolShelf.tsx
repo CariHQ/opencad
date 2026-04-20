@@ -5,7 +5,6 @@ import {
   DoorOpen,
   Fence,
   Ruler,
-  Type,
   Circle,
   Minus,
   RectangleHorizontal,
@@ -69,7 +68,9 @@ const tools: Tool[] = [
 
   // ── Annotation ──
   { id: 'dimension', name: 'Dimension', icon: Ruler,             shortcut: 'M', separatorBefore: true },
-  { id: 'text',      name: 'Text',      icon: Type,              shortcut: 'X' },
+  // text tool intentionally omitted — currently has no mouse handler and
+  // no inline-input state in useViewport. Re-enable once setDrawingText /
+  // textInputRef / confirmText are restored.
 ];
 
 export function ToolShelf() {
