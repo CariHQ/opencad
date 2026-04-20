@@ -1173,7 +1173,10 @@ export function useThreeViewport() {
     renderer.setSize(safeW, safeH);
     renderer.setPixelRatio(window.devicePixelRatio);
     renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+    // PCFSoftShadowMap was deprecated in three@0.170+ for the WebGL path —
+    // use PCFShadowMap; visual difference is negligible at our quality level
+    // and the deprecation warning no longer spams the console.
+    renderer.shadowMap.type    = THREE.PCFShadowMap;
     container.appendChild(renderer.domElement);
     // Make the canvas visibly fill the container so CSS can't accidentally hide it.
     const canvasEl = renderer.domElement as HTMLCanvasElement;
