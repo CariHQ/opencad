@@ -110,17 +110,20 @@ const VIEW_PRESETS: Record<ViewPreset, { azimuth: number; elevation: number; dis
   perspective: { azimuth: Math.PI / 4, elevation: Math.PI / 6, distance: 8000  },
 };
 
+// Architectural palette — each element type uses a distinct warm/cool hue so
+// walls, floor, and roof read as clearly separate surfaces in 3D instead of
+// blending into a uniform grey mass.
 const ELEMENT_COLORS: Record<string, string> = {
-  wall:       '#c8c8d0',
-  slab:       '#a0a8b0',
-  roof:       '#b0b8c0',
-  column:     '#d4c8a0',
-  beam:       '#8090a8',
-  door:       '#c8a878',
-  window:     '#78aac8',
-  stair:      '#b8a8d0',
-  railing:    '#90a0a8',
-  space:      '#d0e8d0',
+  wall:       '#e4dccb', // warm off-white — plaster / painted drywall
+  slab:       '#7d7d7d', // neutral concrete grey — clearly darker than walls
+  roof:       '#8a4a3a', // terracotta — unmistakable from walls and slab
+  column:     '#cfa95c', // warm amber — pops against plaster walls
+  beam:       '#7a6a54', // dark timber / beam brown
+  door:       '#b07842', // varnished hardwood
+  window:     '#9ec7df', // pale glass blue
+  stair:      '#a39079', // taupe
+  railing:    '#606060', // darker metal
+  space:      '#d0e8d0', // light mint (room shading)
   annotation: '#7890a8',
   line:       '#7890a8',
   rectangle:  '#8898b0',
