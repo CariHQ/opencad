@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Columns, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
+import { ContextMenu } from './contextMenu/ContextMenu';
 
 // ─── Floor Plan pane ──────────────────────────────────────────────────────────
 // Always mounted — CSS visibility controls show/hide so canvas state is never lost.
@@ -49,6 +50,7 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
   const {
     containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraTarget,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
+    contextMenuState, closeContextMenu,
   } = useThreeViewport();
 
   const zoomToFitRef = useRef(zoomToFit);
@@ -154,6 +156,18 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
             : 'Orbit: drag · Pan: middle-drag · Zoom: scroll · Fit: 0'}
         </span>
       </div>
+
+      {contextMenuState && (
+        <ContextMenu
+          x={contextMenuState.x}
+          y={contextMenuState.y}
+          viewportW={window.innerWidth}
+          viewportH={window.innerHeight}
+          items={contextMenuState.items}
+          onAction={closeContextMenu}
+          onClose={closeContextMenu}
+        />
+      )}
     </div>
   );
 }

@@ -6,6 +6,7 @@ import { useDocumentStore } from '../stores/documentStore';
 import { type ElementSchema } from '@opencad/document';
 import { BUILT_IN_MATERIALS } from '../lib/materials';
 import { moveElementProps } from '../utils/elementMath';
+import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 
 // Patch Three.js prototypes once at module level for BVH-accelerated raycasting
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -322,6 +323,13 @@ export function useThreeViewport() {
   const [sectionBox,       setSectionBox]       = useState(false);
   const [sectionPosition,  setSectionPosition]  = useState(0);
   const [sectionDirection, setSectionDirection] = useState<'x' | 'y' | 'z'>('z');
+
+  const [contextMenuState, setContextMenuState] = useState<{ x: number; y: number; items: ContextMenuGroup } | null>(null);
+  const closeContextMenu = useCallback(() => setContextMenuState(null), []);
+
+  // Stable ref to selectedIds so the context-menu handler reads the latest value
+  const selectedIdsRef = useRef(selectedIds);
+  useEffect(() => { selectedIdsRef.current = selectedIds; }, [selectedIds]);
 
   const saveSectionView = useCallback(() => {
     try {
@@ -840,7 +848,45 @@ export function useThreeViewport() {
     [updateCamera]
   );
 
-  const handleContextMenu = useCallback((event: Event) => { event.preventDefault(); }, []);
+  const handleContextMenu = useCallback((event: Event) => {
+    event.preventDefault();
+    const me = event as MouseEvent;
+    const container = containerRef.current;
+    const { camera } = stateRef.current;
+    if (!container || !camera) return;
+
+    const rect = container.getBoundingClientRect();
+    const nx = ((me.clientX - rect.left) / rect.width) * 2 - 1;
+    const ny = -((me.clientY - rect.top) / rect.height) * 2 + 1;
+
+    raycasterRef.current.setFromCamera(new THREE.Vector2(nx, ny), camera);
+    const objects = Array.from(elementMeshesRef.current.values());
+    const intersects = raycasterRef.current.intersectObjects(objects, true);
+
+    const ids = selectedIdsRef.current;
+    let elementContext: ElementContext;
+    if (intersects.length > 0) {
+      let hit: THREE.Object3D | null = intersects[0]!.object;
+      while (hit && !hit.userData.elementType) hit = hit.parent;
+      const eType = (hit?.userData.elementType ?? '') as string;
+      if (ids.length > 1) {
+        elementContext = 'multi';
+      } else if (
+        eType === 'wall' || eType === 'door' || eType === 'window' ||
+        eType === 'slab' || eType === 'column' || eType === 'beam' ||
+        eType === 'stair' || eType === 'roof' || eType === 'space'
+      ) {
+        elementContext = eType as ElementContext;
+      } else {
+        elementContext = 'empty';
+      }
+    } else {
+      elementContext = 'empty';
+    }
+
+    const items = getContextMenuItems('3d', elementContext);
+    setContextMenuState({ x: me.clientX, y: me.clientY, items });
+  }, []);
 
   // ── Three.js init ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -928,7 +974,9 @@ export function useThreeViewport() {
 
     tc.addEventListener('change', () => { needsRenderRef.current = true; });
 
-    scene.add(tc as unknown as THREE.Object3D);
+    // three.js 0.170+: TransformControls extends Controls (not Object3D).
+    // The visual gizmo lives on tc.getHelper() — that's what goes in the scene.
+    scene.add(tc.getHelper());
     transformControlsRef.current = tc;
 
     // ── Animate loop: always render each frame. Dirty-flag rendering was
@@ -1041,5 +1089,7 @@ export function useThreeViewport() {
     sectionDirection,
     setSectionDirection,
     saveSectionView,
+    contextMenuState,
+    closeContextMenu,
   };
 }
