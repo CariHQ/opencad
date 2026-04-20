@@ -458,29 +458,36 @@ export function useThreeViewport() {
         const t = pv('Thickness', type === 'roof' ? 200 : 250);
         const elevOffset = pv('ElevationOffset', 0);
         // The 2D tool stores the footprint as a Points polygon (JSON array
-        // of {x,y}). If present, build the slab from that. Otherwise fall
-        // back to X/Y/Width/Depth (legacy / AI-generated elements).
+        // of {x,y}). If present, extrude that polygon directly so L-, S-,
+        // and donut-shaped plates render as their true outline instead of
+        // the axis-aligned bounding box. Fall back to X/Y/Width/Depth for
+        // legacy / AI-generated elements that lack Points.
         const ptsVal = props['Points']?.value;
         let builtFromPoints = false;
         if (typeof ptsVal === 'string' && ptsVal.length > 0) {
           try {
-            const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+            const rawPts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+            // Drop consecutive duplicates — dblclick sometimes appends the
+            // last vertex twice, which Shape doesn't like.
+            const pts: Array<{ x: number; y: number }> = [];
+            for (const p of rawPts) {
+              const prev = pts[pts.length - 1];
+              if (!prev || prev.x !== p.x || prev.y !== p.y) pts.push(p);
+            }
             if (pts.length >= 3) {
-              let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
-              for (const p of pts) {
-                if (p.x < minX) minX = p.x;
-                if (p.x > maxX) maxX = p.x;
-                if (p.y < minY) minY = p.y;
-                if (p.y > maxY) maxY = p.y;
-              }
-              const w = Math.max(maxX - minX, 50);
-              const d = Math.max(maxY - minY, 50);
-              geometry = new THREE.BoxGeometry(w, t, d);
-              posX = (minX + maxX) / 2;
+              const shape = new THREE.Shape(pts.map((p) => new THREE.Vector2(p.x, -p.y)));
+              geometry = new THREE.ExtrudeGeometry(shape, {
+                depth: t, bevelEnabled: false, steps: 1,
+              });
+              // ExtrudeGeometry builds in XY with depth along +Z. Rotate
+              // so the polygon lies in world XZ and the depth becomes +Y.
+              // The shape uses -p.y so the rotation restores original Y→Z.
+              geometry.rotateX(-Math.PI / 2);
+              posX = 0;
               // Slabs sit at/above the ground; roofs sit on top of the
               // typical wall height unless an ElevationOffset is supplied.
-              posY = elevOffset + (type === 'roof' ? 3000 : 0) + t / 2;
-              posZ = (minY + maxY) / 2;
+              posY = elevOffset + (type === 'roof' ? 3000 : 0);
+              posZ = 0;
               builtFromPoints = true;
             }
           } catch { /* fall through */ }
