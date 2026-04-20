@@ -7,6 +7,7 @@ import { type ElementSchema } from '@opencad/document';
 import { BUILT_IN_MATERIALS } from '../lib/materials';
 import { moveElementProps } from '../utils/elementMath';
 import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
+import { buildWallGraph, wallEndOffsets } from './wallGraph';
 
 // Patch Three.js prototypes once at module level for BVH-accelerated raycasting
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -225,15 +226,33 @@ function findWallOpenings(
   return result;
 }
 
-/** Fingerprint for a wall's current openings — used to detect when to rebuild the wall mesh. */
+/**
+ * Fingerprint for a wall's current openings AND junctions — used to detect
+ * when to rebuild the wall mesh. A neighbouring wall moving changes the
+ * junction offsets on this wall even though this wall's own properties
+ * didn't change, so we fold junction kind + t + other-wall thickness into
+ * the fingerprint.
+ */
 function wallOpeningsFingerprint(
   wall: ElementSchema,
   allElements: Record<string, ElementSchema>
 ): string {
-  return findWallOpenings(wall, allElements)
+  const graph = buildWallGraph(allElements);
+  const joins = (graph.get(wall.id) ?? [])
+    .map((j) => {
+      const other = allElements[j.otherWallId];
+      const otherW = other && typeof (other.properties as Record<string, { value: unknown }>)['Width']?.value === 'number'
+        ? ((other.properties as Record<string, { value: unknown }>)['Width']!.value as number)
+        : 0;
+      return `J:${j.kind}:${j.t.toFixed(3)}:${Math.round(otherW)}`;
+    })
+    .sort()
+    .join('|');
+  const openings = findWallOpenings(wall, allElements)
     .map((o) => `${Math.round(o.t)},${o.width},${o.height},${o.sillH}`)
     .sort()
     .join('|');
+  return `${joins}||${openings}`;
 }
 
 /**
@@ -260,13 +279,26 @@ function buildWallMesh(
   const elevOffset = pv('ElevationOffset', 0);
   const len   = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
   const ry    = -Math.atan2(y2 - y1, x2 - x1);
-  const cx    = (x1 + x2) / 2;
-  const cz    = (y1 + y2) / 2;
 
-  // Extend the wall length by half its thickness on each end so adjacent
-  // walls overlap cleanly at corners. Without this, the square notch
-  // (halfT × halfT) at each outside corner shows as a vertical gap.
-  const lenExt = len + wallT;
+  // Per-wall junction offsets — extend each end by the neighbouring wall's
+  // half-thickness at L-corners (closes the outside notch), but leave T/X
+  // junctions and truly-open ends alone so the stub doesn't float past the
+  // through-wall. Falls back to wallT/2 on both ends when the graph
+  // reports nothing (standalone wall) so the open-corner geometry keeps
+  // working on fragmented plans.
+  const graph    = buildWallGraph(allElements);
+  const offsets  = wallEndOffsets(element.id, graph, allElements);
+  const joinCount = (graph.get(element.id) ?? []).length;
+  const defaultOvershoot = joinCount === 0 ? wallT / 2 : 0;
+  const startOv  = offsets.startOffset > 0 ? offsets.startOffset : defaultOvershoot;
+  const endOv    = offsets.endOffset   > 0 ? offsets.endOffset   : defaultOvershoot;
+  const lenExt   = len + startOv + endOv;
+
+  // Shift the centre of the extended mesh so the overshoot lands outside
+  // the original endpoints rather than offsetting one side.
+  const ux = (x2 - x1) / len, uy = (y2 - y1) / len;
+  const cx = (x1 + x2) / 2 + ux * (endOv - startOv) / 2;
+  const cz = (y1 + y2) / 2 + uy * (endOv - startOv) / 2;
 
   const tag = (obj: THREE.Object3D) => {
     obj.userData.elementId   = element.id;
@@ -307,10 +339,11 @@ function buildWallMesh(
   };
 
   const sorted = [...openings].sort((a, b) => a.t - b.t);
-  // Wall runs local-X from -lenExt/2 to +lenExt/2 (half-thickness overshoot
-  // on each end for clean corners). Openings live in wall-local [0..len];
-  // the start of the wall shifts left by wallT/2 in local space.
-  const leftOvershoot = wallT / 2;
+  // Wall runs local-X from -lenExt/2 to +lenExt/2 with asymmetric
+  // junction-aware overshoots on each end (startOv on the StartX side,
+  // endOv on the EndX side). Openings live in wall-local [0..len];
+  // the start of the wall shifts left by startOv in local space.
+  const leftOvershoot = startOv;
   let cursor = -leftOvershoot; // right edge of last filled segment
 
   for (const op of sorted) {
@@ -338,9 +371,9 @@ function buildWallMesh(
     cursor = opRight;
   }
 
-  // Full-height segment after last opening — extended to len + wallT/2 so
-  // the right corner of the wall also overlaps cleanly.
-  const rightExt = len + wallT / 2;
+  // Full-height segment after last opening — extended past the EndX by the
+  // junction-resolved endOv so adjacent walls overlap cleanly.
+  const rightExt = len + endOv;
   if (cursor < rightExt) {
     const w = rightExt - cursor;
     addBox(cursor + w / 2 - len / 2, w, 0, wallH);

@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { ElementSchema } from '@opencad/document';
 import { SpatialGrid } from '../utils/spatialIndex';
+import { buildWallGraph, wallEndOffsets } from './wallGraph';
 import {
   getHandles, hitHandle, hitTestElement,
   moveElementProps, resizeElementProps,
@@ -538,6 +539,9 @@ export function useViewport() {
     if (!doc) { ctx.restore(); return; }
 
     // ── Render existing elements in world space ──
+    // Precompute the wall junction graph once per frame so every wall draws
+    // with asymmetric endpoint offsets that close L/T/X junctions cleanly.
+    const wallGraphMap = buildWallGraph(doc?.content.elements ?? {});
     const visibleLabelTargets: { element: ElementSchema }[] = [];
     for (const element of elementsRef.current) {
       // Viewport culling — skip elements entirely outside visible area
@@ -572,12 +576,20 @@ export function useViewport() {
             const len = Math.sqrt(dx * dx + dy * dy) || 1;
             const nx = -dy / len, ny = dx / len; // unit perpendicular
             const hw = wallW / 2;
-            // Extend each endpoint outward by half-thickness along the wall
-            // direction so adjacent walls overlap into a clean mitered corner
-            // (same trick buildWallMesh uses).
             const ux = dx / len, uy = dy / len;
-            const ex1 = x1 - ux * hw, ey1 = y1 - uy * hw;
-            const ex2 = x2 + ux * hw, ey2 = y2 + uy * hw;
+            // Junction-resolved endpoint offsets — L-corners extend by the
+            // neighbour's half-thickness, T/X junctions stop at the wall
+            // endpoints, standalone walls overshoot by wallW/2 on both ends
+            // for a clean open corner.
+            const offs = doc
+              ? wallEndOffsets(element.id, wallGraphMap, doc.content.elements)
+              : { startOffset: 0, endOffset: 0 };
+            const joinCount = (wallGraphMap.get(element.id) ?? []).length;
+            const defaultOv = joinCount === 0 ? hw : 0;
+            const sOv = offs.startOffset > 0 ? offs.startOffset : defaultOv;
+            const eOv = offs.endOffset   > 0 ? offs.endOffset   : defaultOv;
+            const ex1 = x1 - ux * sOv, ey1 = y1 - uy * sOv;
+            const ex2 = x2 + ux * eOv, ey2 = y2 + uy * eOv;
             ctx.beginPath();
             ctx.moveTo(ex1 + nx * hw, ey1 + ny * hw);
             ctx.lineTo(ex2 + nx * hw, ey2 + ny * hw);
