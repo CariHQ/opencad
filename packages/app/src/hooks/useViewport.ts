@@ -829,7 +829,6 @@ export function useViewport() {
 
     if (activeTool === 'column') {
       commitShape('column', wp, wp);
-      setActiveTool('select');
       return;
     }
 
@@ -1020,10 +1019,11 @@ export function useViewport() {
     if (DRAG_TOOLS.has(activeTool)) {
       commitShape(activeTool, drawingState.startPoint, wp);
       setDrawingState({ isDrawing: false, startPoint: null, currentPoint: null, points: [] });
-      setActiveTool('select');
+      // Intentionally keep activeTool so the user can keep drawing the same
+      // type of element. Press Escape or V to return to the select tool.
     }
     // Multi-click tools don't commit on mouseUp, only on next click or double-click
-  }, [activeTool, drawingState, applySnapping, commitShape, setActiveTool, pushHistory, setSelectedIds]);
+  }, [activeTool, drawingState, applySnapping, commitShape, pushHistory, setSelectedIds]);
 
   // Double-click finishes polyline
   const handleCanvasDoubleClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1042,8 +1042,9 @@ export function useViewport() {
       }
       return { isDrawing: false, startPoint: null, currentPoint: null, points: [] };
     });
-    setActiveTool('select');
-  }, [activeTool, applySnapping, commitShape, setActiveTool]);
+    // Intentionally keep activeTool — user can draw another multi-vertex shape
+    // of the same type without re-selecting the tool.
+  }, [activeTool, applySnapping, commitShape]);
 
   // ─── Keyboard shortcuts ───────────────────────────────────────────────────
 
