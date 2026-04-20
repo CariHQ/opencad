@@ -256,7 +256,11 @@ export function useViewport() {
           EndX: { type: 'number', value: end.x }, EndY: { type: 'number', value: end.y },
           Height: { type: 'number', value: wp['height'] ?? 3000 },
           Width: { type: 'number', value: wp['thickness'] ?? defaultThickness },
-          Material: { type: 'string', value: wp['material'] ?? (wallType === 'exterior' ? 'Concrete' : 'Plasterboard') },
+          Material: { type: 'string', value: wp['material'] ?? (
+            wallType === 'exterior' ? 'Concrete' :
+            wallType === 'curtain'  ? 'Clear Glass' :
+            'Plasterboard'
+          ) },
           WallType: { type: 'string', value: wallType },
           ElevationOffset: { type: 'number', value: wp['elevationOffset'] ?? 0 },
         },

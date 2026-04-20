@@ -246,7 +246,11 @@ function mountainCabin(): Action[] {
 function farnsworthPavilion(): Action[] {
   const a: Action[] = [];
   const xL = -250, xR = 250, yT = -140, yB = 140;
-  // Exterior walls (interpreted as glass curtain walls — same geometry though)
+  // Perimeter is an all-glass curtain wall (60 mm thick, transparent) —
+  // the signature feature of Mies's Farnsworth House. Dedicated curtain-
+  // wall type so cost/carbon picks up the glass material instead of
+  // treating it as interior plasterboard.
+  a.push(setParam('wall', 'wallType', 'curtain'));
   a.push(T('w'));
   a.push(drag(xL, yT, xR, yT));
   a.push(drag(xR, yT, xR, yB));
