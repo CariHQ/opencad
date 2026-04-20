@@ -274,11 +274,24 @@ function pointInPolygon(
   pt: { x: number; y: number },
   poly: Array<{ x: number; y: number }>
 ): boolean {
+  // Ray-cast with a generous edge tolerance — a wall endpoint sitting
+  // exactly on the slab boundary (common when templates draw slab and
+  // wall to the same coord) should count as supported, not flagged.
+  const TOL = 50; // mm — smaller than any realistic wall thickness
   let inside = false;
   const n = poly.length;
   for (let i = 0, j = n - 1; i < n; j = i++) {
     const xi = poly[i]!.x, yi = poly[i]!.y;
     const xj = poly[j]!.x, yj = poly[j]!.y;
+    // On-edge short-circuit: treat the segment as a thick stripe.
+    const dx = xj - xi, dy = yj - yi;
+    const segLen2 = dx * dx + dy * dy;
+    if (segLen2 > 0) {
+      const t = Math.max(0, Math.min(1, ((pt.x - xi) * dx + (pt.y - yi) * dy) / segLen2));
+      const projX = xi + t * dx, projY = yi + t * dy;
+      const dd = Math.hypot(pt.x - projX, pt.y - projY);
+      if (dd <= TOL) return true;
+    }
     const denom = yj - yi;
     const intersect =
       ((yi > pt.y) !== (yj > pt.y)) &&

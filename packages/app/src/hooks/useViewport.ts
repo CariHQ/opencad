@@ -623,6 +623,45 @@ export function useViewport() {
           if (type === 'polygon') { ctx.closePath(); ctx.fill(); }
           ctx.stroke();
         }
+      } else if (type === 'door' || type === 'window') {
+        // Doors and windows are drawn oriented along their host wall so a
+        // horizontal wall gets a horizontal opening marker, not a square
+        // axis-aligned rect that reads as "perpendicular to the wall".
+        const cx = (props['X']?.value as number | undefined) ?? 0;
+        const cy = (props['Y']?.value as number | undefined) ?? 0;
+        const w = (props['Width']?.value as number | undefined) ?? (type === 'door' ? 900 : 1200);
+        const hostId = (props['HostWallId']?.value as string | undefined) ?? '';
+        let ang = 0; // rotation angle (radians) — default horizontal
+        let depth = 200; // plan-view depth (perpendicular to wall) — wall thickness
+        if (hostId && doc) {
+          const host = doc.content.elements[hostId];
+          if (host && host.type === 'wall') {
+            const hp = host.properties as Record<string, { value: unknown }>;
+            const x1 = (hp['StartX']?.value as number | undefined) ?? 0;
+            const y1 = (hp['StartY']?.value as number | undefined) ?? 0;
+            const x2 = (hp['EndX']?.value as number | undefined) ?? x1 + 1000;
+            const y2 = (hp['EndY']?.value as number | undefined) ?? y1;
+            ang = Math.atan2(y2 - y1, x2 - x1);
+            depth = (hp['Width']?.value as number | undefined) ?? 200;
+          }
+        }
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(ang);
+        ctx.beginPath();
+        ctx.rect(-w / 2, -depth / 2, w, depth);
+        // Distinguish door vs window visually — door filled, window outlined
+        // with a centerline indicating glass.
+        if (type === 'door') {
+          ctx.fill(); ctx.stroke();
+        } else {
+          ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(-w / 2, 0);
+          ctx.lineTo(w / 2, 0);
+          ctx.stroke();
+        }
+        ctx.restore();
       } else {
         // Fallback: bounding box in world space
         const bb = element.boundingBox;
