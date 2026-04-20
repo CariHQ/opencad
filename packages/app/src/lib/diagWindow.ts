@@ -118,13 +118,15 @@ export function installDiagWindow(getStoreDocument: () => DocumentSchema | null)
       }
       let clashes = 0;
       try {
-        // detectClashes expects (structural, mep, tolerance) — group by role
-        const structural = Object.values(doc.content.elements).filter(
-          (el) => ['wall', 'column', 'beam', 'slab', 'roof', 'stair'].includes(el.type),
-        );
-        const mep = Object.values(doc.content.elements).filter(
-          (el) => !['wall', 'column', 'beam', 'slab', 'roof', 'stair'].includes(el.type),
-        );
+        // detectClashes expects (structural, mep, tolerance).
+        // MEP = ducts / pipes / conduits / cable trays. Doors, windows, and
+        // railings are ARCHITECTURAL elements — a door inside a wall is
+        // expected, not a clash. Until true MEP types ship we filter to an
+        // explicit allowlist instead of "everything non-structural".
+        const STRUCTURAL = new Set(['wall', 'column', 'beam', 'slab', 'roof', 'stair']);
+        const MEP = new Set(['duct', 'pipe', 'conduit', 'cable_tray', 'hvac', 'plumbing']);
+        const structural = Object.values(doc.content.elements).filter((el) => STRUCTURAL.has(el.type));
+        const mep        = Object.values(doc.content.elements).filter((el) => MEP.has(el.type));
         clashes = detectClashes(structural, mep, 0.05).length;
       } catch { /* element shapes may throw */ }
       let quantity: ReturnType<typeof computeTakeoff>;
