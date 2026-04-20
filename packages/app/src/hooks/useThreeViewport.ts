@@ -201,6 +201,13 @@ function findWallOpenings(
     const epv = (k: string, fb: number) =>
       typeof ep[k]?.value === 'number' ? (ep[k]!.value as number) : fb;
 
+    // HostWallId is set at placement time and is authoritative. In a
+    // multi-story building the same (x,y) sits on stacked walls at different
+    // elevations — without this check, the ground-floor wall would inherit
+    // openings intended for the floors above it.
+    const hostId = (ep['HostWallId']?.value as string | undefined) ?? '';
+    if (hostId && hostId !== wall.id) continue;
+
     const ex = epv('X', 0), ey = epv('Y', 0);
     const dx = ex - x1, dy = ey - y1;
     const t    = dx * uX + dy * uY;          // distance along wall

@@ -30,6 +30,9 @@ const PROJECT_ID = `house-build-${ITER}-${TEMPLATE.id}`;
 const OUT = `experiment/house-build/${ITER}`;
 
 test(`autonomous house build — iter ${ITER} — ${TEMPLATE.label}`, async ({ page }) => {
+  // Multi-story templates (sky-garden-tower) can issue 80+ actions; allow
+  // up to 2 min per run so they don't time out during action playback.
+  test.setTimeout(120_000);
   fs.mkdirSync(OUT, { recursive: true });
 
   const consoleLogs: string[] = [];

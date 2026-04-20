@@ -359,8 +359,21 @@ export function useViewport() {
     }
 
     if (tool === 'door' || tool === 'window') {
-      // Find nearest wall element to host this opening
-      const walls = Object.values(doc.content.elements).filter((el) => el.type === 'wall');
+      const tp = (toolParams?.[tool] ?? {}) as Record<string, unknown>;
+      // Multi-story filter: if elevationOffset is set, only host walls whose
+      // ElevationOffset matches (within 1 mm) are candidates. This keeps a
+      // window placed on the 2nd-floor plan from snapping to the ground-
+      // floor wall directly below it.
+      const wantElev = typeof tp['elevationOffset'] === 'number' ? (tp['elevationOffset'] as number) : undefined;
+      let walls = Object.values(doc.content.elements).filter((el) => el.type === 'wall');
+      if (wantElev !== undefined) {
+        const filtered = walls.filter((w) => {
+          const wv = (w.properties as Record<string, { value: unknown }>)['ElevationOffset']?.value;
+          const we = typeof wv === 'number' ? wv : 0;
+          return Math.abs(we - wantElev) < 1;
+        });
+        if (filtered.length > 0) walls = filtered;
+      }
       let hostWallId = '';
       let minD = Infinity;
       for (const wall of walls) {
@@ -370,7 +383,6 @@ export function useViewport() {
         const d = dist(start, { x: cx, y: cy });
         if (d < minD) { minD = d; hostWallId = wall.id; }
       }
-      const tp = (toolParams?.[tool] ?? {}) as Record<string, unknown>;
       addElement({
         type: tool, layerId,
         properties: {

@@ -650,6 +650,25 @@ function skyGardenTower(): Action[] {
       a.push(click(f.xR - 10, f.yB - 10));
       a.push(dbl  (f.xL + 10, f.yB - 10));
     }
+    // Windows on all four walls — elevationOffset tool param filters the
+    // nearest-wall search so each window hosts to its own floor's wall,
+    // not the one directly below.
+    a.push(setParam('window', 'elevationOffset', f.offset));
+    a.push(T('n'));
+    // Two on N + S
+    for (const wx of [(f.xL + f.xR) / 2 - (f.xR - f.xL) / 4, (f.xL + f.xR) / 2 + (f.xR - f.xL) / 4]) {
+      a.push(click(wx, f.yT));
+      a.push(click(wx, f.yB));
+    }
+    // One on E + W
+    a.push(click(f.xL, (f.yT + f.yB) / 2));
+    a.push(click(f.xR, (f.yT + f.yB) / 2));
+    // Ground-floor entry door on south
+    if (f.id === 1) {
+      a.push(setParam('door', 'elevationOffset', f.offset));
+      a.push(T('d'));
+      a.push(click(0, f.yB));
+    }
   }
   // Top cap — small pitched roof over floor 5
   a.push(setParam('slab', 'elevationOffset', 5 * STORY));
@@ -738,7 +757,7 @@ export const TEMPLATES: Record<string, HouseTemplate> = {
     id: 'sky-garden-tower',
     label: 'Sky-Garden Tower (5 floors, stepped)',
     description: 'Five stacked levels with decreasing widths — open setbacks become roof-garden terraces',
-    expected: { wall: 20, slab: 5, roof: 1 },
+    expected: { wall: 20, slab: 5, roof: 1, window: 30, door: 1 },
     actions: skyGardenTower(),
   },
 };
