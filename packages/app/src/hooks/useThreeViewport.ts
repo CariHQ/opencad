@@ -582,8 +582,16 @@ export function useThreeViewport() {
     box.getSize(size);
     const maxDim = Math.max(size.x, size.y, size.z, 1000);
 
-    cameraStateRef.current.target.copy(center);
-    cameraStateRef.current.distance = maxDim * 2.5;
+    // Default isometric-ish angle for a readable view.
+    const cs = cameraStateRef.current;
+    cs.azimuth   = Math.PI / 4;
+    cs.elevation = Math.PI / 4;
+    cs.target.copy(center);
+    // Distance = half the diagonal / tan(half-fov), with extra padding so the
+    // whole model sits comfortably inside the frame. 2.5× was too tight and
+    // put the camera inside a 5m room.
+    const diagonal = Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
+    cs.distance = Math.max(2500, Math.min(50000, diagonal * 1.8 + maxDim * 0.5));
     updateCamera();
   }, [doc, updateCamera, setViewPreset]);
 
@@ -695,8 +703,12 @@ export function useThreeViewport() {
           Number.isFinite(center.x) && Number.isFinite(center.y) && Number.isFinite(center.z) &&
           Number.isFinite(maxDim);
         if (finite) {
-          cameraStateRef.current.target.copy(center);
-          cameraStateRef.current.distance = Math.max(500, Math.min(50000, maxDim * 2.5));
+          const cs = cameraStateRef.current;
+          cs.azimuth   = Math.PI / 4;
+          cs.elevation = Math.PI / 4;
+          cs.target.copy(center);
+          const diagonal = Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
+          cs.distance = Math.max(2500, Math.min(50000, diagonal * 1.8 + maxDim * 0.5));
           updateCamera();
         } else {
           // eslint-disable-next-line no-console
