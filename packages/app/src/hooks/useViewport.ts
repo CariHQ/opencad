@@ -323,14 +323,17 @@ export function useViewport() {
     }
 
     if ((tool === 'slab' || tool === 'roof') && extraPoints && extraPoints.length >= 3) {
-      const sp = (toolParams?.['slab'] ?? {}) as Record<string, unknown>;
+      const sp = (toolParams?.[tool] ?? {}) as Record<string, unknown>;
+      // Different default materials: slab stays concrete, roof uses clay
+      // tiles so the two read as clearly distinct surfaces in the 3D view.
+      const defaultMaterial = tool === 'roof' ? 'Clay Roof Tiles' : 'Concrete';
       addElement({
         type: tool === 'roof' ? 'roof' : 'slab', layerId,
         properties: {
           Name: { type: 'string', value: tool === 'roof' ? 'Roof' : 'Slab' },
           Points: { type: 'string', value: JSON.stringify(extraPoints) },
-          Thickness: { type: 'number', value: sp['thickness'] ?? 250 },
-          Material: { type: 'string', value: sp['material'] ?? 'Concrete' },
+          Thickness: { type: 'number', value: sp['thickness'] ?? (tool === 'roof' ? 150 : 250) },
+          Material: { type: 'string', value: sp['material'] ?? defaultMaterial },
           SlopeAngle: { type: 'number', value: sp['slopeAngle'] ?? 0 },
           ElevationOffset: { type: 'number', value: sp['elevationOffset'] ?? 0 },
           SlabType: { type: 'string', value: sp['slabType'] ?? tool },
