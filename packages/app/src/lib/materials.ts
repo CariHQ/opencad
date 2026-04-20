@@ -123,6 +123,7 @@ export const BUILT_IN_MATERIALS: Material[] = [
   // Waterproofing
   { id: 'waterproof-membrane', name: 'Waterproof Membrane', category: 'Waterproofing', roughness: 0.9, metalness: 0.0, costPerM2: 30, unit: 'm²', color: '#303030' },
   { id: 'tanking', name: 'Tanking Slurry', category: 'Waterproofing', roughness: 0.9, metalness: 0.0, costPerM2: 25, unit: 'm²', color: '#909090' },
+  { id: 'pool-water', name: 'Pool Water', category: 'Waterproofing', roughness: 0.05, metalness: 0.0, costPerM2: 5, unit: 'm²', color: '#2a88c8' },
 
   // Acoustic
   { id: 'acoustic-panel', name: 'Acoustic Panel', category: 'Acoustic', roughness: 0.98, metalness: 0.0, costPerM2: 80, unit: 'm²', color: '#d8c8b0' },

@@ -185,14 +185,23 @@ function poolHouse(): Action[] {
   a.push(click(xR + 15, yT - 15));
   a.push(click(xR + 15, yB + 15));
   a.push(dbl  (xL - 15, yB + 15));
-  // Pool — rectangular to the east of the cabana
-  const pxL = 20, pxR = 280;
+  // Pool — rectangular to the east of the cabana. Recessed 300 mm so the
+  // water surface reads as a pool rather than a grey concrete patio, and
+  // painted with the dedicated Pool Water material (low roughness → mirror
+  // reflection, blue colour).
+  const pxL = 20, pxR = 180;
   const pyT = -80, pyB = 80;
+  a.push(setParam('slab', 'elevationOffset', -300));
+  a.push(setParam('slab', 'material', 'Pool Water'));
   a.push(T('s'));
   a.push(click(pxL, pyT));
   a.push(click(pxR, pyT));
   a.push(click(pxR, pyB));
   a.push(dbl  (pxL, pyB));
+  // Reset slab params so subsequent slabs in other templates (if re-run in
+  // the same harness session) don't inherit these.
+  a.push(setParam('slab', 'elevationOffset', 0));
+  a.push(setParam('slab', 'material', 'Concrete'));
   a.push(T('v'));
   return a;
 }
