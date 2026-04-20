@@ -563,8 +563,27 @@ export function useViewport() {
           if (type === 'annotation') {
             ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
           } else if (type === 'wall') {
+            // Draw the wall as an oriented rectangle whose short side equals
+            // the stored Width (thickness). This keeps plan view consistent
+            // with the 3D view — a 300 mm exterior wall reads as twice as
+            // thick as a 150 mm partition, not a fixed 1.5 px stroke.
+            const wallW = (props['Width']?.value as number | undefined) ?? 200;
+            const dx = x2 - x1, dy = y2 - y1;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const nx = -dy / len, ny = dx / len; // unit perpendicular
+            const hw = wallW / 2;
+            // Extend each endpoint outward by half-thickness along the wall
+            // direction so adjacent walls overlap into a clean mitered corner
+            // (same trick buildWallMesh uses).
+            const ux = dx / len, uy = dy / len;
+            const ex1 = x1 - ux * hw, ey1 = y1 - uy * hw;
+            const ex2 = x2 + ux * hw, ey2 = y2 + uy * hw;
             ctx.beginPath();
-            ctx.rect(Math.min(x1, x2), Math.min(y1, y2), Math.abs(x2 - x1), Math.abs(y2 - y1));
+            ctx.moveTo(ex1 + nx * hw, ey1 + ny * hw);
+            ctx.lineTo(ex2 + nx * hw, ey2 + ny * hw);
+            ctx.lineTo(ex2 - nx * hw, ey2 - ny * hw);
+            ctx.lineTo(ex1 - nx * hw, ey1 - ny * hw);
+            ctx.closePath();
             ctx.fill(); ctx.stroke();
           } else if (type === 'dimension') {
             ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
