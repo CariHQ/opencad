@@ -261,10 +261,86 @@ const R006: ComplianceRule = {
 };
 
 // ---------------------------------------------------------------------------
+// R007: Wall must rest on a slab (structural support)
+//
+// For every wall we sample the two endpoints and the midpoint and test each
+// against the union of slab Points polygons. Any sample outside all slabs
+// means the wall has an unsupported segment hanging over empty ground —
+// common symptom when the 2D slab tool was clicked INSIDE the wall
+// perimeter instead of at the outer face.
+// ---------------------------------------------------------------------------
+
+function pointInPolygon(
+  pt: { x: number; y: number },
+  poly: Array<{ x: number; y: number }>
+): boolean {
+  let inside = false;
+  const n = poly.length;
+  for (let i = 0, j = n - 1; i < n; j = i++) {
+    const xi = poly[i]!.x, yi = poly[i]!.y;
+    const xj = poly[j]!.x, yj = poly[j]!.y;
+    const denom = yj - yi;
+    const intersect =
+      ((yi > pt.y) !== (yj > pt.y)) &&
+      pt.x < ((xj - xi) * (pt.y - yi)) / (denom === 0 ? 1e-9 : denom) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+
+const R007: ComplianceRule = {
+  id: 'R007',
+  name: 'Wall must rest on a slab',
+  category: 'structural',
+  severity: 'warning',
+  check(doc) {
+    const violations: ComplianceViolation[] = [];
+    const slabPolys: Array<Array<{ x: number; y: number }>> = [];
+    for (const el of Object.values(doc.content.elements)) {
+      if (el.type !== 'slab') continue;
+      const raw = getStrProp(el, 'Points');
+      if (!raw) continue;
+      try {
+        const parsed = JSON.parse(raw) as Array<{ x: number; y: number }>;
+        if (Array.isArray(parsed) && parsed.length >= 3) slabPolys.push(parsed);
+      } catch { /* skip malformed slabs */ }
+    }
+    if (slabPolys.length === 0) return violations;
+
+    for (const el of Object.values(doc.content.elements)) {
+      if (el.type !== 'wall') continue;
+      const x1 = getNumProp(el, 'StartX');
+      const y1 = getNumProp(el, 'StartY');
+      const x2 = getNumProp(el, 'EndX');
+      const y2 = getNumProp(el, 'EndY');
+      if (x1 === undefined || y1 === undefined || x2 === undefined || y2 === undefined) continue;
+      const samples = [
+        { x: x1, y: y1 },
+        { x: x2, y: y2 },
+        { x: (x1 + x2) / 2, y: (y1 + y2) / 2 },
+      ];
+      const off = samples.filter(
+        (p) => !slabPolys.some((poly) => pointInPolygon(p, poly))
+      );
+      if (off.length > 0) {
+        violations.push({
+          ruleId: 'R007',
+          elementId: el.id,
+          message: `Wall "${el.id}" has ${off.length}/3 sample points outside every slab footprint — unsupported span.`,
+          severity: 'warning',
+          suggestedFix: 'Extend the slab polygon to cover the wall outer face, or add a foundation slab beneath the wall.',
+        });
+      }
+    }
+    return violations;
+  },
+};
+
+// ---------------------------------------------------------------------------
 // Rule registry
 // ---------------------------------------------------------------------------
 
-export const COMPLIANCE_RULES: ComplianceRule[] = [R001, R002, R003, R004, R005, R006];
+export const COMPLIANCE_RULES: ComplianceRule[] = [R001, R002, R003, R004, R005, R006, R007];
 
 // ---------------------------------------------------------------------------
 // runComplianceCheck — entry point
