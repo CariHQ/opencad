@@ -19,6 +19,15 @@ import {
 import { isFirebaseConfigured, firebaseAuth } from '../lib/firebase';
 import { type RoleId } from '../config/roles';
 
+/**
+ * Per-project localStorage key. Previously a single 'opencad-document' key
+ * was shared across every project, which made Project B show Project A's
+ * elements as soon as you opened it. Namespacing by projectId keeps each
+ * project's persisted state isolated.
+ */
+const LEGACY_DOC_KEY = 'opencad-document';
+const docKey = (projectId: string): string => `opencad-document:${projectId}`;
+
 interface HistoryEntry {
   document: DocumentSchema;
   timestamp: number;
@@ -143,24 +152,40 @@ export const useDocumentStore = create<DocumentState>()(
 
       initProject: (projectId, userId) => {
         let model: DocumentModel;
+        const perProjectKey = docKey(projectId);
         try {
-          const saved = localStorage.getItem('opencad-document');
+          // One-time migration: if a legacy 'opencad-document' still exists
+          // AND the matching per-project key does NOT, move it into the
+          // per-project slot so old projects don't lose their data. Always
+          // remove the legacy key so future projects start clean.
+          const legacy = localStorage.getItem(LEGACY_DOC_KEY);
+          if (legacy) {
+            try {
+              const legacyDoc = JSON.parse(legacy);
+              const legacyId = legacyDoc?.id;
+              if (legacyId && !localStorage.getItem(docKey(legacyId))) {
+                localStorage.setItem(docKey(legacyId), legacy);
+              }
+            } catch { /* ignore — legacy payload unparseable */ }
+            localStorage.removeItem(LEGACY_DOC_KEY);
+          }
+
+          const saved = localStorage.getItem(perProjectKey);
           if (saved) {
             const docData = JSON.parse(saved);
-            // Guard against pre-refactor schema (no content/organization groups)
-            if (docData?.content && docData?.organization) {
+            if (docData?.content && docData?.organization && docData?.id === projectId) {
               model = new DocumentModel(projectId, userId);
               try {
                 model.loadDocument(docData);
               } catch (loadErr) {
-                // Stale document crashed on load — discard and start fresh.
                 // eslint-disable-next-line no-console
                 console.warn('[doc] loadDocument failed, starting fresh:', loadErr);
-                localStorage.removeItem('opencad-document');
+                localStorage.removeItem(perProjectKey);
                 model = new DocumentModel(projectId, userId);
               }
             } else {
-              localStorage.removeItem('opencad-document');
+              // Schema mismatch or wrong project id — discard and start fresh.
+              localStorage.removeItem(perProjectKey);
               model = new DocumentModel(projectId, userId);
             }
           } else {
@@ -169,7 +194,7 @@ export const useDocumentStore = create<DocumentState>()(
         } catch (err) {
           // eslint-disable-next-line no-console
           console.warn('[doc] initProject parse/init failed, starting fresh:', err);
-          try { localStorage.removeItem('opencad-document'); } catch { /* ignore */ }
+          try { localStorage.removeItem(perProjectKey); } catch { /* ignore */ }
           model = new DocumentModel(projectId, userId);
         }
         const document = model.documentData;
@@ -339,10 +364,10 @@ export const useDocumentStore = create<DocumentState>()(
           changeHistory: [...changeHistory, addRecord].slice(-MAX_CHANGE_HISTORY),
         });
         try {
-          localStorage.setItem('opencad-document', newDocJson);
+          localStorage.setItem(docKey(newDoc.id), newDocJson);
         } catch { /* ignore storage errors */ }
         // Also save to offline store so it persists across sessions
-        void offlineSaveDocument('default', newDocJson).catch(() => {});
+        void offlineSaveDocument(newDoc.id, newDocJson).catch(() => {});
         return elementId;
       },
 
@@ -615,7 +640,7 @@ export const useDocumentStore = create<DocumentState>()(
         const newDoc = { ...model.documentData };
         set({ document: newDoc });
         try {
-          localStorage.setItem('opencad-document', JSON.stringify(newDoc));
+          localStorage.setItem(docKey(newDoc.id), JSON.stringify(newDoc));
         } catch { /* ignore storage errors */ }
       },
     }),
