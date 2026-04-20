@@ -44,6 +44,24 @@ export function _publishFrameStats(stats: FrameStats): void {
   _sharedFrameStats = stats;
 }
 
+/** Published XYZ of the selected element (or null when nothing selected). */
+export interface SelectedCoords {
+  x: number;
+  y: number;
+  z: number;
+  elementId: string;
+}
+
+let _sharedSelectedCoords: SelectedCoords | null = null;
+
+export function getSharedSelectedCoords(): SelectedCoords | null {
+  return _sharedSelectedCoords;
+}
+
+export function _publishSelectedCoords(coords: SelectedCoords | null): void {
+  _sharedSelectedCoords = coords;
+}
+
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
   gridColor: 0xcbd5e1,
@@ -1059,6 +1077,7 @@ export function useThreeViewport() {
     // ── Animate loop: always render each frame. Errors in render are
     // caught and logged so one bad frame doesn't kill the whole loop.
     let renderErrorCount = 0;
+    let coordFrame = 0;
     const animate = () => {
       animationFrameRef.current = requestAnimationFrame(animate);
       try {
@@ -1067,6 +1086,31 @@ export function useThreeViewport() {
         if (renderErrorCount++ < 5) {
           // eslint-disable-next-line no-console
           console.error('[3D] renderer.render() threw:', err);
+        }
+      }
+
+      // Publish selected-element coords every few frames. Reads the live
+      // mesh.position so the value updates during TransformControls drag.
+      coordFrame = (coordFrame + 1) % 3;
+      if (coordFrame === 0) {
+        const ids = selectedIdsRef.current;
+        if (ids.length === 0) {
+          _publishSelectedCoords(null);
+        } else {
+          const firstId = ids[0]!;
+          const mesh = elementMeshesRef.current.get(firstId);
+          if (mesh) {
+            _publishSelectedCoords({
+              x: Math.round(mesh.position.x),
+              // 3D y is vertical (height), 3D z is plan-depth — map back to
+              // arch (x, y, z) = (3d.x, 3d.z, 3d.y) for user-facing labels.
+              y: Math.round(mesh.position.z),
+              z: Math.round(mesh.position.y),
+              elementId: firstId,
+            });
+          } else {
+            _publishSelectedCoords(null);
+          }
         }
       }
     };

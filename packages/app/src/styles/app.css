@@ -1710,6 +1710,26 @@ input[type='range']::-moz-range-track {
   gap: 6px;
 }
 
+.status-coords {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 11px;
+  gap: 2px;
+}
+
+.status-coords .coord-axis {
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 0 2px 0 6px;
+  letter-spacing: 0.02em;
+}
+
+.status-coords .coord-val {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 40px;
+  text-align: right;
+}
+
 .status-indicator {
   width: 8px;
   height: 8px;
