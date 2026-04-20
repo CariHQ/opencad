@@ -78,18 +78,21 @@ describe('T-DOC-012: computeBoundingBox — column', () => {
 });
 
 describe('T-DOC-012: computeBoundingBox — door/window', () => {
-  it('door bounding box from X, Y, Width, Height', () => {
+  it('door bounding box: Width spans plan X, Height drives 3D Z', () => {
     const bb = computeBoundingBox('door', {
       X: prop(0), Y: prop(0), Width: prop(900), Height: prop(2100),
     });
-    expect(bb.max.x).toBe(900);
-    expect(bb.max.y).toBe(2100);
+    expect(bb.max.x).toBe(900);      // Width along plan-X
+    expect(bb.max.z).toBe(2100);     // Height drives vertical extent
+    // Plan-Y is deliberately a thin band around the host wall centerline,
+    // independent of the 3D Height.
+    expect(bb.max.y - bb.min.y).toBeLessThan(500);
   });
 
-  it('window defaults to 900x2100 when no properties', () => {
+  it('window defaults to 1200 wide x 1200 tall when no properties', () => {
     const bb = computeBoundingBox('window', { X: prop(0), Y: prop(0) });
-    expect(bb.max.x).toBe(900);
-    expect(bb.max.y).toBe(2100);
+    expect(bb.max.x).toBe(1200);     // default Width
+    expect(bb.max.z - bb.min.z).toBe(1200); // default Height in Z
   });
 });
 
