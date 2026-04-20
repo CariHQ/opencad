@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import type { PropertyValue, PropertySet } from '@opencad/document';
+import { getSharedSelectedCoords } from '../hooks/useThreeViewport';
 
 interface PendingProp {
   name: string;
@@ -35,6 +36,16 @@ function formatPropValue(prop: PropertyValue): string {
 export function PropertiesPanel() {
   const { document: doc, selectedIds, updateElement, pushHistory } = useDocumentStore();
   const [pendingProps, setPendingProps] = useState<PendingProp[]>([]);
+  // Live-polled position from the 3D viewport so the Location X/Y/Z inputs
+  // update while the user drags the TransformControls gizmo — otherwise we'd
+  // only see the value after the drag commits.
+  const [liveCoords, setLiveCoords] = useState<{ x: number; y: number; z: number; elementId: string } | null>(null);
+  useEffect(() => {
+    const id = setInterval(() => {
+      setLiveCoords(getSharedSelectedCoords());
+    }, 100);
+    return () => clearInterval(id);
+  }, []);
 
   if (!doc) return null;
 
@@ -182,20 +193,36 @@ export function PropertiesPanel() {
         </div>
 
         <div className="property-group">
-          <div className="property-group-title">Location</div>
-          {(['x', 'y', 'z'] as const).map((axis) => (
-            <div key={axis} className="property-row">
-              <span className="property-label">{axis.toUpperCase()}</span>
-              <div className="property-value">
-                <input
-                  type="number"
-                  className="property-input"
-                  defaultValue={selectedElement.transform.translation[axis].toFixed(1)}
-                  onBlur={(e) => handleTranslationBlur(axis, e.target.value)}
-                />
+          <div className="property-group-title">Location (mm)</div>
+          {(['x', 'y', 'z'] as const).map((axis) => {
+            // Prefer the live 3D-viewport coords for the currently selected
+            // element — these update in real time while TransformControls is
+            // dragging. Fall back to the persisted transform.translation.
+            const live =
+              liveCoords && liveCoords.elementId === selectedIds[0]
+                ? liveCoords[axis]
+                : null;
+            const value =
+              live !== null
+                ? live.toFixed(0)
+                : selectedElement.transform.translation[axis].toFixed(1);
+            return (
+              <div key={axis} className="property-row">
+                <span className="property-label">{axis.toUpperCase()}</span>
+                <div className="property-value">
+                  <input
+                    type="number"
+                    className="property-input"
+                    // key forces re-render when the backing value changes,
+                    // letting the user still type and commit on blur
+                    key={`${selectedIds[0]}-${axis}-${live ?? selectedElement.transform.translation[axis]}`}
+                    defaultValue={value}
+                    onBlur={(e) => handleTranslationBlur(axis, e.target.value)}
+                  />
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
 
         <div className="property-group">

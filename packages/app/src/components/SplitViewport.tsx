@@ -152,8 +152,8 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
       <div className="viewport-corner bottom-left" style={{ zIndex: 5, pointerEvents: 'none' }}>
         <span className="viewport-info">
           {viewType === 'section'
-            ? 'Section: drag slider to move cut plane · Orbit: drag · Zoom: scroll'
-            : 'Orbit: drag · Pan: middle-drag · Zoom: scroll · Fit: 0'}
+            ? 'Section: slider moves cut plane · Orbit drag · Two-finger pan · Pinch zoom'
+            : 'Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views'}
         </span>
       </div>
 

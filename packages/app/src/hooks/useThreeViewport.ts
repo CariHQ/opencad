@@ -765,6 +765,46 @@ export function useThreeViewport() {
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
+      // Ignore keystrokes while the user is typing in any input/textarea/select.
+      const tag = (event.target as HTMLElement | null)?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+      const cs = cameraStateRef.current;
+      const camera = stateRef.current.camera;
+
+      // Arrow keys — with Shift pan, without Shift orbit. Hold Alt for a
+      // finer-grained step (1/5 speed).
+      const fine = event.altKey ? 0.2 : 1;
+      const isArrow = event.key === 'ArrowLeft' || event.key === 'ArrowRight'
+        || event.key === 'ArrowUp' || event.key === 'ArrowDown';
+      if (isArrow && camera) {
+        event.preventDefault();
+        if (event.shiftKey) {
+          // Pan in the ground plane
+          const panStep = cs.distance * 0.015 * fine;
+          const forward = new THREE.Vector3();
+          camera.getWorldDirection(forward);
+          forward.y = 0;
+          if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1);
+          forward.normalize();
+          const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+          if (event.key === 'ArrowLeft')  cs.target.addScaledVector(right,   -panStep);
+          if (event.key === 'ArrowRight') cs.target.addScaledVector(right,    panStep);
+          if (event.key === 'ArrowUp')    cs.target.addScaledVector(forward,  panStep);
+          if (event.key === 'ArrowDown')  cs.target.addScaledVector(forward, -panStep);
+        } else {
+          // Orbit — azimuth (left/right), elevation (up/down)
+          const step = 0.08 * fine;
+          if (event.key === 'ArrowLeft')  cs.azimuth   += step;
+          if (event.key === 'ArrowRight') cs.azimuth   -= step;
+          if (event.key === 'ArrowUp')    cs.elevation -= step;
+          if (event.key === 'ArrowDown')  cs.elevation += step;
+          cs.elevation = Math.max(0.01, Math.min(Math.PI - 0.01, cs.elevation));
+        }
+        updateCamera();
+        return;
+      }
+
       switch (event.key) {
         case '1': setViewPreset('top');   break;
         case '2': setViewPreset('front'); break;
@@ -772,7 +812,7 @@ export function useThreeViewport() {
         case '4': setViewPreset('3d');    break;
         case '0': zoomToFit(); break;
         case '+': case '=': zoomIn();  break;
-        case '-':            zoomOut(); break;
+        case '-': case '_': zoomOut(); break;
         case 'g': case 'G': {
           // Cycle TransformControls mode: translate → rotate → scale
           const tc = transformControlsRef.current;
@@ -792,7 +832,7 @@ export function useThreeViewport() {
         }
       }
     },
-    [setViewPreset, zoomIn, zoomOut, zoomToFit]
+    [setViewPreset, zoomIn, zoomOut, zoomToFit, updateCamera]
   );
 
   const isDragging   = useRef(false);
@@ -902,9 +942,39 @@ export function useThreeViewport() {
 
   const handleWheel = useCallback(
     (event: WheelEvent) => {
-      const factor = event.deltaY > 0 ? 1.1 : 0.9;
-      cameraStateRef.current.distance =
-        Math.max(500, Math.min(50000, cameraStateRef.current.distance * factor));
+      event.preventDefault();
+      const { camera } = stateRef.current;
+      if (!camera) return;
+      const cs = cameraStateRef.current;
+
+      // Pinch-zoom gesture (macOS trackpad fires wheel events with ctrlKey)
+      // or Ctrl+scroll → zoom. Plain two-finger scroll → pan in screen-space.
+      if (event.ctrlKey || event.metaKey) {
+        const factor = Math.exp(event.deltaY * 0.01);
+        cs.distance = Math.max(500, Math.min(50000, cs.distance * factor));
+        updateCamera();
+        return;
+      }
+
+      // Shift modifier on wheel → zoom (mouse users without ctrl)
+      if (event.shiftKey) {
+        const factor = event.deltaY > 0 ? 1.08 : 1 / 1.08;
+        cs.distance = Math.max(500, Math.min(50000, cs.distance * factor));
+        updateCamera();
+        return;
+      }
+
+      // Two-finger scroll → pan. deltaX pans right/left, deltaY pans fwd/back,
+      // scaled to camera distance so the motion feels consistent at any zoom.
+      const panScale = cs.distance * 0.0008;
+      const forward = new THREE.Vector3();
+      camera.getWorldDirection(forward);
+      forward.y = 0;
+      if (forward.lengthSq() < 1e-6) forward.set(0, 0, -1);
+      forward.normalize();
+      const right = new THREE.Vector3().crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize();
+      cs.target.addScaledVector(right,   event.deltaX * panScale);
+      cs.target.addScaledVector(forward, -event.deltaY * panScale);
       updateCamera();
     },
     [updateCamera]

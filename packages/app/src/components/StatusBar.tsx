@@ -4,7 +4,7 @@ import { SyncStatusBar, type SyncStatus } from './SyncStatusBar';
 import { getStorageUsage, isStorageQuotaWarning } from '@opencad/document';
 import { useRole } from '../hooks/useRole';
 import { RoleSwitcher } from './RoleSwitcher';
-import { getSharedFrameStats, getSharedSelectedCoords, type SelectedCoords } from '../hooks/useThreeViewport';
+import { getSharedFrameStats } from '../hooks/useThreeViewport';
 
 interface StatusBarProps {
   /** Pass '3d' to show the fps performance counter */
@@ -16,7 +16,6 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
   const [storageWarning, setStorageWarning] = useState(false);
   const { role, config } = useRole();
   const [fpsDisplay, setFpsDisplay] = useState<{ fps: number; color: string } | null>(null);
-  const [coords, setCoords] = useState<SelectedCoords | null>(null);
 
   const syncStatus: SyncStatus = !isOnline ? 'offline' : isSaving ? 'syncing' : 'connected';
 
@@ -35,9 +34,8 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
 
   // ── FPS counter — only active when in 3D view ──────────────────────────────
   useEffect(() => {
-    if (viewType !== '3d' && viewType !== 'section') {
+    if (viewType !== '3d') {
       setFpsDisplay(null);
-      setCoords(null);
       return;
     }
     const id = setInterval(() => {
@@ -52,8 +50,7 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
         color = 'var(--color-error, #ef4444)';
       }
       setFpsDisplay({ fps, color });
-      setCoords(getSharedSelectedCoords());
-    }, 150);
+    }, 500);
     return () => { clearInterval(id); };
   }, [viewType]);
 
@@ -73,13 +70,6 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
       </div>
 
       <div className="status-right">
-        {coords && (
-          <div className="status-item status-coords" title="Selected element world position (mm)">
-            <span className="coord-axis">X</span><span className="coord-val">{coords.x}</span>
-            <span className="coord-axis">Y</span><span className="coord-val">{coords.y}</span>
-            <span className="coord-axis">Z</span><span className="coord-val">{coords.z}</span>
-          </div>
-        )}
         {selectedIds.length > 0 && (
           <div className="status-item">
             <span>{selectedIds.length} selected</span>
