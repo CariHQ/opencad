@@ -422,7 +422,7 @@ export function useThreeViewport() {
         ? { roughness: appliedMat.roughness, metalness: appliedMat.metalness }
         : ELEMENT_MATERIAL_PROPS[type] ?? DEFAULT_MATERIAL_PROPS;
 
-      let geometry: THREE.BufferGeometry;
+      let geometry: THREE.BufferGeometry = new THREE.BoxGeometry(100, 100, 100);
       let posX = 0, posY = 0, posZ = 0, ry = 0;
 
       if (type === 'wall') {
@@ -440,10 +440,44 @@ export function useThreeViewport() {
         posX = (x1 + x2) / 2; posY = h / 2; posZ = (y1 + y2) / 2;
         ry = -Math.atan2(y2 - y1, x2 - x1);
       } else if (type === 'slab' || type === 'roof') {
-        const x = pv('X', 0), y = pv('Y', 0);
-        const w = pv('Width', 5000), d = pv('Depth', 5000), t = pv('Thickness', 250);
-        geometry = new THREE.BoxGeometry(w, t, d);
-        posX = x + w / 2; posY = -t / 2; posZ = y + d / 2;
+        const t = pv('Thickness', type === 'roof' ? 200 : 250);
+        const elevOffset = pv('ElevationOffset', 0);
+        // The 2D tool stores the footprint as a Points polygon (JSON array
+        // of {x,y}). If present, build the slab from that. Otherwise fall
+        // back to X/Y/Width/Depth (legacy / AI-generated elements).
+        const ptsVal = props['Points']?.value;
+        let builtFromPoints = false;
+        if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+          try {
+            const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+            if (pts.length >= 3) {
+              let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+              for (const p of pts) {
+                if (p.x < minX) minX = p.x;
+                if (p.x > maxX) maxX = p.x;
+                if (p.y < minY) minY = p.y;
+                if (p.y > maxY) maxY = p.y;
+              }
+              const w = Math.max(maxX - minX, 50);
+              const d = Math.max(maxY - minY, 50);
+              geometry = new THREE.BoxGeometry(w, t, d);
+              posX = (minX + maxX) / 2;
+              // Slabs sit at/above the ground; roofs sit on top of the
+              // typical wall height unless an ElevationOffset is supplied.
+              posY = elevOffset + (type === 'roof' ? 3000 : 0) + t / 2;
+              posZ = (minY + maxY) / 2;
+              builtFromPoints = true;
+            }
+          } catch { /* fall through */ }
+        }
+        if (!builtFromPoints) {
+          const x = pv('X', 0), y = pv('Y', 0);
+          const w = pv('Width', 5000), d = pv('Depth', 5000);
+          geometry = new THREE.BoxGeometry(w, t, d);
+          posX = x + w / 2;
+          posY = elevOffset + (type === 'roof' ? 3000 : 0) + t / 2;
+          posZ = y + d / 2;
+        }
       } else if (type === 'column') {
         const h   = pv('Height', 3000), dia = pv('Diameter', 300);
         const sec = props['SectionType']?.value;

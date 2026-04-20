@@ -183,14 +183,37 @@ export function computeBoundingBox(
       minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
       break;
     }
-    case 'rectangle':
-    case 'slab': {
+    case 'rectangle': {
       const x = num('X'), y = num('Y');
       const w = num('Width'), h = num('Height');
       const depth = num('Depth', num('Thickness', 200));
       minX = x; maxX = x + w;
       minY = y; maxY = y + h;
       minZ = 0; maxZ = depth;
+      break;
+    }
+    case 'slab': {
+      // Slab stores a Points polygon from the multi-click draw, or falls
+      // back to X/Y/Width/Height for legacy / AI-generated elements.
+      const ptsVal = properties['Points']?.value;
+      if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+        try {
+          const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+          if (pts.length > 0) {
+            minX = Math.min(...pts.map((p) => p.x));
+            maxX = Math.max(...pts.map((p) => p.x));
+            minY = Math.min(...pts.map((p) => p.y));
+            maxY = Math.max(...pts.map((p) => p.y));
+          }
+        } catch { /* fall through */ }
+      }
+      if (minX === 0 && maxX === 0) {
+        const x = num('X'), y = num('Y');
+        const w = num('Width'), h = num('Height');
+        minX = x; maxX = x + w;
+        minY = y; maxY = y + h;
+      }
+      minZ = 0; maxZ = num('Thickness', 250);
       break;
     }
     case 'space': {
