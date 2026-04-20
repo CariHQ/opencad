@@ -1,27 +1,35 @@
 /**
  * Autonomous house-building harness.
  *
- * Drives the app in a headless browser, executes a deterministic
- * house-drawing sequence, and emits 2D + 3D screenshots along with a
- * JSON summary of the document state. Each run is saved as its own
- * project under a per-iteration id so the human reviewer can navigate
- * to /project/<id> in the app and inspect it later.
- *
- * Iteration id: process.env.ITER (e.g. '001', '002'). Falls back to a
- * timestamp when unset. Artifacts land under experiment/house-build/<id>/.
+ * Drives the app in Playwright, runs a template-defined drawing
+ * sequence, emits 2D + 3D screenshots, and captures both element
+ * counts AND compliance-engine violations via window.__opencadDiag.
  *
  * Run:
- *   ITER=001 node node_modules/.pnpm/@playwright+test@1.59.1/node_modules/@playwright/test/cli.js \
+ *   ITER=006 TEMPLATE=three-bedroom node node_modules/.pnpm/@playwright+test@1.59.1/node_modules/@playwright/test/cli.js \
  *     test e2e/house-build.spec.ts --project=chromium --reporter=line
+ *
+ * ITER      — iteration id (required for per-iteration project slot)
+ * TEMPLATE  — one of: simple | three-bedroom | pool-house | mountain-cabin
+ *             (default: simple)
+ *
+ * Artifacts land under experiment/house-build/<iter>/ — gitignored; this
+ * is a local-only experiment, not repo-tracked.
  */
 import { test, expect } from '@playwright/test';
 import * as fs from 'node:fs';
+import { TEMPLATES, type Action } from './house-templates';
 
 const ITER = process.env.ITER ?? `ts-${Date.now()}`;
-const PROJECT_ID = `house-build-${ITER}`;
+const TEMPLATE_NAME = process.env.TEMPLATE ?? 'simple';
+const TEMPLATE = TEMPLATES[TEMPLATE_NAME];
+if (!TEMPLATE) {
+  throw new Error(`Unknown TEMPLATE '${TEMPLATE_NAME}'. Options: ${Object.keys(TEMPLATES).join(', ')}`);
+}
+const PROJECT_ID = `house-build-${ITER}-${TEMPLATE.id}`;
 const OUT = `experiment/house-build/${ITER}`;
 
-test(`autonomous house build — iter ${ITER}`, async ({ page }) => {
+test(`autonomous house build — iter ${ITER} — ${TEMPLATE.label}`, async ({ page }) => {
   fs.mkdirSync(OUT, { recursive: true });
 
   const consoleLogs: string[] = [];
@@ -29,8 +37,6 @@ test(`autonomous house build — iter ${ITER}`, async ({ page }) => {
   page.on('console', (m) => consoleLogs.push(`[${m.type()}] ${m.text()}`));
   page.on('pageerror', (e) => pageErrors.push(`${e.name}: ${e.message}`));
 
-  // Start fresh only for THIS iteration's project slot. Other iterations are
-  // preserved so the user can navigate between them in the app.
   await page.addInitScript((id: string) => {
     try { localStorage.removeItem(`opencad-document:${id}`); } catch { /* */ }
   }, PROJECT_ID);
@@ -39,7 +45,7 @@ test(`autonomous house build — iter ${ITER}`, async ({ page }) => {
   await page.waitForLoadState('networkidle');
   await page.waitForTimeout(1500);
 
-  // Ensure Floor Plan
+  // Floor Plan
   const floor = page.getByRole('button', { name: /^Floor Plan$/i });
   if (await floor.count()) { await floor.first().click(); await page.waitForTimeout(300); }
 
@@ -49,122 +55,105 @@ test(`autonomous house build — iter ${ITER}`, async ({ page }) => {
   const cx0 = box.x + box.width / 2;
   const cy0 = box.y + box.height / 2;
 
-  async function drag(x1: number, y1: number, x2: number, y2: number): Promise<void> {
-    await page.mouse.move(x1, y1);
-    await page.mouse.down();
-    await page.mouse.move(x2, y2, { steps: 10 });
-    await page.mouse.up();
-    await page.waitForTimeout(180);
+  // Convert template-relative pixel offsets to absolute screen coords
+  const xA = (x: number): number => cx0 + x;
+  const yA = (y: number): number => cy0 + y;
+
+  async function exec(a: Action): Promise<void> {
+    switch (a.kind) {
+      case 'tool':
+        if (a.tool) await page.keyboard.press(a.tool);
+        await page.waitForTimeout(90);
+        break;
+      case 'drag':
+        await page.mouse.move(xA(a.x1!), yA(a.y1!));
+        await page.mouse.down();
+        await page.mouse.move(xA(a.x2!), yA(a.y2!), { steps: 10 });
+        await page.mouse.up();
+        await page.waitForTimeout(150);
+        break;
+      case 'click':
+        await page.mouse.click(xA(a.x1!), yA(a.y1!));
+        await page.waitForTimeout(100);
+        break;
+      case 'dblclick':
+        await page.mouse.dblclick(xA(a.x1!), yA(a.y1!));
+        await page.waitForTimeout(180);
+        break;
+      case 'wait':
+        await page.waitForTimeout(a.ms ?? 200);
+        break;
+    }
   }
-  async function clickAt(x: number, y: number): Promise<void> {
-    await page.mouse.click(x, y);
-    await page.waitForTimeout(120);
-  }
 
-  // === Single-room house layout =============================================
-  const L = 200; // half-width in screen pixels
-  const H = 150; // half-height in screen pixels
-  const xL = cx0 - L, xR = cx0 + L;
-  const yT = cy0 - H, yB = cy0 + H;
-
-  // Walls (clockwise)
-  await page.keyboard.press('w');
-  await drag(xL, yT, xR, yT); // top
-  await drag(xR, yT, xR, yB); // right
-  await drag(xR, yB, xL, yB); // bottom
-  await drag(xL, yB, xL, yT); // left
-
-  // Door on bottom wall
-  await page.keyboard.press('d');
-  await clickAt(cx0, yB);
-
-  // Window on top wall
-  await page.keyboard.press('n');
-  await clickAt(cx0, yT);
-
-  // Slab — room footprint
-  await page.keyboard.press('s');
-  await clickAt(xL + 20, yT + 20);
-  await clickAt(xR - 20, yT + 20);
-  await clickAt(xR - 20, yB - 20);
-  await page.mouse.dblclick(xL + 20, yB - 20);
-  await page.waitForTimeout(200);
-
-  // Roof — overhang by ~10 px each side
-  await page.keyboard.press('o');
-  await clickAt(xL - 10, yT - 10);
-  await clickAt(xR + 10, yT - 10);
-  await clickAt(xR + 10, yB + 10);
-  await page.mouse.dblclick(xL - 10, yB + 10);
-  await page.waitForTimeout(200);
-
-  // Columns at 4 interior corners
-  await page.keyboard.press('k');
-  await clickAt(xL + 40, yT + 40);
-  await clickAt(xR - 40, yT + 40);
-  await clickAt(xR - 40, yB - 40);
-  await clickAt(xL + 40, yB - 40);
+  for (const action of TEMPLATE.actions) await exec(action);
 
   await page.keyboard.press('v');
   await page.waitForTimeout(200);
 
-  // ── Capture artifacts ────────────────────────────────────────────────────
+  // Screenshots
   await page.screenshot({ path: `${OUT}/01-floor-plan.png`, fullPage: true });
-
   const three = page.getByRole('button', { name: /^3D View$/i });
   await three.first().click();
   await page.waitForTimeout(600);
   await page.keyboard.press('0');
   await page.waitForTimeout(600);
   await page.screenshot({ path: `${OUT}/02-iso-3d.png`, fullPage: true });
-
-  await page.keyboard.press('2');
-  await page.waitForTimeout(400);
+  await page.keyboard.press('2'); await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/03-front.png`, fullPage: true });
-
-  await page.keyboard.press('3');
-  await page.waitForTimeout(400);
+  await page.keyboard.press('3'); await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/04-right.png`, fullPage: true });
-
-  await page.keyboard.press('1');
-  await page.waitForTimeout(400);
+  await page.keyboard.press('1'); await page.waitForTimeout(400);
   await page.screenshot({ path: `${OUT}/05-top.png`, fullPage: true });
 
-  // Document state — count per type, position of each element
-  const stateDump = await page.evaluate((id: string) => {
-    try {
-      const raw = localStorage.getItem(`opencad-document:${id}`);
-      if (!raw) return { error: 'no-persisted-doc' };
-      const doc = JSON.parse(raw) as {
-        content: { elements: Record<string, { type: string; properties: Record<string, { value: unknown }> }> };
-      };
-      const counts: Record<string, number> = {};
-      const sample: Array<{ type: string; props: Record<string, unknown> }> = [];
+  // Pull a full diagnostic snapshot from window.__opencadDiag — counts,
+  // compliance violations, and a sample of each element type.
+  const diag = await page.evaluate(() => {
+    const w = window as unknown as { __opencadDiag?: {
+      summary: () => { counts: Record<string, number>; violations: Array<{ ruleId: string; message: string; severity: string }>; elementCount: number };
+      getDocument: () => unknown;
+    } };
+    if (!w.__opencadDiag) return { error: 'no-diag-window' };
+    const s = w.__opencadDiag.summary();
+    const doc = w.__opencadDiag.getDocument() as {
+      content: { elements: Record<string, { type: string; properties: Record<string, { value: unknown }> }> };
+    } | null;
+    const sample: Array<{ type: string; props: Record<string, unknown> }> = [];
+    const seenTypes = new Set<string>();
+    if (doc) {
       for (const el of Object.values(doc.content.elements)) {
-        counts[el.type] = (counts[el.type] ?? 0) + 1;
-        if (sample.length < 24) {
-          const props: Record<string, unknown> = {};
-          for (const [k, v] of Object.entries(el.properties)) props[k] = v.value;
-          sample.push({ type: el.type, props });
-        }
+        if (seenTypes.has(el.type)) continue;
+        seenTypes.add(el.type);
+        const props: Record<string, unknown> = {};
+        for (const [k, v] of Object.entries(el.properties)) props[k] = v.value;
+        sample.push({ type: el.type, props });
       }
-      return { counts, sample };
-    } catch (err) {
-      return { error: (err as Error).message };
     }
-  }, PROJECT_ID);
+    return { ...s, sample };
+  });
+
+  // Expected-vs-actual count deltas — quick sanity signal for the evaluator
+  const deltas: Record<string, { expected: number; actual: number; delta: number }> = {};
+  if (TEMPLATE.expected && 'counts' in diag) {
+    for (const [type, exp] of Object.entries(TEMPLATE.expected)) {
+      const act = (diag.counts as Record<string, number>)[type] ?? 0;
+      deltas[type] = { expected: exp, actual: act, delta: act - exp };
+    }
+  }
 
   fs.writeFileSync(`${OUT}/summary.json`, JSON.stringify({
     iteration: ITER,
+    template: TEMPLATE.id,
+    label: TEMPLATE.label,
+    description: TEMPLATE.description,
     projectId: PROJECT_ID,
     projectUrl: `/project/${PROJECT_ID}`,
-    state: stateDump,
+    diag,
+    deltas,
     pageErrors,
     warnings: consoleLogs.filter((l) => l.includes('[warning]') && !l.includes('CRDT')).slice(0, 30),
     timestamp: new Date().toISOString(),
   }, null, 2));
 
-  // Fail the test only on page errors — missing elements are signal for the
-  // evaluator, not a hard blocker.
   expect(pageErrors.filter((e) => !e.includes('CRDT'))).toEqual([]);
 });

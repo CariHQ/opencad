@@ -118,3 +118,6 @@ test/fixtures/large-*.rvt
 # Local overrides
 *.local.json
 pnpm-workspace.yaml.local
+
+# Autonomous-build experiment artifacts (screenshots, summaries) — local only
+experiment/

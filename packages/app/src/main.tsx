@@ -9,12 +9,19 @@ import './styles/index.css';
 // In dev mode the virtual module is a no-op so this is safe in all environments.
 import { registerSW } from 'virtual:pwa-register';
 import { initSyncCrdt } from './lib/syncAdapter';
+import { useDocumentStore } from './stores/documentStore';
+import { installDiagWindow } from './lib/diagWindow';
 
 registerSW({ immediate: false });
 
 // Kick off WASM load in the background — document mutations tolerate the
 // short window before the CRDT is ready (crdtApply* are no-ops when not ready).
 void initSyncCrdt();
+
+// Dev-only: expose window.__opencadDiag for the Playwright autonomous-build
+// harness so it can read the live document and run the compliance engine
+// without re-parsing persisted JSON. No-op in production.
+installDiagWindow(() => useDocumentStore.getState().document);
 
 const container = document.getElementById('root');
 if (!container) {
