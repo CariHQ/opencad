@@ -8,6 +8,7 @@ import { BUILT_IN_MATERIALS } from '../lib/materials';
 import { moveElementProps } from '../utils/elementMath';
 import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 import { buildWallGraph, wallEndOffsets } from './wallGraph';
+import type { Composite } from '@opencad/document';
 
 // Patch Three.js prototypes once at module level for BVH-accelerated raycasting
 THREE.Mesh.prototype.raycast = acceleratedRaycast;
@@ -263,7 +264,8 @@ function wallOpeningsFingerprint(
 function buildWallMesh(
   element: ElementSchema,
   allElements: Record<string, ElementSchema>,
-  mat: THREE.MeshStandardMaterial
+  mat: THREE.MeshStandardMaterial,
+  composites?: Record<string, Composite>,
 ): THREE.Object3D {
   const props = element.properties as Record<string, { value: unknown }>;
   const pv = (k: string, fb: number) =>
@@ -309,7 +311,61 @@ function buildWallMesh(
 
   const openings = findWallOpenings(element, allElements);
 
-  // ── Solid wall (no openings) ──────────────────────────────────────────────
+  // ── Composite lookup (T-MOD-004) ──────────────────────────────────────────
+  // A wall carries CompositeId pointing at doc.library.composites. When we
+  // have a composite + no openings, render as N stacked boxes along the
+  // wall perpendicular so the brick / cavity / insulation / plaster read as
+  // distinct surfaces. Falls back to the single-material box otherwise.
+  const compositeId = typeof (props as Record<string, { value: unknown }>)['CompositeId']?.value === 'string'
+    ? ((props as Record<string, { value: unknown }>)['CompositeId']!.value as string) : '';
+  const composite = composites && compositeId ? composites[compositeId] : undefined;
+
+  // ── Solid composite wall (no openings + composite present) ────────────────
+  // Inline material resolver — builds a MeshStandardMaterial per layer name,
+  // falling back to the wall's default material when the name is unknown.
+  // Not cached (v1); fine for fewer than a few hundred walls.
+  const materialFor = (name: string): THREE.MeshStandardMaterial => {
+    const m = BUILT_IN_MATERIALS.find((bm) => bm.name === name);
+    if (!m) return mat;
+    const color = new THREE.Color(m.color ?? '#a0a0a0');
+    const isGlass = /Glass/i.test(name);
+    const isAir   = /Air Cavity/i.test(name);
+    return new THREE.MeshStandardMaterial({
+      color,
+      roughness: m.roughness ?? 0.8,
+      metalness: m.metalness ?? 0,
+      transparent: isGlass || isAir,
+      opacity: isGlass ? 0.35 : isAir ? 0.05 : 1,
+    });
+  };
+  if (openings.length === 0 && composite && composite.layers.length > 0) {
+    const group = new THREE.Group();
+    group.position.set(cx, elevOffset + wallH / 2, cz);
+    group.rotation.y = ry;
+    tag(group);
+    // Layers are listed inside-to-outside. Render them centered on the
+    // wall's reference line (the core layer if present, otherwise the
+    // geometric centre).
+    let cursorIn = -wallT / 2; // start at the "interior" face along Z
+    for (const layer of composite.layers) {
+      const layerMat = materialFor(layer.material);
+      const m = new THREE.Mesh(
+        new THREE.BoxGeometry(lenExt, wallH, layer.thickness),
+        layerMat,
+      );
+      m.position.set(0, 0, cursorIn + layer.thickness / 2);
+      m.castShadow = true;
+      m.receiveShadow = true;
+      m.userData.elementId = element.id;
+      m.userData.elementType = 'wall';
+      m.userData.compositeLayer = layer.material;
+      group.add(m);
+      cursorIn += layer.thickness;
+    }
+    return group;
+  }
+
+  // ── Solid wall (no openings, no composite — legacy single-material) ──────
   if (openings.length === 0) {
     const mesh = new THREE.Mesh(new THREE.BoxGeometry(lenExt, wallH, wallT), mat);
     mesh.position.set(cx, elevOffset + wallH / 2, cz);
@@ -485,8 +541,13 @@ export function useThreeViewport() {
       let posX = 0, posY = 0, posZ = 0, ry = 0;
 
       if (type === 'wall') {
-        // Walls handled by buildWallMesh (supports openings)
-        return buildWallMesh(element, allElements, createMaterial(color, 0.85, pbr.roughness, pbr.metalness));
+        // Walls handled by buildWallMesh (supports openings + composite layers)
+        const composites = useDocumentStore.getState().document?.library?.composites;
+        return buildWallMesh(
+          element, allElements,
+          createMaterial(color, 0.85, pbr.roughness, pbr.metalness),
+          composites,
+        );
       }
 
       if (type === 'annotation' || type === 'beam') {

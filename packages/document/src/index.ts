@@ -21,6 +21,7 @@ export * from './dwg';
 export * from './pdf';
 export * from './mep';
 export * from './diff';
+export * from './composite';
 
 // ArchiCAD adapter — explicit exports to avoid name collisions with ./io#detectFormat
 export {

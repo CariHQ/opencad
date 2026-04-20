@@ -238,17 +238,22 @@ export function useViewport() {
       if (Math.sqrt(dx * dx + dy * dy) < 100) return;
       const wp = (toolParams?.['wall'] ?? {}) as Record<string, unknown>;
       const wallType = (wp['wallType'] as string | undefined) ?? 'interior';
-      // ArchiCAD-style thickness defaults by wall type:
-      //   exterior  — 300 mm  (brick/block + insulation + inner drywall)
-      //   interior  — 150 mm  (drywall-stud-drywall partition)
-      //   partition — 100 mm  (lightweight office partition)
-      //   curtain   —  60 mm  (glazed curtain wall)
-      // User can still override via toolParams.thickness.
-      const defaultThickness =
-        wallType === 'exterior'  ? 300 :
-        wallType === 'partition' ? 100 :
-        wallType === 'curtain'   ?  60 :
-        150;
+      // Composite-aware wall (T-MOD-004 / #297): the authoritative
+      // description of a wall's build-up is its CompositeId. Width +
+      // Material still ship on the element as convenience snapshots for
+      // legacy readers (IFC exporter, cost calc fallback) until those
+      // paths consume composites directly.
+      const defaultCompositeByType: Record<string, string> = {
+        exterior:  'ext-300-brick-cavity-blockwork-plaster',
+        interior:  'int-150-plasterboard-stud-plasterboard',
+        partition: 'part-100-lightweight-partition',
+        curtain:   'curt-60-glazing',
+      };
+      const compositeId = (wp['compositeId'] as string | undefined) ?? defaultCompositeByType[wallType] ?? defaultCompositeByType.interior;
+      const defaultThicknessByType: Record<string, number> = {
+        exterior: 300, interior: 150, partition: 100, curtain: 60,
+      };
+      const thickness = (wp['thickness'] as number | undefined) ?? defaultThicknessByType[wallType] ?? 150;
       addElement({
         type: 'wall', layerId,
         properties: {
@@ -256,12 +261,13 @@ export function useViewport() {
           StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
           EndX: { type: 'number', value: end.x }, EndY: { type: 'number', value: end.y },
           Height: { type: 'number', value: wp['height'] ?? 3000 },
-          Width: { type: 'number', value: wp['thickness'] ?? defaultThickness },
+          Width: { type: 'number', value: thickness },
           Material: { type: 'string', value: wp['material'] ?? (
             wallType === 'exterior' ? 'Concrete' :
             wallType === 'curtain'  ? 'Clear Glass' :
             'Plasterboard'
           ) },
+          CompositeId: { type: 'string', value: compositeId },
           WallType: { type: 'string', value: wallType },
           ElevationOffset: { type: 'number', value: wp['elevationOffset'] ?? 0 },
         },

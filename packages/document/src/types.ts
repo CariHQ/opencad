@@ -203,10 +203,36 @@ export interface DocumentPresentation {
   annotations: Record<string, AnnotationSchema>;
 }
 
+/**
+ * Composite wall / slab / roof structure (T-MOD-004).
+ * An ordered stack of layers drawn from inside to outside.
+ */
+export interface CompositeLayer {
+  /** References a BuildingMaterial / MaterialSchema by id or name. */
+  material: string;
+  /** Thickness in millimetres. Must be > 0. */
+  thickness: number;
+  /** At most one layer in a composite may carry core=true — it's the
+   *  structural core whose centerline the element's reference line follows. */
+  core?: boolean;
+  /** Which face this layer renders on (2D fill style hint). */
+  finish?: 'exterior' | 'interior' | 'both';
+}
+
+export interface Composite {
+  id: string;
+  name: string;
+  /** 'wall' | 'slab' | 'roof' — scope of where this composite may be used. */
+  category: 'wall' | 'slab' | 'roof';
+  layers: CompositeLayer[];
+}
+
 export interface DocumentLibrary {
   materials: Record<string, MaterialSchema>;
   families?: Record<string, FamilySchema>;
   blocks?: Record<string, ElementSchema>;
+  /** Composite structures referenced by element CompositeId property. */
+  composites?: Record<string, Composite>;
 }
 
 export interface DocumentSchema {

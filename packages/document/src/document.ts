@@ -19,6 +19,7 @@ import {
   BoundingBox3D,
 } from './types';
 import { createDefaultMaterials } from './material';
+import { BUILT_IN_COMPOSITES } from './composite';
 import { parseIFC, serializeIFC } from './ifc';
 
 export interface CreateProjectOptions {
@@ -76,6 +77,7 @@ export function createProject(
     },
     library: {
       materials: createDefaultMaterials(),
+      composites: { ...BUILT_IN_COMPOSITES },
     },
   };
 }
