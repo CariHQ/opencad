@@ -82,7 +82,6 @@ import { PhotoToModelPanel } from './components/PhotoToModelPanel';
 import { MarketplacePanel } from './components/MarketplacePanel';
 import { WindAnalysisPanel } from './components/WindAnalysisPanel';
 import { SplitViewport } from './components/SplitViewport';
-import { PlacementPanel } from './components/PlacementPanel';
 import { AuthModal } from './components/AuthModal';
 import { VersionHistoryPanel } from './components/VersionHistoryPanel';
 import { ReviewPanel } from './components/ReviewPanel';
@@ -570,11 +569,9 @@ export function AppLayout() {
                     activeTool: u.activeTool,
                   }))}
               />
-              {(activeTool === 'door' || activeTool === 'window') && (
-                <div className="floating-placement-panel">
-                  <PlacementPanel elementType={activeTool as 'door' | 'window'} onClose={() => setActiveTool('select')} />
-                </div>
-              )}
+              {/* Door/Window parameters live in DoorWindowPanel in the right
+                  panel (Properties tab); the old floating PlacementPanel was
+                  a redundant duplicate with a separate unsynced state. */}
               {focusMode && <div className="focus-hint">Press <kbd>\</kbd> to exit focus mode</div>}
             </div>
           </PanelErrorBoundary>

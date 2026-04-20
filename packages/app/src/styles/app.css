@@ -2050,18 +2050,13 @@ input[type='range']::-moz-range-track {
   margin-bottom: 16px;
 }
 
-/* Placement Panel */
+/* Tool-parameter panel (Wall/Slab/DoorWindow/Column/Beam/Stair/Railing)
+   — rendered inline at the top of the right-panel Properties tab, NOT a
+   floating overlay. */
 .placement-panel {
-  position: absolute;
-  bottom: 52px;
-  left: 60px;
-  width: 220px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: var(--shadow-md);
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
   overflow: hidden;
-  z-index: 100;
 }
 
 .placement-header {

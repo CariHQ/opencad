@@ -13,7 +13,6 @@ import {
   AppWindow,
   RectangleVertical,
   Triangle,
-  Spline,
   Cylinder,
   Footprints,
   Slash,
@@ -54,7 +53,6 @@ const tools: Tool[] = [
   { id: 'circle',    name: 'Circle',    icon: Circle,            shortcut: 'C' },
   { id: 'arc',       name: 'Arc',       icon: Slash,             shortcut: 'A' },
   { id: 'polygon',   name: 'Polygon',   icon: Pentagon,          shortcut: 'P' },
-  { id: 'spline',    name: 'Spline',    icon: Spline,            shortcut: 'U' },
 
   // ── Structural / building ──
   { id: 'wall',      name: 'Wall',      icon: RectangleVertical, shortcut: 'W', separatorBefore: true },
