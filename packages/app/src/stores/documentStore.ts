@@ -150,7 +150,15 @@ export const useDocumentStore = create<DocumentState>()(
             // Guard against pre-refactor schema (no content/organization groups)
             if (docData?.content && docData?.organization) {
               model = new DocumentModel(projectId, userId);
-              model.loadDocument(docData);
+              try {
+                model.loadDocument(docData);
+              } catch (loadErr) {
+                // Stale document crashed on load — discard and start fresh.
+                // eslint-disable-next-line no-console
+                console.warn('[doc] loadDocument failed, starting fresh:', loadErr);
+                localStorage.removeItem('opencad-document');
+                model = new DocumentModel(projectId, userId);
+              }
             } else {
               localStorage.removeItem('opencad-document');
               model = new DocumentModel(projectId, userId);
@@ -158,7 +166,10 @@ export const useDocumentStore = create<DocumentState>()(
           } else {
             model = new DocumentModel(projectId, userId);
           }
-        } catch {
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.warn('[doc] initProject parse/init failed, starting fresh:', err);
+          try { localStorage.removeItem('opencad-document'); } catch { /* ignore */ }
           model = new DocumentModel(projectId, userId);
         }
         const document = model.documentData;

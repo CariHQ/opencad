@@ -532,6 +532,12 @@ export function useThreeViewport() {
   const updateScene = useCallback(() => {
     const { scene } = stateRef.current;
     if (!scene || !doc) return;
+    try { _runUpdate(); } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[3D] updateScene failed:', err);
+    }
+    function _runUpdate() {
+    if (!scene || !doc) return;
 
     const docElements = doc.content.elements;
     const newIds  = new Set(Object.keys(docElements));
@@ -565,21 +571,35 @@ export function useThreeViewport() {
         if (fp !== (wallFingerprintsRef.current.get(id) ?? '')) needsRebuild = true;
       }
 
+      // Wrap mesh creation in try/catch so one malformed element (old schema,
+      // missing properties, etc.) can't blank out the entire 3D scene.
+      const safeCreate = (el: ElementSchema): THREE.Object3D | null => {
+        try {
+          return createMeshFromElement(el, docElements);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error('[3D] createMeshFromElement failed for element', el.id, el.type, err);
+          return null;
+        }
+      };
+
       if (!oldIds.has(id)) {
-        const obj = createMeshFromElement(element, docElements);
+        const obj = safeCreate(element);
         if (obj) {
           scene.add(obj);
           elementMeshesRef.current.set(id, obj);
         }
         elementDataRef.current.set(id, element);
         if (element.type === 'wall') {
-          wallFingerprintsRef.current.set(id, wallOpeningsFingerprint(element, docElements));
+          try {
+            wallFingerprintsRef.current.set(id, wallOpeningsFingerprint(element, docElements));
+          } catch { /* ignore fingerprint errors */ }
         }
       } else if (needsRebuild) {
         const old = elementMeshesRef.current.get(id)!;
         scene.remove(old);
         disposeObject(old);
-        const obj = createMeshFromElement(element, docElements);
+        const obj = safeCreate(element);
         if (obj) {
           scene.add(obj);
           elementMeshesRef.current.set(id, obj);
@@ -588,7 +608,9 @@ export function useThreeViewport() {
         }
         elementDataRef.current.set(id, element);
         if (element.type === 'wall') {
-          wallFingerprintsRef.current.set(id, wallOpeningsFingerprint(element, docElements));
+          try {
+            wallFingerprintsRef.current.set(id, wallOpeningsFingerprint(element, docElements));
+          } catch { /* ignore fingerprint errors */ }
         }
       }
     }
@@ -611,6 +633,7 @@ export function useThreeViewport() {
     }
 
     needsRenderRef.current = true;
+    }
   }, [doc, createMeshFromElement, updateCamera]);
 
   const updateSelection = useCallback(() => {
