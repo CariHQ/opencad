@@ -139,18 +139,9 @@ interface GenericRenderer {
   dispose(): void;
 }
 
-async function createRenderer(): Promise<GenericRenderer> {
-  // Try WebGPU first if the browser supports it
-  if (typeof navigator !== 'undefined' && 'gpu' in navigator) {
-    try {
-      const { WebGPURenderer } = await import('three/webgpu');
-      const r = new WebGPURenderer({ antialias: true });
-      await r.init();
-      return r as unknown as GenericRenderer;
-    } catch {
-      // Fall through to WebGL
-    }
-  }
+function createRenderer(): GenericRenderer {
+  // WebGL only for now — WebGPU support is experimental and requires async init
+  // which introduced timing issues with the animate loop. Revisit once stable.
   return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
 }
 
@@ -357,6 +348,16 @@ export function useThreeViewport() {
   const tcDraggingRef        = useRef(false);
   const tcElementIdRef       = useRef<string | null>(null);
   const tcInitPosRef         = useRef<THREE.Vector3 | null>(null);
+
+  // Stable handler box — refreshed each render so the init effect can run
+  // with empty deps while still dispatching to the latest callbacks.
+  const handlersRef = useRef({
+    mousedown:   (_e: MouseEvent) => {},
+    mousemove:   (_e: MouseEvent) => {},
+    wheel:       (_e: WheelEvent) => {},
+    contextmenu: (_e: Event) => {},
+    keydown:     (_e: KeyboardEvent) => {},
+  });
 
   const createMaterial = useCallback(
     (color: string, opacity = 0.8, roughness = 0.8, metalness = 0.0): THREE.MeshStandardMaterial => {
@@ -872,93 +873,90 @@ export function useThreeViewport() {
 
     scene.add(new THREE.AxesHelper(1000));
 
-    // Set scene + camera synchronously so updateScene can add meshes
-    // immediately — renderer slot is filled once the async promise resolves.
-    stateRef.current = { camera, renderer: null, scene };
+    // Set scene + camera, then create renderer synchronously.
+    const renderer = createRenderer();
+    renderer.setSize(initW, initH);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
+    container.appendChild(renderer.domElement);
+
+    stateRef.current = { camera, renderer, scene };
+    rendererReadyRef.current = true;
+    needsRenderRef.current = true;
     hasAutoZoomedRef.current = false;
 
     updateCamera();
 
-    let cancelled = false;
+    // ── TransformControls gizmo ──────────────────────────────────────────
+    const tc = new TransformControls(camera, renderer.domElement);
+    tc.setSize(0.8);
 
-    // Async renderer creation: try WebGPU, fall back to WebGL
-    void createRenderer().then((renderer) => {
-      if (cancelled) { renderer.dispose(); return; }
+    tc.addEventListener('dragging-changed', (event) => {
+      const isNowDragging = (event as unknown as { value: boolean }).value;
+      tcDraggingRef.current = isNowDragging;
 
-      renderer.setSize(initW, initH);
-      renderer.setPixelRatio(window.devicePixelRatio);
-      renderer.shadowMap.enabled = true;
-      renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
-      container.appendChild(renderer.domElement);
-
-      stateRef.current.renderer = renderer;
-      rendererReadyRef.current  = true;
-      needsRenderRef.current    = true; // render all meshes already in the scene
-
-      // ── TransformControls gizmo ──────────────────────────────────────────
-      const tc = new TransformControls(camera, renderer.domElement);
-      tc.setSize(0.8);
-
-      tc.addEventListener('dragging-changed', (event) => {
-        const isNowDragging = (event as unknown as { value: boolean }).value;
-        tcDraggingRef.current = isNowDragging;
-
-        if (isNowDragging) {
-          // Capture position before the drag so we can compute delta on finish
-          const obj = tc.object;
-          if (obj) tcInitPosRef.current = obj.position.clone();
-        } else {
-          // Drag finished — commit the displacement to the document
-          const id   = tcElementIdRef.current;
-          const obj  = tc.object;
-          const init = tcInitPosRef.current;
-          if (id && obj && init) {
-            const dx = obj.position.x - init.x;
-            const dz = obj.position.z - init.z; // 3D z == document y
-            if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
-              const st = useDocumentStore.getState();
-              const el = st.document?.content.elements[id];
-              if (el) {
-                const propsUpdate = moveElementProps(el, dx, dz);
-                if (Object.keys(propsUpdate).length > 0) {
-                  st.updateElement(id, {
-                    properties: { ...el.properties, ...propsUpdate },
-                  });
-                  st.pushHistory('Move element');
-                }
+      if (isNowDragging) {
+        const obj = tc.object;
+        if (obj) tcInitPosRef.current = obj.position.clone();
+      } else {
+        const id   = tcElementIdRef.current;
+        const obj  = tc.object;
+        const init = tcInitPosRef.current;
+        if (id && obj && init) {
+          const dx = obj.position.x - init.x;
+          const dz = obj.position.z - init.z;
+          if (Math.abs(dx) > 0.1 || Math.abs(dz) > 0.1) {
+            const st = useDocumentStore.getState();
+            const el = st.document?.content.elements[id];
+            if (el) {
+              const propsUpdate = moveElementProps(el, dx, dz);
+              if (Object.keys(propsUpdate).length > 0) {
+                st.updateElement(id, {
+                  properties: { ...el.properties, ...propsUpdate },
+                });
+                st.pushHistory('Move element');
               }
             }
           }
-          tcInitPosRef.current = null;
-          // Detach so updateSelection re-attaches to the freshly rebuilt mesh
-          tc.detach();
-          tcElementIdRef.current = null;
         }
-      });
-
-      tc.addEventListener('change', () => { needsRenderRef.current = true; });
-
-      scene.add(tc as unknown as THREE.Object3D);
-      transformControlsRef.current = tc;
-
-      const animate = () => {
-        if (!rendererReadyRef.current) return;
-        animationFrameRef.current = requestAnimationFrame(animate);
-        if (needsRenderRef.current) {
-          renderer.render(scene, camera);
-          needsRenderRef.current = false;
-        }
-      };
-      animate();
+        tcInitPosRef.current = null;
+        tc.detach();
+        tcElementIdRef.current = null;
+      }
     });
 
-    container.addEventListener('mousedown',    handleMouseDown);
-    container.addEventListener('mousemove',    handleMouseMove);
-    container.addEventListener('wheel',        handleWheel);
-    container.addEventListener('contextmenu',  handleContextMenu);
-    container.addEventListener('mouseup',   () => { isDragging.current = false; });
-    container.addEventListener('mouseleave', () => { isDragging.current = false; });
-    window.addEventListener('keydown', handleKeyDown);
+    tc.addEventListener('change', () => { needsRenderRef.current = true; });
+
+    scene.add(tc as unknown as THREE.Object3D);
+    transformControlsRef.current = tc;
+
+    // ── Animate loop: always render each frame. Dirty-flag rendering was
+    // skipping frames in pathological cases; a simple always-render loop is
+    // cheaper to reason about and easily hits 60 fps at current scene sizes.
+    const animate = () => {
+      animationFrameRef.current = requestAnimationFrame(animate);
+      renderer.render(scene, camera);
+    };
+    animate();
+
+    // Ref-based handler indirection so changing callback identities don't
+    // tear down the whole Three.js scene on every doc update.
+    const onMouseDown    = (e: MouseEvent)    => handlersRef.current.mousedown(e);
+    const onMouseMove    = (e: MouseEvent)    => handlersRef.current.mousemove(e);
+    const onWheel        = (e: WheelEvent)    => handlersRef.current.wheel(e);
+    const onContextMenu  = (e: Event)         => handlersRef.current.contextmenu(e);
+    const onKeyDown      = (e: KeyboardEvent) => handlersRef.current.keydown(e);
+    const onMouseUp      = () => { isDragging.current = false; };
+    const onMouseLeave   = () => { isDragging.current = false; };
+
+    container.addEventListener('mousedown',    onMouseDown);
+    container.addEventListener('mousemove',    onMouseMove);
+    container.addEventListener('wheel',        onWheel);
+    container.addEventListener('contextmenu',  onContextMenu);
+    container.addEventListener('mouseup',      onMouseUp);
+    container.addEventListener('mouseleave',   onMouseLeave);
+    window.addEventListener('keydown',         onKeyDown);
 
     const ro = new ResizeObserver((entries) => {
       for (const entry of entries) {
@@ -974,15 +972,16 @@ export function useThreeViewport() {
     ro.observe(container);
 
     return () => {
-      cancelled = true;
       rendererReadyRef.current = false;
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       ro.disconnect();
-      container.removeEventListener('mousedown',   handleMouseDown);
-      container.removeEventListener('mousemove',   handleMouseMove);
-      container.removeEventListener('wheel',       handleWheel);
-      container.removeEventListener('contextmenu', handleContextMenu);
-      window.removeEventListener('keydown', handleKeyDown);
+      container.removeEventListener('mousedown',   onMouseDown);
+      container.removeEventListener('mousemove',   onMouseMove);
+      container.removeEventListener('wheel',       onWheel);
+      container.removeEventListener('contextmenu', onContextMenu);
+      container.removeEventListener('mouseup',     onMouseUp);
+      container.removeEventListener('mouseleave',  onMouseLeave);
+      window.removeEventListener('keydown',        onKeyDown);
       if (transformControlsRef.current) {
         transformControlsRef.current.dispose();
         transformControlsRef.current = null;
@@ -994,7 +993,21 @@ export function useThreeViewport() {
       }
       stateRef.current = { camera: null, renderer: null, scene: null };
     };
-  }, [handleMouseDown, handleMouseMove, handleWheel, handleContextMenu, handleKeyDown, updateCamera]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep handlersRef pointing at the latest callbacks on every render —
+  // this lets the init effect stay stable (empty deps) while still invoking
+  // the current handler closures.
+  useEffect(() => {
+    handlersRef.current = {
+      mousedown:   handleMouseDown,
+      mousemove:   handleMouseMove,
+      wheel:       handleWheel,
+      contextmenu: handleContextMenu,
+      keydown:     handleKeyDown,
+    };
+  }, [handleMouseDown, handleMouseMove, handleWheel, handleContextMenu, handleKeyDown]);
 
   useEffect(() => { updateScene();     }, [updateScene]);
   useEffect(() => { updateSelection(); }, [updateSelection]);
