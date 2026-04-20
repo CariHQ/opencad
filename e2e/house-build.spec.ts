@@ -55,9 +55,33 @@ test(`autonomous house build — iter ${ITER} — ${TEMPLATE.label}`, async ({ p
   const cx0 = box.x + box.width / 2;
   const cy0 = box.y + box.height / 2;
 
-  // Convert template-relative pixel offsets to absolute screen coords
-  const xA = (x: number): number => cx0 + x;
-  const yA = (y: number): number => cy0 + y;
+  // A mouse event that starts outside the canvas element hits a toolbar
+  // instead, so the viewport pointerdown handler never fires and the
+  // drawing action silently drops. Clamp to a safe inset of the actual
+  // canvas bounds and log whenever a template strays outside so it's
+  // visible in summary.json (see outOfBoundsHits below).
+  const INSET = 6;
+  const minX = box.x + INSET, maxX = box.x + box.width - INSET;
+  const minY = box.y + INSET, maxY = box.y + box.height - INSET;
+  const outOfBoundsHits: Array<{ axis: 'x' | 'y'; raw: number; clamped: number }> = [];
+  const xA = (x: number): number => {
+    const s = cx0 + x;
+    if (s < minX || s > maxX) {
+      const c = Math.max(minX, Math.min(maxX, s));
+      outOfBoundsHits.push({ axis: 'x', raw: s, clamped: c });
+      return c;
+    }
+    return s;
+  };
+  const yA = (y: number): number => {
+    const s = cy0 + y;
+    if (s < minY || s > maxY) {
+      const c = Math.max(minY, Math.min(maxY, s));
+      outOfBoundsHits.push({ axis: 'y', raw: s, clamped: c });
+      return c;
+    }
+    return s;
+  };
 
   async function exec(a: Action): Promise<void> {
     switch (a.kind) {
@@ -161,6 +185,9 @@ test(`autonomous house build — iter ${ITER} — ${TEMPLATE.label}`, async ({ p
     deltas,
     pageErrors,
     warnings: consoleLogs.filter((l) => l.includes('[warning]') && !l.includes('CRDT')).slice(0, 30),
+    canvasBounds: { x: box.x, y: box.y, width: box.width, height: box.height },
+    outOfBoundsHits: outOfBoundsHits.slice(0, 20),
+    outOfBoundsCount: outOfBoundsHits.length,
     timestamp: new Date().toISOString(),
   }, null, 2));
 
