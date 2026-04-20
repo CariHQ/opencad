@@ -228,6 +228,151 @@ function mountainCabin(): Action[] {
   return a;
 }
 
+// ============================================================================
+// 05 — Farnsworth-style glass pavilion (open plan, thin walls, wide eaves)
+// Inspired by Mies van der Rohe's Farnsworth House — single open volume,
+// all-glass perimeter (rendered as windows here), large roof overhang on
+// two sides, raised slab.
+// ============================================================================
+
+function farnsworthPavilion(): Action[] {
+  const a: Action[] = [];
+  const xL = -250, xR = 250, yT = -140, yB = 140;
+  // Exterior walls (interpreted as glass curtain walls — same geometry though)
+  a.push(T('w'));
+  a.push(drag(xL, yT, xR, yT));
+  a.push(drag(xR, yT, xR, yB));
+  a.push(drag(xR, yB, xL, yB));
+  a.push(drag(xL, yB, xL, yT));
+  // Entry on south (user-facing), few doors
+  a.push(T('d'));
+  a.push(click(0, yB));
+  // Many windows — glass perimeter
+  a.push(T('n'));
+  for (const wx of [-180, -60, 60, 180]) {
+    a.push(click(wx, yT));
+    a.push(click(wx, yB));
+  }
+  for (const wy of [-80, 80]) {
+    a.push(click(xL, wy));
+    a.push(click(xR, wy));
+  }
+  // Raised slab — slightly larger than walls (the floor plate extends)
+  a.push(T('s'));
+  a.push(click(xL - 40, yT - 20));
+  a.push(click(xR + 40, yT - 20));
+  a.push(click(xR + 40, yB + 20));
+  a.push(dbl  (xL - 40, yB + 20));
+  // Roof — deep overhang east/west (signature horizontal emphasis)
+  a.push(T('o'));
+  a.push(click(xL - 80, yT - 30));
+  a.push(click(xR + 80, yT - 30));
+  a.push(click(xR + 80, yB + 30));
+  a.push(dbl  (xL - 80, yB + 30));
+  // Eight steel columns supporting the roof — 4 on each long side
+  a.push(T('k'));
+  for (const cx of [-180, -60, 60, 180]) {
+    a.push(click(cx, yT - 20));
+    a.push(click(cx, yB + 20));
+  }
+  a.push(T('v'));
+  return a;
+}
+
+// ============================================================================
+// 06 — Courtyard house (atrium plan — rooms around a central open court)
+// Common in Mediterranean / Moorish architecture, modern minimalist too.
+// ============================================================================
+
+function courtyardHouse(): Action[] {
+  const a: Action[] = [];
+  const xL = -320, xR = 320, yT = -220, yB = 220;
+  // Outer perimeter
+  a.push(T('w'));
+  a.push(drag(xL, yT, xR, yT));
+  a.push(drag(xR, yT, xR, yB));
+  a.push(drag(xR, yB, xL, yB));
+  a.push(drag(xL, yB, xL, yT));
+  // Inner courtyard — 4 walls forming a central open space
+  const ixL = -80, ixR = 80, iyT = -60, iyB = 60;
+  a.push(drag(ixL, iyT, ixR, iyT));
+  a.push(drag(ixR, iyT, ixR, iyB));
+  a.push(drag(ixR, iyB, ixL, iyB));
+  a.push(drag(ixL, iyB, ixL, iyT));
+  // Entry
+  a.push(T('d'));
+  a.push(click(0, yB));
+  // Access doors to courtyard from each cardinal direction
+  a.push(click(0, iyT));
+  a.push(click(ixR, 0));
+  a.push(click(0, iyB));
+  a.push(click(ixL, 0));
+  // Windows on all four outer walls
+  a.push(T('n'));
+  for (const wx of [-200, 200]) {
+    a.push(click(wx, yT));
+    a.push(click(wx, yB));
+  }
+  for (const wy of [-120, 120]) {
+    a.push(click(xL, wy));
+    a.push(click(xR, wy));
+  }
+  // Slab over the full footprint except the courtyard void — draw full slab;
+  // a proper void would need a polygon with hole support (future feature).
+  a.push(T('s'));
+  a.push(click(xL + 10, yT + 10));
+  a.push(click(xR - 10, yT + 10));
+  a.push(click(xR - 10, yB - 10));
+  a.push(dbl  (xL + 10, yB - 10));
+  // Roof — also full coverage minus courtyard (limitation same as slab)
+  a.push(T('o'));
+  a.push(click(xL - 15, yT - 15));
+  a.push(click(xR + 15, yT - 15));
+  a.push(click(xR + 15, yB + 15));
+  a.push(dbl  (xL - 15, yB + 15));
+  a.push(T('v'));
+  return a;
+}
+
+// ============================================================================
+// 07 — Two-room office / studio — small commercial, full window walls facing south
+// ============================================================================
+
+function officeStudio(): Action[] {
+  const a: Action[] = [];
+  const xL = -220, xR = 220, yT = -130, yB = 130;
+  const xMid = 0;
+  a.push(T('w'));
+  a.push(drag(xL, yT, xR, yT));
+  a.push(drag(xR, yT, xR, yB));
+  a.push(drag(xR, yB, xL, yB));
+  a.push(drag(xL, yB, xL, yT));
+  // Partition dividing the studio
+  a.push(drag(xMid, yT, xMid, yB));
+  a.push(T('d'));
+  a.push(click(-100, yB));  // entry to west room
+  a.push(click(100, yB));   // entry to east room
+  a.push(click(xMid, 40));  // interior door
+  a.push(T('n'));
+  // Full south glazing — 6 windows
+  for (const wx of [-160, -60, 60, 160]) a.push(click(wx, yB));
+  // North clerestory — 2 windows
+  a.push(click(-100, yT));
+  a.push(click(100, yT));
+  a.push(T('s'));
+  a.push(click(xL + 10, yT + 10));
+  a.push(click(xR - 10, yT + 10));
+  a.push(click(xR - 10, yB - 10));
+  a.push(dbl  (xL + 10, yB - 10));
+  a.push(T('o'));
+  a.push(click(xL - 10, yT - 10));
+  a.push(click(xR + 10, yT - 10));
+  a.push(click(xR + 10, yB + 10));
+  a.push(dbl  (xL - 10, yB + 10));
+  a.push(T('v'));
+  return a;
+}
+
 export const TEMPLATES: Record<string, HouseTemplate> = {
   simple: {
     id: 'simple',
@@ -256,5 +401,26 @@ export const TEMPLATES: Record<string, HouseTemplate> = {
     description: 'Compact cabin with steep roof, stone columns',
     expected: { wall: 4, door: 1, window: 4, slab: 1, roof: 1, column: 2 },
     actions: mountainCabin(),
+  },
+  'farnsworth-pavilion': {
+    id: 'farnsworth-pavilion',
+    label: 'Farnsworth-style Pavilion',
+    description: 'Mies-inspired open plan with glass perimeter + deep roof overhang + 8 columns',
+    expected: { wall: 4, door: 1, window: 12, slab: 1, roof: 1, column: 8 },
+    actions: farnsworthPavilion(),
+  },
+  'courtyard-house': {
+    id: 'courtyard-house',
+    label: 'Courtyard House',
+    description: 'Mediterranean-style plan with central atrium + perimeter rooms',
+    expected: { wall: 8, door: 5, window: 8, slab: 1, roof: 1 },
+    actions: courtyardHouse(),
+  },
+  'office-studio': {
+    id: 'office-studio',
+    label: 'Office / Studio',
+    description: 'Two-room commercial with south glazing + north clerestory',
+    expected: { wall: 5, door: 3, window: 6, slab: 1, roof: 1 },
+    actions: officeStudio(),
   },
 };
