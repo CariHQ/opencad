@@ -15,6 +15,12 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   // Firebase not configured → skip auth gate (local dev / OSS self-hosted)
   if (!isFirebaseConfigured) return <>{children}</>;
 
+  // Local dev override: VITE_SKIP_AUTH=true in .env.local lets you work on
+  // the app without signing in. Never set this in production builds.
+  if (import.meta.env.DEV && import.meta.env.VITE_SKIP_AUTH === 'true') {
+    return <>{children}</>;
+  }
+
   if (status === 'loading') {
     return (
       <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100vh' }}>

@@ -926,6 +926,10 @@ export function useThreeViewport() {
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type    = THREE.PCFSoftShadowMap;
     container.appendChild(renderer.domElement);
+    // Make the canvas visibly fill the container so CSS can't accidentally hide it.
+    (renderer.domElement as HTMLCanvasElement).style.display = 'block';
+    (renderer.domElement as HTMLCanvasElement).style.width  = '100%';
+    (renderer.domElement as HTMLCanvasElement).style.height = '100%';
 
     stateRef.current = { camera, renderer, scene };
     rendererReadyRef.current = true;
