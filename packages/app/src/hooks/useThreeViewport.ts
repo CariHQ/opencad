@@ -671,6 +671,22 @@ export function useThreeViewport() {
       }
     }
 
+    // Re-attach TransformControls to the freshly-rebuilt mesh for the
+    // currently selected element. Without this, after a move commits:
+    //   1. dragging-changed handler does tc.detach()
+    //   2. updateScene rebuilds the mesh at its new position
+    //   3. updateSelection doesn't re-run because selectedIds didn't change
+    // → the gizmo stays detached and the user can't grab the element again.
+    const tcNow = transformControlsRef.current;
+    const selNow = selectedIdsRef.current;
+    if (tcNow && selNow.length === 1) {
+      const currentMesh = elementMeshesRef.current.get(selNow[0]!);
+      if (currentMesh && tcNow.object !== currentMesh) {
+        tcNow.attach(currentMesh);
+        tcElementIdRef.current = selNow[0]!;
+      }
+    }
+
     needsRenderRef.current = true;
     }
   }, [doc, createMeshFromElement, updateCamera]);
@@ -869,15 +885,23 @@ export function useThreeViewport() {
         const intersects = raycasterRef.current.intersectObjects(leafMeshes, false);
 
         if (intersects.length > 0) {
-          const hit       = intersects[0].object as THREE.Mesh;
-          const elementId = hit.userData.elementId as string;
-          const current   = useDocumentStore.getState().selectedIds;
-          if (event.shiftKey) {
-            setSelectedIds(current.includes(elementId)
-              ? current.filter((i) => i !== elementId)
-              : [...current, elementId]);
-          } else {
-            setSelectedIds([elementId]);
+          // Walk up the parent chain — for grouped meshes (e.g. walls with
+          // openings or curtain-wall mullions), the leaf hit has no
+          // elementId; only the root group does.
+          let hit: THREE.Object3D | null = intersects[0].object;
+          while (hit && !hit.userData.elementId) hit = hit.parent;
+          const elementId = hit?.userData.elementId as string | undefined;
+          if (elementId) {
+            const current = useDocumentStore.getState().selectedIds;
+            if (event.shiftKey) {
+              setSelectedIds(current.includes(elementId)
+                ? current.filter((i) => i !== elementId)
+                : [...current, elementId]);
+            } else {
+              setSelectedIds([elementId]);
+            }
+          } else if (!event.shiftKey) {
+            setSelectedIds([]);
           }
         } else if (!event.shiftKey) {
           setSelectedIds([]);
