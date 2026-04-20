@@ -8,6 +8,7 @@ import { BUILT_IN_MATERIALS } from '../lib/materials';
 import { moveElementProps } from '../utils/elementMath';
 import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 import { buildWallGraph, wallEndOffsets } from './wallGraph';
+import { trimBeamAtColumns } from '../lib/seoResolver';
 import type { Composite } from '@opencad/document';
 
 // Patch Three.js prototypes once at module level for BVH-accelerated raycasting
@@ -551,8 +552,19 @@ export function useThreeViewport() {
       }
 
       if (type === 'annotation' || type === 'beam') {
-        const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
-        const x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
+        let x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+        let x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
+        // SEO beam-column-trim (T-GEO-001): shorten beam at each end that
+        // lands inside a column so the column reads as continuous and the
+        // beam butts into its face. Analytical — no CSG required.
+        if (type === 'beam') {
+          const cols = Object.values(allElements).filter((e) => e.type === 'column');
+          if (cols.length > 0) {
+            const trimmed = trimBeamAtColumns(element, cols);
+            x1 = trimmed.start.x; y1 = trimmed.start.y;
+            x2 = trimmed.end.x;   y2 = trimmed.end.y;
+          }
+        }
         const h  = pv('Height', type === 'beam' ? 400 : 200);
         const t  = pv('Width',  type === 'beam' ? 200 : 10);
         const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
