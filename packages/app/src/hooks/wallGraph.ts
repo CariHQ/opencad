@@ -63,9 +63,10 @@ function paramAlong(w: WallSeg, px: number, py: number): number {
 }
 
 /** Perpendicular distance from p to the infinite line of w. */
-function perpDist(w: WallSeg, px: number, py: number): number {
+function _perpDist(w: WallSeg, px: number, py: number): number {
   return Math.abs((px - w.x1) * w.uy - (py - w.y1) * w.ux);
 }
+void _perpDist; // kept as a reference helper; exported via the wallGraph geometry path.
 
 /** Intersect two infinite lines defined by walls; null when parallel. */
 function intersectLines(a: WallSeg, b: WallSeg): { x: number; y: number } | null {

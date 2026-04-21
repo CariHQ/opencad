@@ -29,18 +29,14 @@ import {
   Store,
   Wind,
   User,
-  Settings,
   History,
   MessageCirclePlus,
   HelpCircle,
-  GitPullRequest,
   Shield,
-  Plus,
   Zap,
   GitBranch,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useProjectStore } from './stores/projectStore';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 
@@ -71,8 +67,6 @@ import { BCFPanel } from './components/BCFPanel';
 import { parseBCF, serializeBCF, type BCFFile, type BCFTopic } from '@opencad/document';
 import { MaterialLibrary } from './components/MaterialLibrary';
 import { PresenceOverlay } from './components/PresenceOverlay';
-import { EditNotifications } from './components/EditNotifications';
-import { useEditNotifications } from './hooks/useEditNotifications';
 import { CommandPalette } from './components/CommandPalette';
 import { CommentsPanel } from './components/CommentsPanel';
 import { CarbonPanel, type CarbonEntry } from './components/CarbonPanel';
@@ -182,13 +176,7 @@ import { PanelResizer } from './components/PanelResizer';
 import { ProjectHomeScreen } from './components/ProjectHomeScreen';
 import {
   isTauri,
-  openFile,
-  saveFile,
-  saveFileDialog,
-  openFileDialog,
-  onFileDrop,
   tauriToggleMaximize,
-  checkForUpdates,
 } from './hooks/useTauri';
 import type { TauriUpdateInfo } from './hooks/useTauri';
 import { usePresence } from './hooks/usePresence';
@@ -326,7 +314,8 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, setElementMaterial, renameProject } = useDocumentStore();
   const leftPanelRef = React.useRef<HTMLElement>(null);
-  const rightPanelRef = React.useRef<HTMLElement>(null);
+  const _rightPanelRef = React.useRef<HTMLElement>(null);
+  void _rightPanelRef;
   const [isRenamingProject, setIsRenamingProject] = React.useState(false);
   const [renameValue, setRenameValue] = React.useState('');
   const renameInputRef = React.useRef<HTMLInputElement>(null);

@@ -42,7 +42,7 @@ describe('T-DOC-034: labelRenderer', () => {
     expect(renderLabelText('{{Name|upper}}', door({ Name: 'Front Door' }))).toBe('FRONT DOOR');
   });
 
-  it('mm->ft-in converts 900 → "2\'-11\""', () => {
+  it(`mm->ft-in converts 900 → "2'-11""`, () => {
     expect(renderLabelText('{{Width|mm->ft-in}}', door({ Width: 900 }))).toBe(`2'-11"`);
   });
 

@@ -1605,7 +1605,7 @@ export function useThreeViewport() {
 
     // Event / renderer handles we need to tear down on unmount. Populated
     // inside the async IIFE once the renderer is ready.
-    let rendererRef: GenericRenderer | null = null;
+    let _rendererRef: GenericRenderer | null = null;
     let animate: (() => void) | null = null;
     let onMouseDown:   ((e: MouseEvent) => void) | null = null;
     let onMouseMove:   ((e: MouseEvent) => void) | null = null;
@@ -1619,7 +1619,7 @@ export function useThreeViewport() {
     void (async () => {
       const renderer = await createRenderer();
       if (cancelled) { renderer.dispose(); return; }
-      rendererRef = renderer;
+      _rendererRef = renderer;
 
       // Guard against 0×0 initialisation — real canvas size is re-applied by
       // the ResizeObserver below once layout settles.

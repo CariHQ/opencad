@@ -32,7 +32,7 @@ describe('T-MOD-003: parseLength', () => {
     expect(parseLength("15'")).toBeCloseTo(4572, 1);
   });
 
-  it('T-MOD-003-004: parseLength("15\'-3\"") ≈ 4648.2 (15 ft 3 in)', () => {
+  it(`T-MOD-003-004: parseLength("15'-3\\"") ≈ 4648.2 (15 ft 3 in)`, () => {
     expect(parseLength('15\'-3"')).toBeCloseTo(4648.2, 1);
     expect(parseLength('15\'3"')).toBeCloseTo(4648.2, 1);
   });

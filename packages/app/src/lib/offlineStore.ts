@@ -11,7 +11,7 @@
  * Schema   : { projectId: string, data: string, pendingSync: boolean, savedAt: number }
  */
 import { openDB, type IDBPDatabase } from 'idb';
-import { opfsWrite, opfsRead, opfsDelete } from './opfs';
+import { opfsWrite, opfsRead } from './opfs';
 import { registerBackgroundSyncTag } from './backgroundSync';
 
 const DB_NAME = 'opencad-offline';

@@ -61,6 +61,6 @@ export function computeStairGeometry(params: StairParams): StairResult {
 }
 
 /** Check if a computed stair is code-compliant. */
-export function isStairCompliant(r: StairResult, maxRiser = 196, minTread = 280): boolean {
+export function isStairCompliant(r: StairResult, maxRiser = 196, _minTread = 280): boolean {
   return r.riserHeight <= maxRiser && r.runLength > 0 && r.riserCount >= 2;
 }

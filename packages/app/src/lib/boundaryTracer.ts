@@ -79,11 +79,8 @@ export function traceBoundaryFromClick(
       }
     } else if (y1 === y2) {
       const minX = Math.min(x1, x2), maxX = Math.max(x1, x2);
-      for (let i = 0; i < xs.length - 1; i++) {
-        if (xs[i]! >= minX && xs[i + 1]! <= maxX) edges.add(`h:${ys[0] === y1 ? y1 : y1}:${xs[i]}`);
-        else if (xs[i]! >= minX && xs[i + 1]! <= maxX) edges.add(`h:${y1}:${xs[i]}`);
-      }
-      // Simpler: loop and register the row at y1
+      // Single-pass registration — the earlier duplicated loop had a
+      // dead else-if branch that eslint no-dupe-else-if flagged; drop it.
       for (let i = 0; i < xs.length - 1; i++) {
         if (xs[i]! >= minX && xs[i + 1]! <= maxX) edges.add(`h:${y1}:${xs[i]}`);
       }

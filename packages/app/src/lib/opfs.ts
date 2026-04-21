@@ -97,5 +97,5 @@ export async function opfsList(): Promise<string[]> {
 
 /** Strip path separators — OPFS keys can't contain slashes. */
 function sanitise(key: string): string {
-  return key.replace(/[\/\\]/g, '_');
+  return key.replace(/[/\\]/g, '_');
 }

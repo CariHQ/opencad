@@ -33,7 +33,7 @@ interface GeometryWasmModule {
 }
 
 // Lazily resolved WASM module (shared across all hook instances)
-let _wasmModule: GeometryWasmModule | null = null;
+const _wasmModule: GeometryWasmModule | null = null;
 let _initPromise: Promise<GeometryWasmModule | null> | null = null;
 
 async function loadWasm(): Promise<GeometryWasmModule | null> {

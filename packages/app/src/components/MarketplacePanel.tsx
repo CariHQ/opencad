@@ -81,8 +81,9 @@ function PluginSkeleton(): React.ReactElement {
 export function MarketplacePanel({
   items = [],
   onInstall,
-  onPublish,
+  onPublish: _onPublish,
 }: MarketplacePanelProps = {}) {
+  void _onPublish;
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -191,7 +192,7 @@ export function MarketplacePanel({
     if (!validateManifest(manifest)) return;
     pluginRegistry.register(manifest);
   };
-  const handleUninstallPlugin = (pluginId: string) => {
+  const _handleUninstallPlugin = (pluginId: string) => {
     pluginRegistry.unregister(pluginId);
   };
 
