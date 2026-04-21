@@ -1,11 +1,14 @@
-import { useRef, useState, useEffect } from 'react';
+import { useRef, useState, useEffect, useCallback } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
 import { useCursorBroadcast } from '../hooks/useCursorBroadcast';
+import { useDocumentStore } from '../stores/documentStore';
 import { ViewCube } from './ViewCube';
 import { CoordBox, type CoordField, type CoordBoxValues } from './CoordBox';
 import { RemoteCursors } from './RemoteCursors';
+import { ContextMenu } from './contextMenu/ContextMenu';
+import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from './contextMenu/contextMenuItems';
 
 interface ViewportProps {
   viewType?: 'floor-plan' | '3d' | 'section';
@@ -66,6 +69,50 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
   // see it; safe no-op when no sync connection is open.
   useCursorBroadcast(containerRef);
 
+  // ─── 2D context menu ────────────────────────────────────────────────────
+  // 3D viewport has its own context menu inside useThreeViewport; wire one
+  // into the 2D floor-plan canvas so right-click opens the same shell.
+  const [contextMenu2D, setContextMenu2D] = useState<
+    { x: number; y: number; items: ContextMenuGroup } | null
+  >(null);
+  const { selectedIds, setActiveTool, undo, redo } = useDocumentStore();
+  const handleCanvas2DContextMenu = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    e.preventDefault();
+    const ctx: ElementContext = selectedIds.length > 1 ? 'multi'
+      : selectedIds.length === 1 ? 'wall' // treat selection as a concrete element; most-common 2D target
+      : 'empty';
+    const items = getContextMenuItems('2d', ctx);
+    setContextMenu2D({ x: e.clientX, y: e.clientY, items });
+  }, [selectedIds]);
+  const closeContextMenu2D = useCallback(() => setContextMenu2D(null), []);
+  const handleContextMenuAction = useCallback((actionId: string) => {
+    // Tool-switch shortcuts (insert-wall, insert-door, insert-window, insert-slab,
+    // insert-column, insert-beam, insert-roof). Also primitive text/dim/line/rect
+    // tools for plain 2D drafting. Anything else is left to the element-specific
+    // handler down the line; for now swallow unknown actions.
+    const toolForAction: Record<string, string | undefined> = {
+      'insert-wall': 'wall', 'insert-door': 'door', 'insert-window': 'window',
+      'insert-slab': 'slab', 'insert-column': 'column', 'insert-beam': 'beam',
+      'insert-roof': 'roof', 'insert-stair': 'stair', 'insert-text': 'text',
+      'insert-dimension': 'dimension', 'insert-line': 'line',
+      'insert-rectangle': 'rectangle', 'insert-circle': 'circle',
+    };
+    const tool = toolForAction[actionId];
+    if (tool) {
+      setActiveTool(tool as Parameters<typeof setActiveTool>[0]);
+      return;
+    }
+    if (actionId === 'undo')       { undo(); return; }
+    if (actionId === 'redo')       { redo(); return; }
+    if (actionId === 'zoom-fit')   { zoomToFit(); return; }
+    if (actionId === 'select-all') {
+      const st = useDocumentStore.getState();
+      const ids = Object.keys(st.document?.content.elements ?? {});
+      st.setSelectedIds(ids);
+      return;
+    }
+  }, [setActiveTool, undo, redo, zoomToFit]);
+
   return (
     <div className="viewport-container" ref={containerRef}>
       {show3D ? (
@@ -88,6 +135,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           onMouseLeave={handleCanvasMouseUp}
           onDoubleClick={handleCanvasDoubleClick}
           onWheel={handleCanvasWheel}
+          onContextMenu={handleCanvas2DContextMenu}
         />
       )}
       {!show3D && showCoordBox && (
@@ -101,6 +149,17 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
         />
       )}
       <RemoteCursors />
+      {contextMenu2D && (
+        <ContextMenu
+          x={contextMenu2D.x}
+          y={contextMenu2D.y}
+          viewportW={window.innerWidth}
+          viewportH={window.innerHeight}
+          items={contextMenu2D.items}
+          onAction={handleContextMenuAction}
+          onClose={closeContextMenu2D}
+        />
+      )}
       <div className="viewport-overlay">
         <div className="viewport-corner top-left">
           <span>

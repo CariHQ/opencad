@@ -86,12 +86,14 @@ export default defineConfig({
     port: 5173,
     strictPort: false,
     proxy: {
+      // Match the server's default PORT in server/.env (47821). Override
+      // with VITE_SERVER_URL if you run the backend on a different host/port.
       '/api': {
-        target: process.env.VITE_SERVER_URL ?? 'http://localhost:8080',
+        target: process.env.VITE_SERVER_URL ?? 'http://localhost:47821',
         changeOrigin: true,
       },
       '/ws': {
-        target: (process.env.VITE_SERVER_URL ?? 'http://localhost:8080')
+        target: (process.env.VITE_SERVER_URL ?? 'http://localhost:47821')
           .replace(/^http/, 'ws'),
         ws: true,
         changeOrigin: true,

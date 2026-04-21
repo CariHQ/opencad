@@ -18,6 +18,7 @@
     "dev": "turbo run dev --filter=@opencad/desktop",
     "dev:browser": "turbo run dev --filter=@opencad/app",
     "dev:desktop": "turbo run dev --filter=@opencad/desktop",
+    "dev:server": "bash -c 'PORT=$(grep -E \"^PORT=\" server/.env 2>/dev/null | cut -d= -f2 || echo 47821); PIDS=$(lsof -ti:$PORT 2>/dev/null); if [ -n \"$PIDS\" ]; then echo \"Port $PORT busy (pid $PIDS) — killing\"; kill -9 $PIDS; sleep 0.5; fi; cd server && cargo run'",
     "build": "turbo run build",
     "build:browser": "turbo run build --filter=@opencad/app",
     "build:desktop": "turbo run build --filter=@opencad/desktop",
