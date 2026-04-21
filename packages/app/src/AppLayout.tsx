@@ -47,8 +47,9 @@ import { LevelManager } from './components/LevelManager';
 import { ImportExportModal } from './components/ImportExportModal';
 import { ColumnBeamPanel } from './components/ColumnBeamPanel';
 import { StairRailingPanel } from './components/StairRailingPanel';
-import { useDocumentStore } from './stores/documentStore';
+import { useDocumentStore, setDocumentReadOnly } from './stores/documentStore';
 import { useProjectStore } from './stores/projectStore';
+import { useEntitlements } from './hooks/useEntitlements';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { WallToolPanel } from './components/WallToolPanel';
 import { CurtainWallPanel } from './components/CurtainWallPanel';
@@ -85,6 +86,7 @@ import {
 } from './plugins/pluginHost';
 import { pluginRegistry } from './plugins/pluginRegistry';
 import { listInstalled as listInstalledPlugins } from './lib/marketplaceApi';
+import { ReadOnlyBanner } from './components/ReadOnlyBanner';
 import type { AdminMember } from './components/AdminPanel';
 import type { SSOConfig } from './components/SSOSettingsPanel';
 import type { RoleName } from './config/roles';
@@ -372,6 +374,12 @@ export function AppLayout() {
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
+
+  // Mirror the subscription-derived read-only flag into the document
+  // store so element-mutating actions become no-ops when the user's
+  // access has lapsed. Exports and view state are never gated.
+  const { readOnly } = useEntitlements();
+  React.useEffect(() => { setDocumentReadOnly(readOnly); }, [readOnly]);
 
   // Boot the plugin host once. Reconcile remote install state first so:
   //   1. Plugins installed on another device auto-register here.
@@ -673,6 +681,7 @@ export function AppLayout() {
 
   return (
     <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
+      <ReadOnlyBanner />
       {chromeVisible && (
         <header
           className={`app-toolbar${isTauri() && navigator.platform.includes('Mac') ? ' tauri-macos' : ''}`}

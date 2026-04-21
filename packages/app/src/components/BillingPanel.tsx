@@ -24,34 +24,37 @@
  *   cancel-confirm-yes        — confirm cancel button
  *   cancel-confirm-no         — dismiss button
  */
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSubscription } from '../hooks/useSubscription';
-import type { SubscriptionTier } from '../lib/serverApi';
-
-// ── Invoice mock data ────────────────────────────────────────────────────────
-
-export interface InvoiceRow {
-  id: string;
-  date: string;
-  amount: string;
-  status: 'paid' | 'pending' | 'failed';
-  pdf: string;
-}
-
-const MOCK_INVOICES: InvoiceRow[] = [
-  { id: 'inv-001', date: '2026-03-01', amount: '$29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-001.pdf' },
-  { id: 'inv-002', date: '2026-02-01', amount: '$29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-002.pdf' },
-  { id: 'inv-003', date: '2026-01-01', amount: '$29.00', status: 'paid', pdf: 'https://opencad.archi/invoices/inv-003.pdf' },
-];
+import { subscriptionApi, type Invoice, type SubscriptionTier } from '../lib/serverApi';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-const PLAN_LABELS: Record<SubscriptionTier | 'trial', string> = {
+const PLAN_LABELS: Record<SubscriptionTier, string> = {
   free: 'Free',
   pro: 'Pro',
   business: 'Business',
   trial: 'Trial',
 };
+
+/** Format a cents amount into a localised currency string. */
+function formatMoney(amountCents: number, currency: string): string {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: 'currency',
+      currency: currency.toUpperCase(),
+      minimumFractionDigits: 2,
+    }).format(amountCents / 100);
+  } catch {
+    // Unknown ISO code → fall back to raw number + upper-cased code.
+    return `${(amountCents / 100).toFixed(2)} ${currency.toUpperCase()}`;
+  }
+}
+
+function formatInvoiceDate(createdSeconds: number): string {
+  const d = new Date(createdSeconds * 1000);
+  return d.toISOString().slice(0, 10); // YYYY-MM-DD, locale-safe
+}
 
 /** Returns days remaining until validUntil epoch (ms). Minimum 0. */
 function daysRemaining(validUntil: number): number {
@@ -60,7 +63,7 @@ function daysRemaining(validUntil: number): number {
 }
 
 /** Tiers that have an active paid/trial subscription worth cancelling. */
-const CANCELLABLE_TIERS = new Set<SubscriptionTier | 'trial'>(['trial', 'pro', 'business']);
+const CANCELLABLE_TIERS = new Set<SubscriptionTier>(['trial', 'pro', 'business']);
 
 // ── Component ────────────────────────────────────────────────────────────────
 
@@ -69,8 +72,32 @@ interface BillingPanelProps {
 }
 
 export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.ReactElement {
-  const { tier, validUntil, isLoading, openPortal } = useSubscription();
+  const {
+    tier,
+    subscriptionStatus,
+    validUntil,
+    cancelAtPeriodEnd,
+    accessMode,
+    isLoading,
+    openPortal,
+  } = useSubscription();
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+
+  // Real invoices from Stripe. Empty array until loaded (or when the user
+  // has no Stripe customer yet). Errors are swallowed into an empty list
+  // so the rest of the panel still renders.
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState<boolean>(true);
+  useEffect(() => {
+    let active = true;
+    setInvoicesLoading(true);
+    subscriptionApi
+      .listInvoices()
+      .then((list) => { if (active) setInvoices(list); })
+      .catch(() => { if (active) setInvoices([]); })
+      .finally(() => { if (active) setInvoicesLoading(false); });
+    return () => { active = false; };
+  }, []);
 
   if (isLoading) {
     return (
@@ -80,12 +107,16 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
     );
   }
 
-  // Determine the effective plan label. The authStore uses 'trial' but
-  // SubscriptionTier only has 'free' | 'pro' | 'business'. Cast defensively.
-  const effectiveTier = tier as SubscriptionTier | 'trial';
-  const planLabel = PLAN_LABELS[effectiveTier] ?? String(effectiveTier);
-  const isTrial = effectiveTier === 'trial';
-  const canCancel = CANCELLABLE_TIERS.has(effectiveTier);
+  const planLabel = PLAN_LABELS[tier] ?? String(tier);
+  const isTrial = tier === 'trial' || accessMode === 'trial';
+  // Show Cancel when the user has a live Stripe subscription to cancel,
+  // OR when they're on a trial they can end early. Free users with no
+  // subscription have nothing to cancel.
+  const canCancel =
+    CANCELLABLE_TIERS.has(tier) &&
+    subscriptionStatus !== null &&
+    subscriptionStatus !== 'canceled' &&
+    !cancelAtPeriodEnd;
 
   const handleUpgrade = (): void => {
     if (onUpgrade) {
@@ -107,7 +138,7 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
         <h3 className="billing-section-title">Current Plan</h3>
         <div className="billing-plan-row">
           <span
-            className={`billing-plan-badge billing-plan-badge--${effectiveTier}`}
+            className={`billing-plan-badge billing-plan-badge--${tier}`}
             data-testid="plan-badge"
           >
             {planLabel}
@@ -133,41 +164,53 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
       {/* ── Invoice history ─────────────────────────────────────────────────── */}
       <section className="billing-section billing-invoices-section">
         <h3 className="billing-section-title">Invoice History</h3>
-        <table className="billing-invoice-table" data-testid="invoice-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Amount</th>
-              <th>Status</th>
-              <th>PDF</th>
-            </tr>
-          </thead>
-          <tbody>
-            {MOCK_INVOICES.map((inv) => (
-              <tr key={inv.id} data-testid="invoice-row">
-                <td>{inv.date}</td>
-                <td>{inv.amount}</td>
-                <td>
-                  <span className={`invoice-status invoice-status--${inv.status}`}>
-                    {inv.status}
-                  </span>
-                </td>
-                <td>
-                  <a
-                    href={inv.pdf}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="invoice-pdf-link"
-                    data-testid="invoice-pdf-link"
-                    aria-label={`Download invoice ${inv.id}`}
-                  >
-                    Download
-                  </a>
-                </td>
+        {invoicesLoading ? (
+          <p className="billing-loading-text">Loading invoices…</p>
+        ) : invoices.length === 0 ? (
+          <p className="billing-empty-text">
+            No invoices yet. They'll appear here once you're on a paid plan.
+          </p>
+        ) : (
+          <table className="billing-invoice-table" data-testid="invoice-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>PDF</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {invoices.map((inv) => (
+                <tr key={inv.id} data-testid="invoice-row">
+                  <td>{formatInvoiceDate(inv.created)}</td>
+                  <td>{formatMoney(inv.amountPaid, inv.currency)}</td>
+                  <td>
+                    <span className={`invoice-status invoice-status--${inv.status}`}>
+                      {inv.status}
+                    </span>
+                  </td>
+                  <td>
+                    {inv.invoicePdf || inv.hostedInvoiceUrl ? (
+                      <a
+                        href={inv.invoicePdf ?? inv.hostedInvoiceUrl ?? '#'}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="invoice-pdf-link"
+                        data-testid="invoice-pdf-link"
+                        aria-label={`Download invoice ${inv.number ?? inv.id}`}
+                      >
+                        Download
+                      </a>
+                    ) : (
+                      <span className="billing-empty-text">—</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </section>
 
       {/* ── Cancel subscription ─────────────────────────────────────────────── */}

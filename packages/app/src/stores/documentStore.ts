@@ -29,6 +29,32 @@ import { useProjectStore } from './projectStore';
 const LEGACY_DOC_KEY = 'opencad-document';
 const docKey = (projectId: string): string => `opencad-document:${projectId}`;
 
+/**
+ * Global write-lock. Flipped true by useDocumentReadOnlySync when the
+ * user's subscription has lapsed. All element-mutating actions consult
+ * this via assertWritable below and become no-ops when locked. View /
+ * selection / export actions are never gated — users never lose access
+ * to their own data.
+ */
+let _readOnly = false;
+export function setDocumentReadOnly(readOnly: boolean): void {
+  _readOnly = readOnly;
+}
+export function isDocumentReadOnly(): boolean {
+  return _readOnly;
+}
+function assertWritable(): boolean {
+  if (_readOnly) {
+    // Silently no-op instead of throwing: any UI path that reaches a
+    // write action despite the banner + disabled buttons is a bug we'd
+    // rather log than crash on.
+    // eslint-disable-next-line no-console
+    console.info('[doc] write blocked (subscription read-only)');
+    return false;
+  }
+  return true;
+}
+
 interface HistoryEntry {
   document: DocumentSchema;
   timestamp: number;
@@ -359,6 +385,7 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       addElement: (params) => {
+        if (!assertWritable()) return '';
         const { model, changeHistory } = get();
         if (!model) throw new Error('No document loaded');
 
@@ -405,6 +432,7 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       updateElement: (elementId, updates) => {
+        if (!assertWritable()) return;
         const { model, changeHistory } = get();
         if (!model) return;
 
@@ -432,6 +460,7 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       deleteElement: (elementId) => {
+        if (!assertWritable()) return;
         const { model, document, changeHistory } = get();
         if (!model || !document) return;
 
@@ -454,6 +483,7 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       setElementMaterial: (elementId, materialId) => {
+        if (!assertWritable()) return;
         const { model } = get();
         if (!model) return;
         const element = model.getElementById(elementId);

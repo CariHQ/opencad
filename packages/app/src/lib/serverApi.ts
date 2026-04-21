@@ -142,11 +142,39 @@ export const projectsApi = {
 
 // ── Subscriptions ─────────────────────────────────────────────────────────────
 
-export type SubscriptionTier = 'free' | 'pro' | 'business';
+export type SubscriptionTier = 'free' | 'trial' | 'pro' | 'business';
+
+/** Derived by the server from tier + Stripe subscription state. Drives
+ *  read-only-mode gating on the client. */
+export type AccessMode = 'active' | 'trial' | 'grace' | 'expired';
+
+/** Mirrors Stripe's subscription.status, or null when the user has never
+ *  subscribed. See
+ *  https://docs.stripe.com/api/subscriptions/object#subscription_object-status */
+export type StripeSubscriptionStatus =
+  | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid'
+  | 'incomplete' | 'incomplete_expired' | 'paused';
 
 export interface SubscriptionStatus {
   tier: SubscriptionTier;
+  subscriptionStatus: StripeSubscriptionStatus | null;
+  /** Milliseconds since epoch for the end of the current paid (or trial)
+   *  period, or null if the user has no time-bound access. */
   validUntil: number | null;
+  cancelAtPeriodEnd: boolean;
+  accessMode: AccessMode;
+}
+
+export interface Invoice {
+  id: string;
+  number: string | null;
+  /** Seconds since epoch (Stripe uses seconds, not ms). */
+  created: number;
+  amountPaid: number;   // cents
+  currency: string;     // ISO code, lowercase
+  status: string;       // Stripe invoice status
+  hostedInvoiceUrl: string | null;
+  invoicePdf: string | null;
 }
 
 export const subscriptionApi = {
@@ -161,4 +189,7 @@ export const subscriptionApi = {
 
   openPortal: (): Promise<{ url: string }> =>
     apiFetch<{ url: string }>('/subscription/portal', { method: 'POST' }),
+
+  listInvoices: (): Promise<Invoice[]> =>
+    apiFetch<Invoice[]>('/subscription/invoices'),
 };
