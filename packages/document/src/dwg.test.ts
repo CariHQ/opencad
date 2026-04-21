@@ -408,6 +408,35 @@ describe('T-DXF-PARSE: Minimal DXF with 1 LINE and 1 CIRCLE', () => {
     expect(text).toBeDefined();
     expect(text.properties['Content']?.value).toBe('Hello DXF');
   });
+
+  it('INSERT entity becomes a block_ref element with BlockName', () => {
+    const INSERT_DXF = `0
+SECTION
+2
+ENTITIES
+0
+INSERT
+5
+4A
+8
+Layer1
+2
+DOOR_BLOCK
+10
+100.0
+20
+200.0
+30
+0.0
+0
+ENDSEC
+0
+EOF`;
+    const doc = parseDXF(INSERT_DXF);
+    const refs = Object.values(doc.content.elements).filter((e) => e.type === 'block_ref');
+    expect(refs.length).toBe(1);
+    expect(refs[0]!.properties['BlockName']?.value).toBe('DOOR_BLOCK');
+  });
 });
 
 // ─── T-DXF-LAYER: Layer table parsing ────────────────────────────────────────
