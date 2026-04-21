@@ -6,6 +6,7 @@
 import React, { useState, useMemo } from 'react';
 import { MATERIAL_LIBRARY, type BIMMaterial } from '../lib/materials';
 import { useDocumentStore } from '../stores/documentStore';
+import { getBIMMaterialTextureStyle } from '../utils/materialTextures';
 
 const ALL_CATEGORIES = ['structural', 'envelope', 'finish', 'mep'] as const;
 
@@ -71,7 +72,7 @@ export function MaterialsPanel() {
               >
                 <span
                   className="material-swatch"
-                  style={{ backgroundColor: m.color }}
+                  style={getBIMMaterialTextureStyle(m)}
                   aria-hidden="true"
                 />
                 <span className="material-name">{m.name}</span>

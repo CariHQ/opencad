@@ -1,5 +1,6 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { BUILT_IN_MATERIALS, MATERIAL_CATEGORIES, type Material } from '../lib/materials';
+import { getMaterialTextureStyle } from '../utils/materialTextures';
 
 interface MaterialLibraryProps {
   onSelect: (material: Material) => void;
@@ -108,7 +109,7 @@ export function MaterialLibrary({ onSelect, selectedCount, currentMaterialName }
               >
                 <div
                   className="material-swatch"
-                  style={{ backgroundColor: mat.color }}
+                  style={getMaterialTextureStyle(mat)}
                   aria-hidden="true"
                   title={
                     mat.density !== undefined && mat.embodiedCarbon !== undefined
