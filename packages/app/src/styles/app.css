@@ -4809,6 +4809,13 @@ input[type='range']::-moz-range-track {
   font-size: 12px;
   font-family: inherit;
   cursor: pointer;
+  outline: none;
+}
+.material-category-select:focus,
+.material-category-select:focus-visible {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--accent-primary);
 }
 
 .material-empty {
@@ -4838,11 +4845,17 @@ input[type='range']::-moz-range-track {
 }
 
 .material-swatch {
-  width: 32px;
-  height: 32px;
+  width: 48px;
+  height: 48px;
   border-radius: 5px;
   border: 1px solid var(--border-color);
   flex-shrink: 0;
+  /* Textures declare their own background via inline style; force the
+     browser to rasterise the gradient on a dedicated layer so we don't
+     lose the pattern to subpixel rounding at small sizes. */
+  background-clip: padding-box;
+  background-origin: padding-box;
+  background-size: cover;
 }
 
 .material-info {

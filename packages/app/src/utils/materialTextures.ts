@@ -37,21 +37,31 @@ function brickPattern(brickColor: string, mortarColor: string): CSSProperties {
   return { backgroundImage: svgUrl(svg), backgroundSize: '20px 12px' };
 }
 
-/** Wood grain: repeated diagonal stripe set. */
+/** Wood grain: bold diagonal stripes with high contrast so the pattern
+ *  reads even at a 48 px swatch size. Combines a thin dark grain line
+ *  with a wider mid/light band cycle. */
 function woodGrain(baseColor: string): CSSProperties {
-  const dark = adjustHex(baseColor, -35);
-  const med  = adjustHex(baseColor, -15);
-  const lite = adjustHex(baseColor, +20);
+  const deep = adjustHex(baseColor, -55);
+  const dark = adjustHex(baseColor, -30);
+  const lite = adjustHex(baseColor, +30);
   return {
-    background: `repeating-linear-gradient(
-      -12deg,
-      ${baseColor} 0px, ${baseColor} 3px,
-      ${dark}      3px, ${dark}      4px,
-      ${baseColor} 4px, ${baseColor} 9px,
-      ${med}       9px, ${med}      10px,
-      ${baseColor}10px, ${baseColor}16px,
-      ${lite}     16px, ${lite}     17px
-    )`,
+    background: [
+      // Primary grain: narrow dark line every ~6px.
+      `repeating-linear-gradient(
+        92deg,
+        ${baseColor} 0px, ${baseColor} 4px,
+        ${deep}      4px, ${deep}      5px,
+        ${baseColor} 5px, ${baseColor} 9px,
+        ${dark}      9px, ${dark}     10px
+      )`,
+      // Secondary cathedral hint — soft lighter stripe on top.
+      `repeating-linear-gradient(
+        90deg,
+        transparent 0px, transparent 14px,
+        ${lite}    14px, ${lite}    15px,
+        transparent 15px, transparent 30px
+      )`,
+    ].join(', '),
   };
 }
 
@@ -77,6 +87,36 @@ function boardPattern(baseColor: string, boardH = 10, gapDark = -30): CSSPropert
       0deg,
       ${baseColor} 0px, ${baseColor} ${boardH}px,
       ${dark}      ${boardH}px, ${dark} ${boardH + 2}px
+    )`,
+  };
+}
+
+/** Subtle speckle — used as a fallback for categories that would otherwise
+ *  render as a flat colour block. Produces a very mild grain pattern so
+ *  every swatch has visible texture. */
+function speckle(baseColor: string): CSSProperties {
+  const d = adjustHex(baseColor, -18);
+  const l = adjustHex(baseColor, +12);
+  return {
+    background: [
+      `radial-gradient(circle at 18% 22%, ${l} 0%, transparent 8%)`,
+      `radial-gradient(circle at 72% 38%, ${d} 0%, transparent 7%)`,
+      `radial-gradient(circle at 38% 68%, ${d} 0%, transparent 6%)`,
+      `radial-gradient(circle at 82% 82%, ${l} 0%, transparent 7%)`,
+      `radial-gradient(circle at 55% 15%, ${l} 0%, transparent 5%)`,
+      baseColor,
+    ].join(', '),
+  };
+}
+
+/** Plank / board pattern — used for vinyl, laminate, rubber, resin floors. */
+function plankPattern(baseColor: string, plankH = 8, contrast = -18): CSSProperties {
+  const dark = adjustHex(baseColor, contrast);
+  return {
+    background: `repeating-linear-gradient(
+      0deg,
+      ${baseColor} 0px, ${baseColor} ${plankH}px,
+      ${dark}      ${plankH}px, ${dark} ${plankH + 1}px
     )`,
   };
 }
@@ -132,7 +172,7 @@ export function getBIMMaterialTextureStyle(mat: BIMMaterial): CSSProperties {
       ${c} 7px, ${c} 14px)`,
   };
   if (mat.id === 'bim-copper')     return metallicSheen(c, 0.3);
-  return { backgroundColor: c };
+  return speckle(c);
 }
 
 export function getMaterialTextureStyle(mat: Material): CSSProperties {
@@ -244,7 +284,15 @@ export function getMaterialTextureStyle(mat: Material): CSSProperties {
       // Polished / epoxy
       return { background: `linear-gradient(135deg, ${adjustHex(c, +40)} 0%, ${c} 50%, ${adjustHex(c, +40)} 100%)` };
     }
-    return { backgroundColor: c };
+    if (mat.id.includes('vinyl') || mat.id.includes('rubber') || mat.id.includes('linoleum') ||
+        mat.id.includes('cork')  || mat.id.includes('bamboo') || mat.id.includes('resin') ||
+        mat.id.includes('marmoleum') || mat.id.includes('encaustic')) {
+      return plankPattern(c, 9, -18);
+    }
+    if (mat.id.includes('terrazzo')) {
+      return speckle(c);
+    }
+    return speckle(c);
   }
 
   // ── Roofing ───────────────────────────────────────────────────────────────
@@ -262,7 +310,15 @@ export function getMaterialTextureStyle(mat: Material): CSSProperties {
     if (mat.id.includes('metal') || mat.id.includes('seam')) {
       return boardPattern(c, 13, -15);
     }
-    return { backgroundColor: c };
+    if (mat.id.includes('green') || mat.id.includes('sedum')) {
+      // Simulated foliage — fine dotted speckle on a green base.
+      return speckle(c);
+    }
+    if (mat.id.includes('thatch') || mat.id.includes('shingle') || mat.id.includes('shake') ||
+        mat.id.includes('felt')   || mat.id.includes('bitumen')) {
+      return plankPattern(c, 6, -18);
+    }
+    return speckle(c);
   }
 
   // ── Cladding ─────────────────────────────────────────────────────────────
@@ -272,7 +328,13 @@ export function getMaterialTextureStyle(mat: Material): CSSProperties {
     if (mat.id.includes('metal') || mat.id.includes('panel') || mat.id.includes('rainscreen')) {
       return boardPattern(c, 13, -15);
     }
-    return { backgroundColor: c };
+    if (mat.id.includes('fibre') || mat.id.includes('fiber') || mat.id.includes('hpl')) {
+      return plankPattern(c, 10, -12);
+    }
+    if (mat.id.includes('slate')) {
+      return speckle(c);
+    }
+    return speckle(c);
   }
 
   // ── Paint / finish ────────────────────────────────────────────────────────
@@ -289,7 +351,9 @@ export function getMaterialTextureStyle(mat: Material): CSSProperties {
         ].join(', '),
       };
     }
-    return { backgroundColor: c };
+    // Matte / satin paint — subtle speckle so the swatch reads as painted
+    // rather than a flat colour chip.
+    return speckle(c);
   }
 
   // ── Tile (specialty) ─────────────────────────────────────────────────────
@@ -308,7 +372,24 @@ export function getMaterialTextureStyle(mat: Material): CSSProperties {
         ].join(', '),
       };
     }
-    return { backgroundColor: c };
+    if (mat.id.includes('perforated') || mat.id.includes('micro')) {
+      return {
+        background: [
+          `radial-gradient(circle at 25% 25%, ${adjustHex(c, -25)} 0%, transparent 14%)`,
+          `radial-gradient(circle at 75% 25%, ${adjustHex(c, -25)} 0%, transparent 14%)`,
+          `radial-gradient(circle at 25% 75%, ${adjustHex(c, -25)} 0%, transparent 14%)`,
+          `radial-gradient(circle at 75% 75%, ${adjustHex(c, -25)} 0%, transparent 14%)`,
+          c,
+        ].join(', '),
+      };
+    }
+    if (mat.id.includes('slat') || mat.id.includes('wood')) {
+      return plankPattern(c, 7, -22);
+    }
+    if (mat.id.includes('fabric') || mat.id.includes('felt')) {
+      return speckle(c);
+    }
+    return speckle(c);
   }
 
   // ── Waterproofing ─────────────────────────────────────────────────────────
@@ -319,5 +400,6 @@ export function getMaterialTextureStyle(mat: Material): CSSProperties {
     };
   }
 
-  return { backgroundColor: c };
+  // Every other category still gets a real texture — no flat colour blocks.
+  return speckle(c);
 }
