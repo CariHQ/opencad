@@ -75,9 +75,23 @@ const MIN_SCALE = 0.5;       // max zoom-in
 const MAX_SCALE = 5000;      // max zoom-out
 
 // Tools that use drag-to-draw (mousedown → mousemove → mouseup)
-const DRAG_TOOLS = new Set(['line', 'wall', 'rectangle', 'circle', 'arc', 'dimension', 'beam', 'stair']);
+const DRAG_TOOLS = new Set([
+  'line', 'wall', 'rectangle', 'circle', 'arc', 'dimension',
+  'beam', 'stair', 'ellipse', 'curtain_wall', 'section', 'detail',
+  'duct', 'pipe', 'ramp', 'truss', 'brace', 'cable_tray', 'conduit',
+  'property_line', 'mass', 'room_separator',
+]);
 // Tools that use click-to-add-vertex (polygon, polyline, slab, roof, railing)
-const MULTICLICK_TOOLS = new Set(['polygon', 'polyline', 'slab', 'roof', 'railing']);
+const MULTICLICK_TOOLS = new Set([
+  'polygon', 'polyline', 'slab', 'roof', 'railing', 'spline', 'zone',
+  'ceiling', 'foundation', 'topo', 'revision_cloud',
+]);
+// Tools that place a single element at the clicked point
+const SINGLE_CLICK_TOOLS = new Set([
+  'column', 'door', 'window', 'skylight',
+  'elevation', 'hotspot', 'label', 'text', 'lamp',
+  'air_terminal', 'sprinkler', 'model_text',
+]);
 
 interface ViewTransform { scale: number; panX: number; panY: number; }
 const DEFAULT_VIEW: ViewTransform = { scale: DEFAULT_SCALE, panX: DEFAULT_PAN_X, panY: DEFAULT_PAN_Y };
@@ -479,6 +493,432 @@ export function useViewport() {
         },
       });
       getStoreActions().pushHistory('Add railing');
+    }
+
+    // ── Archicad-parity placement tools ──────────────────────────────────────
+    if (tool === 'ellipse') {
+      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
+      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
+      addElement({
+        type: 'ellipse', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Ellipse' },
+          CenterX: { type: 'number', value: (minX + maxX) / 2 },
+          CenterY: { type: 'number', value: (minY + maxY) / 2 },
+          RadiusX: { type: 'number', value: (maxX - minX) / 2 },
+          RadiusY: { type: 'number', value: (maxY - minY) / 2 },
+        },
+      });
+      getStoreActions().pushHistory('Add ellipse');
+    }
+
+    if (tool === 'curtain_wall' && start !== end) {
+      const cp = (toolParams?.['curtain_wall'] ?? {}) as Record<string, unknown>;
+      addElement({
+        type: 'curtain_wall', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Curtain Wall' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:   { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Height:      { type: 'number', value: (cp['height']      as number | undefined) ?? 3000 },
+          FrameDepth:  { type: 'number', value: (cp['frameDepth']  as number | undefined) ?? 150  },
+          MullionCols: { type: 'number', value: (cp['mullionCols'] as number | undefined) ?? 4    },
+          MullionRows: { type: 'number', value: (cp['mullionRows'] as number | undefined) ?? 2    },
+          Material:    { type: 'string', value: (cp['material']    as string | undefined) ?? 'Clear Glass' },
+        },
+      });
+      getStoreActions().pushHistory('Add curtain wall');
+    }
+
+    if (tool === 'zone' && extraPoints && extraPoints.length >= 3) {
+      addElement({
+        type: 'space', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Zone' },
+          Points: { type: 'string', value: JSON.stringify(extraPoints) },
+          Height: { type: 'number', value: 3000 },
+        },
+      });
+      getStoreActions().pushHistory('Add zone');
+    }
+
+    if (tool === 'section' && start !== end) {
+      addElement({
+        type: 'annotation', layerId,
+        properties: {
+          Name:       { type: 'string', value: 'Section' },
+          Kind:       { type: 'string', value: 'section' },
+          StartX:     { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:       { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Depth:      { type: 'number', value: 10000 },
+        },
+      });
+      getStoreActions().pushHistory('Add section');
+    }
+
+    if (tool === 'detail' && start !== end) {
+      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
+      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
+      addElement({
+        type: 'annotation', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Detail' },
+          Kind:   { type: 'string', value: 'detail' },
+          X:      { type: 'number', value: minX }, Y: { type: 'number', value: minY },
+          Width:  { type: 'number', value: maxX - minX },
+          Height: { type: 'number', value: maxY - minY },
+        },
+      });
+      getStoreActions().pushHistory('Add detail');
+    }
+
+    if (tool === 'elevation') {
+      addElement({
+        type: 'annotation', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Elevation' },
+          Kind: { type: 'string', value: 'elevation' },
+          X:    { type: 'number', value: start.x },
+          Y:    { type: 'number', value: start.y },
+          Heading: { type: 'number', value: 0 },
+        },
+      });
+      getStoreActions().pushHistory('Add elevation');
+    }
+
+    if (tool === 'hotspot') {
+      addElement({
+        type: 'point', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Hotspot' },
+          X:    { type: 'number', value: start.x },
+          Y:    { type: 'number', value: start.y },
+        },
+      });
+      getStoreActions().pushHistory('Add hotspot');
+    }
+
+    if (tool === 'label') {
+      addElement({
+        type: 'annotation', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Label' },
+          Kind: { type: 'string', value: 'label' },
+          X:    { type: 'number', value: start.x },
+          Y:    { type: 'number', value: start.y },
+          Text: { type: 'string', value: 'Label' },
+        },
+      });
+      getStoreActions().pushHistory('Add label');
+    }
+
+    if (tool === 'text') {
+      addElement({
+        type: 'text', layerId,
+        properties: {
+          Name:     { type: 'string', value: 'Text' },
+          X:        { type: 'number', value: start.x },
+          Y:        { type: 'number', value: start.y },
+          Content:  { type: 'string', value: 'Text' },
+          FontSize: { type: 'number', value: 200 },
+        },
+      });
+      getStoreActions().pushHistory('Add text');
+    }
+
+    if (tool === 'skylight') {
+      addElement({
+        type: 'window', layerId,
+        properties: {
+          Name:       { type: 'string', value: 'Skylight' },
+          X:          { type: 'number', value: start.x },
+          Y:          { type: 'number', value: start.y },
+          Width:      { type: 'number', value: 1000 },
+          Height:     { type: 'number', value: 1000 },
+          SillHeight: { type: 'number', value: 2900 },
+          IsSkylight: { type: 'boolean', value: true },
+        },
+      });
+      getStoreActions().pushHistory('Add skylight');
+    }
+
+    if (tool === 'lamp') {
+      addElement({
+        type: 'electrical_equipment', layerId,
+        properties: {
+          Name:    { type: 'string', value: 'Lamp' },
+          X:       { type: 'number', value: start.x },
+          Y:       { type: 'number', value: start.y },
+          Z:       { type: 'number', value: 2700 },
+          Wattage: { type: 'number', value: 50 },
+          Kind:    { type: 'string', value: 'lamp' },
+        },
+      });
+      getStoreActions().pushHistory('Add lamp');
+    }
+
+    if (tool === 'duct' && start !== end) {
+      addElement({
+        type: 'duct', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Duct' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:   { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Width:  { type: 'number', value: 300 },
+          Height: { type: 'number', value: 200 },
+          Z:      { type: 'number', value: 2700 },
+        },
+      });
+      getStoreActions().pushHistory('Add duct');
+    }
+
+    if (tool === 'pipe' && start !== end) {
+      addElement({
+        type: 'pipe', layerId,
+        properties: {
+          Name:    { type: 'string', value: 'Pipe' },
+          StartX:  { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:    { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Diameter:{ type: 'number', value: 50 },
+          Z:       { type: 'number', value: 2700 },
+        },
+      });
+      getStoreActions().pushHistory('Add pipe');
+    }
+
+    if (tool === 'spline' && extraPoints && extraPoints.length >= 2) {
+      addElement({
+        type: 'polyline', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Spline' },
+          Points: { type: 'string', value: JSON.stringify(extraPoints) },
+          Smooth: { type: 'boolean', value: true },
+        },
+      });
+      getStoreActions().pushHistory('Add spline');
+    }
+
+    // ── Revit-parity placement tools ─────────────────────────────────────────
+    if (tool === 'ceiling' && extraPoints && extraPoints.length >= 3) {
+      addElement({
+        type: 'slab', layerId,
+        properties: {
+          Name:      { type: 'string', value: 'Ceiling' },
+          Kind:      { type: 'string', value: 'ceiling' },
+          Points:    { type: 'string', value: JSON.stringify(extraPoints) },
+          Thickness: { type: 'number', value: 100 },
+          ElevationOffset: { type: 'number', value: 2700 },
+        },
+      });
+      getStoreActions().pushHistory('Add ceiling');
+    }
+
+    if (tool === 'foundation' && extraPoints && extraPoints.length >= 3) {
+      addElement({
+        type: 'slab', layerId,
+        properties: {
+          Name:      { type: 'string', value: 'Foundation' },
+          Kind:      { type: 'string', value: 'foundation' },
+          Points:    { type: 'string', value: JSON.stringify(extraPoints) },
+          Thickness: { type: 'number', value: 500 },
+          ElevationOffset: { type: 'number', value: -500 },
+          Material:  { type: 'string', value: 'Reinforced Concrete' },
+        },
+      });
+      getStoreActions().pushHistory('Add foundation');
+    }
+
+    if (tool === 'ramp' && start !== end) {
+      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
+      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
+      addElement({
+        type: 'stair', layerId,
+        properties: {
+          Name:       { type: 'string', value: 'Ramp' },
+          Kind:       { type: 'string', value: 'ramp' },
+          X:          { type: 'number', value: minX },
+          Y:          { type: 'number', value: minY },
+          Width2D:    { type: 'number', value: maxX - minX },
+          Length:     { type: 'number', value: maxY - minY },
+          TotalRise:  { type: 'number', value: 500 },
+          Slope:      { type: 'number', value: 1 / 12 },
+        },
+      });
+      getStoreActions().pushHistory('Add ramp');
+    }
+
+    if (tool === 'truss' && start !== end) {
+      addElement({
+        type: 'beam', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Truss' },
+          Kind:   { type: 'string', value: 'truss' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:   { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Height: { type: 'number', value: 1200 },
+          Width:  { type: 'number', value: 200 },
+        },
+      });
+      getStoreActions().pushHistory('Add truss');
+    }
+
+    if (tool === 'brace' && start !== end) {
+      addElement({
+        type: 'beam', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Brace' },
+          Kind:   { type: 'string', value: 'brace' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:   { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Height: { type: 'number', value: 100 },
+          Width:  { type: 'number', value: 100 },
+        },
+      });
+      getStoreActions().pushHistory('Add brace');
+    }
+
+    if (tool === 'topo' && extraPoints && extraPoints.length >= 3) {
+      addElement({
+        type: 'surface', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Topography' },
+          Kind:   { type: 'string', value: 'topo' },
+          Points: { type: 'string', value: JSON.stringify(extraPoints) },
+        },
+      });
+      getStoreActions().pushHistory('Add topography');
+    }
+
+    if (tool === 'revision_cloud' && extraPoints && extraPoints.length >= 3) {
+      addElement({
+        type: 'annotation', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Revision Cloud' },
+          Kind:   { type: 'string', value: 'revision_cloud' },
+          Points: { type: 'string', value: JSON.stringify(extraPoints) },
+        },
+      });
+      getStoreActions().pushHistory('Add revision cloud');
+    }
+
+    if (tool === 'mass' && start !== end) {
+      const minX = Math.min(start.x, end.x), minY = Math.min(start.y, end.y);
+      const maxX = Math.max(start.x, end.x), maxY = Math.max(start.y, end.y);
+      addElement({
+        type: 'solid', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Mass' },
+          Kind:   { type: 'string', value: 'mass' },
+          X:      { type: 'number', value: minX },
+          Y:      { type: 'number', value: minY },
+          Width:  { type: 'number', value: maxX - minX },
+          Depth:  { type: 'number', value: maxY - minY },
+          Height: { type: 'number', value: 3000 },
+        },
+      });
+      getStoreActions().pushHistory('Add mass');
+    }
+
+    if (tool === 'room_separator' && start !== end) {
+      addElement({
+        type: 'line', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Room Separator' },
+          Kind:   { type: 'string', value: 'room_separator' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:   { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+        },
+      });
+      getStoreActions().pushHistory('Add room separator');
+    }
+
+    if (tool === 'property_line' && start !== end) {
+      addElement({
+        type: 'line', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Property Line' },
+          Kind:   { type: 'string', value: 'property_line' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:   { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+        },
+      });
+      getStoreActions().pushHistory('Add property line');
+    }
+
+    if (tool === 'cable_tray' && start !== end) {
+      addElement({
+        type: 'duct', layerId,
+        properties: {
+          Name:   { type: 'string', value: 'Cable Tray' },
+          Kind:   { type: 'string', value: 'cable_tray' },
+          StartX: { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:   { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Width:  { type: 'number', value: 300 },
+          Height: { type: 'number', value: 100 },
+          Z:      { type: 'number', value: 2700 },
+        },
+      });
+      getStoreActions().pushHistory('Add cable tray');
+    }
+
+    if (tool === 'conduit' && start !== end) {
+      addElement({
+        type: 'pipe', layerId,
+        properties: {
+          Name:    { type: 'string', value: 'Conduit' },
+          Kind:    { type: 'string', value: 'conduit' },
+          StartX:  { type: 'number', value: start.x }, StartY: { type: 'number', value: start.y },
+          EndX:    { type: 'number', value: end.x   }, EndY:   { type: 'number', value: end.y   },
+          Diameter:{ type: 'number', value: 25 },
+          Z:       { type: 'number', value: 2700 },
+        },
+      });
+      getStoreActions().pushHistory('Add conduit');
+    }
+
+    if (tool === 'air_terminal') {
+      addElement({
+        type: 'mechanical_equipment', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Air Terminal' },
+          Kind: { type: 'string', value: 'air_terminal' },
+          X:    { type: 'number', value: start.x },
+          Y:    { type: 'number', value: start.y },
+          Z:    { type: 'number', value: 2700 },
+          Flow: { type: 'number', value: 200 },
+        },
+      });
+      getStoreActions().pushHistory('Add air terminal');
+    }
+
+    if (tool === 'sprinkler') {
+      addElement({
+        type: 'plumbing_fixture', layerId,
+        properties: {
+          Name: { type: 'string', value: 'Sprinkler' },
+          Kind: { type: 'string', value: 'sprinkler' },
+          X:    { type: 'number', value: start.x },
+          Y:    { type: 'number', value: start.y },
+          Z:    { type: 'number', value: 2700 },
+        },
+      });
+      getStoreActions().pushHistory('Add sprinkler');
+    }
+
+    if (tool === 'model_text') {
+      addElement({
+        type: 'text', layerId,
+        properties: {
+          Name:     { type: 'string', value: 'Model Text' },
+          Kind:     { type: 'string', value: 'model_text' },
+          X:        { type: 'number', value: start.x },
+          Y:        { type: 'number', value: start.y },
+          Content:  { type: 'string', value: 'Model Text' },
+          FontSize: { type: 'number', value: 300 },
+          Extruded: { type: 'boolean', value: true },
+        },
+      });
+      getStoreActions().pushHistory('Add model text');
     }
   }, [doc, addElement, toolParams]);
 
@@ -956,10 +1396,9 @@ export function useViewport() {
     let wp = rawWp;
     wp = applySnapping(wp);
 
-    // Single-click placement tools — column, door, window all place at
-    // the clicked point (walls are resolved as the nearest host for
-    // doors/windows inside commitShape).
-    if (activeTool === 'column' || activeTool === 'door' || activeTool === 'window') {
+    // Single-click placement tools — place at the clicked point.
+    // Walls are resolved as the nearest host for doors/windows inside commitShape.
+    if (SINGLE_CLICK_TOOLS.has(activeTool)) {
       commitShape(activeTool, wp, wp);
       return;
     }
@@ -973,7 +1412,15 @@ export function useViewport() {
       // Commit logic OUTSIDE the reducer — otherwise React.StrictMode
       // double-invokes the reducer in dev and we double-commit the element.
       const scale = viewTransformRef.current.scale;
-      const isCloseable = activeTool === 'polygon' || activeTool === 'slab' || activeTool === 'roof';
+      const isCloseable =
+        activeTool === 'polygon' ||
+        activeTool === 'slab' ||
+        activeTool === 'roof' ||
+        activeTool === 'zone' ||
+        activeTool === 'ceiling' ||
+        activeTool === 'foundation' ||
+        activeTool === 'topo' ||
+        activeTool === 'revision_cloud';
       const prev = drawingState;
       if (isCloseable && prev.points.length >= 3 && prev.points[0] && dist(wp, prev.points[0]) < SNAP_TOLERANCE * scale) {
         commitShape(activeTool, prev.points[0], prev.points[prev.points.length - 1]!, prev.points);

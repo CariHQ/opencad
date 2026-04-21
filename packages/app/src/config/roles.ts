@@ -24,9 +24,23 @@ export const ROLE_CONFIGS: Record<RoleId, RoleConfig> = {
   architect: {
     label: 'Architect',
     tools: [
-      'select', 'line', 'rectangle', 'circle', 'arc', 'polygon', 'polyline',
-      'wall', 'column', 'beam', 'slab', 'roof', 'stair', 'door', 'window', 'railing',
-      'dimension', 'text', 'hatch', 'section', 'compliance', 'ai',
+      // Selection
+      'select',
+      // 2D drafting
+      'line', 'rectangle', 'circle', 'arc', 'ellipse', 'polygon', 'polyline', 'spline', 'hotspot',
+      // Structural / BIM
+      'wall', 'curtain_wall', 'column', 'beam', 'slab', 'roof', 'stair', 'ramp', 'railing',
+      'ceiling', 'foundation', 'zone', 'truss', 'brace', 'mass',
+      // Openings
+      'door', 'window', 'skylight',
+      // MEP
+      'duct', 'pipe', 'cable_tray', 'conduit', 'lamp', 'air_terminal', 'sprinkler',
+      // Site
+      'topo', 'property_line', 'room_separator',
+      // Documentation / annotation
+      'dimension', 'text', 'model_text', 'label', 'section', 'elevation', 'detail', 'revision_cloud',
+      // Misc
+      'hatch', 'compliance', 'ai',
     ],
     panels: [
       // core

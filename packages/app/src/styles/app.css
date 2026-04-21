@@ -638,6 +638,16 @@ input[type='range']::-moz-range-track {
   flex-direction: column;
   align-items: center;
   gap: 2px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-height: 100%;
+  padding: 4px 0;
+  scrollbar-width: thin;
+}
+.toolshelf::-webkit-scrollbar { width: 6px; }
+.toolshelf::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border-radius: 3px;
 }
 
 .toolshelf-categories {
