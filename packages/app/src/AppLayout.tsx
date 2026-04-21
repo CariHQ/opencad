@@ -82,6 +82,8 @@ import {
   type PluginNotification,
   type PluginCommand,
 } from './plugins/pluginHost';
+import { pluginRegistry } from './plugins/pluginRegistry';
+import { listInstalled as listInstalledPlugins } from './lib/marketplaceApi';
 import type { AdminMember } from './components/AdminPanel';
 import type { SSOConfig } from './components/SSOSettingsPanel';
 import type { RoleName } from './config/roles';
@@ -370,9 +372,40 @@ export function AppLayout() {
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
 
-  // Boot the plugin host once — loads every installed plugin into a worker
-  // sandbox and keeps them in sync as the registry changes.
-  React.useEffect(() => { void pluginHost.startAll(); }, []);
+  // Boot the plugin host once. Reconcile remote install state first so:
+  //   1. Plugins installed on another device auto-register here.
+  //   2. Revoked plugins (kill switch) get uninstalled before the sandbox
+  //      ever starts the worker.
+  // If the server is unreachable we skip the reconcile and fall back to
+  // whatever the persisted local registry has, so offline users still
+  // boot into their installed plugins.
+  React.useEffect(() => {
+    void (async () => {
+      try {
+        const installed = await listInstalledPlugins();
+        for (const p of installed) {
+          if (p.revoked) {
+            pluginRegistry.unregister(p.id);
+            continue;
+          }
+          pluginRegistry.register({
+            id: p.id,
+            name: p.name,
+            version: p.version,
+            description: p.description,
+            permissions: p.permissions,
+            entrypoint: p.entrypoint,
+            sriHash: p.sriHash,
+            icon: p.icon,
+            author: p.author,
+          });
+        }
+      } catch {
+        // Offline / server down — persisted local registry is the fallback.
+      }
+      void pluginHost.startAll();
+    })();
+  }, []);
 
   // BCF panel re-mount nonce so imports surface immediately.
   const [bcfVersion, setBcfVersion] = React.useState(0);

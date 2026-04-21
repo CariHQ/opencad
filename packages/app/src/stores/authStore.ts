@@ -24,6 +24,7 @@ import {
 import { firebaseAuth, firebaseDb, isFirebaseConfigured } from '../lib/firebase';
 import { authApi, registerTokenProvider, isServerAvailable } from '../lib/serverApi';
 import { registerProjectsTokenProvider } from '../lib/projectsApi';
+import { registerMarketplaceTokenProvider } from '../lib/marketplaceApi';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 export type TrialStatus = 'active' | 'expired' | 'none';
@@ -138,6 +139,9 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     // for mockability in tests). Without this the project list/create/delete
     // calls go out without Authorization and silently 401.
     registerProjectsTokenProvider(tokenProvider);
+    // Same pattern for marketplaceApi — install/uninstall and
+    // installed-list all need the current Firebase ID token.
+    registerMarketplaceTokenProvider(tokenProvider);
 
     // Cache the one-shot server-reachability probe so we don't spam /health
     // or log 502s in dev when the backend isn't running locally.

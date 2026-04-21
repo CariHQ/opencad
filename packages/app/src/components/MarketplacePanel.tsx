@@ -144,17 +144,37 @@ export function MarketplacePanel({
   }, [debouncedSearch, fetchPlugins]);
 
   // ── Install handler ──────────────────────────────────────────────────────
-  const handleApiInstall = useCallback(async (pluginId: string) => {
-    // Optimistic update
+  // Registers the manifest locally (so pluginHost spawns a worker) AND
+  // records the install on the server (so the user's library follows them
+  // across devices and the download counter increments). If the server
+  // call fails we revert both the UI and the local registration so the
+  // Install button reappears.
+  const handleApiInstall = useCallback(async (plugin: Plugin) => {
+    const pluginId = plugin.id;
+    const manifest: PluginManifest = {
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      description: plugin.description,
+      permissions: plugin.permissions,
+      entrypoint: plugin.entrypoint,
+      sriHash: plugin.sriHash,
+      icon: plugin.icon,
+      author: plugin.author,
+    };
+    if (!validateManifest(manifest)) return;
+
     setApiPlugins((prev) => prev.map((p) => (p.id === pluginId ? { ...p, installed: true } : p)));
     setInstallingIds((prev) => new Set([...prev, pluginId]));
+    pluginRegistry.register(manifest);
     try {
       await installPlugin(pluginId);
-    } catch (_err) {
-      // Revert on failure
-      setApiPlugins((prev) =>
-        prev.map((p) => (p.id === pluginId ? { ...p, installed: false } : p)),
-      );
+    } catch (err) {
+      // Server rejected — revert UI + local state.
+      setApiPlugins((prev) => prev.map((p) => (p.id === pluginId ? { ...p, installed: false } : p)));
+      pluginRegistry.unregister(pluginId);
+      // eslint-disable-next-line no-console
+      console.warn(`[marketplace] install failed for ${pluginId}:`, err);
     } finally {
       setInstallingIds((prev) => {
         const next = new Set(prev);
@@ -165,19 +185,22 @@ export function MarketplacePanel({
   }, []);
 
   // ── Uninstall handler ────────────────────────────────────────────────────
+  // Unregisters locally first (stops the running worker) then DELETEs the
+  // install record on the server. Uninstall is idempotent server-side, so
+  // a network failure here just means the server-side record lingers; the
+  // client still sees the plugin as gone, and the next installed-list
+  // reconcile will clear the discrepancy.
   const handleApiUninstall = useCallback(async (pluginId: string) => {
-    // Optimistic update
     setApiPlugins((prev) =>
       prev.map((p) => (p.id === pluginId ? { ...p, installed: false } : p)),
     );
     setUninstallingIds((prev) => new Set([...prev, pluginId]));
+    pluginRegistry.unregister(pluginId);
     try {
       await uninstallPlugin(pluginId);
-    } catch (_err) {
-      // Revert on failure
-      setApiPlugins((prev) =>
-        prev.map((p) => (p.id === pluginId ? { ...p, installed: true } : p)),
-      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[marketplace] uninstall server call failed for ${pluginId}:`, err);
     } finally {
       setUninstallingIds((prev) => {
         const next = new Set(prev);
@@ -324,7 +347,7 @@ export function MarketplacePanel({
                       aria-label={`Install ${plugin.name}`}
                       className="btn-install"
                       disabled={isInstalling}
-                      onClick={() => void handleApiInstall(plugin.id)}
+                      onClick={() => void handleApiInstall(plugin)}
                     >
                       {isInstalling ? 'Installing…' : 'Install'}
                     </button>

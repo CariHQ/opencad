@@ -7,6 +7,9 @@
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
+export type PluginPermission = 'network' | 'storage' | 'ui' | 'document';
+
+/** Public catalogue entry. Matches `PluginView` in server/src/routes/plugins.rs. */
 export interface Plugin {
   id: string;
   name: string;
@@ -15,15 +18,47 @@ export interface Plugin {
   version: string;
   author: string;
   icon?: string;
+  /** URL of the plugin bundle (or `inline:<key>` for built-in examples). */
+  entrypoint: string;
+  /** Optional SRI hash (sha384-…) for bundle integrity verification. */
+  sriHash?: string;
+  permissions: PluginPermission[];
   rating: number;
   downloadCount: number;
   price: number | 'free';
   installed: boolean;
 }
 
+/** A plugin the current user has installed. Includes the version the user
+ *  locally has so we can prompt for updates when `version !== installedVersion`. */
+export interface InstalledPlugin {
+  id: string;
+  name: string;
+  description: string;
+  version: string;
+  installedVersion: string;
+  author: string;
+  category: string;
+  icon?: string;
+  entrypoint: string;
+  sriHash?: string;
+  permissions: PluginPermission[];
+  priceCents: number;
+  rating: number;
+  revoked: boolean;
+  revokedReason?: string;
+  installedAt: string;
+}
+
 export interface InstallResult {
   pluginId: string;
+  version: string;
   installedAt: string;
+}
+
+export interface PluginReportBody {
+  reason: 'malware' | 'broken' | 'spam' | 'policy' | 'other';
+  details?: string;
 }
 
 // ── Token provider (injected by auth layer at runtime) ────────────────────────
@@ -96,6 +131,63 @@ export function uninstallPlugin(id: string): Promise<void> {
   });
 }
 
-export function listInstalled(): Promise<Plugin[]> {
-  return apiFetch<Plugin[]>('/plugins/installed');
+export function listInstalled(): Promise<InstalledPlugin[]> {
+  return apiFetch<InstalledPlugin[]>('/plugins/installed');
+}
+
+export function reportPlugin(id: string, body: PluginReportBody): Promise<void> {
+  return apiFetch<void>(`/plugins/${encodeURIComponent(id)}/report`, {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Publisher submission ─────────────────────────────────────────────────────
+
+export interface SubmitPluginBody {
+  id: string;
+  name: string;
+  description?: string;
+  version: string;
+  category?: string;
+  icon?: string;
+  entrypoint: string;
+  sriHash?: string;
+  permissions: PluginPermission[];
+  priceCents?: number;
+}
+
+export function submitPlugin(body: SubmitPluginBody): Promise<Plugin> {
+  return apiFetch<Plugin>('/plugins', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
+// ── Admin ────────────────────────────────────────────────────────────────────
+
+export function adminListQueue(): Promise<Plugin[]> {
+  return apiFetch<Plugin[]>('/admin/queue');
+}
+
+export function adminSetModeration(
+  id: string,
+  status: 'pending' | 'approved' | 'rejected',
+  notes?: string,
+): Promise<Plugin> {
+  return apiFetch<Plugin>(`/admin/plugins/${encodeURIComponent(id)}/moderation`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, notes }),
+  });
+}
+
+export function adminRevoke(
+  id: string,
+  revoked: boolean,
+  reason?: string,
+): Promise<Plugin> {
+  return apiFetch<Plugin>(`/admin/plugins/${encodeURIComponent(id)}/revoke`, {
+    method: 'PATCH',
+    body: JSON.stringify({ revoked, reason }),
+  });
 }

@@ -5,13 +5,21 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+export type PluginPermission = 'network' | 'storage' | 'ui' | 'document';
+
 export interface PluginManifest {
   id: string;
   name: string;
   version: string;
   description: string;
-  permissions: ('network' | 'storage' | 'ui' | 'document')[];
-  entrypoint: string; // URL or module path
+  permissions: PluginPermission[];
+  entrypoint: string; // URL, `inline:<key>`, or module path
+  /** Optional SRI hash (sha384-…) for bundle integrity verification. */
+  sriHash?: string;
+  /** Optional icon URL shown in the marketplace card. */
+  icon?: string;
+  /** Optional author/publisher name. */
+  author?: string;
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
