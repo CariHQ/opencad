@@ -1,18 +1,7 @@
 import React, { useState } from 'react';
+import type { BCFTopic, BCFStatus, BCFPriority } from '@opencad/document';
 
-export type BCFStatus = 'open' | 'in-progress' | 'resolved' | 'closed';
-export type BCFPriority = 'critical' | 'high' | 'normal' | 'low';
-
-export interface BCFTopic {
-  guid: string;
-  title: string;
-  status: BCFStatus;
-  priority: BCFPriority;
-  creationDate: string;
-  assignedTo?: string;
-  description?: string;
-  viewpointUrl?: string;
-}
+export type { BCFTopic, BCFStatus, BCFPriority };
 
 interface BCFPanelProps {
   initialTopics?: BCFTopic[];
@@ -22,17 +11,17 @@ interface BCFPanelProps {
 }
 
 const STATUS_COLORS: Record<BCFStatus, string> = {
-  open: '#e74c3c',
-  'in-progress': '#f39c12',
-  resolved: '#27ae60',
-  closed: '#95a5a6',
+  Open: '#e74c3c',
+  'In Progress': '#f39c12',
+  Resolved: '#27ae60',
+  Closed: '#95a5a6',
 };
 
 const PRIORITY_LABELS: Record<BCFPriority, string> = {
-  critical: 'Critical',
-  high: 'High',
-  normal: 'Normal',
-  low: 'Low',
+  Critical: 'Critical',
+  High: 'High',
+  Normal: 'Normal',
+  Low: 'Low',
 };
 
 export function BCFPanel({ initialTopics = [], onImport, onExport, onSelectTopic }: BCFPanelProps = {}) {
@@ -87,17 +76,19 @@ export function BCFPanel({ initialTopics = [], onImport, onExport, onSelectTopic
               <div className="topic-header">
                 <span
                   className="topic-status"
-                  style={{ color: STATUS_COLORS[topic.status] }}
+                  style={{ color: STATUS_COLORS[topic.topic_status] }}
                 >
-                  {topic.status}
+                  {topic.topic_status}
                 </span>
-                <span className="topic-priority">{PRIORITY_LABELS[topic.priority]}</span>
+                {topic.priority && (
+                  <span className="topic-priority">{PRIORITY_LABELS[topic.priority]}</span>
+                )}
               </div>
               <div className="topic-title">{topic.title}</div>
-              {topic.assignedTo && (
-                <div className="topic-assigned">{topic.assignedTo}</div>
+              {topic.assigned_to && (
+                <div className="topic-assigned">{topic.assigned_to}</div>
               )}
-              <div className="topic-date">{topic.creationDate}</div>
+              <div className="topic-date">{topic.creation_date}</div>
             </div>
           ))}
         </div>
