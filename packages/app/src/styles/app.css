@@ -637,11 +637,11 @@ input[type='range']::-moz-range-track {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: 0;
   overflow-y: auto;
   overflow-x: hidden;
   max-height: 100%;
-  padding: 4px 0;
+  padding: 2px 0;
   /* Hide scrollbar — keep scroll behaviour. */
   scrollbar-width: none;
   -ms-overflow-style: none;
@@ -681,58 +681,56 @@ input[type='range']::-moz-range-track {
 }
 
 .toolshelf-divider {
-  width: 24px;
+  width: 20px;
   height: 1px;
   background: var(--border-color);
-  margin: 4px 0;
+  margin: 2px 0;
+  flex-shrink: 0;
 }
 
 .toolshelf-tools {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  padding: 0 4px;
+  gap: 0;
+  padding: 0 2px;
   width: 100%;
 }
 
 .tool-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 24px;
   border: none;
   outline: none;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   padding: 0;
-  transition: background 0.12s ease, color 0.12s ease;
+  transition: color 0.12s ease;
   flex-shrink: 0;
 }
 
 .tool-btn:hover {
-  background: var(--bg-tertiary);
+  background: transparent;
   color: var(--text-primary);
 }
 
-.tool-btn.active {
-  background: var(--accent-primary);
-  color: #fff;
-}
-
+.tool-btn.active,
 .tool-btn.active:hover {
-  background: var(--accent-primary);
-  color: #fff;
+  background: transparent;
+  color: var(--accent-primary);
 }
 
 /* Expanded mode — tool shows name alongside the icon */
 .toolshelf--expanded .tool-btn {
   width: 140px;
+  height: 22px;
   justify-content: flex-start;
-  padding: 0 10px;
+  padding: 0 8px;
 }
 
 .tool-name {
@@ -2512,26 +2510,29 @@ input[type='range']::-moz-range-track {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 40px;
-  min-width: 40px;
-  padding: 6px 4px;
+  width: 32px;
+  min-width: 32px;
+  padding: 2px 0;
   background: var(--bg-primary);
   border-right: 1px solid var(--border-color);
-  gap: 2px;
+  gap: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  overflow-x: hidden;
   flex-shrink: 0;
+  /* Hide scrollbar — keep scroll behaviour. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+.right-panel-tab-bar::-webkit-scrollbar { display: none; }
 
 .right-panel-tab-btn {
-  width: 32px;
-  height: 32px;
+  width: 28px;
+  height: 24px;
   border: none;
   outline: none;
   background: transparent;
   color: var(--text-secondary);
-  border-radius: 6px;
+  border-radius: 0;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -2548,11 +2549,13 @@ input[type='range']::-moz-range-track {
 }
 
 .right-panel-tab-btn:hover {
+  background: transparent;
   color: var(--text-primary);
 }
 
-.right-panel-tab-btn.active {
-  background: var(--bg-elevated);
+.right-panel-tab-btn.active,
+.right-panel-tab-btn.active:hover {
+  background: transparent;
   color: var(--accent-primary);
 }
 
