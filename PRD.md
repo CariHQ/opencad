@@ -201,17 +201,17 @@ The convergence of **WebAssembly maturity**, **WebGPU rendering**, **CRDT-based 
 │  ├── Import/Export Pipeline (IFC, DWG, DXF, SKP, PDF)               │
 │  └── Plugin Runtime & SDK                                            │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Geometry & Rendering Layer (WASM + WebGPU)                          │
-│  ├── Geometry Kernel (OpenCASCADE WASM / Custom Rust kernel)         │
+│  Geometry & Rendering Layer (WASM + WebGPU/WebGL)                    │
+│  ├── Geometry Kernel (Custom Rust WASM; OpenCASCADE deferred P2)     │
 │  ├── 2D Drafting Engine                                              │
 │  ├── 3D Modeling Engine                                              │
-│  ├── Rendering Engine (WebGPU primary, WebGL fallback)               │
+│  ├── Rendering Engine (WebGPU primary, WebGL 2.0 fallback)           │
 │  ├── Scene Graph & LOD Management                                    │
 │  └── Spatial Index (BVH / Octree)                                    │
 ├─────────────────────────────────────────────────────────────────────┤
 │  Storage & Sync Layer                                                │
 │  ├── Local Storage (IndexedDB + Origin Private File System)          │
-│  ├── CRDT Sync Engine (Yjs-based custom implementation)              │
+│  ├── CRDT Sync Engine (Custom Rust LWW CRDT, WASM)                   │
 │  ├── Service Worker (offline caching, background sync)               │
 │  ├── Conflict Resolution Engine                                      │
 │  └── Cloud Storage Adapter (S3-compatible, GCS / AWS S3)             │
@@ -260,9 +260,9 @@ The convergence of **WebAssembly maturity**, **WebGPU rendering**, **CRDT-based 
 
 | Decision               | Choice                                         | Rationale                                                                      |
 | ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------ |
-| **Geometry Kernel**    | OpenCASCADE (WASM) + custom Rust extensions    | Proven CAD kernel, open-source, WASM-compiled, supports BREP/NURBS             |
-| **Rendering**          | WebGPU (primary) + WebGL 2.0 (fallback)        | WebGPU provides compute shaders, better performance; WebGL for Safari fallback |
-| **CRDT Library**       | Yjs (custom extensions for BIM)                | Mature, performant, excellent ecosystem; needs BIM-specific data types         |
+| **Geometry Kernel**    | Custom Rust kernel (`@opencad/geometry`, WASM) with TypeScript fallback; OpenCASCADE BREP deferred to Phase 2 | Ship the mesh-extrude path now without the 30 MB OpenCASCADE payload; upgrade to full BREP once product-market fit justifies the binary size |
+| **Rendering**          | WebGPU (Three.js WebGPURenderer, primary) + WebGL 2.0 fallback | WebGPU provides compute shaders and better performance; WebGL keeps Safari working during the transition |
+| **CRDT Library**       | Custom Rust LWW CRDT (`@opencad/sync-rs`, WASM) | Purpose-built for our element schema; avoids Yjs dependency weight and gives full control over merge semantics |
 | **Local Storage**      | IndexedDB + Origin Private File System (OPFS)  | IndexedDB for structured data; OPFS for large binary assets (textures, models) |
 | **Frontend Framework** | React + TypeScript + Vite                      | Ecosystem, type safety, developer experience, plugin compatibility             |
 | **3D Scene**           | Three.js (WebGPU renderer)                     | Mature ecosystem, WebGPU support, large community                              |
@@ -2114,9 +2114,9 @@ Week 11-12: Polish & Beta
 | -------------------- | -------------------------- | ------------------------------------------------ |
 | **Framework**        | React 19 + TypeScript      | Ecosystem, type safety, plugin compatibility     |
 | **Build Tool**       | Vite 6                     | Fast HMR, WASM support, optimized builds         |
-| **State Management** | Zustand + Yjs              | Lightweight, CRDT-native for collaborative state |
+| **State Management** | Zustand + `@opencad/sync-rs` LWW CRDT | Lightweight local state; custom Rust/WASM CRDT for collaboration |
 | **UI Components**    | Radix UI + Tailwind CSS    | Accessible, customizable, small bundle           |
-| **3D Rendering**     | Three.js (WebGPU renderer) | Mature, WebGPU support, large ecosystem          |
+| **3D Rendering**     | Three.js (WebGPU primary, WebGL 2.0 fallback) | Compute shaders + better performance on WebGPU; WebGL keeps Safari working |
 | **2D Rendering**     | Canvas 2D + WebGL fallback | Performant 2D drafting                           |
 | **Monorepo**         | Turborepo + pnpm           | Fast builds, shared packages                     |
 
@@ -2124,9 +2124,9 @@ Week 11-12: Polish & Beta
 
 | Layer                 | Technology                        | Rationale                                       |
 | --------------------- | --------------------------------- | ----------------------------------------------- |
-| **Geometry Kernel**   | OpenCASCADE (WASM via Emscripten) | Proven, open-source, BREP/NURBS support         |
-| **WASM Bridge**       | wasm-bindgen + Emscripten         | Mature toolchain, TypeScript bindings           |
-| **Custom Extensions** | Rust (compiled to WASM)           | Performance-critical operations, modern tooling |
+| **Geometry Kernel**   | Custom Rust kernel (`@opencad/geometry`, WASM), Phase 1 | Mesh-extrude BIM primitives; small binary, ships today |
+| **BREP / NURBS**      | OpenCASCADE (WASM via Emscripten), Phase 2 | Deferred until BREP-level ops (fillet, shell, loft) are on the roadmap |
+| **WASM Bridge**       | wasm-bindgen                      | Rust→WASM bindings with TypeScript types         |
 | **Spatial Index**     | Custom BVH (Rust/WASM)            | Efficient collision/clash detection             |
 
 ### 15.3 Storage & Sync
@@ -2137,7 +2137,7 @@ Week 11-12: Polish & Beta
 | **Local DB (Desktop)**     | SQLite (via `rusqlite`)           | No quota limits, native performance     |
 | **File Storage (Browser)** | Origin Private File System (OPFS) | Large files, WASM-compatible            |
 | **File Storage (Desktop)** | Native file system                | Unlimited, direct access                |
-| **CRDT**                   | Yjs (custom BIM extensions)       | Mature, performant, excellent ecosystem |
+| **CRDT**                   | `@opencad/sync-rs` — custom Rust LWW CRDT (WASM) | Purpose-built for our element schema; full control over merge semantics |
 | **Sync Protocol**          | WebSocket + HTTP fallback         | Real-time when online, HTTP when not    |
 | **Service Worker**         | Workbox                           | Caching, background sync, offline       |
 
