@@ -77,6 +77,43 @@ import { CostPanel, type CostItem } from './components/CostPanel';
 import { computeTakeoff } from './lib/quantityTakeoff';
 import { BUILT_IN_MATERIALS } from './lib/materials';
 import { pluginHost, onPluginNotification, type PluginNotification } from './plugins/pluginHost';
+import type { AdminMember } from './components/AdminPanel';
+import type { SSOConfig } from './components/SSOSettingsPanel';
+import type { RoleName } from './config/roles';
+
+// ─── Persistent admin / SSO storage ──────────────────────────────────────────
+// These are local-first for now — once a real server-backed org API lands
+// they'll move to HTTP endpoints. For this build the admin changes persist
+// per-browser so at least the UI state survives a refresh.
+
+const SSO_STORAGE_KEY = 'opencad-sso-config';
+const MEMBERS_STORAGE_KEY = 'opencad-project-members';
+
+function loadSSOConfig(): SSOConfig | undefined {
+  try {
+    const raw = localStorage.getItem(SSO_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as SSOConfig) : undefined;
+  } catch { return undefined; }
+}
+function saveSSOConfig(cfg: SSOConfig): void {
+  try { localStorage.setItem(SSO_STORAGE_KEY, JSON.stringify(cfg)); } catch { /* quota */ }
+}
+function loadMembers(): AdminMember[] | undefined {
+  try {
+    const raw = localStorage.getItem(MEMBERS_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as AdminMember[]) : undefined;
+  } catch { return undefined; }
+}
+function saveMemberRole(userId: string, role: RoleName): void {
+  try {
+    const raw = localStorage.getItem(MEMBERS_STORAGE_KEY);
+    const existing = raw ? (JSON.parse(raw) as AdminMember[]) : [];
+    const next = existing.some((m) => m.id === userId)
+      ? existing.map((m) => (m.id === userId ? { ...m, role } : m))
+      : [...existing, { id: userId, name: userId, role }];
+    localStorage.setItem(MEMBERS_STORAGE_KEY, JSON.stringify(next));
+  } catch { /* quota */ }
+}
 import { HatchPanel } from './components/HatchPanel';
 import { SymbolLibrary } from './components/SymbolLibrary';
 import { ShadowAnalysisPanel } from './components/ShadowAnalysisPanel';
@@ -790,7 +827,13 @@ export function AppLayout() {
               {rightPanelTab === 'photo' && <PhotoToModelPanel />}
               {rightPanelTab === 'marketplace' && <MarketplacePanel />}
               {rightPanelTab === 'wind' && <WindAnalysisPanel />}
-              {rightPanelTab === 'admin' && <AdminPanel can={can} />}
+              {rightPanelTab === 'admin' && (
+                <AdminPanel
+                  can={can}
+                  members={loadMembers()}
+                  onSetRole={(userId, role) => saveMemberRole(userId, role)}
+                />
+              )}
               {rightPanelTab === 'history' && <VersionHistoryPanel />}
               {rightPanelTab === 'review' && <ReviewPanel />}
             </PanelErrorBoundary>
@@ -861,7 +904,12 @@ export function AppLayout() {
             <div className="settings-content">
               {settingsTab === 'apikeys' && <APIKeyPanel />}
               {settingsTab === 'permissions' && <PermissionsPanel />}
-              {settingsTab === 'sso' && <SSOSettingsPanel />}
+              {settingsTab === 'sso' && (
+                <SSOSettingsPanel
+                  config={loadSSOConfig()}
+                  onSave={(cfg) => saveSSOConfig(cfg)}
+                />
+              )}
               {settingsTab === 'billing' && (
                 <BillingPanel onUpgrade={() => { setShowSettings(false); setShowUpgrade(true); }} />
               )}
