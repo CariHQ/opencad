@@ -36,6 +36,30 @@ function pv(props: Record<string, { value: unknown }>, key: string, fallback: nu
   return typeof props[key]?.value === 'number' ? (props[key]!.value as number) : fallback;
 }
 
+/**
+ * Parse a Points / points property value into a list of {x, y}. Accepts a
+ * JSON-serialised string (as produced by the slab/roof tool when it writes
+ * `Points: { type: 'string', value: JSON.stringify(points) }`) or a native
+ * array (older fixtures, in-memory edits).
+ */
+function polygonPoints(raw: unknown): Point[] {
+  if (!raw) return [];
+  let arr: unknown = raw;
+  if (typeof raw === 'string') {
+    try { arr = JSON.parse(raw); } catch { return []; }
+  }
+  if (!Array.isArray(arr)) return [];
+  const out: Point[] = [];
+  for (const p of arr) {
+    if (p && typeof p === 'object') {
+      const x = (p as { x?: unknown }).x;
+      const y = (p as { y?: unknown }).y;
+      if (typeof x === 'number' && typeof y === 'number') out.push({ x, y });
+    }
+  }
+  return out;
+}
+
 // ─── Handle placement ─────────────────────────────────────────────────────────
 
 /**
@@ -55,9 +79,31 @@ export function getHandles(element: ElementSchema): Handle[] {
     ];
   }
 
-  if (t === 'rectangle' || t === 'slab' || t === 'roof') {
-    const x = pv(props, 'X', 0), y = pv(props, 'Y', 0);
-    const w = pv(props, 'Width', 1000), h = pv(props, 'Height', 1000);
+  if (
+    t === 'rectangle' || t === 'slab' || t === 'roof' ||
+    t === 'polygon'   || t === 'polyline' || t === 'space'
+  ) {
+    // These element types are typically drawn as polygons — their geometry
+    // lives in the `Points` property, not X/Y/Width/Height. Derive the
+    // handle rectangle from the point list when present so handles appear
+    // around the actual shape instead of at the origin with a default
+    // 1000×1000 footprint.
+    let x: number, y: number, w: number, h: number;
+    const rawPoints = (props['Points']?.value ?? props['points']?.value) as unknown;
+    const pts = polygonPoints(rawPoints);
+    if (pts.length >= 2) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const p of pts) {
+        if (p.x < minX) minX = p.x;
+        if (p.x > maxX) maxX = p.x;
+        if (p.y < minY) minY = p.y;
+        if (p.y > maxY) maxY = p.y;
+      }
+      x = minX; y = minY; w = maxX - minX; h = maxY - minY;
+    } else {
+      x = pv(props, 'X', 0); y = pv(props, 'Y', 0);
+      w = pv(props, 'Width', 1000); h = pv(props, 'Height', 1000);
+    }
     return [
       { kind: 'nw', x,         y,         cursor: 'nw-resize' },
       { kind: 'n',  x: x+w/2,  y,         cursor: 'n-resize'  },
