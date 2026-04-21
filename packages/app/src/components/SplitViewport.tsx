@@ -206,7 +206,22 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
                 <button
                   key={dir}
                   className={`section-cut-axis-btn${sectionDirection === dir ? ' active' : ''}`}
-                  onClick={() => setSectionDirection(dir)}
+                  onClick={() => {
+                    setSectionDirection(dir);
+                    // Snap the camera to look down the chosen axis so the cut
+                    // face is visible head-on. x → right view, y → top view,
+                    // z → front view (matches the numeric 1/2/3 presets).
+                    if (dir === 'x') setViewPreset('right');
+                    else if (dir === 'y') setViewPreset('top');
+                    else                  setViewPreset('front');
+                    // Re-centre the cut at the model mid-point along the new
+                    // axis so the slider starts somewhere useful. Matches the
+                    // midpoint logic used on initial section-mode entry.
+                    if (sceneBounds) {
+                      const mid = (sceneBounds.min[dir] + sceneBounds.max[dir]) / 2;
+                      setSectionPosition(Math.round(mid));
+                    }
+                  }}
                   title={`Cut along ${dir.toUpperCase()} axis`}
                   aria-pressed={sectionDirection === dir}
                 >
