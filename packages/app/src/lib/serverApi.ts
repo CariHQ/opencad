@@ -214,6 +214,36 @@ export interface ProjectMember {
   updatedAt: string;
 }
 
+// ── Versions (server-persisted snapshots) ────────────────────────────────────
+
+export interface ServerVersionInfo {
+  id: string;
+  project_id: string;
+  version_number: number;
+  message: string | null;
+  created_at: string;
+}
+
+export interface ServerVersion extends ServerVersionInfo {
+  data: string;
+}
+
+export const versionsApi = {
+  list: (projectId: string): Promise<ServerVersionInfo[]> =>
+    apiFetch<ServerVersionInfo[]>(`/projects/${encodeURIComponent(projectId)}/versions`),
+
+  create: (projectId: string, data: string, message?: string): Promise<ServerVersion> =>
+    apiFetch<ServerVersion>(`/projects/${encodeURIComponent(projectId)}/versions`, {
+      method: 'POST',
+      body: JSON.stringify({ data, message }),
+    }),
+
+  get: (projectId: string, versionId: string): Promise<ServerVersion> =>
+    apiFetch<ServerVersion>(
+      `/projects/${encodeURIComponent(projectId)}/versions/${encodeURIComponent(versionId)}`,
+    ),
+};
+
 export const projectMembersApi = {
   list: (projectId: string): Promise<ProjectMember[]> =>
     apiFetch<ProjectMember[]>(`/projects/${encodeURIComponent(projectId)}/members`),

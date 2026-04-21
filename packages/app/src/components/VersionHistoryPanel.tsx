@@ -1,32 +1,143 @@
 /**
- * VersionHistoryPanel — shows saved version snapshots and change tracking history.
- * T-UI-013: Version snapshots
- * T-HIST-001: Change tracking
+ * VersionHistoryPanel — server-persisted version snapshots + in-session
+ * change history.
+ *
+ * T-UI-013 / T-HIST-001: previously this panel used only the documentStore's
+ * in-memory version list, so saved versions died with the browser tab and
+ * didn't follow the user across devices. Now:
+ *   - createVersion writes to `/api/v1/projects/:id/versions` on the
+ *     server and also records a local entry so the list updates instantly.
+ *   - The visible list is the merged server + local list, de-duped by
+ *     version_number (server wins).
+ *   - Restore reads the server version's serialized document and feeds
+ *     it into documentStore.loadDocumentSchema. Falls back to local
+ *     restoreVersion when offline or for session-only entries.
+ *   - Change history (recent element edits) is still derived from the
+ *     local documentStore — that's a separate stream and still useful.
  */
-import React, { useState } from 'react';
-import { Tag, RotateCcw } from 'lucide-react';
+import React, { useEffect, useState, useCallback } from 'react';
+import { Tag, RotateCcw, CloudOff, Cloud } from 'lucide-react';
+import type { DocumentSchema } from '@opencad/document';
 import { useDocumentStore } from '../stores/documentStore';
 import type { ChangeRecord } from '../stores/documentStore';
+import { versionsApi, type ServerVersionInfo } from '../lib/serverApi';
 
 const CHANGE_DISPLAY_LIMIT = 50;
 
-export function VersionHistoryPanel() {
-  const { createVersion, restoreVersion, getVersionList, changeHistory } = useDocumentStore();
-  const [message, setMessage] = useState('');
-  const [restoring, setRestoring] = useState<number | null>(null);
+interface MergedVersion {
+  key: string;
+  /** Sequential version number — from server when available, else local. */
+  version: number;
+  timestamp: number;
+  message?: string;
+  source: 'server' | 'local';
+  /** Server row id needed to fetch the payload on restore. */
+  serverId?: string;
+}
 
-  const versions = getVersionList();
+export function VersionHistoryPanel(): React.ReactElement {
+  const {
+    document: doc,
+    createVersion,
+    restoreVersion,
+    getVersionList,
+    loadDocumentSchema,
+    changeHistory,
+  } = useDocumentStore();
+
+  const [serverVersions, setServerVersions] = useState<ServerVersionInfo[]>([]);
+  const [message, setMessage] = useState('');
+  const [restoring, setRestoring] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [online, setOnline] = useState<boolean>(true);
+
+  // Fetch the server-side version list on mount / when the project changes.
+  const refreshServer = useCallback(async (projectId: string): Promise<void> => {
+    try {
+      const rows = await versionsApi.list(projectId);
+      setServerVersions(rows);
+      setOnline(true);
+    } catch {
+      // Offline or 404 — fall back to local versions only.
+      setServerVersions([]);
+      setOnline(false);
+    }
+  }, []);
+  useEffect(() => {
+    if (!doc?.id) return;
+    void refreshServer(doc.id);
+  }, [doc?.id, refreshServer]);
+
+  const localVersions = getVersionList();
   const recentChanges = (changeHistory ?? []).slice(-CHANGE_DISPLAY_LIMIT);
 
-  const handleCreateVersion = () => {
-    createVersion(message.trim() || undefined);
-    setMessage('');
+  /** Merge server + local by version_number. Server wins on collisions. */
+  const merged: MergedVersion[] = React.useMemo(() => {
+    const byNumber = new Map<number, MergedVersion>();
+    for (const v of localVersions) {
+      byNumber.set(v.version, {
+        key: `local-${v.version}`,
+        version: v.version,
+        timestamp: v.timestamp,
+        message: v.message,
+        source: 'local',
+      });
+    }
+    for (const v of serverVersions) {
+      byNumber.set(v.version_number, {
+        key: `server-${v.id}`,
+        version: v.version_number,
+        timestamp: new Date(v.created_at).getTime(),
+        message: v.message ?? undefined,
+        source: 'server',
+        serverId: v.id,
+      });
+    }
+    return [...byNumber.values()].sort((a, b) => b.version - a.version);
+  }, [localVersions, serverVersions]);
+
+  const handleCreateVersion = async (): Promise<void> => {
+    if (!doc) return;
+    setSaving(true);
+    try {
+      // Local first so the list updates instantly even if the server is
+      // slow or offline.
+      createVersion(message.trim() || undefined);
+      if (doc.id) {
+        try {
+          await versionsApi.create(doc.id, JSON.stringify(doc), message.trim() || undefined);
+          await refreshServer(doc.id);
+          setOnline(true);
+        } catch {
+          setOnline(false);
+        }
+      }
+      setMessage('');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleRestore = (versionNumber: number) => {
-    setRestoring(versionNumber);
-    restoreVersion(versionNumber);
-    setRestoring(null);
+  const handleRestore = async (v: MergedVersion): Promise<void> => {
+    if (!doc) return;
+    setRestoring(v.key);
+    try {
+      if (v.source === 'server' && v.serverId) {
+        // Pull the full payload and feed it to the documentStore.
+        const full = await versionsApi.get(doc.id, v.serverId);
+        try {
+          const parsed = JSON.parse(full.data) as DocumentSchema;
+          loadDocumentSchema(parsed);
+        } catch {
+          // Bad payload — fall back to local restore.
+          restoreVersion(v.version);
+        }
+      } else {
+        restoreVersion(v.version);
+      }
+    } finally {
+      setRestoring(null);
+    }
   };
 
   function verbFor(record: ChangeRecord): string {
@@ -39,6 +150,12 @@ export function VersionHistoryPanel() {
     <div className="version-history-panel">
       <div className="panel-header">
         <span className="panel-title">Version History</span>
+        <span
+          className={`version-sync-badge${online ? ' online' : ' offline'}`}
+          title={online ? 'Synced to server' : 'Offline — versions saved locally only'}
+        >
+          {online ? <Cloud size={12} /> : <CloudOff size={12} />}
+        </span>
       </div>
 
       <div className="version-create">
@@ -47,20 +164,27 @@ export function VersionHistoryPanel() {
           placeholder="Version description (optional)"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleCreateVersion()}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && !saving) void handleCreateVersion();
+          }}
+          disabled={saving}
         />
-        <button className="btn-create-version" onClick={handleCreateVersion}>
+        <button
+          className="btn-create-version"
+          onClick={() => void handleCreateVersion()}
+          disabled={saving || !doc}
+        >
           <Tag size={13} />
-          Save Version
+          {saving ? 'Saving…' : 'Save Version'}
         </button>
       </div>
 
-      {versions.length === 0 ? (
+      {merged.length === 0 ? (
         <p className="version-empty">No saved versions yet. Click &quot;Save Version&quot; to create a snapshot.</p>
       ) : (
         <ul className="version-list">
-          {[...versions].reverse().map((v) => (
-            <li key={v.version} className="version-item">
+          {merged.map((v) => (
+            <li key={v.key} className="version-item">
               <div className="version-meta">
                 <span className="version-number">v{v.version}</span>
                 <span className="version-time">
@@ -71,16 +195,22 @@ export function VersionHistoryPanel() {
                     minute: '2-digit',
                   })}
                 </span>
+                <span
+                  className={`version-source version-source--${v.source}`}
+                  title={v.source === 'server' ? 'Stored on server' : 'Local only — will upload when you reconnect'}
+                >
+                  {v.source === 'server' ? <Cloud size={10} /> : <CloudOff size={10} />}
+                </span>
               </div>
               {v.message && <p className="version-msg">{v.message}</p>}
               <button
                 className="btn-restore-version"
-                onClick={() => handleRestore(v.version)}
-                disabled={restoring === v.version}
+                onClick={() => void handleRestore(v)}
+                disabled={restoring === v.key}
                 title={`Restore to v${v.version}`}
               >
                 <RotateCcw size={12} />
-                Restore
+                {restoring === v.key ? 'Restoring…' : 'Restore'}
               </button>
             </li>
           ))}

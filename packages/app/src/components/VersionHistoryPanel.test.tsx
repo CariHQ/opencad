@@ -6,22 +6,46 @@
 import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 expect.extend(jestDomMatchers);
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { VersionHistoryPanel } from './VersionHistoryPanel';
 import type { ChangeRecord } from '../stores/documentStore';
 
 const mockCreateVersion = vi.fn();
 const mockRestoreVersion = vi.fn();
 const mockGetVersionList = vi.fn();
+const mockLoadDocumentSchema = vi.fn();
 let mockChangeHistory: ChangeRecord[] = [];
+
+// Minimal document stub — the panel reads id and passes the blob through
+// to the server call. A real DocumentSchema isn't needed for these tests.
+const mockDoc = { id: 'test-project', name: 'Test', content: { elements: {} } };
 
 vi.mock('../stores/documentStore', () => ({
   useDocumentStore: vi.fn(() => ({
+    document: mockDoc,
     createVersion: mockCreateVersion,
     restoreVersion: mockRestoreVersion,
     getVersionList: mockGetVersionList,
+    loadDocumentSchema: mockLoadDocumentSchema,
     changeHistory: mockChangeHistory,
   })),
+}));
+
+// Stub the server API so the panel renders without making real network
+// calls. Default: empty server version list so the merged list equals
+// the local list only.
+vi.mock('../lib/serverApi', () => ({
+  versionsApi: {
+    list:   vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({
+      id: 'v1', project_id: 'test-project', version_number: 1,
+      message: null, created_at: new Date().toISOString(), data: '{}',
+    }),
+    get:    vi.fn().mockResolvedValue({
+      id: 'v1', project_id: 'test-project', version_number: 1,
+      message: null, created_at: new Date().toISOString(), data: '{}',
+    }),
+  },
 }));
 
 describe('T-UI-013: VersionHistoryPanel', () => {
@@ -65,12 +89,16 @@ describe('T-UI-013: VersionHistoryPanel', () => {
     expect(mockCreateVersion).toHaveBeenCalledWith('Phase 1 complete');
   });
 
-  it('clears input after saving a version', () => {
+  it('clears input after saving a version', async () => {
     render(<VersionHistoryPanel />);
     const input = screen.getByPlaceholderText(/Version description/i);
     fireEvent.change(input, { target: { value: 'My snapshot' } });
     fireEvent.click(screen.getByRole('button', { name: /Save Version/i }));
-    expect((input as HTMLInputElement).value).toBe('');
+    // handleCreateVersion awaits the server call before clearing, so we
+    // need to wait for the React state update rather than assert sync.
+    await waitFor(() => {
+      expect((input as HTMLInputElement).value).toBe('');
+    });
   });
 
   it('calls createVersion with undefined when message is empty', () => {
