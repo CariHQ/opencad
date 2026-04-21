@@ -17,8 +17,13 @@ export interface TakeoffRow {
 // ── Property helpers ──────────────────────────────────────────────────────────
 
 function numProp(el: ElementSchema, key: string): number | undefined {
-  const p = el.properties[key];
-  if (p && p.type === 'number' && typeof p.value === 'number') return p.value;
+  // Elements created via the toolshelf store PascalCase keys (Width, Height,
+  // Thickness); older fixtures use lowercase. Try both so takeoff works
+  // regardless of source.
+  for (const k of [key, key.charAt(0).toUpperCase() + key.slice(1)]) {
+    const p = el.properties[k];
+    if (p && p.type === 'number' && typeof p.value === 'number') return p.value;
+  }
   return undefined;
 }
 
@@ -26,14 +31,33 @@ function numProp(el: ElementSchema, key: string): number | undefined {
 
 function wallMetrics(elements: ElementSchema[]): Partial<TakeoffRow> {
   let totalArea = 0;
+  let totalLength = 0;
   let totalVolume = 0;
   let hasVolume = false;
 
   for (const el of elements) {
-    const length = numProp(el, 'length');
-    const height = numProp(el, 'height');
-    const thickness = numProp(el, 'thickness');
+    // Prefer StartX/EndX (canonical wall storage). Fall back to a 'length'
+    // property for fixtures / imports that use it directly.
+    let length = numProp(el, 'length');
+    const sx = numProp(el, 'startX') ?? numProp(el, 'StartX');
+    const sy = numProp(el, 'startY') ?? numProp(el, 'StartY');
+    const ex = numProp(el, 'endX')   ?? numProp(el, 'EndX');
+    const ey = numProp(el, 'endY')   ?? numProp(el, 'EndY');
+    if (length === undefined && sx !== undefined && ex !== undefined) {
+      const dx = ex - sx;
+      const dy = (ey ?? 0) - (sy ?? 0);
+      length = Math.sqrt(dx * dx + dy * dy);
+    }
 
+    const height = numProp(el, 'height');
+    // Thickness is 'Thickness' in new code, 'Width' in the original
+    // wall-creation path, or 'thickness' in test fixtures.
+    const thickness =
+      numProp(el, 'thickness') ??
+      numProp(el, 'Thickness') ??
+      numProp(el, 'width');
+
+    if (length !== undefined) totalLength += length;
     if (length !== undefined && height !== undefined) {
       totalArea += length * height;
       if (thickness !== undefined) {
@@ -45,6 +69,7 @@ function wallMetrics(elements: ElementSchema[]): Partial<TakeoffRow> {
 
   return {
     totalArea,
+    ...(totalLength > 0 ? { totalLength } : {}),
     ...(hasVolume ? { totalVolume } : {}),
   };
 }

@@ -72,8 +72,10 @@ import { EditNotifications } from './components/EditNotifications';
 import { useEditNotifications } from './hooks/useEditNotifications';
 import { CommandPalette } from './components/CommandPalette';
 import { CommentsPanel } from './components/CommentsPanel';
-import { CarbonPanel } from './components/CarbonPanel';
-import { CostPanel } from './components/CostPanel';
+import { CarbonPanel, type CarbonEntry } from './components/CarbonPanel';
+import { CostPanel, type CostItem } from './components/CostPanel';
+import { computeTakeoff } from './lib/quantityTakeoff';
+import { BUILT_IN_MATERIALS } from './lib/materials';
 import { HatchPanel } from './components/HatchPanel';
 import { SymbolLibrary } from './components/SymbolLibrary';
 import { ShadowAnalysisPanel } from './components/ShadowAnalysisPanel';
@@ -166,6 +168,77 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'wind', title: 'Wind Analysis', icon: <Wind size={16} strokeWidth={2} /> },
   { id: 'history', title: 'History', icon: <History size={16} strokeWidth={2} /> },
 ];
+
+/** Build CostPanel items from the document using quantityTakeoff + material rates. */
+function computeCostItems(doc: NonNullable<ReturnType<typeof useDocumentStore.getState>['document']>): CostItem[] {
+  const rows = computeTakeoff(doc);
+  // Per-type fallback rates when elements have no applied material.
+  const typeRates: Record<string, number> = {
+    wall: 120, slab: 85, roof: 110, column: 180, beam: 160,
+    door: 450, window: 380, stair: 950, railing: 110,
+    curtain_wall: 280,
+  };
+  const out: CostItem[] = [];
+  for (const row of rows) {
+    if (row.count === 0) continue;
+    const quantity = row.totalArea && row.totalArea > 0
+      ? row.totalArea / 1e6     // mm² → m²
+      : row.totalLength && row.totalLength > 0
+        ? row.totalLength / 1000 // mm → m
+        : row.count;
+    const unit = row.totalArea ? 'm²' : row.totalLength ? 'm' : 'ea';
+    const rate = typeRates[row.type] ?? 0;
+    out.push({
+      id: `cost-${row.type}`,
+      elementType: row.type,
+      description: `${row.type.charAt(0).toUpperCase()}${row.type.slice(1)} — ${row.count} item${row.count === 1 ? '' : 's'}`,
+      quantity: Math.round(quantity * 100) / 100,
+      unit,
+      unitRate: rate,
+      total: Math.round(quantity * rate),
+    });
+  }
+  return out;
+}
+
+/** Build CarbonPanel entries from the document using material embodied-carbon data. */
+function computeCarbonEntries(doc: NonNullable<ReturnType<typeof useDocumentStore.getState>['document']>): CarbonEntry[] {
+  const rows = computeTakeoff(doc);
+  const byMat = new Map<string, { quantity: number; mat: (typeof BUILT_IN_MATERIALS)[number] }>();
+
+  for (const el of Object.values(doc.content.elements)) {
+    const matName =
+      (el.properties['MaterialId']?.value as string | undefined) ??
+      (el.properties['Material']?.value as string | undefined);
+    if (!matName) continue;
+    const mat = BUILT_IN_MATERIALS.find((m) => m.name === matName);
+    if (!mat || mat.embodiedCarbon === undefined || mat.density === undefined) continue;
+
+    const row = rows.find((r) => r.type === el.type);
+    const volumeM3 = row?.totalVolume ? row.totalVolume / 1e9 : 0;
+    if (volumeM3 <= 0) continue;
+
+    const existing = byMat.get(matName);
+    if (existing) existing.quantity += volumeM3;
+    else byMat.set(matName, { quantity: volumeM3, mat });
+  }
+
+  const out: CarbonEntry[] = [];
+  for (const [name, { quantity, mat }] of byMat) {
+    const massKg = quantity * (mat.density ?? 0);
+    const kgCO2e = massKg * (mat.embodiedCarbon ?? 0);
+    out.push({
+      id: `carbon-${mat.id}`,
+      material: name,
+      quantity: Math.round(quantity * 100) / 100,
+      unit: 'm³',
+      kgCO2ePerUnit: Math.round((mat.embodiedCarbon ?? 0) * (mat.density ?? 0) * 100) / 100,
+      totalKgCO2e: Math.round(kgCO2e),
+      stage: 'A1-A3',
+    });
+  }
+  return out;
+}
 
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
@@ -686,8 +759,12 @@ export function AppLayout() {
                 />
               )}
               {rightPanelTab === 'comments' && <CommentsPanel />}
-              {rightPanelTab === 'carbon' && <CarbonPanel />}
-              {rightPanelTab === 'cost' && <CostPanel />}
+              {rightPanelTab === 'carbon' && (
+                <CarbonPanel entries={doc ? computeCarbonEntries(doc) : []} />
+              )}
+              {rightPanelTab === 'cost' && (
+                <CostPanel items={doc ? computeCostItems(doc) : []} />
+              )}
               {rightPanelTab === 'hatch' && <HatchPanel />}
               {rightPanelTab === 'symbols' && <SymbolLibrary />}
               {rightPanelTab === 'shadow' && <ShadowAnalysisPanel />}
