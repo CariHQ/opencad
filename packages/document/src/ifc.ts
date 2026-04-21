@@ -311,6 +311,7 @@ export class IFCSerializer {
     const cosA = parseFloat(Math.cos(angle).toFixed(10));
     const sinA = parseFloat(Math.sin(angle).toFixed(10));
 
+    const idLocalPlace = this._nextId();
     const idPlaceOrigin = this._nextId();
     const idOriginPt = this._nextId();
     const idDirRef = this._nextId();
@@ -341,6 +342,7 @@ export class IFCSerializer {
     };
 
     return [
+      `#${idLocalPlace}=IFCLOCALPLACEMENT($,#${idPlaceOrigin});`,
       `#${idPlaceOrigin}=IFCAXIS2PLACEMENT3D(#${idOriginPt},#${idDirUp},#${idDirRef});`,
       `#${idOriginPt}=IFCCARTESIANPOINT((${f(startX)},${f(startY)},0.));`,
       `#${idDirRef}=IFCDIRECTION((${f(cosA)},${f(sinA)},0.));`,
@@ -358,7 +360,7 @@ export class IFCSerializer {
       `#${idCtxPlace}=IFCAXIS2PLACEMENT3D(#${idCtxOrigin},$,$);`,
       `#${idCtxOrigin}=IFCCARTESIANPOINT((0.,0.,0.));`,
       `#${idProductShape}=IFCPRODUCTDEFINITIONSHAPE($,$,(#${idShapeRep}));`,
-      `#${wallLineNum}=${ifcType}('${element.id}',$,'${name}',$,$,#${idPlaceOrigin},#${idProductShape},$); ${bboxStr}`,
+      `#${wallLineNum}=${ifcType}('${element.id}',$,'${name}',$,$,#${idLocalPlace},#${idProductShape},$); ${bboxStr}`,
     ];
   }
 
