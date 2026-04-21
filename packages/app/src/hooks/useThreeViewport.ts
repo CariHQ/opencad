@@ -642,7 +642,12 @@ export function useThreeViewport() {
         );
       }
 
-      if (type === 'annotation' || type === 'beam') {
+      // Annotations with StartX/EndX (section lines, plain line annotations)
+      // get the line-extrusion treatment. Annotations that are single-point
+      // markers (elevation, hotspot-backed elevation, label, detail callout,
+      // text tags) fall through to the marker branch further down.
+      const isLineAnnotation = type === 'annotation' && !!(props['StartX'] && props['EndX']);
+      if (type === 'beam' || isLineAnnotation) {
         let x1 = pv('StartX', 0), y1 = pv('StartY', 0);
         let x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
         // SEO beam-column-trim (T-GEO-001): shorten beam at each end that
@@ -733,6 +738,88 @@ export function useThreeViewport() {
         const r = pv('Radius', 500);
         geometry = new THREE.CylinderGeometry(r, r, 50, 32);
         posX = pv('CenterX', 0); posY = 25; posZ = pv('CenterY', 0);
+      } else if (type === 'ellipse') {
+        // Extruded ellipse — approximate as a thin disc with X/Y scale.
+        const erx = pv('RadiusX', 500);
+        const ery = pv('RadiusY', 250);
+        geometry = new THREE.CylinderGeometry(1, 1, 50, 64);
+        geometry.scale(erx, 1, ery);
+        posX = pv('CenterX', 0); posY = 25; posZ = pv('CenterY', 0);
+      } else if (type === 'curtain_wall') {
+        const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+        const x2 = pv('EndX', x1 + 3000), y2 = pv('EndY', y1);
+        const h  = pv('Height', 3000);
+        const depth = pv('FrameDepth', 150);
+        const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
+        geometry = new THREE.BoxGeometry(len, h, depth);
+        posX = (x1 + x2) / 2; posY = h / 2; posZ = (y1 + y2) / 2;
+        ry = -Math.atan2(y2 - y1, x2 - x1);
+      } else if (type === 'duct' || type === 'pipe') {
+        const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
+        const x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
+        const z  = pv('Z', 2700);
+        const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
+        if (type === 'duct') {
+          const w = pv('Width', 300), h = pv('Height', 200);
+          geometry = new THREE.BoxGeometry(len, h, w);
+        } else {
+          const d = pv('Diameter', 50);
+          geometry = new THREE.CylinderGeometry(d / 2, d / 2, len, 16);
+          geometry.rotateZ(Math.PI / 2);
+        }
+        posX = (x1 + x2) / 2; posY = z; posZ = (y1 + y2) / 2;
+        ry = -Math.atan2(y2 - y1, x2 - x1);
+      } else if (type === 'space') {
+        // Zone / space volume — extruded polygon with a translucent fill.
+        const ptsVal = props['Points']?.value;
+        const h = pv('Height', 3000);
+        if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+          try {
+            const rawPts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+            const pts: Array<{ x: number; y: number }> = [];
+            for (const p of rawPts) {
+              const prev = pts[pts.length - 1];
+              if (!prev || prev.x !== p.x || prev.y !== p.y) pts.push(p);
+            }
+            if (pts.length >= 3) {
+              const shape = new THREE.Shape(pts.map((p) => new THREE.Vector2(p.x, -p.y)));
+              geometry = new THREE.ExtrudeGeometry(shape, { depth: h, bevelEnabled: false, steps: 1 });
+              geometry.rotateX(-Math.PI / 2);
+              posY = 0;
+            } else {
+              geometry = new THREE.BoxGeometry(1000, h, 1000);
+              posY = h / 2;
+            }
+          } catch {
+            geometry = new THREE.BoxGeometry(1000, h, 1000);
+            posY = h / 2;
+          }
+        } else {
+          geometry = new THREE.BoxGeometry(1000, h, 1000);
+          posY = h / 2;
+        }
+      } else if (type === 'solid') {
+        // Mass study — simple extruded rect.
+        const w = pv('Width', 3000), d = pv('Depth', 3000), h = pv('Height', 3000);
+        geometry = new THREE.BoxGeometry(w, h, d);
+        posX = pv('X', 0) + w / 2; posY = h / 2; posZ = pv('Y', 0) + d / 2;
+      } else if (type === 'surface') {
+        // Terrain / topo — flat plane at bbox extents.
+        const bb = element.boundingBox;
+        const bw = Math.max(bb.max.x - bb.min.x, 1000);
+        const bd = Math.max(bb.max.y - bb.min.y, 1000);
+        geometry = new THREE.BoxGeometry(bw, 20, bd);
+        posX = bb.min.x + bw / 2; posY = -10; posZ = bb.min.y + bd / 2;
+      } else if (type === 'point' || type === 'text' || type === 'annotation' || type === 'dimension') {
+        // Hotspot / text / annotation markers — render as a thin upright
+        // disc so the user sees where they placed the marker in 3D.
+        const x = pv('X', 0), y = pv('Y', 0);
+        geometry = new THREE.CylinderGeometry(120, 120, 40, 16);
+        posX = x; posY = 20; posZ = y;
+      } else if (type === 'plumbing_fixture' || type === 'mechanical_equipment' || type === 'electrical_equipment') {
+        const x = pv('X', 0), y = pv('Y', 0), z = pv('Z', 2700);
+        geometry = new THREE.BoxGeometry(300, 150, 300);
+        posX = x; posY = z; posZ = y;
       } else {
         const bb = element.boundingBox;
         const bw = Math.max(bb.max.x - bb.min.x, 100);
