@@ -16,19 +16,79 @@ interface DXFEntity {
   vertices?: Array<{ x: number; y: number }>;
 }
 
-/** AutoCAD Color Index (ACI) to hex colour. Only the 7 standard colours are listed. */
+/** AutoCAD Color Index (ACI) to hex colour. Full 256-entry palette. */
 const ACI_COLORS: Record<number, string> = {
-  1: '#FF0000',
-  2: '#FFFF00',
-  3: '#00FF00',
-  4: '#00FFFF',
-  5: '#0000FF',
-  6: '#FF00FF',
-  7: '#FFFFFF',
+  1: '#FF0000', // red
+  2: '#FFFF00', // yellow
+  3: '#00FF00', // green
+  4: '#00FFFF', // cyan
+  5: '#0000FF', // blue
+  6: '#FF00FF', // magenta
+  7: '#FFFFFF', // white / black-on-white
+  8: '#808080', // grey
+  9: '#C0C0C0', // light grey
+  // 10-249 are algorithmic — computed below.
+  250: '#333333',
+  251: '#505050',
+  252: '#696969',
+  253: '#828282',
+  254: '#BEBEBE',
+  255: '#FFFFFF',
 };
+
+// Populate the algorithmic 10-249 range with a plausible palette so round-trip
+// to a hex colour is stable. Exact AutoCAD palette values are public but we
+// keep a compact approximation here — the reverse lookup on export uses
+// nearest-match so round-tripping known base colours stays exact.
+(() => {
+  for (let i = 10; i <= 249; i++) {
+    if (ACI_COLORS[i]) continue;
+    const hue = ((i - 10) / 240) * 360;
+    const { r, g, b } = hslToRgb(hue, 0.8, 0.5);
+    ACI_COLORS[i] = `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+  }
+})();
+
+function toHex(v: number): string {
+  return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0').toUpperCase();
+}
+
+function hslToRgb(h: number, s: number, l: number): { r: number; g: number; b: number } {
+  const c = (1 - Math.abs(2 * l - 1)) * s;
+  const hh = h / 60;
+  const x = c * (1 - Math.abs((hh % 2) - 1));
+  let r = 0, g = 0, b = 0;
+  if (hh < 1) { r = c; g = x; }
+  else if (hh < 2) { r = x; g = c; }
+  else if (hh < 3) { g = c; b = x; }
+  else if (hh < 4) { g = x; b = c; }
+  else if (hh < 5) { r = x; b = c; }
+  else { r = c; b = x; }
+  const m = l - c / 2;
+  return { r: (r + m) * 255, g: (g + m) * 255, b: (b + m) * 255 };
+}
 
 function aciToHex(aci: number): string {
   return ACI_COLORS[aci] ?? '#808080';
+}
+
+/** Reverse lookup — nearest ACI code for a hex colour, for export. */
+function hexToAci(hex: string): number {
+  const target = hex.replace('#', '').toLowerCase();
+  const rr = parseInt(target.slice(0, 2), 16);
+  const gg = parseInt(target.slice(2, 4), 16);
+  const bb = parseInt(target.slice(4, 6), 16);
+  let bestAci = 7;
+  let bestDist = Infinity;
+  for (const [aciStr, h] of Object.entries(ACI_COLORS)) {
+    const hx = h.replace('#', '');
+    const r = parseInt(hx.slice(0, 2), 16);
+    const g = parseInt(hx.slice(2, 4), 16);
+    const b = parseInt(hx.slice(4, 6), 16);
+    const d = (r - rr) ** 2 + (g - gg) ** 2 + (b - bb) ** 2;
+    if (d < bestDist) { bestDist = d; bestAci = parseInt(aciStr, 10); }
+  }
+  return bestAci;
 }
 
 const DXF_ENTITY_MAP: Record<string, ElementType> = {
@@ -37,6 +97,7 @@ const DXF_ENTITY_MAP: Record<string, ElementType> = {
   ARC: 'arc',
   POLYLINE: 'polyline',
   LWPOLYLINE: 'polyline',
+  SPLINE: 'polyline',
   ELLIPSE: 'ellipse',
   POINT: 'point',
   TEXT: 'text',
@@ -239,17 +300,22 @@ class DXFParser {
             entity.textContent = value;
           } else if (code === '10') {
             const v = parseFloat(value);
-            if (entityType === 'LWPOLYLINE') {
+            // LWPOLYLINE and SPLINE both repeat 10/20 pairs for each vertex /
+            // control point. Route them to the vertex list.
+            if (entityType === 'LWPOLYLINE' || entityType === 'SPLINE') {
               nextVertexX = v;
-            } else {
+            } else if (entity.coordinates['x'] === undefined) {
               entity.coordinates['x'] = v;
+            } else {
+              // Subsequent 10 codes without a matching 20 — treat as secondary.
+              entity.coordinates['x_extra'] = v;
             }
           } else if (code === '20') {
             const v = parseFloat(value);
-            if (entityType === 'LWPOLYLINE' && nextVertexX !== null) {
+            if ((entityType === 'LWPOLYLINE' || entityType === 'SPLINE') && nextVertexX !== null) {
               entity.vertices!.push({ x: nextVertexX, y: v });
               nextVertexX = null;
-            } else {
+            } else if (entity.coordinates['y'] === undefined) {
               entity.coordinates['y'] = v;
             }
           } else if (code === '30') {
@@ -261,11 +327,32 @@ class DXFParser {
           } else if (code === '31') {
             entity.coordinates['z2'] = parseFloat(value);
           } else if (code === '40') {
-            entity.coordinates['radius'] = parseFloat(value);
+            // 40 means different things per entity — store by context.
+            if (entityType === 'TEXT' || entityType === 'MTEXT') {
+              entity.coordinates['textHeight'] = parseFloat(value);
+            } else if (entityType === 'ELLIPSE') {
+              entity.coordinates['ratio'] = parseFloat(value);
+            } else {
+              entity.coordinates['radius'] = parseFloat(value);
+            }
+          } else if (code === '41') {
+            if (entityType === 'INSERT') entity.coordinates['scaleX'] = parseFloat(value);
+            else if (entityType === 'ELLIPSE') entity.coordinates['startParam'] = parseFloat(value);
+          } else if (code === '42') {
+            if (entityType === 'INSERT') entity.coordinates['scaleY'] = parseFloat(value);
+            else if (entityType === 'ELLIPSE') entity.coordinates['endParam'] = parseFloat(value);
+          } else if (code === '43') {
+            if (entityType === 'INSERT') entity.coordinates['scaleZ'] = parseFloat(value);
           } else if (code === '50') {
-            entity.coordinates['startAngle'] = parseFloat(value);
+            if (entityType === 'INSERT' || entityType === 'TEXT' || entityType === 'MTEXT') {
+              entity.coordinates['rotation'] = parseFloat(value);
+            } else {
+              entity.coordinates['startAngle'] = parseFloat(value);
+            }
           } else if (code === '51') {
             entity.coordinates['endAngle'] = parseFloat(value);
+          } else if (code === '71') {
+            if (entityType === 'SPLINE') entity.coordinates['degree'] = parseInt(value, 10);
           } else if (code === '90') {
             entity.coordinates['vertexCount'] = parseInt(value);
           }
@@ -622,13 +709,33 @@ export function parseDXF(content: string): DocumentSchema {
         layerId,
         levelId,
       });
+    } else if (elementType === 'ellipse') {
+      const mx = (entity.coordinates.x2 ?? 0) * scale;
+      const my = (entity.coordinates.y2 ?? 0) * scale;
+      const majorLen = Math.sqrt(mx * mx + my * my);
+      const ratio = entity.coordinates.ratio ?? 1;
+      addElement(document, {
+        type: 'ellipse',
+        properties: {
+          CenterX: { type: 'number', value: sx },
+          CenterY: { type: 'number', value: sy },
+          RadiusX: { type: 'number', value: majorLen },
+          RadiusY: { type: 'number', value: majorLen * ratio },
+          Rotation: { type: 'number', value: Math.atan2(my, mx) },
+        },
+        layerId,
+        levelId,
+        transform: { translation: { x: sx, y: sy, z: sz }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+      });
     } else if (elementType === 'text') {
       addElement(document, {
         type: 'text',
         properties: {
-          Content: { type: 'string', value: entity.textContent || '' },
-          X: { type: 'number', value: sx },
-          Y: { type: 'number', value: sy },
+          Content:  { type: 'string', value: entity.textContent || '' },
+          X:        { type: 'number', value: sx },
+          Y:        { type: 'number', value: sy },
+          FontSize: { type: 'number', value: (entity.coordinates.textHeight ?? 2.5) * scale },
+          Rotation: { type: 'number', value: entity.coordinates.rotation ?? 0 },
         },
         layerId,
         levelId,
@@ -639,10 +746,22 @@ export function parseDXF(content: string): DocumentSchema {
         type: 'block_ref',
         properties: {
           BlockName: { type: 'string', value: entity.blockName || '' },
+          Rotation:  { type: 'number', value: entity.coordinates.rotation ?? 0 },
+          ScaleX:    { type: 'number', value: entity.coordinates.scaleX ?? 1 },
+          ScaleY:    { type: 'number', value: entity.coordinates.scaleY ?? 1 },
+          ScaleZ:    { type: 'number', value: entity.coordinates.scaleZ ?? 1 },
         },
         layerId,
         levelId,
-        transform: { translation: { x: sx, y: sy, z: sz }, rotation: { x: 0, y: 0, z: 0 }, scale: { x: 1, y: 1, z: 1 } },
+        transform: {
+          translation: { x: sx, y: sy, z: sz },
+          rotation: { x: 0, y: 0, z: (entity.coordinates.rotation ?? 0) * Math.PI / 180 },
+          scale: {
+            x: entity.coordinates.scaleX ?? 1,
+            y: entity.coordinates.scaleY ?? 1,
+            z: entity.coordinates.scaleZ ?? 1,
+          },
+        },
       });
     } else {
       addElement(document, {
@@ -718,8 +837,7 @@ export function exportDXF(document: DocumentSchema): string {
   lines.push('0', 'TABLE', '2', 'LAYER', '5', nextHandle(), '70', String(docLayers.length));
 
   for (const layer of docLayers) {
-    // Reverse hex color to ACI (default 7 = white)
-    const aci = Object.entries(ACI_COLORS).find(([, hex]) => hex.toLowerCase() === layer.color.toLowerCase())?.[0] ?? '7';
+    const aci = String(hexToAci(layer.color));
     lines.push(
       '0', 'LAYER',
       '5', nextHandle(),
@@ -799,13 +917,49 @@ export function exportDXF(document: DocumentSchema): string {
       const x = (element.properties['X']?.value as number) ?? t.x;
       const y = (element.properties['Y']?.value as number) ?? t.y;
       const content = String(element.properties['Content']?.value ?? '');
+      const height = (element.properties['FontSize']?.value as number) ?? 2.5;
+      const rotation = (element.properties['Rotation']?.value as number) ?? 0;
       lines.push(
         '0', 'TEXT', '5', h, '330', '0',
         '100', 'AcDbEntity', '8', layerName,
         '100', 'AcDbText',
         '10', String(x), '20', String(y), '30', String(t.z),
-        '40', '2.5',
+        '40', String(height),
         '1', content,
+        '50', String(rotation),
+      );
+    } else if (element.type === 'ellipse') {
+      const cx = (element.properties['CenterX']?.value as number) ?? t.x;
+      const cy = (element.properties['CenterY']?.value as number) ?? t.y;
+      const rx = (element.properties['RadiusX']?.value as number) ?? 25;
+      const ry = (element.properties['RadiusY']?.value as number) ?? 25;
+      const rot = (element.properties['Rotation']?.value as number) ?? 0;
+      const mx = Math.cos(rot) * rx;
+      const my = Math.sin(rot) * rx;
+      const ratio = rx > 0 ? ry / rx : 1;
+      lines.push(
+        '0', 'ELLIPSE', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbEllipse',
+        '10', String(cx), '20', String(cy), '30', String(t.z),
+        '11', String(mx), '21', String(my), '31', '0',
+        '40', String(ratio),
+        '41', '0', '42', String(2 * Math.PI),
+      );
+    } else if (element.type === 'block_ref') {
+      const blockName = String(element.properties['BlockName']?.value ?? '');
+      const rot = (element.properties['Rotation']?.value as number) ?? 0;
+      const sx = (element.properties['ScaleX']?.value as number) ?? 1;
+      const sy = (element.properties['ScaleY']?.value as number) ?? 1;
+      const sz = (element.properties['ScaleZ']?.value as number) ?? 1;
+      lines.push(
+        '0', 'INSERT', '5', h, '330', '0',
+        '100', 'AcDbEntity', '8', layerName,
+        '100', 'AcDbBlockReference',
+        '2', blockName,
+        '10', String(t.x), '20', String(t.y), '30', String(t.z),
+        '41', String(sx), '42', String(sy), '43', String(sz),
+        '50', String(rot),
       );
     } else {
       // Generic fallback

@@ -642,13 +642,11 @@ input[type='range']::-moz-range-track {
   overflow-x: hidden;
   max-height: 100%;
   padding: 4px 0;
-  scrollbar-width: thin;
+  /* Hide scrollbar — keep scroll behaviour. */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
-.toolshelf::-webkit-scrollbar { width: 6px; }
-.toolshelf::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-}
+.toolshelf::-webkit-scrollbar { display: none; }
 
 .toolshelf-categories {
   display: flex;
