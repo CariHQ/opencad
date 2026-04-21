@@ -2,10 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
 import { useDocumentStore } from '../stores/documentStore';
 import {
-  parseIFC, serializeIFC,
-  parseDXF, serializeDXF,
-  parseDWG,
-  parseRVT,
+  parseIFC,
   exportToIFC,
   exportToDXF,
   exportToPDFDataURL,
@@ -92,11 +89,9 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
     const name = doc.name || 'export';
 
     if (format === 'ifc') {
-      const ifcContent = exportToIFC(doc) || serializeIFC(doc);
-      triggerDownload(ifcContent, `${name}.ifc`, 'text/plain');
+      triggerDownload(exportToIFC(doc), `${name}.ifc`, 'application/x-step');
     } else if (format === 'dxf') {
-      const dxfContent = exportToDXF(doc) || serializeDXF(doc);
-      triggerDownload(dxfContent, `${name}.dxf`, 'application/dxf');
+      triggerDownload(exportToDXF(doc), `${name}.dxf`, 'application/dxf');
     } else if (format === 'pdf') {
       // Prefer the canvas-aware renderer so the exported PDF embeds the
       // actual viewport image. Fall back to the vector-primitive exporter
