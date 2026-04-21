@@ -22,7 +22,7 @@ import {
   type Timestamp,
 } from 'firebase/firestore';
 import { firebaseAuth, firebaseDb, isFirebaseConfigured } from '../lib/firebase';
-import { authApi, registerTokenProvider } from '../lib/serverApi';
+import { authApi, registerTokenProvider, isServerAvailable } from '../lib/serverApi';
 import { registerProjectsTokenProvider } from '../lib/projectsApi';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
@@ -139,13 +139,28 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     // calls go out without Authorization and silently 401.
     registerProjectsTokenProvider(tokenProvider);
 
+    // Cache the one-shot server-reachability probe so we don't spam /health
+    // or log 502s in dev when the backend isn't running locally.
+    let serverReachable: boolean | null = null;
+    const probeServer = async (): Promise<boolean> => {
+      if (serverReachable !== null) return serverReachable;
+      serverReachable = await isServerAvailable();
+      if (!serverReachable) {
+        console.info('[auth] Backend unreachable — using local profile only. ' +
+          'Start the server with: cd server && cargo run');
+      }
+      return serverReachable;
+    };
+
     onAuthStateChanged(auth, async (user) => {
       if (user) {
         try {
           const profile = await upsertProfile(user);
           // Fetch the server-side user profile and merge it into local state.
           // Falls back to the Firestore profile if the backend is unreachable.
-          const serverProfile = await authApi.me().catch(() => null);
+          const serverProfile = (await probeServer())
+            ? await authApi.me().catch(() => null)
+            : null;
           const mergedProfile: UserProfile = serverProfile
             ? {
                 ...profile,
