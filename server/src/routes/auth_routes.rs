@@ -27,17 +27,30 @@ pub struct MeResponse {
 ///
 /// Exchanges a verified Firebase ID token for the user's profile and trial
 /// status. Creates the user row on first call (upsert).
+///
+/// When `auth_enabled = false` (local dev), the middleware passes every
+/// request through as `AuthUser::Unauthenticated`. Rather than blanket-401
+/// here (which would make every feature that depends on `/auth/me` broken
+/// in local dev), we synthesise a deterministic "dev-local" profile.
 pub async fn me(
     State(state): State<AppState>,
     user: AuthUser,
 ) -> Result<Json<MeResponse>, (StatusCode, &'static str)> {
-    let AuthUser::Authenticated(claims) = user else {
-        return Err((StatusCode::UNAUTHORIZED, "Not authenticated"));
+    let (uid_owned, email_owned, name_owned) = match user {
+        AuthUser::Authenticated(claims) => (
+            claims.sub.clone(),
+            claims.email.clone().unwrap_or_default(),
+            claims.name.clone().unwrap_or_else(|| claims.email.clone().unwrap_or_default()),
+        ),
+        AuthUser::Unauthenticated => (
+            "dev-local".to_string(),
+            "dev@localhost".to_string(),
+            "Dev User".to_string(),
+        ),
     };
-
-    let uid   = &claims.sub;
-    let email = claims.email.as_deref().unwrap_or("");
-    let name  = claims.name.as_deref().unwrap_or(email);
+    let uid   = uid_owned.as_str();
+    let email = email_owned.as_str();
+    let name  = name_owned.as_str();
 
     // Upsert user row using the non-macro query builder (no live DB at compile time).
     let row: UserRow = sqlx::query_as(
