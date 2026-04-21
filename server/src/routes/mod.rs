@@ -12,6 +12,7 @@ mod llm;
 mod plugins;
 mod projects;
 mod publishers;
+mod subscriptions;
 mod versions;
 pub mod ws;
 
@@ -119,6 +120,11 @@ pub fn build(state: AppState) -> Router {
             "/api/v1/marketplace/admin/plugins/:id/revoke",
             patch(plugins::admin_revoke),
         )
+        // ── Subscriptions (authenticated) ────────────────────────────────────
+        .route("/api/v1/subscription/status",   get(subscriptions::get_status))
+        .route("/api/v1/subscription/checkout", post(subscriptions::create_checkout))
+        .route("/api/v1/subscription/portal",   post(subscriptions::open_portal))
+        .route("/api/v1/subscription/invoices", get(subscriptions::list_invoices))
         // ── WebSocket ─────────────────────────────────────────────────────────
         .route("/ws/:project_id", get(ws::handler))
         .layer(middleware::from_fn_with_state(
@@ -129,6 +135,8 @@ pub fn build(state: AppState) -> Router {
     Router::new()
         // ── Liveness (no auth) ────────────────────────────────────────────
         .route("/health", get(health::health))
+        // ── Stripe webhook (no auth — HMAC-verified in the handler) ───────
+        .route("/api/v1/stripe/webhook", post(subscriptions::stripe_webhook))
         .merge(protected)
         // ── Middleware ────────────────────────────────────────────────────
         .layer(TraceLayer::new_for_http())

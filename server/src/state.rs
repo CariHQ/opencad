@@ -28,8 +28,15 @@ pub struct AppState {
     pub admin_uids: Option<String>,
     /// Public base URL for plugin bundles.
     pub plugin_bundle_base_url: Option<String>,
-    /// Stripe secret key (paid plugins).
+    /// Stripe secret key (paid plugins + user subscriptions).
     pub stripe_secret_key: Option<String>,
+    /// Stripe webhook signing secret.
+    pub stripe_webhook_secret: Option<String>,
+    /// Stripe price ids for the Pro / Business subscription tiers.
+    pub stripe_price_pro: Option<String>,
+    pub stripe_price_business: Option<String>,
+    /// Public URL to redirect back to after Checkout.
+    pub app_base_url: String,
 }
 
 impl AppState {
@@ -44,6 +51,10 @@ impl AppState {
             admin_uids: cfg.admin_uids.clone(),
             plugin_bundle_base_url: cfg.plugin_bundle_base_url.clone(),
             stripe_secret_key: cfg.stripe_secret_key.clone(),
+            stripe_webhook_secret: cfg.stripe_webhook_secret.clone(),
+            stripe_price_pro: cfg.stripe_price_pro.clone(),
+            stripe_price_business: cfg.stripe_price_business.clone(),
+            app_base_url: cfg.app_base_url.clone(),
         }
     }
 

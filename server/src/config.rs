@@ -32,8 +32,17 @@ pub struct Config {
     /// without an absolute entrypoint URL have this prepended.
     pub plugin_bundle_base_url: Option<String>,
     /// Stripe secret key for marketplace payouts (optional; only needed for
-    /// paid plugins).
+    /// paid plugins) and for user subscription checkout/portal/webhook.
     pub stripe_secret_key: Option<String>,
+    /// Stripe webhook signing secret. Required to verify webhook payloads
+    /// before we apply subscription state changes to our database.
+    pub stripe_webhook_secret: Option<String>,
+    /// Stripe price id for the Pro tier ('price_…' from the dashboard).
+    pub stripe_price_pro: Option<String>,
+    /// Stripe price id for the Business tier.
+    pub stripe_price_business: Option<String>,
+    /// Public URL the Checkout success/cancel redirects should return to.
+    pub app_base_url: String,
 }
 
 impl Config {
@@ -81,6 +90,11 @@ impl Config {
             admin_uids: std::env::var("ADMIN_UIDS").ok().filter(|s| !s.is_empty()),
             plugin_bundle_base_url: std::env::var("PLUGIN_BUNDLE_BASE_URL").ok(),
             stripe_secret_key: std::env::var("STRIPE_SECRET_KEY").ok(),
+            stripe_webhook_secret: std::env::var("STRIPE_WEBHOOK_SECRET").ok(),
+            stripe_price_pro: std::env::var("STRIPE_PRICE_PRO").ok(),
+            stripe_price_business: std::env::var("STRIPE_PRICE_BUSINESS").ok(),
+            app_base_url: std::env::var("APP_BASE_URL")
+                .unwrap_or_else(|_| "https://app.opencad.archi".into()),
         })
     }
 }
