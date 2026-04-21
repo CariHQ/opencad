@@ -122,7 +122,9 @@ describe('T-SCHED-001: SchedulePanel', () => {
     render(<SchedulePanel />);
     const select = screen.getByRole('combobox', { name: /element type/i });
     fireEvent.change(select, { target: { value: 'door' } });
-    expect(screen.getByText('d1')).toBeInTheDocument();
+    // Door schedule assigns deterministic tags (D-001, D-002…) rather than
+    // exposing raw element ids, matching the typed doorSchedule contract.
+    expect(screen.getByText('D-001')).toBeInTheDocument();
   });
 
   it('shows column headers for properties', () => {

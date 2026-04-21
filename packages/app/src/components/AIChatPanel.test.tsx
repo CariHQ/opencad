@@ -33,12 +33,31 @@ const _mockStoreState = vi.hoisted(() => ({
   addElement: vi.fn(),
   deleteElement: vi.fn(),
   pushHistory: vi.fn(),
+  loadDocumentSchema: vi.fn(),
 }));
-vi.mock('../stores/documentStore', () => ({
-  useDocumentStore: Object.assign(
-    vi.fn().mockReturnValue(_mockStoreState),
-    { getState: vi.fn().mockReturnValue(_mockStoreState) }
-  ),
+vi.mock('../stores/documentStore', () => {
+  // Selector-aware: when called with a selector fn, apply it to the state.
+  const hook = vi.fn((selector?: unknown) =>
+    typeof selector === 'function' ? (selector as (s: typeof _mockStoreState) => unknown)(_mockStoreState) : _mockStoreState,
+  );
+  return {
+    useDocumentStore: Object.assign(hook, { getState: vi.fn().mockReturnValue(_mockStoreState) }),
+  };
+});
+
+// Mock @opencad/ai so /plan doesn't hit the network.
+vi.mock('@opencad/ai', () => ({
+  generateProject: vi.fn(async ({ prompt }: { prompt: string }) => ({
+    document: {
+      id: 'gen-1',
+      name: `Generated: ${prompt}`,
+      content: { elements: { w1: { id: 'w1', type: 'wall' } }, spaces: {} },
+      organization: { layers: {}, levels: {} },
+    },
+    description: 'Test fixture',
+    warnings: [],
+    validation: [],
+  })),
 }));
 
 describe('T-AI-006: AIChatPanel', () => {
@@ -73,7 +92,7 @@ describe('T-AI-006: AIChatPanel', () => {
 
   it('renders suggested prompts', () => {
     render(<AIChatPanel onClose={onClose} />);
-    expect(screen.getByText(/Design a residential floor plan/i)).toBeInTheDocument();
+    expect(screen.getByText(/\/plan a two-bedroom cottage/i)).toBeInTheDocument();
   });
 
   it('renders settings button', () => {
@@ -134,6 +153,25 @@ describe('T-AI-006: AIChatPanel', () => {
     const textarea = screen.getByRole('textbox');
     fireEvent.change(textarea, { target: { value: 'hello' } });
     expect(screen.getByRole('button', { name: /send message/i })).not.toBeDisabled();
+  });
+
+  describe('/plan slash command', () => {
+    it('sends /plan through generateProject and loads the returned schema', async () => {
+      const { generateProject } = await import('@opencad/ai');
+      render(<AIChatPanel onClose={onClose} />);
+      const textarea = screen.getByRole('textbox');
+      fireEvent.change(textarea, { target: { value: '/plan a tiny studio' } });
+      fireEvent.click(screen.getByRole('button', { name: /send message/i }));
+      // The slash-command branch runs synchronously enough that the echoed
+      // user message and the "Loaded" / "Generating" assistant message
+      // both appear after microtask flush.
+      await new Promise((r) => setTimeout(r, 0));
+      expect(generateProject).toHaveBeenCalledWith(
+        expect.objectContaining({ prompt: 'a tiny studio' }),
+      );
+      expect(_mockStoreState.loadDocumentSchema).toHaveBeenCalledTimes(1);
+      expect(await screen.findByText(/Loaded 1 element/i)).toBeInTheDocument();
+    });
   });
 
   describe('Config panel', () => {

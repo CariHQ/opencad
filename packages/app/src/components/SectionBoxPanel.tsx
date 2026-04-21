@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   DEFAULT_SECTION_BOX,
   sectionBoxFromElements,
 } from '../lib/sectionBox';
 import type { SectionBox } from '../lib/sectionBox';
+import { sliceBoxes, type Box3D } from '../lib/sectionSlice';
+import { useDocumentStore } from '../stores/documentStore';
 
 type SectionDirection = 'x' | 'y' | 'z';
 
@@ -78,6 +80,20 @@ export function SectionBoxPanel({
     updateBox({ [key]: value });
   };
 
+  // Live section-slice readout: count elements currently cut by the
+  // position+direction plane. Gives users immediate feedback that the
+  // slicer is live, and matches PRD §7.1.4 "Interactive 3D sectioning."
+  const doc = useDocumentStore((s) => s.document);
+  const cutCount = useMemo(() => {
+    if (!enabled || !doc) return 0;
+    const boxes: Box3D[] = Object.values(doc.content.elements).map((el) => ({
+      elementId: el.id,
+      min: el.boundingBox.min,
+      max: el.boundingBox.max,
+    }));
+    return sliceBoxes(boxes, { axis: direction, value: position }).polygons.length;
+  }, [doc, enabled, direction, position]);
+
   return (
     <div className="section-box-panel panel">
       <div className="panel-header">
@@ -113,6 +129,10 @@ export function SectionBoxPanel({
         </div>
         {enabled && (
           <>
+            <div className="panel-row" data-testid="section-cut-readout">
+              <span className="panel-label">Elements cut by plane</span>
+              <span className="panel-value">{cutCount}</span>
+            </div>
             <div className="panel-row">
               <label htmlFor="section-position">Position: {position}mm</label>
               <input

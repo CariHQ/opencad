@@ -7,6 +7,8 @@ import {
   type ChatMessage,
 } from '../hooks/useAIStream';
 import { useDocumentStore } from '../stores/documentStore';
+import { generateProject } from '@opencad/ai';
+import type { DocumentSchema } from '@opencad/document';
 
 const AI_CONFIG_KEY = 'opencad-ai-config';
 
@@ -60,7 +62,7 @@ interface AIChatPanelProps {
 }
 
 const suggestedPrompts = [
-  'Design a residential floor plan',
+  '/plan a two-bedroom cottage with a porch',
   'Check building code compliance',
   'Add a staircase to level 2',
   'Generate quantity takeoff',
@@ -69,6 +71,7 @@ const suggestedPrompts = [
 
 export function AIChatPanel({ onClose }: AIChatPanelProps) {
   const { document: doc } = useDocumentStore();
+  const loadDocumentSchema = useDocumentStore((s) => s.loadDocumentSchema);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -128,6 +131,53 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+
+    const planMatch = /^\/(plan|generate)\s+(.+)/is.exec(userText);
+    if (planMatch) {
+      const brief = planMatch[2]!.trim();
+      const thinkingId = (Date.now() + 1).toString();
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: thinkingId,
+          role: 'assistant',
+          content: `Generating a project for: "${brief}"…`,
+          timestamp: Date.now(),
+          streaming: true,
+        },
+      ]);
+      try {
+        const result = await generateProject({ prompt: brief, apiKey: config.apiKey });
+        loadDocumentSchema(result.document as DocumentSchema);
+        const elementCount = Object.keys(result.document.content?.elements ?? {}).length;
+        const warningLines = result.warnings.length
+          ? '\n\nNotes:\n' + result.warnings.map((w) => `- ${w}`).join('\n')
+          : '';
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? {
+                  ...m,
+                  content: `Loaded ${elementCount} element${elementCount === 1 ? '' : 's'}. ${result.description}${warningLines}`,
+                  streaming: false,
+                }
+              : m,
+          ),
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === thinkingId
+              ? { ...m, content: `Generation failed: ${msg}`, streaming: false }
+              : m,
+          ),
+        );
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
 
     if (!isConfigured) {
       setMessages((prev) => [

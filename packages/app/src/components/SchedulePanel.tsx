@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import type { ElementSchema, ElementType } from '@opencad/document';
 import { computeTakeoff } from '../lib/quantityTakeoff';
+import { doorSchedule, windowSchedule, roomSchedule, scheduleToCSV } from '../lib/schedules';
 
 const SCHEDULE_TYPES: { value: ElementType; label: string }[] = [
   { value: 'wall', label: 'Wall' },
@@ -145,43 +146,133 @@ export function SchedulePanel() {
         <div className="schedule-empty">No {selectedType} elements in model</div>
       ) : (
         <div className="schedule-table-wrapper">
-          <table className="schedule-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                {columns.map((col) => (
-                  <th key={col}>{col}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {elements.map((el) => (
-                <tr key={el.id}>
-                  <td>{el.id}</td>
-                  {columns.map((col) => {
-                    const prop = el.properties[col];
-                    return (
-                      <td key={col}>
-                        {prop ? `${prop.value}${prop.unit ? ' ' + prop.unit : ''}` : '—'}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
-            </tbody>
-            <tfoot>
-              <tr>
-                <td colSpan={columns.length + 1} className="schedule-total">
-                  Total: {elements.length} {selectedType}{elements.length !== 1 ? 's' : ''}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
+          {renderStructuredOrFallback(selectedType, elements, columns, doc)}
         </div>
       )}
     </div>
   );
 }
+
+/**
+ * Door / window / space get a structured schedule from lib/schedules.ts
+ * with proper typed columns (tag, width, height, material, host wall,
+ * cost). Everything else falls back to the generic union-of-property-
+ * keys table.
+ */
+function renderStructuredOrFallback(
+  type: ElementType,
+  elements: ElementSchema[],
+  columns: string[],
+  doc: ReturnType<typeof useDocumentStore.getState>['document'],
+) {
+  if (doc && type === 'door') {
+    const rows = doorSchedule(doc);
+    return (
+      <table className="schedule-table">
+        <thead>
+          <tr>
+            <th>Tag</th><th>Width (mm)</th><th>Height (mm)</th>
+            <th>Material</th><th>Host wall</th><th>Level</th><th>Cost</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.elementId}>
+              <td>{r.tag}</td><td>{r.width}</td><td>{r.height}</td>
+              <td>{r.material || '—'}</td>
+              <td>{r.hostWall ? r.hostWall.slice(0, 8) : '—'}</td>
+              <td>{r.level || '—'}</td>
+              <td>{r.cost || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  if (doc && type === 'window') {
+    const rows = windowSchedule(doc);
+    return (
+      <table className="schedule-table">
+        <thead>
+          <tr>
+            <th>Tag</th><th>Width</th><th>Height</th><th>Sill</th>
+            <th>Material</th><th>Host wall</th><th>Level</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.elementId}>
+              <td>{r.tag}</td><td>{r.width}</td><td>{r.height}</td><td>{r.sill}</td>
+              <td>{r.material || '—'}</td>
+              <td>{r.hostWall ? r.hostWall.slice(0, 8) : '—'}</td>
+              <td>{r.level || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  if (doc && type === 'space') {
+    const rows = roomSchedule(doc);
+    return (
+      <table className="schedule-table">
+        <thead>
+          <tr>
+            <th>Tag</th><th>Name</th><th>Area (m²)</th>
+            <th>Occupancy</th><th>Floor</th><th>Walls</th><th>Ceiling</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.elementId}>
+              <td>{r.tag}</td><td>{r.name}</td>
+              <td>{typeof r.area === 'number' ? r.area.toFixed(1) : '—'}</td>
+              <td>{r.occupancy || '—'}</td>
+              <td>{r.finishFloor || '—'}</td>
+              <td>{r.finishWalls || '—'}</td>
+              <td>{r.finishCeiling || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    );
+  }
+  return (
+    <table className="schedule-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          {columns.map((col) => <th key={col}>{col}</th>)}
+        </tr>
+      </thead>
+      <tbody>
+        {elements.map((el) => (
+          <tr key={el.id}>
+            <td>{el.id}</td>
+            {columns.map((col) => {
+              const prop = el.properties[col];
+              return (
+                <td key={col}>
+                  {prop ? `${prop.value}${prop.unit ? ' ' + prop.unit : ''}` : '—'}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td colSpan={columns.length + 1} className="schedule-total">
+            Total: {elements.length} {type}{elements.length !== 1 ? 's' : ''}
+          </td>
+        </tr>
+      </tfoot>
+    </table>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const _keepSchedulesCSVExportAvailable: () => string = () => scheduleToCSV([]);
 
 /**
  * QuantityTab — T-BIM-002

@@ -62,6 +62,7 @@ import { PanelErrorBoundary } from './components/ErrorBoundary';
 import { SchedulePanel } from './components/SchedulePanel';
 import { SpacePanel } from './components/SpacePanel';
 import { ClashDetectionPanel } from './components/ClashDetectionPanel';
+import { CompliancePanel } from './components/CompliancePanel';
 import { RenderPanel } from './components/RenderPanel';
 import { SheetPanel } from './components/SheetPanel';
 import { BCFPanel } from './components/BCFPanel';
@@ -138,13 +139,15 @@ type RightPanelTab =
   | 'admin'
   | 'history'
   | 'review'
-  | 'layers';
+  | 'layers'
+  | 'compliance';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
   { id: 'schedule', title: 'Schedule', icon: <Table2 size={16} strokeWidth={2} /> },
   { id: 'spaces', title: 'Spaces', icon: <LayoutDashboard size={16} strokeWidth={2} /> },
   { id: 'clash', title: 'Clash', icon: <AlertTriangle size={16} strokeWidth={2} /> },
+  { id: 'compliance', title: 'Compliance', icon: <Shield size={16} strokeWidth={2} /> },
   { id: 'render', title: 'Render', icon: <Camera size={16} strokeWidth={2} /> },
   { id: 'sheets', title: 'Sheets', icon: <Sheet size={16} strokeWidth={2} /> },
   { id: 'bcf', title: 'Issues', icon: <MessageSquareWarning size={16} strokeWidth={2} /> },
@@ -647,6 +650,7 @@ export function AppLayout() {
               {rightPanelTab === 'schedule' && <SchedulePanel />}
               {rightPanelTab === 'spaces' && <SpacePanel />}
               {rightPanelTab === 'clash' && <ClashDetectionPanel />}
+              {rightPanelTab === 'compliance' && <CompliancePanel />}
               {rightPanelTab === 'render' && <RenderPanel />}
               {rightPanelTab === 'sheets' && <SheetPanel />}
               {rightPanelTab === 'bcf' && <BCFPanel />}
