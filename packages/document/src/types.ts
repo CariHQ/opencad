@@ -107,8 +107,7 @@ export type ElementType =
   | 'pipe'
   | 'plumbing_fixture'
   | 'electrical_equipment'
-  | 'mechanical_equipment'
-  | 'curtain_wall';
+  | 'mechanical_equipment';
 
 export interface LayerSchema {
   id: string;

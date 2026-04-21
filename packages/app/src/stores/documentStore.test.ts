@@ -82,13 +82,15 @@ describe('T-BIM-006: Level operations', () => {
     expect(docAfter?.organization.levels[levelId]).toBeUndefined();
   });
 
-  it('deleteLevel does NOT remove the last remaining level', () => {
-    // loadProject creates exactly 1 level; try to delete it
+  it('deleteLevel throws when asked to remove the last remaining level', () => {
+    // loadProject creates exactly 1 level; trying to delete it should now
+    // throw (audit 2026-04-19: deleteLevel contract aligned with deleteLayer).
     const doc = useDocumentStore.getState().document;
     const levelIds = Object.keys(doc?.organization.levels ?? {});
     expect(levelIds.length).toBe(1);
 
-    useDocumentStore.getState().deleteLevel(levelIds[0]!);
+    expect(() => useDocumentStore.getState().deleteLevel(levelIds[0]!))
+      .toThrow(/last level/);
     const docAfter = useDocumentStore.getState().document;
     expect(Object.keys(docAfter?.organization.levels ?? {}).length).toBe(1);
   });

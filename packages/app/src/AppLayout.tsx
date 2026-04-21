@@ -167,7 +167,7 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, updateElement, renameProject } = useDocumentStore();
+  const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, setElementMaterial, renameProject } = useDocumentStore();
   const leftPanelRef = React.useRef<HTMLElement>(null);
   const rightPanelRef = React.useRef<HTMLElement>(null);
   const [isRenamingProject, setIsRenamingProject] = React.useState(false);
@@ -655,11 +655,13 @@ export function AppLayout() {
                   selectedCount={selectedIds.length}
                   currentMaterialName={
                     selectedIds.length > 0 && doc
-                      ? (doc.content.elements[selectedIds[0]] as { material?: string } | undefined)?.material
+                      ? (doc.content.elements[selectedIds[0]]?.properties?.['MaterialId']?.value as string | undefined)
                       : undefined
                   }
                   onSelect={(mat) => {
-                    selectedIds.forEach((id) => updateElement(id, { material: mat.name }));
+                    // Canonical path: write MaterialId into properties, not
+                    // a top-level `material` field (audit 2026-04-19 finding).
+                    selectedIds.forEach((id) => setElementMaterial(id, mat.name));
                   }}
                 />
               )}

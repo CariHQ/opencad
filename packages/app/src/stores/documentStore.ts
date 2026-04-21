@@ -593,9 +593,10 @@ export const useDocumentStore = create<DocumentState>()(
 
       updateLevel: (levelId, updates) => {
         const { document } = get();
-        if (!document) return;
+        if (!document) throw new Error('No document loaded');
         const level = document.organization.levels[levelId];
-        if (!level) return;
+        // Match updateLayer's throw-on-missing contract (audit 2026-04-19).
+        if (!level) throw new Error(`Level not found: ${levelId}`);
         Object.assign(level, updates);
         set({
           document: {
@@ -610,10 +611,13 @@ export const useDocumentStore = create<DocumentState>()(
 
       deleteLevel: (levelId) => {
         const { model } = get();
-        if (!model) return;
+        if (!model) throw new Error('No document loaded');
 
         const levels = model.documentData.organization.levels;
-        if (Object.keys(levels).length <= 1) return;
+        if (!levels[levelId]) throw new Error(`Level not found: ${levelId}`);
+        if (Object.keys(levels).length <= 1) {
+          throw new Error('Cannot delete the last level');
+        }
 
         delete levels[levelId];
         const remainingIds = Object.keys(levels);
