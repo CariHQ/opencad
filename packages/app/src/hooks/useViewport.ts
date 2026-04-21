@@ -1006,7 +1006,75 @@ export function useViewport() {
       const props = element.properties as Record<string, { value: unknown }>;
       const type = element.type;
 
-      if (type === 'annotation' || type === 'wall' || type === 'dimension') {
+      if (type === 'annotation' && props['Kind']) {
+        const kind = String(props['Kind']?.value ?? '');
+        if (kind === 'section' && props['StartX'] && props['EndX']) {
+          const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
+          const x2 = props['EndX']!.value as number,  y2 = props['EndY']!.value as number;
+          const prevDash = ctx.getLineDash();
+          ctx.setLineDash([200, 120]);
+          ctx.lineWidth = 3 * v.scale;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+          ctx.setLineDash(prevDash);
+          const dx = x2 - x1, dy = y2 - y1;
+          const len = Math.hypot(dx, dy) || 1;
+          const nx = -dy / len * 200, ny = dx / len * 200;
+          for (const [ax, ay] of [[x1, y1], [x2, y2]] as const) {
+            ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(ax + nx, ay + ny); ctx.stroke();
+          }
+        } else if (kind === 'elevation') {
+          const x = (props['X']?.value as number) ?? 0;
+          const y = (props['Y']?.value as number) ?? 0;
+          ctx.beginPath(); ctx.arc(x, y, 250, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(x, y - 250); ctx.lineTo(x + 100, y - 100); ctx.lineTo(x - 100, y - 100);
+          ctx.closePath(); ctx.fill();
+        } else if (kind === 'detail') {
+          const x = (props['X']?.value as number) ?? 0;
+          const y = (props['Y']?.value as number) ?? 0;
+          const w = (props['Width']?.value as number) ?? 0;
+          const h = (props['Height']?.value as number) ?? 0;
+          const prevDash = ctx.getLineDash();
+          ctx.setLineDash([80, 80]);
+          ctx.beginPath(); ctx.rect(x, y, w, h); ctx.stroke();
+          ctx.setLineDash(prevDash);
+        } else if (kind === 'label') {
+          const x = (props['X']?.value as number) ?? 0;
+          const y = (props['Y']?.value as number) ?? 0;
+          const text = String(props['Text']?.value ?? 'Label');
+          ctx.save();
+          ctx.fillStyle = color;
+          ctx.font = `200px sans-serif`;
+          ctx.textBaseline = 'middle';
+          const metrics = ctx.measureText(text);
+          const pad = 60;
+          ctx.beginPath();
+          ctx.rect(x, y - 120, metrics.width + pad * 2, 240);
+          ctx.stroke();
+          ctx.fillText(text, x + pad, y);
+          ctx.restore();
+        } else if (kind === 'revision_cloud' && props['Points']) {
+          try {
+            const pts = JSON.parse(props['Points']!.value as string) as Array<{ x: number; y: number }>;
+            if (pts.length >= 3) {
+              ctx.beginPath();
+              ctx.moveTo(pts[0]!.x, pts[0]!.y);
+              for (let i = 1; i <= pts.length; i++) {
+                const a = pts[i % pts.length]!;
+                const b = pts[i - 1]!;
+                const mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+                const r = Math.hypot(a.x - b.x, a.y - b.y) / 2;
+                ctx.arc(mx, my, r, Math.atan2(b.y - a.y, b.x - a.x), Math.atan2(b.y - a.y, b.x - a.x) + Math.PI, true);
+              }
+              ctx.stroke();
+            }
+          } catch { /* ignore */ }
+        } else if (props['StartX'] && props['EndX']) {
+          const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
+          const x2 = props['EndX']!.value as number,  y2 = props['EndY']!.value as number;
+          ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+        }
+      } else if (type === 'annotation' || type === 'wall' || type === 'dimension') {
         if (props['StartX'] && props['EndX']) {
           const x1 = props['StartX'].value as number, y1 = props['StartY']!.value as number;
           const x2 = props['EndX'].value as number, y2 = props['EndY']!.value as number;
@@ -1119,6 +1187,40 @@ export function useViewport() {
           ctx.lineTo(w / 2, 0);
           ctx.stroke();
         }
+        ctx.restore();
+      } else if (type === 'ellipse') {
+        const cx = (props['CenterX']?.value as number) ?? 0;
+        const cy = (props['CenterY']?.value as number) ?? 0;
+        const rx = (props['RadiusX']?.value as number) ?? 0;
+        const ry = (props['RadiusY']?.value as number) ?? 0;
+        const rot = (props['Rotation']?.value as number) ?? 0;
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(rot);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        ctx.restore();
+      } else if (type === 'point') {
+        // Hotspot marker — centred cross.
+        const x = (props['X']?.value as number) ?? 0;
+        const y = (props['Y']?.value as number) ?? 0;
+        const r = 60;
+        ctx.beginPath();
+        ctx.moveTo(x - r, y); ctx.lineTo(x + r, y);
+        ctx.moveTo(x, y - r); ctx.lineTo(x, y + r);
+        ctx.stroke();
+        ctx.beginPath(); ctx.arc(x, y, r * 0.4, 0, Math.PI * 2); ctx.stroke();
+      } else if (type === 'text') {
+        const x = (props['X']?.value as number) ?? 0;
+        const y = (props['Y']?.value as number) ?? 0;
+        const content = String(props['Content']?.value ?? '');
+        const fontSize = (props['FontSize']?.value as number) ?? 200;
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.font = `${fontSize}px sans-serif`;
+        ctx.textBaseline = 'top';
+        ctx.fillText(content, x, y);
         ctx.restore();
       } else {
         // Fallback: bounding box in world space
