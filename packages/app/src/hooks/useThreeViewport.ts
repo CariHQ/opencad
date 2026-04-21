@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import { useDocumentStore } from '../stores/documentStore';
+import { useSceneStore, sunDirectionToVector } from '../stores/sceneStore';
 import { type ElementSchema } from '@opencad/document';
 import { BUILT_IN_MATERIALS, type Material } from '../lib/materials';
 import { getPBRMaps } from '../lib/proceduralTextures';
@@ -532,6 +533,26 @@ export function useThreeViewport() {
   const raycasterRef     = useRef(new THREE.Raycaster());
   const pickVec2Ref      = useRef(new THREE.Vector2());
   const materialCacheRef = useRef<Map<string, THREE.MeshStandardMaterial>>(new Map());
+  const dirLightRef      = useRef<THREE.DirectionalLight | null>(null);
+
+  // ── Sun study: move the DirectionalLight when ShadowAnalysisPanel updates
+  // the sceneStore. Subscribing to the store directly (rather than via a
+  // selector) keeps this independent of hook re-renders.
+  useEffect(() => {
+    const apply = () => {
+      const { sun, shadowsEnabled } = useSceneStore.getState();
+      const light = dirLightRef.current;
+      if (!light) return;
+      const v = sunDirectionToVector(sun);
+      light.position.set(v.x, v.y, v.z);
+      light.castShadow = shadowsEnabled && sun.elevationDeg > 0;
+      const renderer = stateRef.current.renderer;
+      if (renderer) renderer.shadowMap.enabled = shadowsEnabled && sun.elevationDeg > 0;
+      needsRenderRef.current = true;
+    };
+    apply();
+    return useSceneStore.subscribe(apply);
+  }, []);
 
   // TransformControls — 3D gizmo for move/rotate/scale of selected elements
   const transformControlsRef = useRef<TransformControls | null>(null);
@@ -1400,6 +1421,15 @@ export function useThreeViewport() {
     dirLight.shadow.camera.near = 100;
     dirLight.shadow.camera.far  = 50000;
     scene.add(dirLight);
+    dirLightRef.current = dirLight;
+
+    // Apply the current sun direction immediately so reopening a project
+    // picks up the last time-of-day setting without waiting for a slider nudge.
+    {
+      const sun = useSceneStore.getState().sun;
+      const v = sunDirectionToVector(sun);
+      dirLight.position.set(v.x, v.y, v.z);
+    }
 
     scene.add(new THREE.AxesHelper(1000));
 

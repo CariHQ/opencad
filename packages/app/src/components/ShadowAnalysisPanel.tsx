@@ -1,5 +1,6 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { calculateSolarPosition, estimateDaylightHours } from '../lib/solarAnalysis';
+import { useSceneStore } from '../stores/sceneStore';
 
 export interface ShadowAnalysisSettings {
   latitude: number;
@@ -39,6 +40,8 @@ function parseMonth(date: string): number {
 
 export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProps = {}) {
   const [settings, setSettings] = useState<ShadowAnalysisSettings>(DEFAULT_SETTINGS);
+  const setSun = useSceneStore((s) => s.setSun);
+  const setShadowsEnabled = useSceneStore((s) => s.setShadowsEnabled);
 
   const update = (patch: Partial<ShadowAnalysisSettings>) => {
     const next = { ...settings, ...patch };
@@ -59,6 +62,19 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
     const daylightHours = estimateDaylightHours(settings.latitude, month);
     return { position, daylightHours };
   }, [settings.latitude, settings.longitude, settings.date, settings.time]);
+
+  // Push the computed sun direction into the scene store so the 3D viewport's
+  // DirectionalLight tracks the time-of-day slider in real time.
+  useEffect(() => {
+    setSun({
+      elevationDeg: solarData.position.elevation,
+      azimuthDeg: solarData.position.azimuth,
+    });
+  }, [solarData.position.elevation, solarData.position.azimuth, setSun]);
+
+  useEffect(() => {
+    setShadowsEnabled(settings.showShadowMap);
+  }, [settings.showShadowMap, setShadowsEnabled]);
 
   return (
     <div className="shadow-analysis-panel">
