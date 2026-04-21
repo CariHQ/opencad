@@ -621,11 +621,12 @@ export function useThreeViewport() {
       const type = element.type;
 
       // Resolve applied material (overrides the type defaults when set)
-      // Canonical key is MaterialId (store.setElementMaterial writes there).
-      // Fall back to legacy 'Material' for documents migrated from older builds.
+      // Canonical key is 'Material' — matches every placement tool and the
+      // schedules / takeoff / serializer paths. Fall back to legacy
+      // 'MaterialId' for documents written by an earlier build.
       const appliedMatName =
-        (props['MaterialId']?.value as string | undefined) ??
-        (props['Material']?.value as string | undefined);
+        (props['Material']?.value as string | undefined) ??
+        (props['MaterialId']?.value as string | undefined);
       const appliedMat = appliedMatName
         ? BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName)
         : undefined;
@@ -1159,8 +1160,8 @@ export function useThreeViewport() {
           const elId    = (mesh.userData.elementId   as string) || '';
           const freshEl = useDocumentStore.getState().document?.content.elements[elId];
           const appliedMatName = freshEl
-            ? ((freshEl.properties as Record<string, { value: unknown }>)['MaterialId']?.value as string | undefined) ??
-              ((freshEl.properties as Record<string, { value: unknown }>)['Material']?.value as string | undefined)
+            ? ((freshEl.properties as Record<string, { value: unknown }>)['Material']?.value as string | undefined) ??
+              ((freshEl.properties as Record<string, { value: unknown }>)['MaterialId']?.value as string | undefined)
             : undefined;
           const appliedMat = appliedMatName
             ? BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName)
@@ -1603,6 +1604,12 @@ export function useThreeViewport() {
       renderer.shadowMap.enabled = true;
       // PCFSoftShadowMap was deprecated in three@0.170+ — use PCFShadowMap.
       renderer.shadowMap.type    = THREE.PCFShadowMap;
+      // Match clear colour to scene background so any transient clear (e.g.
+      // during a panel-toggle resize) reads as the scene colour instead of
+      // flashing black.
+      (renderer as GenericRenderer & {
+        setClearColor?: (c: THREE.Color, a?: number) => void;
+      }).setClearColor?.(new THREE.Color(theme.sceneBackground), 1);
       container.appendChild(renderer.domElement);
       const canvasEl = renderer.domElement as HTMLCanvasElement;
       canvasEl.style.display = 'block';
@@ -1746,16 +1753,37 @@ export function useThreeViewport() {
       container.addEventListener('mouseleave',   onMouseLeave);
       window.addEventListener('keydown',         onKeyDown);
 
+      // Panel open/close animations fire ResizeObserver many times per frame.
+      // Calling renderer.setSize() on every tick caused a visible blink as
+      // the canvas reallocated its framebuffer. Throttle to one setSize per
+      // animation frame and skip the call when the size hasn't meaningfully
+      // changed.
+      let roLastW = 0;
+      let roLastH = 0;
+      let roPendingRaf = 0;
+      let roPendingW = 0;
+      let roPendingH = 0;
+      const applyResize = () => {
+        roPendingRaf = 0;
+        const width = roPendingW;
+        const height = roPendingH;
+        if (width === 0 || height === 0) return;
+        if (Math.abs(width - roLastW) < 1 && Math.abs(height - roLastH) < 1) return;
+        roLastW = width;
+        roLastH = height;
+        camera.aspect = width / height;
+        camera.updateProjectionMatrix();
+        const { renderer: r } = stateRef.current;
+        if (r) r.setSize(width, height);
+        needsRenderRef.current = true;
+      };
       ro = new ResizeObserver((entries) => {
         for (const entry of entries) {
           const { width, height } = entry.contentRect;
-          if (width === 0 || height === 0) continue;
-          camera.aspect = width / height;
-          camera.updateProjectionMatrix();
-          const { renderer: r } = stateRef.current;
-          if (r) r.setSize(width, height);
-          needsRenderRef.current = true;
+          roPendingW = width;
+          roPendingH = height;
         }
+        if (!roPendingRaf) roPendingRaf = requestAnimationFrame(applyResize);
       });
       ro.observe(container);
     })();

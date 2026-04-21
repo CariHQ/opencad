@@ -246,8 +246,8 @@ function computeCarbonEntries(doc: NonNullable<ReturnType<typeof useDocumentStor
 
   for (const el of Object.values(doc.content.elements)) {
     const matName =
-      (el.properties['MaterialId']?.value as string | undefined) ??
-      (el.properties['Material']?.value as string | undefined);
+      (el.properties['Material']?.value as string | undefined) ??
+      (el.properties['MaterialId']?.value as string | undefined);
     if (!matName) continue;
     const mat = BUILT_IN_MATERIALS.find((m) => m.name === matName);
     if (!mat || mat.embodiedCarbon === undefined || mat.density === undefined) continue;
@@ -801,12 +801,13 @@ export function AppLayout() {
                   selectedCount={selectedIds.length}
                   currentMaterialName={
                     selectedIds.length > 0 && doc
-                      ? (doc.content.elements[selectedIds[0]]?.properties?.['MaterialId']?.value as string | undefined)
+                      ? ((doc.content.elements[selectedIds[0]]?.properties?.['Material']?.value as string | undefined)
+                        ?? (doc.content.elements[selectedIds[0]]?.properties?.['MaterialId']?.value as string | undefined))
                       : undefined
                   }
                   onSelect={(mat) => {
-                    // Canonical path: write MaterialId into properties, not
-                    // a top-level `material` field (audit 2026-04-19 finding).
+                    // Canonical key: 'Material' property. setElementMaterial
+                    // drops any legacy 'MaterialId' carried by older documents.
                     selectedIds.forEach((id) => setElementMaterial(id, mat.name));
                   }}
                 />

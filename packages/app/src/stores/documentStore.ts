@@ -426,13 +426,18 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) return;
         const element = model.getElementById(elementId);
         if (!element) return;
+        // Canonical key is 'Material' — matches every placement tool, the
+        // schedules module, quantityTakeoff, and the IFC/DXF serializers.
+        // Drop any legacy 'MaterialId' so the element doesn't carry both.
+        const { MaterialId: _legacy, ...restProps } = element.properties ?? {};
+        void _legacy;
+        const nextProperties = {
+          ...restProps,
+          Material: { type: 'string' as const, value: materialId },
+        };
         // Replace the element reference so the 3D viewport's identity-based
         // dirty check (prev !== element) fires and rebuilds the mesh with
-        // textured materials. Mutating in place was silently skipping rebuild.
-        const nextProperties = {
-          ...(element.properties ?? {}),
-          MaterialId: { type: 'string' as const, value: materialId },
-        };
+        // textured materials. Mutating in place silently skipped rebuild.
         const nextElement = { ...element, properties: nextProperties };
         model.documentData.content.elements[elementId] = nextElement;
         set({ document: { ...model.documentData } });
