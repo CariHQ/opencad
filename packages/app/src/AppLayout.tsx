@@ -191,6 +191,22 @@ export function AppLayout() {
     return undefined;
   }, []);
 
+  // Wire browser online/offline events into the document store so the
+  // StatusBar (and offline-queue flush on reconnect) react to real
+  // connectivity, not a value that was frozen at `true` on load.
+  React.useEffect(() => {
+    const setOnline  = useDocumentStore.getState().setOnlineStatus;
+    setOnline(navigator.onLine);
+    const onOnline  = () => setOnline(true);
+    const onOffline = () => setOnline(false);
+    window.addEventListener('online',  onOnline);
+    window.addEventListener('offline', onOffline);
+    return () => {
+      window.removeEventListener('online',  onOnline);
+      window.removeEventListener('offline', onOffline);
+    };
+  }, []);
+
   // ? shortcut opens Help (when not typing in an input)
   React.useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
