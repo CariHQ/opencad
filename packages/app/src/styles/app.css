@@ -1166,6 +1166,22 @@ input[type='range']::-moz-range-track {
   cursor: not-allowed;
 }
 
+/* Structured-value summary (Points: "6 points", etc.) */
+.property-structured {
+  display: inline-block;
+  padding: 5px 10px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-style: italic;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+  box-sizing: border-box;
+  cursor: help;
+}
+
 /* AI Chat Panel */
 .app-ai-panel {
   width: 360px;
@@ -6859,4 +6875,264 @@ input[type='range']::-moz-range-track {
 @keyframes skeleton-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
+}
+
+/* ════════════════════════════════════════════════════════════════════════ */
+/* Settings > Billing panel (entire CSS was missing)                         */
+/* ════════════════════════════════════════════════════════════════════════ */
+
+.billing-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.billing-loading-text {
+  padding: 20px;
+  color: var(--text-muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.billing-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.billing-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+/* Plan badge + trial countdown */
+.billing-plan-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.billing-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  letter-spacing: 0.3px;
+}
+
+.billing-plan-badge--free {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+.billing-plan-badge--trial {
+  background: rgba(243, 156, 18, 0.12);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.4);
+}
+.billing-plan-badge--pro {
+  background: rgba(24, 160, 251, 0.12);
+  color: var(--accent-primary);
+  border: 1px solid rgba(24, 160, 251, 0.4);
+}
+.billing-plan-badge--business {
+  background: rgba(155, 89, 182, 0.12);
+  color: #9b59b6;
+  border: 1px solid rgba(155, 89, 182, 0.4);
+}
+
+.billing-trial-countdown {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-upgrade-btn {
+  align-self: flex-start;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: filter 0.12s;
+}
+
+.billing-upgrade-btn:hover {
+  filter: brightness(1.08);
+}
+
+/* Invoice history table */
+.billing-invoice-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.billing-invoice-table th {
+  text-align: left;
+  padding: 8px 10px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.billing-invoice-table td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.billing-invoice-table tr:last-child td {
+  border-bottom: none;
+}
+
+.invoice-status {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+.invoice-status--paid {
+  background: rgba(39, 174, 96, 0.12);
+  color: #27ae60;
+  border: 1px solid rgba(39, 174, 96, 0.35);
+}
+.invoice-status--pending {
+  background: rgba(243, 156, 18, 0.12);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.35);
+}
+.invoice-status--failed {
+  background: rgba(231, 76, 60, 0.12);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.35);
+}
+
+.invoice-pdf-link {
+  color: var(--accent-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.invoice-pdf-link:hover {
+  text-decoration: underline;
+}
+
+/* Cancel subscription section */
+.billing-cancel-description {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.billing-cancel-btn {
+  align-self: flex-start;
+  background: transparent;
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.4);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: inherit;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.billing-cancel-btn:hover {
+  background: rgba(231, 76, 60, 0.08);
+  border-color: #e74c3c;
+}
+
+/* Cancel confirmation dialog */
+.billing-cancel-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.billing-cancel-dialog {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  width: 380px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+.billing-cancel-dialog-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.billing-cancel-dialog-body {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.billing-cancel-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.billing-cancel-confirm-yes {
+  background: #e74c3c;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.billing-cancel-confirm-yes:hover { filter: brightness(1.08); }
+
+.billing-cancel-confirm-no {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+.billing-cancel-confirm-no:hover {
+  background: var(--bg-elevated);
+  border-color: var(--accent-primary);
 }

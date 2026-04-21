@@ -33,6 +33,35 @@ function formatPropValue(prop: PropertyValue): string {
   return `${prop.value}${prop.unit ? ' ' + prop.unit : ''}`;
 }
 
+/**
+ * Detects structured JSON-array values (like Points / Vertices) whose raw
+ * JSON string is unreadable inside a single-line text input. Returns a
+ * short human summary like "6 points" / "12 vertices". null = not structured.
+ */
+function summarizeStructuredValue(key: string, prop: PropertyValue): string | null {
+  if (prop.type !== 'string' || typeof prop.value !== 'string') return null;
+  const v = prop.value.trim();
+  if (!v.startsWith('[') && !v.startsWith('{')) return null;
+  try {
+    const parsed = JSON.parse(v) as unknown;
+    if (Array.isArray(parsed)) {
+      const n = parsed.length;
+      const lower = key.toLowerCase();
+      if (lower === 'points')   return `${n} ${n === 1 ? 'point' : 'points'}`;
+      if (lower === 'vertices') return `${n} ${n === 1 ? 'vertex' : 'vertices'}`;
+      if (lower === 'layers')   return `${n} ${n === 1 ? 'layer' : 'layers'}`;
+      return `${n} ${n === 1 ? 'item' : 'items'}`;
+    }
+    if (parsed && typeof parsed === 'object') {
+      const keys = Object.keys(parsed as Record<string, unknown>);
+      return `{ ${keys.length} ${keys.length === 1 ? 'field' : 'fields'} }`;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
 export function PropertiesPanel() {
   const { document: doc, selectedIds, updateElement, pushHistory } = useDocumentStore();
   const [pendingProps, setPendingProps] = useState<PendingProp[]>([]);
@@ -237,19 +266,31 @@ export function PropertiesPanel() {
               +
             </button>
           </div>
-          {Object.entries(selectedElement.properties).map(([key, prop]) => (
-            <div key={key} className="property-row">
-              <span className="property-label">{key}</span>
-              <div className="property-value">
-                <input
-                  type="text"
-                  className="property-input"
-                  defaultValue={formatPropValue(prop)}
-                  onBlur={(e) => handlePropertyBlur(key, e.target.value)}
-                />
+          {Object.entries(selectedElement.properties).map(([key, prop]) => {
+            const summary = summarizeStructuredValue(key, prop);
+            return (
+              <div key={key} className="property-row">
+                <span className="property-label">{key}</span>
+                <div className="property-value">
+                  {summary !== null ? (
+                    <span
+                      className="property-structured"
+                      title={typeof prop.value === 'string' ? prop.value : String(prop.value)}
+                    >
+                      {summary}
+                    </span>
+                  ) : (
+                    <input
+                      type="text"
+                      className="property-input"
+                      defaultValue={formatPropValue(prop)}
+                      onBlur={(e) => handlePropertyBlur(key, e.target.value)}
+                    />
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {pendingProps.map((pending, idx) => (
             <div key={`pending-${idx}`} className="property-row">
               <div className="property-value" style={{ display: 'flex', gap: '4px' }}>
