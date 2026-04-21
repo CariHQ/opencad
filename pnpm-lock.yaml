@@ -281,25 +281,6 @@ importers:
         specifier: ^6.0.2
         version: 6.0.2
 
-  packages/sync:
-    dependencies:
-      '@opencad/shared':
-        specifier: workspace:*
-        version: link:../shared
-    devDependencies:
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      happy-dom:
-        specifier: ^14.0.0
-        version: 14.12.3
-      typescript:
-        specifier: ^6.0.2
-        version: 6.0.2
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@25.6.0)(happy-dom@14.12.3)(jsdom@29.0.2)(lightningcss@1.32.0)(terser@5.46.1)
-
   packages/sync-rs:
     devDependencies:
       '@testing-library/jest-dom':
@@ -7856,7 +7837,8 @@ snapshots:
 
   emojilib@2.4.0: {}
 
-  entities@4.5.0: {}
+  entities@4.5.0:
+    optional: true
 
   entities@6.0.1: {}
 
@@ -8477,6 +8459,7 @@ snapshots:
       entities: 4.5.0
       webidl-conversions: 7.0.0
       whatwg-mimetype: 3.0.0
+    optional: true
 
   has-bigints@1.1.0: {}
 
@@ -10269,7 +10252,8 @@ snapshots:
 
   webidl-conversions@4.0.2: {}
 
-  webidl-conversions@7.0.0: {}
+  webidl-conversions@7.0.0:
+    optional: true
 
   webidl-conversions@8.0.1: {}
 
@@ -10281,7 +10265,8 @@ snapshots:
 
   websocket-extensions@0.1.4: {}
 
-  whatwg-mimetype@3.0.0: {}
+  whatwg-mimetype@3.0.0:
+    optional: true
 
   whatwg-mimetype@5.0.0: {}
 
