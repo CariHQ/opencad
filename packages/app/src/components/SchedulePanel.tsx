@@ -8,11 +8,14 @@ const SCHEDULE_TYPES: { value: ElementType; label: string }[] = [
   { value: 'wall', label: 'Wall' },
   { value: 'door', label: 'Door' },
   { value: 'window', label: 'Window' },
+  { value: 'space', label: 'Room' },
   { value: 'slab', label: 'Slab' },
   { value: 'column', label: 'Column' },
   { value: 'beam', label: 'Beam' },
   { value: 'stair', label: 'Stair' },
   { value: 'railing', label: 'Railing' },
+  { value: 'curtain_wall', label: 'Curtain Wall' },
+  { value: 'roof', label: 'Roof' },
 ];
 
 /** Wall/slab area from bounding box: (max.x - min.x) * height / 1e6 → m² */
