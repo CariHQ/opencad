@@ -1,3 +1,10 @@
+# [1.2.0](https://github.com/CariHQ/opencad/compare/v1.1.1...v1.2.0) (2026-04-21)
+
+
+### Features
+
+* **landing,desktop:** mobile pricing page + Firebase inject + sign pipeline ([f76d1c4](https://github.com/CariHQ/opencad/commit/f76d1c4cc39f7be2603b17386e7738790cd318d5)), closes [#pricing](https://github.com/CariHQ/opencad/issues/pricing)
+
 ## [1.1.1](https://github.com/CariHQ/opencad/compare/v1.1.0...v1.1.1) (2026-04-21)
 
 
