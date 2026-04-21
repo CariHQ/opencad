@@ -50,7 +50,7 @@ Build the world's first **browser-native, AI-powered, open-source BIM platform**
 | Dimension     | Archicad / Revit       | Figma                 | **OpenCAD (Us)**                                             |
 | ------------- | ---------------------- | --------------------- | ------------------------------------------------------------ |
 | Platform      | Desktop install        | Browser (WASM)        | **Browser + Desktop (Tauri)**                                |
-| Rendering     | Native GPU             | WASM + Canvas         | **Three.js WebGL 2.0 today; WebGPU slated for Phase 2**       |
+| Rendering     | Native GPU             | WASM + Canvas         | **Three.js WebGPU (primary) + WebGL 2.0 fallback**            |
 | Collaboration | File-based, slow       | Real-time multiplayer | **Real-time CRDT-based multiplayer**                         |
 | AI Features   | Minimal (add-ons)      | Emerging (FigJam AI)  | **Core AI-first design**                                     |
 | Offline       | Full                   | Limited               | **Full offline-first (browser: IndexedDB, desktop: SQLite)** |
@@ -136,7 +136,7 @@ The convergence of **WebAssembly maturity**, **WebGPU rendering**, **CRDT-based 
 
 ## 4. Product Principles
 
-1. **Browser-First, Not Browser-Limited** — The browser is the primary platform, not a compromise. WebGL 2.0 is the live rendering path today (Three.js); WebGPU is a Phase-2 upgrade so Safari users aren't blocked.
+1. **Browser-First, Not Browser-Limited** — The browser is the primary platform, not a compromise. Three.js WebGPURenderer is the primary path (hardware-accelerated compute shaders, better fill-rate); WebGL 2.0 is a fallback for browsers where `navigator.gpu` is unavailable.
 2. **Offline is the Default** — The app works identically online and offline. Sync is an optimization, not a requirement.
 3. **AI as a Core Primitive** — AI is not a feature bolted on; it's woven into every workflow from project creation to documentation.
 4. **Open Core, Open Community** — The core platform is open-source (Apache 2.0). Revenue comes from hosted services, enterprise features, and marketplace.
@@ -201,12 +201,12 @@ The convergence of **WebAssembly maturity**, **WebGPU rendering**, **CRDT-based 
 │  ├── Import/Export Pipeline (IFC, DWG, DXF, SKP, PDF)               │
 │  └── Plugin Runtime & SDK                                            │
 ├─────────────────────────────────────────────────────────────────────┤
-│  Geometry & Rendering Layer (Three.js WebGL 2.0)                     │
+│  Geometry & Rendering Layer (Three.js WebGPU + WebGL fallback)       │
 │  ├── Geometry Kernel (pure-TS mesh math in packages/app/src/lib/*;   │
 │  │   Rust/WASM kernel removed 2026-Q2; deferred to Phase-2 revisit)  │
 │  ├── 2D Drafting Engine (Canvas 2D in useViewport)                   │
 │  ├── 3D Modeling Engine (Three.js scene graph in useThreeViewport)   │
-│  ├── Rendering Engine (WebGL 2.0 today; WebGPU Phase-2 upgrade)      │
+│  ├── Rendering Engine (WebGPURenderer primary; WebGL 2.0 fallback)   │
 │  ├── Scene Graph & LOD Management                                    │
 │  └── Spatial Index (BVH / Octree)                                    │
 ├─────────────────────────────────────────────────────────────────────┤
@@ -262,11 +262,11 @@ The convergence of **WebAssembly maturity**, **WebGPU rendering**, **CRDT-based 
 | Decision               | Choice                                         | Rationale                                                                      |
 | ---------------------- | ---------------------------------------------- | ------------------------------------------------------------------------------ |
 | **Geometry Kernel**    | Pure-TypeScript mesh math (`packages/app/src/lib/*`); Rust/WASM kernel removed in 2026-Q2 as orphaned; OpenCASCADE BREP revisited only when BREP-level ops (fillet, shell, loft) reach the backlog | Keeps the bundle small and lets every live path run in WebGL without Emscripten-sized payloads |
-| **Rendering**          | Three.js WebGLRenderer today; WebGPURenderer slated as a Phase-2 upgrade | WebGL 2.0 is fully supported in every target browser including Safari; WebGPU lands when compute-shader work justifies the branch  |
+| **Rendering**          | Three.js WebGPURenderer (primary) + WebGLRenderer fallback | WebGPU gives compute-shader access + better fill-rate; WebGL fallback keeps the viewport working on any browser where navigator.gpu is missing |
 | **CRDT Library**       | Custom Rust LWW CRDT (`@opencad/sync-rs`, WASM) | Purpose-built for our element schema; avoids Yjs dependency weight and gives full control over merge semantics |
 | **Local Storage**      | OPFS (primary) + IndexedDB (fallback) + localStorage (small items) | OPFS for large document blobs; IndexedDB for pendingSync metadata + fallback when OPFS is unavailable; localStorage for tiny config |
 | **Frontend Framework** | React + TypeScript + Vite                      | Ecosystem, type safety, developer experience, plugin compatibility             |
-| **3D Scene**           | Three.js (WebGLRenderer; WebGPU later)         | Mature ecosystem, broad browser support, large community                       |
+| **3D Scene**           | Three.js (WebGPURenderer primary; WebGL 2.0 fallback) | Mature ecosystem, WebGPU + WebGL coverage, large community                |
 | **AI Models**          | Multi-model router (GPT-4o, Claude, local)     | Flexibility, cost optimization, offline capability via local models            |
 | **Build System**       | Turborepo + pnpm monorepo                      | Fast builds, shared packages, test isolation                                   |
 | **Testing**            | Vitest + Playwright + Custom WASM test harness | Unit, integration, E2E, and geometry-specific testing                          |
@@ -2267,14 +2267,14 @@ Week 11-12: Polish & Beta
 
 ### 16.5 Browser Support
 
-| Browser             | Support Level                                      |
-| ------------------- | -------------------------------------------------- |
-| Chrome 120+         | Full (WebGL 2.0; WebGPU in Phase 2)                |
-| Firefox 125+        | Full (WebGL 2.0; WebGPU in Phase 2)                |
-| Safari 17.4+        | Full (WebGL 2.0)                                   |
-| Edge 120+           | Full (WebGL 2.0; WebGPU in Phase 2)                |
-| Mobile Safari 17.4+ | Supported (reduced features)                       |
-| Mobile Chrome 120+  | Supported (reduced features)                       |
+| Browser             | Support Level                          |
+| ------------------- | -------------------------------------- |
+| Chrome 120+         | Full (WebGPU → WebGL fallback)         |
+| Firefox 125+        | Full (WebGPU → WebGL fallback)         |
+| Safari 17.4+        | Full (WebGPU → WebGL fallback)         |
+| Edge 120+           | Full (WebGPU → WebGL fallback)         |
+| Mobile Safari 17.4+ | Supported (WebGL; WebGPU when exposed) |
+| Mobile Chrome 120+  | Supported (WebGL; WebGPU when exposed) |
 
 ### 16.6 Desktop Platform Support
 

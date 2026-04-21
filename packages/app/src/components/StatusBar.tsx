@@ -4,7 +4,12 @@ import { SyncStatusBar, type SyncStatus } from './SyncStatusBar';
 import { getStorageUsage, isStorageQuotaWarning } from '@opencad/document';
 import { useRole } from '../hooks/useRole';
 import { RoleSwitcher } from './RoleSwitcher';
-import { getSharedFrameStats } from '../hooks/useThreeViewport';
+import {
+  getSharedFrameStats,
+  getActiveRendererBackend,
+  onActiveRendererBackendChange,
+  type ActiveRendererBackend,
+} from '../hooks/useThreeViewport';
 
 interface StatusBarProps {
   /** Pass '3d' to show the fps performance counter */
@@ -16,6 +21,8 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
   const [storageWarning, setStorageWarning] = useState(false);
   const { role, config } = useRole();
   const [fpsDisplay, setFpsDisplay] = useState<{ fps: number; color: string } | null>(null);
+  const [backend, setBackend] = useState<ActiveRendererBackend>(() => getActiveRendererBackend());
+  useEffect(() => onActiveRendererBackendChange(setBackend), []);
 
   const syncStatus: SyncStatus = !isOnline ? 'offline' : isSaving ? 'syncing' : 'connected';
 
@@ -88,6 +95,20 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
                 : fpsDisplay.fps >= 30
                   ? '< 30 fps'
                   : '< 20 fps'}
+            </span>
+          </div>
+        )}
+        {viewType === '3d' && (
+          <div
+            className="status-item status-backend"
+            title={
+              backend === 'webgpu'
+                ? 'Three.js WebGPURenderer — compute shaders enabled'
+                : 'WebGL 2.0 fallback — WebGPU unavailable or disabled'
+            }
+          >
+            <span className={`backend-badge backend-badge--${backend}`}>
+              {backend === 'webgpu' ? 'WebGPU' : 'WebGL'}
             </span>
           </div>
         )}

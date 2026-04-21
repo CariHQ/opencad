@@ -166,6 +166,24 @@ interface GenericRenderer {
   dispose(): void;
 }
 
+/** Which renderer the viewport actually booted with. Exposed so the status
+ *  bar can show "WebGPU" vs "WebGL" and the user isn't guessing. */
+export type ActiveRendererBackend = 'webgpu' | 'webgl';
+let _activeBackend: ActiveRendererBackend = 'webgl';
+const _backendListeners = new Set<(b: ActiveRendererBackend) => void>();
+
+export function getActiveRendererBackend(): ActiveRendererBackend {
+  return _activeBackend;
+}
+export function onActiveRendererBackendChange(fn: (b: ActiveRendererBackend) => void): () => void {
+  _backendListeners.add(fn);
+  return () => { _backendListeners.delete(fn); };
+}
+function _setActiveBackend(b: ActiveRendererBackend): void {
+  _activeBackend = b;
+  for (const fn of _backendListeners) fn(b);
+}
+
 /** Opt-out check: `?renderer=webgl` or `localStorage.opencad-renderer = 'webgl'`. */
 function isWebGLForced(): boolean {
   try {
@@ -184,9 +202,11 @@ function isWebGLForced(): boolean {
  */
 async function createRenderer(): Promise<GenericRenderer> {
   if (isWebGLForced()) {
+    _setActiveBackend('webgl');
     return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
   }
   if (typeof navigator === 'undefined' || !(navigator as { gpu?: unknown }).gpu) {
+    _setActiveBackend('webgl');
     return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
   }
   try {
@@ -199,10 +219,14 @@ async function createRenderer(): Promise<GenericRenderer> {
       init?: () => Promise<unknown>;
     };
     await gpu.init?.();
+    // eslint-disable-next-line no-console
     console.info('[viewport] WebGPU renderer active.');
+    _setActiveBackend('webgpu');
     return gpu;
   } catch (err) {
+    // eslint-disable-next-line no-console
     console.info('[viewport] WebGPU init failed, using WebGL:', err);
+    _setActiveBackend('webgl');
     return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
   }
 }

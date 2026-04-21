@@ -38,6 +38,10 @@ vi.mock('./hooks/useThreeViewport', () => ({
     sectionBox: false,
     setSectionBox: vi.fn(),
   }),
+  getSharedFrameStats: () => ({ avgFrameMs: 16.67, currentLod: 'high' }),
+  getSharedSelectedCoords: () => null,
+  getActiveRendererBackend: () => 'webgl',
+  onActiveRendererBackendChange: () => () => {},
 }));
 
 vi.mock('./hooks/useViewport', () => ({
