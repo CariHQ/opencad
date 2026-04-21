@@ -493,19 +493,51 @@ export class IFCSerializer {
     }
 
     const map: Record<ElementType, string> = {
+      // ── Architectural ────────────────────────────────────────────────────
       wall: 'IFCWALLSTANDARDCASE',
       door: 'IFCDOOR',
       window: 'IFCWINDOW',
+      skylight: 'IFCWINDOW',                   // roof-mounted window
       slab: 'IFCSLAB',
       roof: 'IFCROOF',
+      ceiling: 'IFCCOVERING',                  // IfcCovering PredefinedType=CEILING
+      foundation: 'IFCFOOTING',
       column: 'IFCCOLUMN',
       beam: 'IFCBEAM',
+      truss: 'IFCBUILDINGELEMENTPROXY',        // composite member; proxy to preserve
+      brace: 'IFCMEMBER',                      // IfcMember BRACE
       stair: 'IFCSTAIR',
+      ramp: 'IFCRAMP',
       railing: 'IFCRAILING',
+      mass: 'IFCBUILDINGELEMENTPROXY',         // schematic-design mass
       space: 'IFCSPACE',
+      curtain_wall: 'IFCCURTAINWALL',
+      // ── MEP ──────────────────────────────────────────────────────────────
+      duct: 'IFCDUCTFITTINGTYPE',
+      pipe: 'IFCPIPEFITTINGTYPE',
+      cable_tray: 'IFCCABLECARRIERSEGMENT',
+      conduit: 'IFCCABLESEGMENT',
+      plumbing_fixture: 'IFCFLOWTERMINAL',
+      electrical_equipment: 'IFCELECTRICAPPLIANCE',
+      mechanical_equipment: 'IFCMECHANICALFASTENER',
+      sprinkler: 'IFCFIRESUPPRESSIONTERMINAL',
+      lamp: 'IFCLIGHTFIXTURE',
+      air_terminal: 'IFCAIRTERMINAL',
+      // ── Site ─────────────────────────────────────────────────────────────
+      topography: 'IFCGEOGRAPHICELEMENT',
+      property_line: 'IFCANNOTATION',
+      // ── Documentation / annotation ───────────────────────────────────────
       annotation: 'IFCANNOTATION',
       dimension: 'IFCANNOTATION',
-      grid: 'IFCANNOTATION',
+      grid: 'IFCGRID',
+      label: 'IFCANNOTATION',
+      section_mark: 'IFCANNOTATION',
+      elevation_mark: 'IFCANNOTATION',
+      detail_mark: 'IFCANNOTATION',
+      revision_cloud: 'IFCANNOTATION',
+      room_separator: 'IFCVIRTUALELEMENT',
+      model_text: 'IFCTEXTLITERAL',
+      // ── 2D primitives ────────────────────────────────────────────────────
       line: 'IFCANNOTATION',
       circle: 'IFCANNOTATION',
       arc: 'IFCANNOTATION',
@@ -513,6 +545,7 @@ export class IFCSerializer {
       surface: 'IFCANNOTATION',
       solid: 'IFCSOLID',
       point: 'IFCANNOTATION',
+      hotspot: 'IFCANNOTATION',
       text: 'IFCTEXT',
       block_ref: 'IFCBLOCK',
       ellipse: 'IFCANNOTATION',
@@ -520,15 +553,9 @@ export class IFCSerializer {
       polygon: 'IFCANNOTATION',
       component: 'IFCGROUP',
       group: 'IFCGROUP',
-      duct: 'IFCDUCTFITTINGTYPE',
-      pipe: 'IFCPIPEFITTINGTYPE',
-      plumbing_fixture: 'IFCFLOWTERMINAL',
-      electrical_equipment: 'IFCELECTRICAPPLIANCE',
-      mechanical_equipment: 'IFCMECHANICALFASTENER',
-      curtain_wall: 'IFCCURTAINWALL',
     };
 
-    return map[elementType] || 'IFCANNOTATION';
+    return map[elementType] || 'IFCBUILDINGELEMENTPROXY';
   }
 }
 

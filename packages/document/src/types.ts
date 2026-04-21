@@ -75,19 +75,51 @@ export interface ElementSchema {
 }
 
 export type ElementType =
+  // ── Architectural ────────────────────────────────────────────────────────
   | 'wall'
   | 'door'
   | 'window'
+  | 'skylight'           // roof-mounted window
   | 'slab'
   | 'roof'
+  | 'ceiling'            // slab-like; position=ceiling
+  | 'foundation'         // slab-like; position=foundation
   | 'column'
   | 'beam'
+  | 'truss'              // composite beam structure
+  | 'brace'              // diagonal brace member
   | 'stair'
+  | 'ramp'               // sloped slab
   | 'railing'
-  | 'space'
+  | 'mass'               // conceptual volume
+  | 'space'              // zone / room
+  | 'curtain_wall'
+  // ── MEP ──────────────────────────────────────────────────────────────────
+  | 'duct'
+  | 'pipe'
+  | 'cable_tray'
+  | 'conduit'
+  | 'plumbing_fixture'
+  | 'electrical_equipment'
+  | 'mechanical_equipment'
+  | 'sprinkler'          // fire-suppression head
+  | 'lamp'               // light fixture
+  | 'air_terminal'       // diffuser / grille
+  // ── Site ─────────────────────────────────────────────────────────────────
+  | 'topography'         // terrain surface
+  | 'property_line'      // site boundary
+  // ── Documentation / annotation ──────────────────────────────────────────
   | 'annotation'
   | 'dimension'
   | 'grid'
+  | 'label'              // callout with leader
+  | 'section_mark'       // view-reference marker
+  | 'elevation_mark'
+  | 'detail_mark'
+  | 'revision_cloud'
+  | 'room_separator'     // zero-thickness separator
+  | 'model_text'         // 3D text in model space
+  // ── 2D drafting primitives ───────────────────────────────────────────────
   | 'line'
   | 'circle'
   | 'arc'
@@ -95,19 +127,14 @@ export type ElementType =
   | 'surface'
   | 'solid'
   | 'point'
+  | 'hotspot'            // GDL-style anchor point
   | 'text'
   | 'block_ref'
   | 'ellipse'
   | 'rectangle'
   | 'polygon'
   | 'component'
-  | 'group'
-  | 'curtain_wall'
-  | 'duct'
-  | 'pipe'
-  | 'plumbing_fixture'
-  | 'electrical_equipment'
-  | 'mechanical_equipment';
+  | 'group';
 
 export interface LayerSchema {
   id: string;

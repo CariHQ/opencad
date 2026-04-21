@@ -328,10 +328,152 @@ export function computeBoundingBox(
       minZ = 0; maxZ = num('Thickness', 300);
       break;
     }
-    case 'text': {
+    case 'text':
+    case 'model_text':
+    case 'label': {
       const x = num('X'), y = num('Y');
       minX = x; maxX = x + 100;
       minY = y; maxY = y + 20;
+      // model_text gets a z extent matching text height so the 3D viewport
+      // can draw it at a real elevation; label is 2D but keep a tiny z so
+      // the existing minimum-extent logic doesn't collapse it.
+      if (elementType === 'model_text') maxZ = num('Height', 200);
+      break;
+    }
+    case 'skylight':
+    case 'window': {
+      // Fall-through: skylight has the same width/height shape as window.
+      // Already handled above — this case protects against the
+      // explicit-listed-but-not-implemented path.
+      minX = num('X'); minY = num('Y');
+      maxX = minX + num('Width', 1200);
+      maxY = minY + num('Height', 1200);
+      minZ = num('SillHeight', 900); maxZ = minZ + num('Height', 1200);
+      break;
+    }
+    case 'ceiling':
+    case 'foundation':
+    case 'ramp': {
+      // Slab-shaped: use the same Points polygon extraction as slab.
+      const ptsVal = properties['Points']?.value;
+      if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+        try {
+          const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number }>;
+          if (pts.length > 0) {
+            minX = Math.min(...pts.map((p) => p.x));
+            maxX = Math.max(...pts.map((p) => p.x));
+            minY = Math.min(...pts.map((p) => p.y));
+            maxY = Math.max(...pts.map((p) => p.y));
+          }
+        } catch { /* fall through */ }
+      } else {
+        minX = num('X'); minY = num('Y');
+        maxX = minX + num('Width', 4000);
+        maxY = minY + num('Depth', 4000);
+      }
+      const thickness = num('Thickness', 200);
+      if (elementType === 'foundation') {
+        maxZ = num('Elevation', -200);
+        minZ = maxZ - thickness;
+      } else if (elementType === 'ceiling') {
+        minZ = num('Elevation', 2800);
+        maxZ = minZ + thickness;
+      } else {
+        // ramp: from bottom to top along Z
+        minZ = num('StartElevation', 0);
+        maxZ = num('EndElevation', 1000);
+      }
+      break;
+    }
+    case 'truss':
+    case 'brace': {
+      // Beam-shaped member between two endpoints.
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX', sx + 2000), ey = num('EndY', sy);
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      minZ = num('Elevation', 0);
+      maxZ = minZ + num('Depth', elementType === 'truss' ? 800 : 200);
+      break;
+    }
+    case 'mass': {
+      // Conceptual box volume (schematic design).
+      const x = num('X'), y = num('Y');
+      minX = x; minY = y;
+      maxX = x + num('Width', 4000);
+      maxY = y + num('Depth', 4000);
+      minZ = num('Elevation', 0);
+      maxZ = minZ + num('Height', 3000);
+      break;
+    }
+    case 'cable_tray':
+    case 'conduit': {
+      // Linear run like duct/pipe.
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX', sx + 1000), ey = num('EndY', sy);
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      const diameter = num('Width', elementType === 'cable_tray' ? 300 : 50);
+      minZ = num('Elevation', 3000);
+      maxZ = minZ + diameter;
+      break;
+    }
+    case 'sprinkler':
+    case 'lamp':
+    case 'air_terminal': {
+      // Point-placed MEP fixture.
+      const x = num('X'), y = num('Y');
+      const size = num('Width', 200);
+      minX = x - size / 2; maxX = x + size / 2;
+      minY = y - size / 2; maxY = y + size / 2;
+      minZ = num('Elevation', 2800);
+      maxZ = minZ + num('Height', 100);
+      break;
+    }
+    case 'topography': {
+      // Terrain: bounded by sample points when provided.
+      const ptsVal = properties['Points']?.value;
+      if (typeof ptsVal === 'string' && ptsVal.length > 0) {
+        try {
+          const pts = JSON.parse(ptsVal) as Array<{ x: number; y: number; z?: number }>;
+          if (pts.length > 0) {
+            minX = Math.min(...pts.map((p) => p.x));
+            maxX = Math.max(...pts.map((p) => p.x));
+            minY = Math.min(...pts.map((p) => p.y));
+            maxY = Math.max(...pts.map((p) => p.y));
+            const zs = pts.map((p) => p.z ?? 0);
+            minZ = Math.min(...zs); maxZ = Math.max(...zs);
+          }
+        } catch { /* fall through */ }
+      }
+      break;
+    }
+    case 'property_line':
+    case 'room_separator': {
+      // Zero-thickness linear annotation.
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX', sx + 1000), ey = num('EndY', sy);
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      // Keep it planar — min/max Z collapse to 0 and the post-case
+      // clamp will expand to 1 unit for selection-highlight purposes.
+      break;
+    }
+    case 'section_mark':
+    case 'elevation_mark':
+    case 'detail_mark':
+    case 'revision_cloud': {
+      // View reference marker — point + small symbol bounds.
+      const x = num('X'), y = num('Y');
+      const r = num('Width', elementType === 'revision_cloud' ? 1500 : 300);
+      minX = x - r; maxX = x + r;
+      minY = y - r; maxY = y + r;
+      break;
+    }
+    case 'hotspot': {
+      const x = num('X'), y = num('Y');
+      minX = x - 50; maxX = x + 50;
+      minY = y - 50; maxY = y + 50;
       break;
     }
     default: {

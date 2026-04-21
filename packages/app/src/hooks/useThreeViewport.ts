@@ -739,7 +739,19 @@ export function useThreeViewport() {
       // markers (elevation, hotspot-backed elevation, label, detail callout,
       // text tags) fall through to the marker branch further down.
       const isLineAnnotation = type === 'annotation' && !!(props['StartX'] && props['EndX']);
-      if (type === 'beam' || isLineAnnotation) {
+      // Beam-shaped linear members. `brace` is a thinner beam angled
+      // between two endpoints; `truss` is a visually chunkier composite
+      // that we approximate as a deeper beam for now. `property_line` /
+      // `room_separator` are zero-thickness annotations between two
+      // endpoints — render as thin beams so the user sees them in 3D.
+      if (
+        type === 'beam' ||
+        type === 'brace' ||
+        type === 'truss' ||
+        type === 'property_line' ||
+        type === 'room_separator' ||
+        isLineAnnotation
+      ) {
         let x1 = pv('StartX', 0), y1 = pv('StartY', 0);
         let x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
         // SEO beam-column-trim (T-GEO-001): shorten beam at each end that
@@ -759,7 +771,17 @@ export function useThreeViewport() {
         geometry = new THREE.BoxGeometry(len, h, t);
         posX = (x1 + x2) / 2; posY = h / 2; posZ = (y1 + y2) / 2;
         ry = -Math.atan2(y2 - y1, x2 - x1);
-      } else if (type === 'slab' || type === 'roof') {
+      } else if (
+        type === 'slab' || type === 'roof' ||
+        type === 'ceiling' || type === 'foundation' || type === 'ramp'
+      ) {
+        // Slab-family: footprint polygon extruded vertically. Each
+        // subtype places the slab at a different elevation — ceilings
+        // up at 'Elevation' or default 2800mm, foundations below grade,
+        // ramps span between StartElevation and EndElevation.
+        // The base path below handles slab/roof; specific elevations
+        // fall through and get adjusted after geometry is built.
+        // Legacy check just preserves original slab/roof logic:
         const t = pv('Thickness', type === 'roof' ? 200 : 250);
         const elevOffset = pv('ElevationOffset', 0);
         // The 2D tool stores the footprint as a Points polygon (JSON array
@@ -789,9 +811,17 @@ export function useThreeViewport() {
               // The shape uses -p.y so the rotation restores original Y→Z.
               geometry.rotateX(-Math.PI / 2);
               posX = 0;
-              // Slabs sit at/above the ground; roofs sit on top of the
-              // typical wall height unless an ElevationOffset is supplied.
-              posY = elevOffset + (type === 'roof' ? 3000 : 0);
+              // Elevation per subtype:
+              //   - slab: at grade (0) + optional offset
+              //   - roof: on top of walls (3000) + offset
+              //   - ceiling: at 'Elevation' (default 2800)
+              //   - foundation: below grade at 'Elevation' (default -200)
+              //   - ramp: starts at StartElevation (default 0)
+              if (type === 'roof')              posY = elevOffset + 3000;
+              else if (type === 'ceiling')      posY = pv('Elevation', 2800);
+              else if (type === 'foundation')   posY = pv('Elevation', -200);
+              else if (type === 'ramp')         posY = pv('StartElevation', 0);
+              else                              posY = elevOffset;
               posZ = 0;
               builtFromPoints = true;
             }
@@ -812,10 +842,16 @@ export function useThreeViewport() {
           ? new THREE.BoxGeometry(dia, h, dia)
           : new THREE.CylinderGeometry(dia / 2, dia / 2, h, 16);
         posX = pv('X', 0); posY = h / 2; posZ = pv('Y', 0);
-      } else if (type === 'door' || type === 'window') {
+      } else if (type === 'door' || type === 'window' || type === 'skylight') {
         const w    = pv('Width',  type === 'door' ? 900 : 1200);
         const h    = pv('Height', type === 'door' ? 2100 : 1200);
-        const sill = type === 'window' ? pv('SillHeight', 900) : 0;
+        // Door: sits on floor. Window: wall-mounted at SillHeight.
+        // Skylight: roof-mounted at Elevation (default 3000 = top of walls).
+        const sill = type === 'skylight'
+          ? pv('Elevation', 3000)
+          : type === 'window'
+            ? pv('SillHeight', 900)
+            : 0;
         geometry = new THREE.BoxGeometry(w, h, 50);
         posX = pv('X', 0); posY = sill + h / 2; posZ = pv('Y', 0);
       } else if (type === 'stair') {
@@ -846,16 +882,29 @@ export function useThreeViewport() {
         geometry = new THREE.BoxGeometry(len, h, depth);
         posX = (x1 + x2) / 2; posY = h / 2; posZ = (y1 + y2) / 2;
         ry = -Math.atan2(y2 - y1, x2 - x1);
-      } else if (type === 'duct' || type === 'pipe') {
+      } else if (
+        type === 'duct' || type === 'pipe' ||
+        type === 'cable_tray' || type === 'conduit'
+      ) {
+        // Linear MEP run between two endpoints at a given elevation.
+        // Each subtype differs only in cross-section:
+        //   duct        — rectangular box (Width × Height)
+        //   pipe        — circular cylinder (Diameter)
+        //   cable_tray  — wide shallow box (open-top in reality, but we
+        //                 render a closed box for solidity)
+        //   conduit     — thin circular cylinder (Diameter default 50mm)
         const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
         const x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
-        const z  = pv('Z', 2700);
+        const z  = pv('Z', pv('Elevation', type === 'cable_tray' ? 3200 : 2700));
         const len = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1000;
         if (type === 'duct') {
           const w = pv('Width', 300), h = pv('Height', 200);
           geometry = new THREE.BoxGeometry(len, h, w);
+        } else if (type === 'cable_tray') {
+          const w = pv('Width', 300), h = pv('Height', 100);
+          geometry = new THREE.BoxGeometry(len, h, w);
         } else {
-          const d = pv('Diameter', 50);
+          const d = pv('Diameter', type === 'conduit' ? 25 : 50);
           geometry = new THREE.CylinderGeometry(d / 2, d / 2, len, 16);
           geometry.rotateZ(Math.PI / 2);
         }
@@ -908,10 +957,63 @@ export function useThreeViewport() {
         const x = pv('X', 0), y = pv('Y', 0);
         geometry = new THREE.CylinderGeometry(120, 120, 40, 16);
         posX = x; posY = 20; posZ = y;
-      } else if (type === 'plumbing_fixture' || type === 'mechanical_equipment' || type === 'electrical_equipment') {
-        const x = pv('X', 0), y = pv('Y', 0), z = pv('Z', 2700);
-        geometry = new THREE.BoxGeometry(300, 150, 300);
+      } else if (
+        type === 'plumbing_fixture' ||
+        type === 'mechanical_equipment' ||
+        type === 'electrical_equipment' ||
+        type === 'sprinkler' ||
+        type === 'lamp' ||
+        type === 'air_terminal'
+      ) {
+        // Point-placed MEP fixture. Rendered as a small box at the
+        // specified elevation. Sprinkler defaults to ceiling-mounted,
+        // lamps hang slightly below ceiling, air terminals flush.
+        const x = pv('X', 0), y = pv('Y', 0);
+        const defaultElev = type === 'sprinkler' ? 2800
+                          : type === 'air_terminal' ? 2800
+                          : type === 'lamp' ? 2700
+                          : 2700;
+        const z = pv('Z', pv('Elevation', defaultElev));
+        const sizeXY = type === 'sprinkler' ? 80
+                    : type === 'air_terminal' ? 400
+                    : type === 'lamp' ? 300
+                    : 300;
+        const sizeZ = type === 'sprinkler' ? 120
+                    : type === 'lamp' ? 100
+                    : 150;
+        geometry = new THREE.BoxGeometry(sizeXY, sizeZ, sizeXY);
         posX = x; posY = z; posZ = y;
+      } else if (type === 'mass') {
+        // Schematic volume — box extrusion from X,Y at Elevation.
+        const x = pv('X', 0), y = pv('Y', 0);
+        const w = pv('Width', 4000), d = pv('Depth', 4000);
+        const h = pv('Height', 3000);
+        const elev = pv('Elevation', 0);
+        geometry = new THREE.BoxGeometry(w, h, d);
+        posX = x + w / 2; posY = elev + h / 2; posZ = y + d / 2;
+      } else if (type === 'topography') {
+        // Terrain surface from sample points. Fallback: flat plane from
+        // the element's bounding box so it's still visible in 3D even
+        // without Points data.
+        const bb = element.boundingBox;
+        const bw = Math.max(bb.max.x - bb.min.x, 1000);
+        const bd = Math.max(bb.max.y - bb.min.y, 1000);
+        geometry = new THREE.BoxGeometry(bw, 100, bd);
+        posX = bb.min.x + bw / 2; posY = (bb.min.z + bb.max.z) / 2; posZ = bb.min.y + bd / 2;
+      } else if (
+        type === 'section_mark' || type === 'elevation_mark' ||
+        type === 'detail_mark' || type === 'revision_cloud' ||
+        type === 'label' || type === 'model_text' ||
+        type === 'hotspot'
+      ) {
+        // View-reference markers / annotations. Render as a small
+        // upright disc so the user sees where the mark is in 3D but
+        // it doesn't dominate the scene.
+        const x = pv('X', 0), y = pv('Y', 0);
+        const r = pv('Width', type === 'revision_cloud' ? 1500 : 200);
+        geometry = new THREE.CylinderGeometry(r / 3, r / 3, 40, 16);
+        posX = x; posY = type === 'model_text' ? pv('Elevation', 100) : 20;
+        posZ = y;
       } else {
         const bb = element.boundingBox;
         const bw = Math.max(bb.max.x - bb.min.x, 100);
