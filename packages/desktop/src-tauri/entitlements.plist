@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Hardened runtime requirements (required for notarization). -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+  <!-- WASM / WebGPU paths inside WKWebView occasionally allocate
+       dyld-linked libraries; allow them to keep the WebView alive. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+
+  <!-- Sandbox is intentionally not enabled — OpenCAD is a pro desktop
+       authoring tool that needs read/write access to arbitrary paths
+       the user picks. We rely on hardened-runtime + notarization for
+       distribution trust instead of the App Sandbox. -->
+
+  <!-- File-system access for user-selected files (open/save dialogs). -->
+  <key>com.apple.security.files.user-selected.read-write</key>
+  <true/>
+
+  <!-- Network for the cloud sync + AI endpoints. -->
+  <key>com.apple.security.network.client</key>
+  <true/>
+</dict>
+</plist>

@@ -22,6 +22,7 @@
     "build": "turbo run build",
     "build:browser": "turbo run build --filter=@opencad/app",
     "build:desktop": "turbo run build --filter=@opencad/desktop",
+    "sign:macos": "bash scripts/sign-macos.sh",
     "test": "turbo run test --filter=!@opencad/e2e",
     "test:unit": "turbo run test:unit",
     "test:integration": "turbo run test:integration",

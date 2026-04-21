@@ -46,8 +46,9 @@
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "10.13",
-      "signingIdentity": null,
-      "entitlements": null
+      "signingIdentity": "-",
+      "entitlements": "entitlements.plist",
+      "providerShortName": null
     },
     "windows": {
       "certificateThumbprint": null,
