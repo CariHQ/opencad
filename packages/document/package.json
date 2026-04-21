@@ -24,7 +24,8 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
-    "@opencad/shared": "workspace:*"
+    "@opencad/shared": "workspace:*",
+    "fflate": "^0.8.2"
   },
   "devDependencies": {
     "@types/node": "^25.6.0",

@@ -267,6 +267,23 @@ function isZipContainer(buffer: ArrayBuffer): boolean {
   return v[0] === 0x50 && v[1] === 0x4b && v[2] === 0x03 && v[3] === 0x04;
 }
 
+/** Attempt ZIP extraction via fflate. Returns file entries { name → bytes }
+ *  or null when extraction fails / format isn't ZIP. */
+async function tryExtractZip(buffer: ArrayBuffer): Promise<Record<string, Uint8Array> | null> {
+  if (!isZipContainer(buffer)) return null;
+  try {
+    const fflate = await import('fflate');
+    return await new Promise<Record<string, Uint8Array>>((resolve, reject) => {
+      fflate.unzip(new Uint8Array(buffer), (err, data) => {
+        if (err) reject(err);
+        else resolve(data as Record<string, Uint8Array>);
+      });
+    });
+  } catch {
+    return null;
+  }
+}
+
 interface PLNMetadata {
   version: string;
   projectName: string;
@@ -311,10 +328,10 @@ function scrapeBinaryMetadata(buffer: ArrayBuffer): PLNMetadata {
  *  The canonical interop path remains IFC — users who need real geometry
  *  export PLN → IFC from Archicad and re-import here via parseIFC.
  */
-export function importFile(
+export async function importFile(
   buffer: ArrayBuffer,
   projectId: string,
-): { schema: DocumentSchema; warnings: string[] } {
+): Promise<{ schema: DocumentSchema; warnings: string[] }> {
   const warnings: string[] = [];
   const schema = createProject(projectId, 'archicad-import');
 
@@ -323,16 +340,47 @@ export function importFile(
     return { schema, warnings };
   }
 
+  // First-pass ASCII metadata always works.
   const meta = scrapeBinaryMetadata(buffer);
   if (meta.projectName) schema.name = meta.projectName;
-  (schema.metadata as unknown as { source?: Record<string, string> }).source = {
+  const source: Record<string, string | number> = {
     format: 'pln',
     version: meta.version || 'unknown',
     generator: meta.generator,
   };
-  warnings.push(
-    'Archicad PLN binary geometry is not decoded — only metadata survives. ' +
-    'Export PLN → IFC from Archicad and re-import via IFC for full fidelity.',
-  );
+
+  // ZIP-structured PLNs (newer format) expose some human-readable XML entries
+  // inside — list them so the UI can surface the contents even without
+  // decoding Graphisoft's proprietary binary streams.
+  const entries = await tryExtractZip(buffer);
+  if (entries) {
+    const innerNames = Object.keys(entries).sort();
+    source.zipEntryCount = innerNames.length;
+
+    // Surface any XML metadata we find as a key/value scrape.
+    for (const name of innerNames) {
+      if (!/\.xml$/i.test(name)) continue;
+      const bytes = entries[name];
+      if (!bytes) continue;
+      try {
+        const text = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
+        const pn = /<ProjectName>([^<]+)<\/ProjectName>/i.exec(text)?.[1];
+        if (pn && !meta.projectName) schema.name = pn.trim();
+        const ver = /<ArchicadVersion>([^<]+)<\/ArchicadVersion>/i.exec(text)?.[1];
+        if (ver) source.version = ver.trim();
+      } catch { /* non-UTF-8 XML fragment — skip */ }
+    }
+    warnings.push(
+      `Archicad PLN: extracted ${innerNames.length} inner entries via ZIP; ` +
+      'geometry streams remain proprietary. Export PLN → IFC for full fidelity.',
+    );
+  } else {
+    warnings.push(
+      'Archicad PLN binary geometry is not decoded — only metadata survives. ' +
+      'Export PLN → IFC from Archicad and re-import via IFC for full fidelity.',
+    );
+  }
+
+  (schema.metadata as unknown as { source?: Record<string, string | number> }).source = source;
   return { schema, warnings };
 }
