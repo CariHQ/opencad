@@ -168,73 +168,64 @@ function renderStructuredOrFallback(
   if (doc && type === 'door') {
     const rows = doorSchedule(doc);
     return (
-      <table className="schedule-table">
-        <thead>
-          <tr>
-            <th>Tag</th><th>Width (mm)</th><th>Height (mm)</th>
-            <th>Material</th><th>Host wall</th><th>Level</th><th>Cost</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.elementId}>
-              <td>{r.tag}</td><td>{r.width}</td><td>{r.height}</td>
-              <td>{r.material || '—'}</td>
-              <td>{r.hostWall ? r.hostWall.slice(0, 8) : '—'}</td>
-              <td>{r.level || '—'}</td>
-              <td>{r.cost || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="schedule-cards" role="list">
+        {rows.map((r) => (
+          <ScheduleCard
+            key={r.elementId}
+            tag={r.tag}
+            fields={[
+              ['Width',  `${r.width} mm`],
+              ['Height', `${r.height} mm`],
+              ['Material', r.material || '—'],
+              ['Host wall', r.hostWall ? r.hostWall.slice(0, 8) : '—'],
+              ['Level', r.level || '—'],
+              ['Cost',  r.cost ? String(r.cost) : '—'],
+            ]}
+          />
+        ))}
+      </div>
     );
   }
   if (doc && type === 'window') {
     const rows = windowSchedule(doc);
     return (
-      <table className="schedule-table">
-        <thead>
-          <tr>
-            <th>Tag</th><th>Width</th><th>Height</th><th>Sill</th>
-            <th>Material</th><th>Host wall</th><th>Level</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.elementId}>
-              <td>{r.tag}</td><td>{r.width}</td><td>{r.height}</td><td>{r.sill}</td>
-              <td>{r.material || '—'}</td>
-              <td>{r.hostWall ? r.hostWall.slice(0, 8) : '—'}</td>
-              <td>{r.level || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="schedule-cards" role="list">
+        {rows.map((r) => (
+          <ScheduleCard
+            key={r.elementId}
+            tag={r.tag}
+            fields={[
+              ['Width',  `${r.width} mm`],
+              ['Height', `${r.height} mm`],
+              ['Sill',   `${r.sill} mm`],
+              ['Material', r.material || '—'],
+              ['Host wall', r.hostWall ? r.hostWall.slice(0, 8) : '—'],
+              ['Level', r.level || '—'],
+            ]}
+          />
+        ))}
+      </div>
     );
   }
   if (doc && type === 'space') {
     const rows = roomSchedule(doc);
     return (
-      <table className="schedule-table">
-        <thead>
-          <tr>
-            <th>Tag</th><th>Name</th><th>Area (m²)</th>
-            <th>Occupancy</th><th>Floor</th><th>Walls</th><th>Ceiling</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.elementId}>
-              <td>{r.tag}</td><td>{r.name}</td>
-              <td>{typeof r.area === 'number' ? r.area.toFixed(1) : '—'}</td>
-              <td>{r.occupancy || '—'}</td>
-              <td>{r.finishFloor || '—'}</td>
-              <td>{r.finishWalls || '—'}</td>
-              <td>{r.finishCeiling || '—'}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      <div className="schedule-cards" role="list">
+        {rows.map((r) => (
+          <ScheduleCard
+            key={r.elementId}
+            tag={r.tag}
+            title={r.name}
+            fields={[
+              ['Area', typeof r.area === 'number' ? `${r.area.toFixed(1)} m²` : '—'],
+              ['Occupancy', r.occupancy || '—'],
+              ['Floor', r.finishFloor || '—'],
+              ['Walls', r.finishWalls || '—'],
+              ['Ceiling', r.finishCeiling || '—'],
+            ]}
+          />
+        ))}
+      </div>
     );
   }
   return (
@@ -268,6 +259,33 @@ function renderStructuredOrFallback(
         </tr>
       </tfoot>
     </table>
+  );
+}
+
+function ScheduleCard({
+  tag,
+  title,
+  fields,
+}: {
+  tag: string;
+  title?: string;
+  fields: Array<[string, string]>;
+}) {
+  return (
+    <div className="schedule-card" role="listitem">
+      <div className="schedule-card-header">
+        <span className="schedule-card-tag">{tag}</span>
+        {title && <span className="schedule-card-title">{title}</span>}
+      </div>
+      <dl className="schedule-card-fields">
+        {fields.map(([k, v]) => (
+          <div key={k} className="schedule-card-field">
+            <dt>{k}</dt>
+            <dd>{v}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
   );
 }
 
