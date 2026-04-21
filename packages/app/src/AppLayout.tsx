@@ -86,6 +86,7 @@ import {
 } from './plugins/pluginHost';
 import { pluginRegistry } from './plugins/pluginRegistry';
 import { listInstalled as listInstalledPlugins } from './lib/marketplaceApi';
+import { projectMembersApi } from './lib/serverApi';
 import { ReadOnlyBanner } from './components/ReadOnlyBanner';
 import type { AdminMember } from './components/AdminPanel';
 import type { SSOConfig } from './components/SSOSettingsPanel';
@@ -380,6 +381,48 @@ export function AppLayout() {
   // access has lapsed. Exports and view state are never gated.
   const { readOnly } = useEntitlements();
   React.useEffect(() => { setDocumentReadOnly(readOnly); }, [readOnly]);
+
+  // ── Project members (real, server-backed) ───────────────────────────────
+  // Drops the localStorage/MOCK_MEMBERS fallback for projects that exist
+  // on the server. Falls back to the local list only when offline or for
+  // projects that haven't been pushed yet. Role changes round-trip
+  // through the API so they persist across devices.
+  const [realMembers, setRealMembers] = React.useState<AdminMember[] | null>(null);
+  React.useEffect(() => {
+    if (!projectId) { setRealMembers(null); return; }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await projectMembersApi.list(projectId);
+        if (cancelled) return;
+        setRealMembers(rows.map((r) => ({
+          id: r.firebaseUid,
+          name: r.displayName || r.email || r.firebaseUid,
+          role: r.role as RoleName,
+        })));
+      } catch {
+        if (!cancelled) setRealMembers(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [projectId]);
+
+  const handleSetMemberRole = React.useCallback(
+    (userId: string, role: RoleName) => {
+      if (!projectId) { saveMemberRole(userId, role); return; }
+      // Optimistic UI.
+      setRealMembers((prev) =>
+        prev ? prev.map((m) => (m.id === userId ? { ...m, role } : m)) : prev,
+      );
+      void projectMembersApi.updateRole(projectId, userId, role).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn('[members] role update failed:', err);
+        // Fall back to local cache so the change isn't silently lost.
+        saveMemberRole(userId, role);
+      });
+    },
+    [projectId],
+  );
 
   // Boot the plugin host once. Reconcile remote install state first so:
   //   1. Plugins installed on another device auto-register here.
@@ -969,8 +1012,15 @@ export function AppLayout() {
               {rightPanelTab === 'admin' && (
                 <AdminPanel
                   can={can}
-                  members={loadOrgMembersForProject(doc?.id ?? null) ?? loadMembers()}
-                  onSetRole={(userId, role) => saveMemberRole(userId, role)}
+                  // Prefer real server members. Fall back to local cache
+                  // only when offline or for projects that haven't been
+                  // pushed server-side yet.
+                  members={
+                    realMembers ??
+                    loadOrgMembersForProject(doc?.id ?? null) ??
+                    loadMembers()
+                  }
+                  onSetRole={handleSetMemberRole}
                 />
               )}
               {rightPanelTab === 'history' && <VersionHistoryPanel />}

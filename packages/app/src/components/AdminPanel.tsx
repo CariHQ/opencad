@@ -22,11 +22,15 @@ export interface AdminMember {
   role: RoleName;
 }
 
-const MOCK_MEMBERS: AdminMember[] = [
-  { id: 'u1', name: 'Alice Mercer',   role: 'architect'  },
-  { id: 'u2', name: 'Bob Tanaka',     role: 'structural' },
-  { id: 'u3', name: 'Carol Osei',     role: 'owner'      },
-  { id: 'u4', name: 'David Park',     role: 'architect'  },
+/**
+ * Demo-only fallback used when the caller passes no `members` prop.
+ * Real callers (AppLayout) load server-backed members and pass them in.
+ * Kept as a short array so test fixtures / Storybook work without a
+ * network stub, but never shown to real users because AppLayout always
+ * supplies the `members` prop.
+ */
+const DEMO_MEMBERS: AdminMember[] = [
+  { id: 'u1', name: 'Project owner (demo)', role: 'owner' },
 ];
 
 /** All 7 role IDs available in the system */
@@ -52,7 +56,7 @@ export function AdminPanel({
   setMemberRole,
   currentUserId,
 }: AdminPanelProps) {
-  const [members, setMembers] = useState<AdminMember[]>(propMembers ?? MOCK_MEMBERS);
+  const [members, setMembers] = useState<AdminMember[]>(propMembers ?? DEMO_MEMBERS);
   const [pendingRoles, setPendingRoles] = useState<Record<string, RoleName>>({});
 
   // Only visible to admins

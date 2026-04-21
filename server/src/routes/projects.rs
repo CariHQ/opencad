@@ -7,6 +7,7 @@ use serde::Deserialize;
 use uuid::Uuid;
 
 use crate::{
+    auth::AuthUser,
     db,
     error::{AppError, Result},
     state::AppState,
@@ -33,6 +34,7 @@ pub async fn list(State(s): State<AppState>) -> Result<Json<Vec<db::Project>>> {
 /// T-API-002: POST /api/v1/projects
 pub async fn create(
     State(s): State<AppState>,
+    user: AuthUser,
     Json(body): Json<CreateBody>,
 ) -> Result<(StatusCode, Json<db::Project>)> {
     let name = body.name.trim().to_string();
@@ -40,6 +42,27 @@ pub async fn create(
         return Err(AppError::BadRequest("name is required".into()));
     }
     let project = db::create_project(&s.db, body.id, &name).await?;
+
+    // Auto-seat the creator as the project's owner. Without this the
+    // AdminPanel would be unusable on a freshly-created project (no
+    // members, no one can manage membership). Best-effort — if the
+    // insert races a later webhook or duplicate request, ON CONFLICT
+    // keeps the current role intact.
+    if let Some(uid) = user.uid() {
+        let _ = sqlx::query(
+            r#"INSERT INTO project_members
+                 (project_id, firebase_uid, email, display_name, role, added_by)
+               VALUES ($1, $2, $3, $4, 'owner', $2)
+               ON CONFLICT (project_id, firebase_uid) DO NOTHING"#,
+        )
+        .bind(project.id)
+        .bind(uid)
+        .bind(user.email().unwrap_or(""))
+        .bind("")
+        .execute(&s.db)
+        .await;
+    }
+
     Ok((StatusCode::CREATED, Json(project)))
 }
 

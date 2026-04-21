@@ -200,3 +200,47 @@ export const subscriptionApi = {
   listInvoices: (): Promise<Invoice[]> =>
     apiFetch<Invoice[]>('/subscription/invoices'),
 };
+
+// ── Project members ─────────────────────────────────────────────────────────
+
+export interface ProjectMember {
+  projectId: string;
+  firebaseUid: string;
+  email: string;
+  displayName: string;
+  role: string;
+  addedBy: string | null;
+  addedAt: string;
+  updatedAt: string;
+}
+
+export const projectMembersApi = {
+  list: (projectId: string): Promise<ProjectMember[]> =>
+    apiFetch<ProjectMember[]>(`/projects/${encodeURIComponent(projectId)}/members`),
+
+  add: (
+    projectId: string,
+    params: { firebaseUid: string; email?: string; displayName?: string; role: string },
+  ): Promise<ProjectMember> =>
+    apiFetch<ProjectMember>(`/projects/${encodeURIComponent(projectId)}/members`, {
+      method: 'POST',
+      body: JSON.stringify({
+        firebase_uid: params.firebaseUid,
+        email: params.email,
+        display_name: params.displayName,
+        role: params.role,
+      }),
+    }),
+
+  updateRole: (projectId: string, uid: string, role: string): Promise<ProjectMember> =>
+    apiFetch<ProjectMember>(
+      `/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(uid)}`,
+      { method: 'PATCH', body: JSON.stringify({ role }) },
+    ),
+
+  remove: (projectId: string, uid: string): Promise<void> =>
+    apiFetch<void>(
+      `/projects/${encodeURIComponent(projectId)}/members/${encodeURIComponent(uid)}`,
+      { method: 'DELETE' },
+    ),
+};

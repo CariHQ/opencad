@@ -10,6 +10,7 @@ mod feedback;
 mod files;
 mod health;
 mod llm;
+mod members;
 mod plugins;
 mod projects;
 mod publishers;
@@ -69,6 +70,15 @@ pub fn build(state: AppState) -> Router {
         .route(
             "/api/v1/projects/:id/branches/:bid",
             axum::routing::patch(branches::update).delete(branches::delete_one),
+        )
+        // ── Members ───────────────────────────────────────────────────────────
+        .route(
+            "/api/v1/projects/:id/members",
+            get(members::list).post(members::add),
+        )
+        .route(
+            "/api/v1/projects/:id/members/:uid",
+            axum::routing::patch(members::update_role).delete(members::remove),
         )
         // ── Feedback ──────────────────────────────────────────────────────────
         .route(
