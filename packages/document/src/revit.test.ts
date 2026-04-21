@@ -129,17 +129,17 @@ describe('T-DOC-007: Revit detectFormat + importFile', () => {
     expect(detectRVT(buf)).toBe(false);
   });
 
-  it('importFile returns a DocumentSchema with at least one element', () => {
+  it('importFile returns a valid schema with no synthetic elements', () => {
     const buf = makeBuffer([0x44, 0x4f, 0xc8, 0xf4]);
     const result = importRVT(buf, 'proj-456');
     expect(result.schema).toBeDefined();
-    expect(Object.keys(result.schema.content.elements).length).toBeGreaterThan(0);
+    expect(Object.keys(result.schema.content.elements).length).toBe(0);
   });
 
-  it('importFile includes a warning about stub implementation', () => {
+  it('importFile warns and points users to IFC', () => {
     const buf = makeBuffer([0x44, 0x4f, 0xc8, 0xf4]);
     const result = importRVT(buf, 'proj-456');
     expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings[0]).toMatch(/Revit/i);
+    expect(result.warnings.join(' ')).toMatch(/IFC/i);
   });
 });

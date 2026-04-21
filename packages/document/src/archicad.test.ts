@@ -261,17 +261,18 @@ describe('T-DOC-007: ArchiCAD detectFormat + importFile', () => {
     expect(detectAC(buf)).toBe(false);
   });
 
-  it('importFile returns a DocumentSchema with at least one element', () => {
+  it('importFile returns a valid schema with no synthetic elements', () => {
     const buf = makeBuffer([0x50, 0x4c, 0x41, 0x4e]);
     const result = importAC(buf, 'proj-789');
     expect(result.schema).toBeDefined();
-    expect(Object.keys(result.schema.content.elements).length).toBeGreaterThan(0);
+    // Honest importer: geometry is not decoded, so no synthetic walls.
+    expect(Object.keys(result.schema.content.elements).length).toBe(0);
   });
 
-  it('importFile includes a warning about stub implementation', () => {
+  it('importFile includes a warning pointing users to IFC', () => {
     const buf = makeBuffer([0x50, 0x4c, 0x41, 0x4e]);
     const result = importAC(buf, 'proj-789');
     expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings[0]).toMatch(/ArchiCAD/i);
+    expect(result.warnings.join(' ')).toMatch(/IFC/i);
   });
 });

@@ -227,48 +227,82 @@ export function parseRVT(content: string): DocumentSchema {
 
 // ── Binary format detection ────────────────────────────────────────────────────
 
-/** Returns true if the buffer starts with the RVT magic bytes: 44 4F C8 F4 */
+/** Returns true if the buffer starts with the RVT magic bytes: 44 4F C8 F4
+ *  (OLE/CFBF compound document header used by Revit .rvt). */
 export function detectFormat(buffer: ArrayBuffer): boolean {
   if (buffer.byteLength < 4) return false;
   const view = new Uint8Array(buffer);
-  return view[0] === 0x44 && view[1] === 0x4f && view[2] === 0xc8 && view[3] === 0xf4;
+  // Full CFBF signature is D0 CF 11 E0 A1 B1 1A E1; Revit files are CFBF
+  // containers so check either the legacy "DOC-rvt" tag or the CFBF magic.
+  const cfbf = view[0] === 0xd0 && view[1] === 0xcf && view[2] === 0x11 && view[3] === 0xe0;
+  const rvt  = view[0] === 0x44 && view[1] === 0x4f && view[2] === 0xc8 && view[3] === 0xf4;
+  return cfbf || rvt;
 }
 
-/** Stub binary import — returns a minimal schema and a stub warning. */
+interface RVTMeta {
+  version: string;
+  productName: string;
+  locale: string;
+  buildNumber: string;
+}
+
+/** Pull the BasicFileInfo ASCII metadata out of a CFBF .rvt buffer.
+ *  The stream stores a small UTF-16LE blob containing "Build:", "Version:"
+ *  etc. in the first ~8 KB after the header. */
+function scrapeRVTMetadata(buffer: ArrayBuffer): RVTMeta {
+  const slice = new Uint8Array(buffer.slice(0, Math.min(buffer.byteLength, 64 * 1024)));
+  // Decode UTF-16LE the dumb way — RVT metadata is short and ASCII-only.
+  let text = '';
+  for (let i = 0; i + 1 < slice.length; i += 2) {
+    const lo = slice[i]!;
+    const hi = slice[i + 1]!;
+    if (hi === 0 && lo >= 0x20 && lo <= 0x7e) text += String.fromCharCode(lo);
+    else if (hi === 0) text += ' '; // control chars become spaces
+  }
+
+  const pickFirst = (re: RegExp): string => {
+    const m = re.exec(text);
+    return m ? m[1]!.trim() : '';
+  };
+  return {
+    version:     pickFirst(/Version:\s*([\d.]+)/i) || pickFirst(/Revit\s+([\d]{4})/),
+    productName: pickFirst(/Product:\s*([^\r\n]{1,80})/i) || 'Autodesk Revit',
+    locale:      pickFirst(/Locale:\s*([A-Za-z_-]{2,20})/i),
+    buildNumber: pickFirst(/Build:\s*([^\r\n\s]{1,40})/i),
+  };
+}
+
+/** Binary RVT import — hardened.
+ *
+ *  Real Revit geometry lives in undocumented binary streams inside the
+ *  CFBF container (RevitPreview4.0, PartAtom, etc.) that require Autodesk's
+ *  Revit SDK to read. Rather than fake a synthetic wall, surface the
+ *  metadata we CAN read (version, product, build, locale) and return an
+ *  empty-but-labelled DocumentSchema. The canonical interop path is IFC.
+ */
 export function importFile(
   buffer: ArrayBuffer,
   projectId: string,
 ): { schema: DocumentSchema; warnings: string[] } {
-  void buffer;
-  const schema = createProject(projectId, 'imported');
-  const layerId = Object.keys(schema.organization.layers)[0]!;
-  const elementId = crypto.randomUUID();
-  schema.content.elements[elementId] = {
-    id: elementId,
-    type: 'wall',
-    layerId,
-    levelId: '',
-    visible: true,
-    locked: false,
-    properties: {},
-    propertySets: [],
-    geometry: { type: 'brep', data: null },
-    transform: {
-      translation: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
-    },
-    boundingBox: { min: { x: 0, y: 0, z: 0, _type: 'Point3D' }, max: { x: 1000, y: 200, z: 3000, _type: 'Point3D' } },
-    metadata: {
-      id: elementId,
-      createdBy: 'revit-import',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      version: { clock: {} },
-    },
+  const warnings: string[] = [];
+  const schema = createProject(projectId, 'revit-import');
+
+  if (!detectFormat(buffer)) {
+    warnings.push('File does not look like a Revit .rvt (CFBF) container. No elements imported.');
+    return { schema, warnings };
+  }
+
+  const meta = scrapeRVTMetadata(buffer);
+  (schema.metadata as unknown as { source?: Record<string, string> }).source = {
+    format: 'rvt',
+    product: meta.productName,
+    version: meta.version || 'unknown',
+    build: meta.buildNumber,
+    locale: meta.locale,
   };
-  return {
-    schema,
-    warnings: ['Revit binary format is not fully supported; geometry was stubbed. Export to IFC for full fidelity.'],
-  };
+  warnings.push(
+    'Revit binary geometry is not decoded — metadata only. ' +
+    'Export RVT → IFC from Revit and re-import via IFC for full fidelity.',
+  );
+  return { schema, warnings };
 }

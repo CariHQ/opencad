@@ -259,41 +259,80 @@ export function detectFormat(buffer: ArrayBuffer): boolean {
   return view[0] === 0x50 && view[1] === 0x4c && view[2] === 0x41 && view[3] === 0x4e;
 }
 
-/** Stub binary import — returns a minimal schema and a stub warning. */
+/** Returns true if the buffer looks like a ZIP container (PLN is ZIP-structured). */
+function isZipContainer(buffer: ArrayBuffer): boolean {
+  if (buffer.byteLength < 4) return false;
+  const v = new Uint8Array(buffer);
+  // Local file header magic: PK\x03\x04
+  return v[0] === 0x50 && v[1] === 0x4b && v[2] === 0x03 && v[3] === 0x04;
+}
+
+interface PLNMetadata {
+  version: string;
+  projectName: string;
+  generator: string;
+}
+
+/** Best-effort binary metadata scrape — no proprietary decoder required.
+ *
+ *  The PLN / PLA container exposes ASCII project name + generator strings
+ *  in the first few KB. Pull them out with a bounded regex scan and
+ *  surface them as document metadata so the import isn't entirely blind.
+ */
+function scrapeBinaryMetadata(buffer: ArrayBuffer): PLNMetadata {
+  const slice = new Uint8Array(buffer.slice(0, Math.min(buffer.byteLength, 64 * 1024)));
+  // Cheap latin1 decode — enough for ASCII metadata scraped from a binary.
+  let text = '';
+  for (let i = 0; i < slice.length; i++) text += String.fromCharCode(slice[i]!);
+
+  const pickFirst = (re: RegExp): string => {
+    const m = re.exec(text);
+    return m ? m[1]!.trim() : '';
+  };
+
+  return {
+    version:     pickFirst(/ArchiCAD\s+([\d.]+)/i) || pickFirst(/Archicad\s+([0-9]+)/i),
+    projectName: pickFirst(/Project Name\s*[:=]\s*([^\x00\r\n]{1,120})/i),
+    generator:   pickFirst(/Generator\s*[:=]\s*([^\x00\r\n]{1,120})/i) || 'Archicad',
+  };
+}
+
+/** Binary import — hardened.
+ *
+ *  Real geometry extraction from a PLN container requires Graphisoft's
+ *  internal format (GSM, GDL, encrypted project data) which isn't public
+ *  without a proprietary SDK. Rather than fake geometry, this importer:
+ *
+ *  1. Confirms the buffer is actually PLN/PLA or ZIP-structured.
+ *  2. Scrapes ASCII metadata (version / project name / generator).
+ *  3. Returns an empty-but-labelled DocumentSchema so downstream UI
+ *     doesn't show synthetic walls that don't exist in the source.
+ *
+ *  The canonical interop path remains IFC — users who need real geometry
+ *  export PLN → IFC from Archicad and re-import here via parseIFC.
+ */
 export function importFile(
   buffer: ArrayBuffer,
   projectId: string,
 ): { schema: DocumentSchema; warnings: string[] } {
-  void buffer;
-  const schema = createProject(projectId, 'imported');
-  const layerId = Object.keys(schema.organization.layers)[0]!;
-  const elementId = crypto.randomUUID();
-  schema.content.elements[elementId] = {
-    id: elementId,
-    type: 'wall',
-    layerId,
-    levelId: '',
-    visible: true,
-    locked: false,
-    properties: {},
-    propertySets: [],
-    geometry: { type: 'brep', data: null },
-    transform: {
-      translation: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
-    },
-    boundingBox: { min: { x: 0, y: 0, z: 0, _type: 'Point3D' }, max: { x: 1000, y: 200, z: 3000, _type: 'Point3D' } },
-    metadata: {
-      id: elementId,
-      createdBy: 'archicad-import',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      version: { clock: {} },
-    },
+  const warnings: string[] = [];
+  const schema = createProject(projectId, 'archicad-import');
+
+  if (!detectFormat(buffer) && !isZipContainer(buffer)) {
+    warnings.push('File does not look like an Archicad PLN/PLA container. No elements imported.');
+    return { schema, warnings };
+  }
+
+  const meta = scrapeBinaryMetadata(buffer);
+  if (meta.projectName) schema.name = meta.projectName;
+  (schema.metadata as unknown as { source?: Record<string, string> }).source = {
+    format: 'pln',
+    version: meta.version || 'unknown',
+    generator: meta.generator,
   };
-  return {
-    schema,
-    warnings: ['ArchiCAD binary format is not fully supported; geometry was stubbed. Export to IFC for full fidelity.'],
-  };
+  warnings.push(
+    'Archicad PLN binary geometry is not decoded — only metadata survives. ' +
+    'Export PLN → IFC from Archicad and re-import via IFC for full fidelity.',
+  );
+  return { schema, warnings };
 }

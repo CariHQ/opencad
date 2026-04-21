@@ -5,7 +5,6 @@
 
 import { DocumentSchema, ElementType } from './types';
 import { createProject } from './document';
-import type { ElementSchema } from './types';
 
 const SKP_CATEGORY_MAP: Record<string, ElementType> = {
   Wall: 'wall',
@@ -149,46 +148,54 @@ export function detectFormat(buffer: ArrayBuffer): boolean {
   return view[0] === 0x37 && view[1] === 0xfc && view[2] === 0xf4 && view[3] === 0x75;
 }
 
-/** Stub binary import — returns a minimal schema and a stub warning. */
+interface SKPHeader {
+  version: string;
+  locale: string;
+}
+
+/** Pull readable ASCII metadata out of an SKP header. The first ~1 KB
+ *  carries the version string ("SketchUp Model, Ver …") in plain ASCII. */
+function scrapeSKPHeader(buffer: ArrayBuffer): SKPHeader {
+  const slice = new Uint8Array(buffer.slice(0, Math.min(buffer.byteLength, 2048)));
+  let text = '';
+  for (let i = 0; i < slice.length; i++) {
+    const c = slice[i]!;
+    text += c >= 0x20 && c <= 0x7e ? String.fromCharCode(c) : ' ';
+  }
+  const version = /SketchUp\s+(?:Model,\s*)?Ver(?:sion)?\s*([\d.]+)/i.exec(text)?.[1] ?? '';
+  const locale  = /Locale\s*[:=]\s*([A-Za-z_-]{2,20})/i.exec(text)?.[1] ?? '';
+  return { version, locale };
+}
+
+/** Binary SKP import — hardened.
+ *
+ *  The SKP binary format is undocumented (Trimble's C++ SDK is the only
+ *  supported reader). Rather than fabricate a synthetic component wall,
+ *  verify the header magic, scrape the ASCII version/locale strings, and
+ *  return an empty but labelled DocumentSchema. Users bring geometry in
+ *  via DAE, OBJ, or IFC exports instead.
+ */
 export function importFile(
   buffer: ArrayBuffer,
   projectId: string,
 ): { schema: DocumentSchema; warnings: string[] } {
-  void buffer;
-  const schema = createProject(projectId, 'imported');
-  const layerId = Object.keys(schema.organization.layers)[0]!;
-  const elementId = crypto.randomUUID();
-  schema.content.elements[elementId] = {
-    id: elementId,
-    type: 'component',
-    layerId,
-    visible: true,
-    locked: false,
-    properties: {},
-    propertySets: [],
-    geometry: { type: 'mesh', data: null },
-    levelId: '',
-    transform: {
-      translation: { x: 0, y: 0, z: 0 },
-      rotation: { x: 0, y: 0, z: 0 },
-      scale: { x: 1, y: 1, z: 1 },
-    },
-    boundingBox: {
-      min: { x: 0, y: 0, z: 0, _type: 'Point3D' },
-      max: { x: 1000, y: 1000, z: 3000, _type: 'Point3D' },
-    },
-    metadata: {
-      id: elementId,
-      createdBy: 'sketchup-import',
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      version: { clock: {} },
-    },
-  } satisfies ElementSchema;
-  return {
-    schema,
-    warnings: ['SketchUp binary format is not fully supported; geometry was stubbed. Export to IFC for full fidelity.'],
+  const warnings: string[] = [];
+  const schema = createProject(projectId, 'sketchup-import');
+  if (!detectFormat(buffer)) {
+    warnings.push('File does not look like a SketchUp .skp. No elements imported.');
+    return { schema, warnings };
+  }
+  const meta = scrapeSKPHeader(buffer);
+  (schema.metadata as unknown as { source?: Record<string, string> }).source = {
+    format: 'skp',
+    version: meta.version || 'unknown',
+    locale: meta.locale,
   };
+  warnings.push(
+    'SketchUp binary geometry is not decoded — metadata only. ' +
+    'Export SKP → DAE/OBJ/IFC from SketchUp for re-import with geometry.',
+  );
+  return { schema, warnings };
 }
 
 class SKPParser {

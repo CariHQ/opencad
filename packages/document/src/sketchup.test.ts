@@ -221,17 +221,17 @@ describe('T-DOC-007: SketchUp detectFormat + importFile', () => {
     expect(detectSKP(buf)).toBe(false);
   });
 
-  it('importFile returns a DocumentSchema with at least one element', () => {
+  it('importFile returns a valid schema with no synthetic elements', () => {
     const buf = makeBuffer([0x37, 0xfc, 0xf4, 0x75]);
     const result = importSKP(buf, 'proj-123');
     expect(result.schema).toBeDefined();
-    expect(Object.keys(result.schema.content.elements).length).toBeGreaterThan(0);
+    expect(Object.keys(result.schema.content.elements).length).toBe(0);
   });
 
-  it('importFile includes a warning about stub implementation', () => {
+  it('importFile warns and points users to DAE/OBJ/IFC exports', () => {
     const buf = makeBuffer([0x37, 0xfc, 0xf4, 0x75]);
     const result = importSKP(buf, 'proj-123');
     expect(result.warnings.length).toBeGreaterThan(0);
-    expect(result.warnings[0]).toMatch(/SketchUp/i);
+    expect(result.warnings.join(' ')).toMatch(/DAE|OBJ|IFC/i);
   });
 });
