@@ -481,6 +481,10 @@ export function AppLayout() {
   const { status: authStatus, profile: authProfile, signOut: authSignOut } = useAuthStore();
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso' | 'billing'>('apikeys');
+  // SSO tab visible only when the deployment has been configured with a
+  // real SAML provider. The panel itself is localStorage-only today so
+  // we refuse to render it in any other environment.
+  const ssoEnabled = (import.meta.env.VITE_SSO_ENABLED as string | undefined) === 'true';
   const [rightPanelTab, setRightPanelTab] = useLocalStorage<RightPanelTab>(
     'opencad-rightPanelTab',
     'properties'
@@ -1070,13 +1074,20 @@ export function AppLayout() {
             <div className="settings-tabs">
               <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
               <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
-              <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+              {/* SSO tab gated behind VITE_SSO_ENABLED. The panel writes
+                  config to localStorage only; there's no real SAML backend
+                  yet, so we hide it to stop promising a feature that
+                  doesn't work. Flip the env var on the moment the Firebase
+                  SAML provider is configured per-org. */}
+              {ssoEnabled && (
+                <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+              )}
               <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
             </div>
             <div className="settings-content">
               {settingsTab === 'apikeys' && <APIKeyPanel />}
               {settingsTab === 'permissions' && <PermissionsPanel />}
-              {settingsTab === 'sso' && (
+              {settingsTab === 'sso' && ssoEnabled && (
                 <SSOSettingsPanel
                   config={loadSSOConfig()}
                   onSave={(cfg) => saveSSOConfig(cfg)}

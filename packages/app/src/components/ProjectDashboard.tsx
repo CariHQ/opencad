@@ -41,6 +41,7 @@ export function ProjectDashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('apikeys');
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const ssoEnabled = (import.meta.env.VITE_SSO_ENABLED as string | undefined) === 'true';
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState<string>('');
   const renameInputRef = useRef<HTMLInputElement>(null);
@@ -349,13 +350,15 @@ export function ProjectDashboard() {
             <div className="settings-tabs">
               <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
               <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
-              <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+              {ssoEnabled && (
+                <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+              )}
               <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
             </div>
             <div className="settings-content">
               {settingsTab === 'apikeys' && <APIKeyPanel />}
               {settingsTab === 'permissions' && <PermissionsPanel />}
-              {settingsTab === 'sso' && (
+              {settingsTab === 'sso' && ssoEnabled && (
                 <SSOSettingsPanel
                   config={loadSSOConfig()}
                   onSave={(cfg) => saveSSOConfig(cfg)}

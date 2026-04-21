@@ -92,6 +92,9 @@ const TIER_DEFAULTS: Record<SubscriptionTier, Omit<Entitlements, 'tier' | 'readO
     collabEnabled: true,
     aiEnabled: true,
     versionHistoryEnabled: true,
+    // SSO is gated behind VITE_SSO_ENABLED at render time too — see
+    // AppLayout / ProjectDashboard. The entitlement reflects intent
+    // (Business has SSO in the contract), not current plumbing state.
     ssoEnabled: true,
     marketplaceInstallEnabled: true,
     publisherEnabled: true,
