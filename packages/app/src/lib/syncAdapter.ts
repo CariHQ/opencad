@@ -116,13 +116,15 @@ export async function initSyncCrdt(peerId?: string): Promise<void> {
   _peerId = peerId ?? (typeof crypto !== 'undefined' ? crypto.randomUUID() : `peer-${Date.now()}`);
 
   try {
-    // Indirect import so bundler static analysis doesn't choke on the WASM URL.
-    const wasmPkg = '@opencad/sync-rs/pkg';
     type WasmMod = {
       default: (input?: unknown) => Promise<unknown>;
       DocumentCrdt: new (peerId: string) => DocumentCrdtInstance;
     };
-    const mod = await (Function('s', 'return import(s)')(wasmPkg) as Promise<WasmMod>);
+    // Direct dynamic import — Vite resolves @opencad/sync-rs/pkg via the
+    // package's `exports` map. The earlier Function(...) trick was an attempt
+    // to bypass bundler analysis, but it also bypassed Vite's module
+    // resolver at runtime in dev, which is why WASM never loaded.
+    const mod = (await import('@opencad/sync-rs/pkg')) as unknown as WasmMod;
     await mod.default();
     _crdt = new mod.DocumentCrdt(_peerId);
 

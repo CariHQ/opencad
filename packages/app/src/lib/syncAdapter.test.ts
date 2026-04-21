@@ -152,55 +152,31 @@ function makeCrdtMock(peerId: string): CrdtMock {
 // ── importAdapterWithCrdt ─────────────────────────────────────────────────────
 
 /**
- * Reset modules, monkey-patch globalThis.Function so that the `return import(s)`
- * factory used inside initSyncCrdt returns our mock WASM package, then import a
- * fresh copy of syncAdapter and call initSyncCrdt.
+ * Reset modules, mock the `@opencad/sync-rs/pkg` WASM entry with an in-memory
+ * stub, import a fresh copy of syncAdapter, and call initSyncCrdt. syncAdapter
+ * now uses a direct dynamic import (Vite's exports-map resolver) instead of
+ * the old Function(...) eval trick — so the mock targets the module path.
  *
- * We build the DocumentCrdt stub as a plain `function` constructor so that
- * `new DocumentCrdt(peerId)` works correctly (vitest 4.x rejects arrow mocks
- * used as constructors).
+ * DocumentCrdt is a plain `function` constructor so `new DocumentCrdt(id)`
+ * works correctly (vitest 4.x rejects arrow mocks used as constructors).
  */
 async function importAdapterWithCrdt(peerId = 'test-peer') {
   vi.resetModules();
 
   const crdtMock = makeCrdtMock(peerId);
-  const OriginalFunction = globalThis.Function;
 
-  // Build a real function-constructor that returns the crdtMock.
   // eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
   const DocumentCrdtStub = function (this: unknown) {
     Object.assign(this as object, crdtMock);
   } as unknown as new (id: string) => CrdtMock;
 
-  const mockWasmModule = {
+  vi.doMock('@opencad/sync-rs/pkg', () => ({
     default: vi.fn().mockResolvedValue(undefined),
     DocumentCrdt: DocumentCrdtStub,
-  };
+  }));
 
-  // Intercept the specific Function('s','return import(s)') call used by the adapter.
-  const patchedFunction = function (...args: unknown[]) {
-    const body = args[args.length - 1] as string;
-    if (typeof body === 'string' && body.includes('return import(s)')) {
-      // Return a no-arg function that resolves with our mock module.
-      return () => Promise.resolve(mockWasmModule);
-    }
-    // Fall through to the real Function for everything else.
-    // @ts-expect-error – we intentionally call with unknown args
-    return OriginalFunction(...args);
-  } as unknown as typeof Function;
-
-  // Copy over all static properties of Function.
-  Object.setPrototypeOf(patchedFunction, OriginalFunction);
-  Object.assign(patchedFunction, OriginalFunction);
-  globalThis.Function = patchedFunction;
-
-  let mod: typeof import('./syncAdapter');
-  try {
-    mod = await import('./syncAdapter');
-    await mod.initSyncCrdt(peerId);
-  } finally {
-    globalThis.Function = OriginalFunction;
-  }
+  const mod = await import('./syncAdapter');
+  await mod.initSyncCrdt(peerId);
 
   return { mod, crdtMock };
 }

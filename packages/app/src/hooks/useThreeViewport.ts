@@ -164,54 +164,45 @@ interface GenericRenderer {
   dispose(): void;
 }
 
-/** Opt-in check: `?renderer=webgpu` or `localStorage.opencad-renderer = 'webgpu'`. */
-function isWebGPURequested(): boolean {
+/** Opt-out check: `?renderer=webgl` or `localStorage.opencad-renderer = 'webgl'`. */
+function isWebGLForced(): boolean {
   try {
     if (typeof window === 'undefined') return false;
     const q = new URLSearchParams(window.location.search).get('renderer');
-    if (q === 'webgpu') return true;
-    if (q === 'webgl') return false;
-    return window.localStorage?.getItem('opencad-renderer') === 'webgpu';
+    if (q === 'webgl') return true;
+    if (q === 'webgpu') return false;
+    return window.localStorage?.getItem('opencad-renderer') === 'webgl';
   } catch { return false; }
 }
 
-function createWebGLRenderer(): GenericRenderer {
-  return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
-}
-
 /**
- * Create the 3D renderer. Synchronously returns WebGL; if the user has opted
- * into WebGPU (URL param or localStorage) AND `navigator.gpu` is present, also
- * kicks off an async upgrade to WebGPU via `onUpgrade(newRenderer)`. The caller
- * is responsible for hot-swapping the renderer on upgrade — the WebGL renderer
- * keeps the viewport live until the upgrade completes.
+ * Create the 3D renderer. Defaults to WebGPU on browsers that expose
+ * `navigator.gpu`; falls back to WebGL on any failure. Opt out with
+ * `?renderer=webgl` or `localStorage.opencad-renderer = 'webgl'`.
  */
-function createRenderer(
-  onUpgrade?: (next: GenericRenderer) => void,
-): GenericRenderer {
-  const webgl = createWebGLRenderer();
-  if (!onUpgrade || !isWebGPURequested()) return webgl;
-  if (typeof navigator === 'undefined' || !(navigator as { gpu?: unknown }).gpu) return webgl;
-
-  // Defer the WebGPU import so bundlers that don't know about three/webgpu
-  // don't blow up at build time.
-  void (async () => {
-    try {
-      const mod = await import('three/webgpu');
-      const WebGPURenderer = (mod as unknown as { WebGPURenderer: new (params?: unknown) => unknown }).WebGPURenderer;
-      if (!WebGPURenderer) return;
-      const gpu = new WebGPURenderer({ antialias: true }) as unknown as GenericRenderer & { init?: () => Promise<unknown> };
-      await gpu.init?.();
-      onUpgrade(gpu);
-    } catch (err) {
-      // Stay on WebGL silently — WebGPU is opt-in, failures are non-fatal.
-      // Log once so dev-tools users can see what happened.
-      // eslint-disable-next-line no-console
-      console.info('[viewport] WebGPU init failed, staying on WebGL:', err);
-    }
-  })();
-
-  return webgl;
+async function createRenderer(): Promise<GenericRenderer> {
+  if (isWebGLForced()) {
+    return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+  }
+  if (typeof navigator === 'undefined' || !(navigator as { gpu?: unknown }).gpu) {
+    return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+  }
+  try {
+    const mod = await import('three/webgpu');
+    const WebGPURenderer = (mod as unknown as {
+      WebGPURenderer: new (params?: unknown) => unknown;
+    }).WebGPURenderer;
+    if (!WebGPURenderer) throw new Error('WebGPURenderer missing from three/webgpu module');
+    const gpu = new WebGPURenderer({ antialias: true }) as unknown as GenericRenderer & {
+      init?: () => Promise<unknown>;
+    };
+    await gpu.init?.();
+    console.info('[viewport] WebGPU renderer active.');
+    return gpu;
+  } catch (err) {
+    console.info('[viewport] WebGPU init failed, using WebGL:', err);
+    return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+  }
 }
 
 // ─── Module-level geometry helpers ───────────────────────────────────────────
@@ -1332,59 +1323,60 @@ export function useThreeViewport() {
 
     scene.add(new THREE.AxesHelper(1000));
 
-    // Set scene + camera, then create renderer synchronously.
-    // When the user has opted into WebGPU the onUpgrade callback hot-swaps
-    // the renderer once the async WebGPU init resolves.
+    // Renderer init is async (WebGPU resolves `navigator.gpu` asynchronously).
+    // Everything renderer-dependent lives inside the IIFE below; `cancelled`
+    // guards against unmount completing before init finishes.
+    let cancelled = false;
     const safeW = Math.max(100, initW);
     const safeH = Math.max(100, initH);
-    const configureRenderer = (r: GenericRenderer) => {
-      r.setSize(safeW, safeH);
-      r.setPixelRatio(window.devicePixelRatio);
-      r.shadowMap.enabled = true;
-      r.shadowMap.type = THREE.PCFShadowMap;
-      const el = r.domElement as HTMLCanvasElement;
-      el.style.display = 'block';
-      el.style.width  = '100%';
-      el.style.height = '100%';
-    };
-    let cancelled = false;
-    const renderer = createRenderer((nextRenderer) => {
-      if (cancelled) { nextRenderer.dispose(); return; }
-      const prev = stateRef.current.renderer;
-      if (!prev) { nextRenderer.dispose(); return; }
-      configureRenderer(nextRenderer);
-      const prevEl = prev.domElement;
-      const nextEl = nextRenderer.domElement;
-      prevEl.parentNode?.replaceChild(nextEl, prevEl);
-      prev.dispose();
-      stateRef.current.renderer = nextRenderer;
+
+    // Event / renderer handles we need to tear down on unmount. Populated
+    // inside the async IIFE once the renderer is ready.
+    let rendererRef: GenericRenderer | null = null;
+    let animate: (() => void) | null = null;
+    let onMouseDown:   ((e: MouseEvent) => void) | null = null;
+    let onMouseMove:   ((e: MouseEvent) => void) | null = null;
+    let onWheel:       ((e: WheelEvent) => void) | null = null;
+    let onContextMenu: ((e: Event) => void)      | null = null;
+    let onKeyDown:     ((e: KeyboardEvent) => void) | null = null;
+    let onMouseUp:     (() => void) | null = null;
+    let onMouseLeave:  (() => void) | null = null;
+    let ro: ResizeObserver | null = null;
+
+    void (async () => {
+      const renderer = await createRenderer();
+      if (cancelled) { renderer.dispose(); return; }
+      rendererRef = renderer;
+
+      // Guard against 0×0 initialisation — real canvas size is re-applied by
+      // the ResizeObserver below once layout settles.
+      renderer.setSize(safeW, safeH);
+      renderer.setPixelRatio(window.devicePixelRatio);
+      renderer.shadowMap.enabled = true;
+      // PCFSoftShadowMap was deprecated in three@0.170+ — use PCFShadowMap.
+      renderer.shadowMap.type    = THREE.PCFShadowMap;
+      container.appendChild(renderer.domElement);
+      const canvasEl = renderer.domElement as HTMLCanvasElement;
+      canvasEl.style.display = 'block';
+      canvasEl.style.width  = '100%';
+      canvasEl.style.height = '100%';
+
+      requestAnimationFrame(() => {
+        const r = container.getBoundingClientRect();
+        if (r.width > 0 && r.height > 0) {
+          const camObj = stateRef.current.camera;
+          if (camObj) { camObj.aspect = r.width / r.height; camObj.updateProjectionMatrix(); }
+          stateRef.current.renderer?.setSize(r.width, r.height);
+          needsRenderRef.current = true;
+        }
+      });
+
+      stateRef.current = { camera, renderer, scene };
+      rendererReadyRef.current = true;
       needsRenderRef.current = true;
-    });
-    // PCFSoftShadowMap was deprecated in three@0.170+ for the WebGL path —
-    // use PCFShadowMap; visual difference is negligible at our quality level
-    // and the deprecation warning no longer spams the console.
-    configureRenderer(renderer);
-    container.appendChild(renderer.domElement);
+      hasAutoZoomedRef.current = false;
 
-    // Re-measure after the browser has committed layout — catches the case
-    // where initial getBoundingClientRect returned 0s because the parent was
-    // still hidden or not yet sized.
-    requestAnimationFrame(() => {
-      const r = container.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0) {
-        const camObj = stateRef.current.camera;
-        if (camObj) { camObj.aspect = r.width / r.height; camObj.updateProjectionMatrix(); }
-        stateRef.current.renderer?.setSize(r.width, r.height);
-        needsRenderRef.current = true;
-      }
-    });
-
-    stateRef.current = { camera, renderer, scene };
-    rendererReadyRef.current = true;
-    needsRenderRef.current = true;
-    hasAutoZoomedRef.current = false;
-
-    updateCamera();
+      updateCamera();
 
     // ── TransformControls gizmo ──────────────────────────────────────────
     // Wrapped in try/catch because TransformControls broke its API in
@@ -1442,91 +1434,89 @@ export function useThreeViewport() {
       console.warn('[3D] TransformControls init failed — gizmo disabled:', err);
     }
 
-    // ── Animate loop: always render each frame. Errors in render are
-    // caught and logged so one bad frame doesn't kill the whole loop.
-    let renderErrorCount = 0;
-    let coordFrame = 0;
-    const animate = () => {
-      animationFrameRef.current = requestAnimationFrame(animate);
-      try {
-        renderer.render(scene, camera);
-      } catch (err) {
-        if (renderErrorCount++ < 5) {
-          // eslint-disable-next-line no-console
-          console.error('[3D] renderer.render() threw:', err);
-        }
-      }
-
-      // Publish selected-element coords every few frames. Reads the live
-      // mesh.position so the value updates during TransformControls drag.
-      coordFrame = (coordFrame + 1) % 3;
-      if (coordFrame === 0) {
-        const ids = selectedIdsRef.current;
-        if (ids.length === 0) {
-          _publishSelectedCoords(null);
-        } else {
-          const firstId = ids[0]!;
-          const mesh = elementMeshesRef.current.get(firstId);
-          if (mesh) {
-            _publishSelectedCoords({
-              x: Math.round(mesh.position.x),
-              // 3D y is vertical (height), 3D z is plan-depth — map back to
-              // arch (x, y, z) = (3d.x, 3d.z, 3d.y) for user-facing labels.
-              y: Math.round(mesh.position.z),
-              z: Math.round(mesh.position.y),
-              elementId: firstId,
-            });
-          } else {
-            _publishSelectedCoords(null);
+      // ── Animate loop: always render each frame. Errors in render are
+      // caught and logged so one bad frame doesn't kill the whole loop.
+      let renderErrorCount = 0;
+      let coordFrame = 0;
+      animate = () => {
+        animationFrameRef.current = requestAnimationFrame(animate!);
+        try {
+          renderer.render(scene, camera);
+        } catch (err) {
+          if (renderErrorCount++ < 5) {
+            // eslint-disable-next-line no-console
+            console.error('[3D] renderer.render() threw:', err);
           }
         }
-      }
-    };
-    animate();
 
-    // Ref-based handler indirection so changing callback identities don't
-    // tear down the whole Three.js scene on every doc update.
-    const onMouseDown    = (e: MouseEvent)    => handlersRef.current.mousedown(e);
-    const onMouseMove    = (e: MouseEvent)    => handlersRef.current.mousemove(e);
-    const onWheel        = (e: WheelEvent)    => handlersRef.current.wheel(e);
-    const onContextMenu  = (e: Event)         => handlersRef.current.contextmenu(e);
-    const onKeyDown      = (e: KeyboardEvent) => handlersRef.current.keydown(e);
-    const onMouseUp      = () => { isDragging.current = false; };
-    const onMouseLeave   = () => { isDragging.current = false; };
+        // Publish selected-element coords every few frames.
+        coordFrame = (coordFrame + 1) % 3;
+        if (coordFrame === 0) {
+          const ids = selectedIdsRef.current;
+          if (ids.length === 0) {
+            _publishSelectedCoords(null);
+          } else {
+            const firstId = ids[0]!;
+            const mesh = elementMeshesRef.current.get(firstId);
+            if (mesh) {
+              _publishSelectedCoords({
+                x: Math.round(mesh.position.x),
+                y: Math.round(mesh.position.z),
+                z: Math.round(mesh.position.y),
+                elementId: firstId,
+              });
+            } else {
+              _publishSelectedCoords(null);
+            }
+          }
+        }
+      };
+      animate();
 
-    container.addEventListener('mousedown',    onMouseDown);
-    container.addEventListener('mousemove',    onMouseMove);
-    container.addEventListener('wheel',        onWheel);
-    container.addEventListener('contextmenu',  onContextMenu);
-    container.addEventListener('mouseup',      onMouseUp);
-    container.addEventListener('mouseleave',   onMouseLeave);
-    window.addEventListener('keydown',         onKeyDown);
+      // Ref-based handler indirection so changing callback identities don't
+      // tear down the whole Three.js scene on every doc update.
+      onMouseDown    = (e: MouseEvent)    => handlersRef.current.mousedown(e);
+      onMouseMove    = (e: MouseEvent)    => handlersRef.current.mousemove(e);
+      onWheel        = (e: WheelEvent)    => handlersRef.current.wheel(e);
+      onContextMenu  = (e: Event)         => handlersRef.current.contextmenu(e);
+      onKeyDown      = (e: KeyboardEvent) => handlersRef.current.keydown(e);
+      onMouseUp      = () => { isDragging.current = false; };
+      onMouseLeave   = () => { isDragging.current = false; };
 
-    const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        const { width, height } = entry.contentRect;
-        if (width === 0 || height === 0) continue;
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
-        const { renderer: r } = stateRef.current;
-        if (r) r.setSize(width, height);
-        needsRenderRef.current = true;
-      }
-    });
-    ro.observe(container);
+      container.addEventListener('mousedown',    onMouseDown);
+      container.addEventListener('mousemove',    onMouseMove);
+      container.addEventListener('wheel',        onWheel);
+      container.addEventListener('contextmenu',  onContextMenu);
+      container.addEventListener('mouseup',      onMouseUp);
+      container.addEventListener('mouseleave',   onMouseLeave);
+      window.addEventListener('keydown',         onKeyDown);
+
+      ro = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          const { width, height } = entry.contentRect;
+          if (width === 0 || height === 0) continue;
+          camera.aspect = width / height;
+          camera.updateProjectionMatrix();
+          const { renderer: r } = stateRef.current;
+          if (r) r.setSize(width, height);
+          needsRenderRef.current = true;
+        }
+      });
+      ro.observe(container);
+    })();
 
     return () => {
       cancelled = true;
       rendererReadyRef.current = false;
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
-      ro.disconnect();
-      container.removeEventListener('mousedown',   onMouseDown);
-      container.removeEventListener('mousemove',   onMouseMove);
-      container.removeEventListener('wheel',       onWheel);
-      container.removeEventListener('contextmenu', onContextMenu);
-      container.removeEventListener('mouseup',     onMouseUp);
-      container.removeEventListener('mouseleave',  onMouseLeave);
-      window.removeEventListener('keydown',        onKeyDown);
+      ro?.disconnect();
+      if (onMouseDown)   container.removeEventListener('mousedown',   onMouseDown);
+      if (onMouseMove)   container.removeEventListener('mousemove',   onMouseMove);
+      if (onWheel)       container.removeEventListener('wheel',       onWheel);
+      if (onContextMenu) container.removeEventListener('contextmenu', onContextMenu);
+      if (onMouseUp)     container.removeEventListener('mouseup',     onMouseUp);
+      if (onMouseLeave)  container.removeEventListener('mouseleave',  onMouseLeave);
+      if (onKeyDown)     window.removeEventListener('keydown',        onKeyDown);
       if (transformControlsRef.current) {
         transformControlsRef.current.dispose();
         transformControlsRef.current = null;
