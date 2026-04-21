@@ -32,6 +32,23 @@ export function onPluginNotification(fn: NotifListener): () => void {
   return () => { notifListeners.delete(fn); };
 }
 
+/** Emit a notification that isn't coming from a plugin itself — host-level
+ *  events like kill-switch removal use this so they appear in the same
+ *  toast stream the user already expects for plugin output. */
+export function emitHostPluginNotification(
+  message: string,
+  type: 'info' | 'success' | 'error' = 'info',
+): void {
+  const n: PluginNotification = {
+    id: crypto.randomUUID(),
+    pluginId: '__host__',
+    message,
+    type,
+    timestamp: Date.now(),
+  };
+  for (const fn of notifListeners) fn(n);
+}
+
 // ─── Command registry (plugins → UI) ─────────────────────────────────────────
 
 export interface PluginCommand {

@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { pluginRegistry } from '../plugins/pluginRegistry';
 import { validateManifest, type PluginManifest } from '../plugins/pluginManifest';
-import { BUNDLED_PLUGIN_MANIFESTS } from '../plugins/pluginHost';
+import { BUNDLED_PLUGIN_MANIFESTS, pluginHost } from '../plugins/pluginHost';
 import {
   listPlugins,
   listInstalled,
@@ -10,6 +10,8 @@ import {
   type Plugin,
 } from '../lib/marketplaceApi';
 import { PluginConsentModal } from './PluginConsentModal';
+import { PluginReportModal } from './PluginReportModal';
+import type { InstalledPlugin } from '../lib/marketplaceApi';
 
 export interface MarketplaceItem {
   id: string;
@@ -111,6 +113,14 @@ export function MarketplacePanel({
     | { kind: 'remote'; plugin: Plugin }
     | { kind: 'bundled'; manifest: PluginManifest };
   const [pendingConsent, setPendingConsent] = useState<ConsentPending | null>(null);
+
+  // Target of the report-a-plugin modal (null = closed).
+  const [reportingPlugin, setReportingPlugin] = useState<{ id: string; name: string } | null>(null);
+
+  // Per-user installed plugins from the backend. Used to detect available
+  // updates (installedVersion !== version) and to surface the revoked
+  // flag so we can warn the user their plugin was killed server-side.
+  const [installedFromServer, setInstalledFromServer] = useState<InstalledPlugin[]>([]);
   useEffect(() => {
     return pluginRegistry.subscribe(() => {
       setRegisteredIds(new Set(pluginRegistry.list().map((m) => m.id)));
@@ -141,6 +151,7 @@ export function MarketplacePanel({
       const installedIds = new Set(installed.map((p) => p.id));
       const merged = all.map((p) => ({ ...p, installed: p.installed || installedIds.has(p.id) }));
       setApiPlugins(merged);
+      setInstalledFromServer(installed);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load plugins';
       setError(message);
@@ -162,6 +173,62 @@ export function MarketplacePanel({
   const handleApiInstall = useCallback((plugin: Plugin) => {
     setPendingConsent({ kind: 'remote', plugin });
   }, []);
+
+  // Update handler: when the catalogue version is ahead of the user's
+  // installedVersion, one click replaces the running sandbox with the
+  // new entrypoint and tells the server to bump the installed version.
+  const handleApiUpdate = useCallback(async (plugin: Plugin) => {
+    const pluginId = plugin.id;
+    const nextManifest: PluginManifest = {
+      id: plugin.id,
+      name: plugin.name,
+      version: plugin.version,
+      description: plugin.description,
+      permissions: plugin.permissions,
+      entrypoint: plugin.entrypoint,
+      sriHash: plugin.sriHash,
+      icon: plugin.icon,
+      author: plugin.author,
+    };
+    if (!validateManifest(nextManifest)) return;
+
+    setInstallingIds((prev) => new Set([...prev, pluginId]));
+    try {
+      // Stop the currently-running sandbox before re-registering so the
+      // host's subscribe callback starts the new version against the new
+      // manifest instead of keeping the old worker alive.
+      pluginHost.stop(pluginId);
+      pluginRegistry.register(nextManifest);
+      await installPlugin(pluginId); // bumps installed version server-side
+      // Refresh installedFromServer so the Update button goes away.
+      setInstalledFromServer((prev) =>
+        prev.map((i) => (i.id === pluginId ? { ...i, installedVersion: plugin.version } : i)),
+      );
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.warn(`[marketplace] update failed for ${pluginId}:`, err);
+    } finally {
+      setInstallingIds((prev) => {
+        const next = new Set(prev);
+        next.delete(pluginId);
+        return next;
+      });
+    }
+  }, []);
+
+  // Lookup helper: does `pluginId` have an available update?
+  const installedById = useMemo(() => {
+    const m = new Map<string, InstalledPlugin>();
+    for (const p of installedFromServer) m.set(p.id, p);
+    return m;
+  }, [installedFromServer]);
+  const hasUpdate = useCallback(
+    (plugin: Plugin): boolean => {
+      const i = installedById.get(plugin.id);
+      return !!i && i.installedVersion !== plugin.version;
+    },
+    [installedById],
+  );
 
   /** Runs once the user clicks Install in the consent modal for a
    *  remote-catalogue plugin. Registers the manifest locally (so
@@ -283,6 +350,13 @@ export function MarketplacePanel({
 
   return (
     <div className="marketplace-panel">
+      {reportingPlugin && (
+        <PluginReportModal
+          pluginId={reportingPlugin.id}
+          pluginName={reportingPlugin.name}
+          onClose={() => setReportingPlugin(null)}
+        />
+      )}
       {pendingConsent && (
         <PluginConsentModal
           pluginName={
@@ -397,6 +471,17 @@ export function MarketplacePanel({
                   </span>
                 </div>
                 <div className="item-actions">
+                  {plugin.installed && hasUpdate(plugin) && (
+                    <button
+                      aria-label={`Update ${plugin.name}`}
+                      className="btn-update"
+                      disabled={isInstalling}
+                      onClick={() => void handleApiUpdate(plugin)}
+                      title={`Update to v${plugin.version}`}
+                    >
+                      {isInstalling ? 'Updating…' : 'Update'}
+                    </button>
+                  )}
                   {plugin.installed ? (
                     <button
                       aria-label={`Uninstall ${plugin.name}`}
@@ -416,6 +501,14 @@ export function MarketplacePanel({
                       {isInstalling ? 'Installing…' : 'Install'}
                     </button>
                   )}
+                  <button
+                    aria-label={`Report ${plugin.name}`}
+                    className="btn-report"
+                    onClick={() => setReportingPlugin({ id: plugin.id, name: plugin.name })}
+                    title="Report this plugin"
+                  >
+                    Report
+                  </button>
                 </div>
               </div>
             );

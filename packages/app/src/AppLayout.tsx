@@ -81,6 +81,7 @@ import {
   listPluginCommands,
   type PluginNotification,
   type PluginCommand,
+  emitHostPluginNotification,
 } from './plugins/pluginHost';
 import { pluginRegistry } from './plugins/pluginRegistry';
 import { listInstalled as listInstalledPlugins } from './lib/marketplaceApi';
@@ -381,11 +382,19 @@ export function AppLayout() {
   // boot into their installed plugins.
   React.useEffect(() => {
     void (async () => {
+      const revokedMessages: string[] = [];
       try {
         const installed = await listInstalledPlugins();
         for (const p of installed) {
           if (p.revoked) {
             pluginRegistry.unregister(p.id);
+            // Surface why — otherwise the plugin silently disappears from
+            // the user's library with no explanation.
+            revokedMessages.push(
+              p.revokedReason
+                ? `"${p.name}" was removed by OpenCAD: ${p.revokedReason}`
+                : `"${p.name}" was removed by OpenCAD for policy reasons.`,
+            );
             continue;
           }
           pluginRegistry.register({
@@ -404,6 +413,11 @@ export function AppLayout() {
         // Offline / server down — persisted local registry is the fallback.
       }
       void pluginHost.startAll();
+      // Surface kill-switch removals in the same toast stream as plugin
+      // notifications so the user understands why the plugin vanished.
+      for (const msg of revokedMessages) {
+        emitHostPluginNotification(msg, 'error');
+      }
     })();
   }, []);
 

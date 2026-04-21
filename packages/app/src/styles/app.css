@@ -7051,6 +7051,94 @@ input[type='range']::-moz-range-track {
   filter: brightness(1.08);
 }
 
+.plugin-consent-accept:disabled,
+.plugin-consent-cancel:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Report modal fields */
+
+.plugin-report-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.plugin-report-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.plugin-report-select,
+.plugin-report-textarea {
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  width: 100%;
+}
+
+.plugin-report-textarea {
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.4;
+}
+
+.plugin-report-error {
+  padding: 8px 10px;
+  font-size: 12px;
+  background: rgba(231, 76, 60, 0.1);
+  border-left: 3px solid #e74c3c;
+  border-radius: 4px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+/* Update and Report buttons in the Available list */
+
+.btn-update {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: inherit;
+  background: #f59e0b;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: filter 0.12s;
+}
+
+.btn-update:hover {
+  filter: brightness(1.08);
+}
+
+.btn-update:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-report {
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.btn-report:hover {
+  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+}
+
 .plugin-icon {
   width: 20px;
   height: 20px;
