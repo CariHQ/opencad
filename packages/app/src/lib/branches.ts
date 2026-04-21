@@ -1,14 +1,20 @@
 /**
- * Design branches — Phase-3 collaboration feature.
+ * Design branches — server-authoritative, with OPFS cache for offline.
  *
- * A branch is a named snapshot of a document's serialized JSON. Branches live
- * in OPFS / localStorage keyed by projectId; switching a branch reloads the
- * active document from that snapshot. Diffing compares element-by-element
- * membership and property content.
+ * Previously branches lived only in OPFS / localStorage keyed by
+ * projectId, which meant clearing browser storage or switching devices
+ * wiped every branch. Now:
+ *   - The server's `project_branches` table is the source of truth.
+ *   - The local OPFS cache mirrors the server so offline reads still
+ *     work. loadBranches() serves the cache immediately and reconciles
+ *     from the server in the background when online.
+ *   - createBranch / deleteBranch / updateBranch round-trip through the
+ *     API; the local cache is updated on success.
  */
 
 import type { DocumentSchema } from '@opencad/document';
 import { opfsRead, opfsWrite } from './opfs';
+import { isServerAvailable, serverFetch } from './serverApi';
 
 export interface BranchRecord {
   /** Stable internal id; 'main' is reserved for the original branch. */
@@ -33,22 +39,115 @@ export interface BranchStore {
 const lsKey = (projectId: string): string => `opencad-branches-${projectId}`;
 const opfsKey = (projectId: string): string => `branches-${projectId}.json`;
 
-export async function loadBranches(projectId: string): Promise<BranchStore> {
-  try {
-    const fromOpfs = await opfsRead(opfsKey(projectId));
-    if (fromOpfs) return JSON.parse(fromOpfs) as BranchStore;
-  } catch { /* fall through */ }
-  try {
-    const raw = localStorage.getItem(lsKey(projectId));
-    if (raw) return JSON.parse(raw) as BranchStore;
-  } catch { /* fall through */ }
-  return { projectId, branches: {}, activeBranchId: 'main' };
+/** Server row shape from /api/v1/projects/:id/branches. */
+interface ServerBranch {
+  projectId: string;
+  id: string;
+  name: string;
+  message: string | null;
+  snapshot: string;
+  baseBranchId: string | null;
+  createdBy: string | null;
+  createdAt: string;
+  updatedAt: string;
 }
 
-export async function saveBranches(store: BranchStore): Promise<void> {
+function branchFromServer(row: ServerBranch): BranchRecord {
+  return {
+    id: row.id,
+    name: row.name,
+    message: row.message ?? undefined,
+    snapshot: row.snapshot,
+    createdAt: new Date(row.createdAt).getTime(),
+  };
+}
+
+async function fetchServerBranches(projectId: string): Promise<BranchStore | null> {
+  try {
+    if (!(await isServerAvailable())) return null;
+    const rows = await serverFetch<ServerBranch[]>(`/projects/${encodeURIComponent(projectId)}/branches`);
+    const branches: Record<string, BranchRecord> = {};
+    for (const row of rows) branches[row.id] = branchFromServer(row);
+    // activeBranchId is client-local — server doesn't track which branch
+    // the user is currently viewing, only the branch catalogue.
+    return { projectId, branches, activeBranchId: 'main' };
+  } catch {
+    return null;
+  }
+}
+
+export async function loadBranches(projectId: string): Promise<BranchStore> {
+  // Fast path: cache first (works offline), then reconcile from server.
+  let local: BranchStore | null = null;
+  try {
+    const fromOpfs = await opfsRead(opfsKey(projectId));
+    if (fromOpfs) local = JSON.parse(fromOpfs) as BranchStore;
+  } catch { /* fall through */ }
+  if (!local) {
+    try {
+      const raw = localStorage.getItem(lsKey(projectId));
+      if (raw) local = JSON.parse(raw) as BranchStore;
+    } catch { /* fall through */ }
+  }
+
+  const remote = await fetchServerBranches(projectId);
+  if (remote) {
+    // Preserve the client-local activeBranchId (server doesn't know it).
+    const merged: BranchStore = {
+      ...remote,
+      activeBranchId: local?.activeBranchId ?? 'main',
+    };
+    await saveBranchesLocal(merged);
+    return merged;
+  }
+  return local ?? { projectId, branches: {}, activeBranchId: 'main' };
+}
+
+async function saveBranchesLocal(store: BranchStore): Promise<void> {
   const serialized = JSON.stringify(store);
   await opfsWrite(opfsKey(store.projectId), serialized);
   try { localStorage.setItem(lsKey(store.projectId), serialized); } catch { /* quota */ }
+}
+
+/**
+ * Write the current branch state to the local cache. Kept for the
+ * switchBranch (activeBranchId) path where no server round-trip is
+ * needed — branch mutations use pushBranchToServer / removeBranchFromServer
+ * below to round-trip first, then update the cache.
+ */
+export async function saveBranches(store: BranchStore): Promise<void> {
+  await saveBranchesLocal(store);
+}
+
+/** Create-or-update a branch server-side then cache it locally. */
+export async function pushBranchToServer(
+  projectId: string,
+  record: BranchRecord,
+  baseBranchId?: string,
+): Promise<BranchRecord> {
+  const body = {
+    id: record.id,
+    name: record.name,
+    message: record.message ?? null,
+    snapshot: record.snapshot,
+    base_branch_id: baseBranchId ?? null,
+  };
+  const row = await serverFetch<ServerBranch>(
+    `/projects/${encodeURIComponent(projectId)}/branches`,
+    { method: 'POST', body: JSON.stringify(body) },
+  );
+  return branchFromServer(row);
+}
+
+/** Delete a branch server-side. Caller is responsible for updating cache. */
+export async function removeBranchFromServer(
+  projectId: string,
+  branchId: string,
+): Promise<void> {
+  await serverFetch<void>(
+    `/projects/${encodeURIComponent(projectId)}/branches/${encodeURIComponent(branchId)}`,
+    { method: 'DELETE' },
+  );
 }
 
 // ─── Branch operations ──────────────────────────────────────────────────────

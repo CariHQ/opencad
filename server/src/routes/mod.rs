@@ -4,6 +4,7 @@ use tower_http::{cors::CorsLayer, trace::TraceLayer};
 use crate::{auth, state::AppState};
 
 mod auth_routes;
+mod branches;
 mod documents;
 mod feedback;
 mod files;
@@ -59,6 +60,15 @@ pub fn build(state: AppState) -> Router {
         .route(
             "/api/v1/projects/:id/versions/:vid",
             get(versions::get_version),
+        )
+        // ── Branches ──────────────────────────────────────────────────────────
+        .route(
+            "/api/v1/projects/:id/branches",
+            get(branches::list).post(branches::create),
+        )
+        .route(
+            "/api/v1/projects/:id/branches/:bid",
+            axum::routing::patch(branches::update).delete(branches::delete_one),
         )
         // ── Feedback ──────────────────────────────────────────────────────────
         .route(

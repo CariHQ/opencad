@@ -18,6 +18,8 @@ import {
   getBranchDocument,
   diffBranches,
   mergeBranches,
+  pushBranchToServer,
+  removeBranchFromServer,
   type BranchStore,
 } from '../lib/branches';
 
@@ -48,7 +50,20 @@ export function BranchPanel(): React.ReactElement {
 
   const handleCreate = () => {
     if (!newName.trim()) return;
-    persist(createBranch(store, { name: newName.trim(), document: doc }));
+    // Update the local cache immediately so the UI feels instant, then
+    // push to the server. If the push fails we surface it via the
+    // useDocumentStore toast pattern — for now we log and keep the
+    // optimistic state (next loadBranches reconciles).
+    const next = createBranch(store, { name: newName.trim(), document: doc });
+    persist(next);
+    // Find the record we just created — it's the newly active one.
+    const record = next.branches[next.activeBranchId];
+    if (record) {
+      void pushBranchToServer(doc.id, record, store.activeBranchId).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn('[branches] push failed, kept local copy:', err);
+      });
+    }
     setNewName('');
   };
 
@@ -57,12 +72,19 @@ export function BranchPanel(): React.ReactElement {
       const snap = getBranchDocument(store, id);
       if (snap) loadDocumentSchema(snap);
     }
+    // activeBranchId is client-local; no server round-trip.
     persist(switchBranch(store, id));
   };
 
   const handleDelete = (id: string) => {
     if (id === 'main') return;
     persist(deleteBranch(store, id));
+    if (doc) {
+      void removeBranchFromServer(doc.id, id).catch((err) => {
+        // eslint-disable-next-line no-console
+        console.warn('[branches] delete failed server-side:', err);
+      });
+    }
   };
 
   const handleMergeIn = (id: string, strategy: 'prefer-mine' | 'prefer-theirs') => {

@@ -22,6 +22,13 @@ async function authHeaders(): Promise<HeadersInit> {
     : { 'Content-Type': 'application/json' };
 }
 
+/** Authenticated JSON fetch against /api/v1. Exported as `serverFetch`
+ *  for use by other modules (e.g. branches.ts) that want the same auth
+ *  + baseUrl + error-handling wrapper without reaching in privately. */
+export async function serverFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  return apiFetch<T>(path, init);
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = await authHeaders();
   const res = await fetch(`/api/v1${path}`, {
