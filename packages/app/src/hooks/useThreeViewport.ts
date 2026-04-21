@@ -648,6 +648,43 @@ export function useThreeViewport() {
         );
       }
 
+      // Point clouds — stored as surface elements tagged Kind=point_cloud.
+      // Render as THREE.Points with the stored XYZ buffer + optional colours.
+      if (type === 'surface' && props['Kind']?.value === 'point_cloud') {
+        try {
+          const raw = props['Points']?.value;
+          if (typeof raw !== 'string' || raw.length === 0) return null;
+          const coords = raw.split(',').map((s) => parseFloat(s));
+          if (coords.length < 3 || coords.length % 3 !== 0) return null;
+          const positions = new Float32Array(coords);
+          const geom = new THREE.BufferGeometry();
+          geom.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+          let vertexColors = false;
+          const colorsRaw = props['Colors']?.value;
+          if (typeof colorsRaw === 'string' && colorsRaw.length > 0) {
+            const cArr = colorsRaw.split(',').map((s) => parseFloat(s));
+            if (cArr.length === positions.length) {
+              geom.setAttribute('color', new THREE.BufferAttribute(new Float32Array(cArr), 3));
+              vertexColors = true;
+            }
+          }
+
+          const mat = new THREE.PointsMaterial({
+            size: 8,
+            sizeAttenuation: true,
+            vertexColors,
+            color: vertexColors ? 0xffffff : new THREE.Color(color),
+          });
+          const pts = new THREE.Points(geom, mat);
+          pts.userData.elementId   = element.id;
+          pts.userData.elementType = type;
+          return pts;
+        } catch {
+          return null;
+        }
+      }
+
       // Annotations with StartX/EndX (section lines, plain line annotations)
       // get the line-extrusion treatment. Annotations that are single-point
       // markers (elevation, hotspot-backed elevation, label, detail callout,

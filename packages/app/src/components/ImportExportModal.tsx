@@ -11,6 +11,7 @@ import {
   exportToPDFDataURL,
   renderDocumentToPDF,
 } from '@opencad/document';
+import { parsePointCloud } from '../lib/pointCloud';
 
 interface ImportExportModalProps {
   mode: 'import' | 'export' | 'projects';
@@ -31,12 +32,38 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
     setError(null);
 
     try {
-      if (file.name.toLowerCase().endsWith('.ifc')) {
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith('.ifc')) {
         const content = await file.text();
         const parsed = parseIFC(content);
         loadDocumentSchema(parsed);
+      } else if (
+        lower.endsWith('.ply') || lower.endsWith('.xyz') || lower.endsWith('.txt') ||
+        lower.endsWith('.pts')
+      ) {
+        const content = await file.text();
+        const pc = parsePointCloud(file.name, content);
+        if (pc.renderedCount === 0) {
+          setError('No points found in file (binary PLY not yet supported).');
+          setImporting(false);
+          return;
+        }
+        const store = useDocumentStore.getState();
+        if (!store.document) store.initProject(crypto.randomUUID(), 'import');
+        const layerId = Object.keys(store.document!.organization.layers)[0]!;
+        store.addElement({
+          type: 'surface',
+          layerId,
+          properties: {
+            Name:   { type: 'string', value: `Point Cloud (${pc.renderedCount.toLocaleString()} pts)` },
+            Kind:   { type: 'string', value: 'point_cloud' },
+            Points: { type: 'string', value: Array.from(pc.positions).join(',') },
+            PointCount: { type: 'number', value: pc.renderedCount },
+            ...(pc.colors ? { Colors: { type: 'string', value: Array.from(pc.colors).join(',') } } : {}),
+          },
+        });
       } else {
-        setError('Unsupported file format. Please use .ifc files for import.');
+        setError('Unsupported file format. Please use .ifc, .ply, or .xyz files.');
         setImporting(false);
         return;
       }
