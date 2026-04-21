@@ -8235,3 +8235,55 @@ input[type='range']::-moz-range-track {
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
+
+/* ── Branch panel ─────────────────────────────────────────────────── */
+.branch-panel { display: flex; flex-direction: column; height: 100%; }
+.branch-create-row {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border-color);
+}
+.branch-name-input {
+  flex: 1;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  font-size: 12px;
+  border-radius: 4px;
+}
+.branch-name-input:focus { outline: none; border-color: var(--accent-primary); }
+.btn-create-branch {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--accent-primary); color: #fff;
+  border: none; padding: 4px 10px; font-size: 12px;
+  border-radius: 4px; cursor: pointer;
+}
+.btn-create-branch:disabled { opacity: 0.5; cursor: not-allowed; }
+.branch-list { list-style: none; margin: 0; padding: 4px 0; overflow-y: auto; }
+.branch-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 12px; border-bottom: 1px solid var(--border-color);
+}
+.branch-item.active { background: var(--accent-primary-muted); }
+.branch-meta { display: inline-flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+.branch-name { font-size: 12px; font-weight: 500; color: var(--text-primary); }
+.branch-active-tag {
+  font-size: 10px; text-transform: uppercase;
+  letter-spacing: 0.05em; color: var(--accent-primary);
+}
+.branch-diff {
+  display: inline-flex; gap: 6px; font-size: 10px; color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+.branch-actions { display: inline-flex; gap: 4px; }
+.btn-branch-switch, .btn-branch-merge, .btn-branch-delete {
+  background: transparent;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 3px 8px; font-size: 11px; border-radius: 4px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-branch-switch:hover, .btn-branch-merge:hover { border-color: var(--accent-primary); }
+.btn-branch-delete:hover { border-color: var(--danger-color, #f24822); color: var(--danger-color, #f24822); }

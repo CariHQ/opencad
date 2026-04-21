@@ -37,6 +37,7 @@ import {
   Shield,
   Plus,
   Zap,
+  GitBranch,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from './stores/projectStore';
@@ -146,6 +147,7 @@ import { WindAnalysisPanel } from './components/WindAnalysisPanel';
 import { SplitViewport } from './components/SplitViewport';
 import { AuthModal } from './components/AuthModal';
 import { VersionHistoryPanel } from './components/VersionHistoryPanel';
+import { BranchPanel } from './components/BranchPanel';
 import { ReviewPanel } from './components/ReviewPanel';
 import { UpdateBanner } from './components/UpdateBanner';
 import { useAuthStore } from './stores/authStore';
@@ -200,7 +202,8 @@ type RightPanelTab =
   | 'history'
   | 'review'
   | 'layers'
-  | 'compliance';
+  | 'compliance'
+  | 'branches';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
@@ -225,6 +228,7 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'marketplace', title: 'Marketplace', icon: <Store size={16} strokeWidth={2} /> },
   { id: 'wind', title: 'Wind Analysis', icon: <Wind size={16} strokeWidth={2} /> },
   { id: 'history', title: 'History', icon: <History size={16} strokeWidth={2} /> },
+  { id: 'branches', title: 'Branches', icon: <GitBranch size={16} strokeWidth={2} /> },
 ];
 
 /** Build CostPanel items from the document using quantityTakeoff + material rates. */
@@ -894,6 +898,7 @@ export function AppLayout() {
                 />
               )}
               {rightPanelTab === 'history' && <VersionHistoryPanel />}
+              {rightPanelTab === 'branches' && <BranchPanel />}
               {rightPanelTab === 'review' && <ReviewPanel />}
             </PanelErrorBoundary>
           </div>
