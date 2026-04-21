@@ -307,10 +307,16 @@ function scrapeBinaryMetadata(buffer: ArrayBuffer): PLNMetadata {
     return m ? m[1]!.trim() : '';
   };
 
+  // PLN field values are NUL-terminated when embedded in binary streams;
+  // build the regexes via RegExp() so the NUL literal doesn't trip the
+  // no-control-regex lint rule on the static regex literal.
+  const nul = String.fromCharCode(0);
+  const nameRe = new RegExp(`Project Name\\s*[:=]\\s*([^${nul}\\r\\n]{1,120})`, 'i');
+  const genRe  = new RegExp(`Generator\\s*[:=]\\s*([^${nul}\\r\\n]{1,120})`, 'i');
   return {
     version:     pickFirst(/ArchiCAD\s+([\d.]+)/i) || pickFirst(/Archicad\s+([0-9]+)/i),
-    projectName: pickFirst(/Project Name\s*[:=]\s*([^\x00\r\n]{1,120})/i),
-    generator:   pickFirst(/Generator\s*[:=]\s*([^\x00\r\n]{1,120})/i) || 'Archicad',
+    projectName: pickFirst(nameRe),
+    generator:   pickFirst(genRe) || 'Archicad',
   };
 }
 
