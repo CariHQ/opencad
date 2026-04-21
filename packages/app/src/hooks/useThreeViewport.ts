@@ -492,6 +492,10 @@ export function useThreeViewport() {
   const [sectionBox,       setSectionBox]       = useState(false);
   const [sectionPosition,  setSectionPosition]  = useState(0);
   const [sectionDirection, setSectionDirection] = useState<'x' | 'y' | 'z'>('z');
+  // Flips true once the async renderer init completes. Gates the effects
+  // that need stateRef.current.scene / .renderer, so they don't silently
+  // early-return on the first render.
+  const [rendererReady,    setRendererReady]    = useState(false);
 
   const [contextMenuState, setContextMenuState] = useState<{ x: number; y: number; items: ContextMenuGroup } | null>(null);
   const closeContextMenu = useCallback(() => setContextMenuState(null), []);
@@ -1012,6 +1016,7 @@ export function useThreeViewport() {
 
   // ── Section clipping plane ─────────────────────────────────────────────────
   useEffect(() => {
+    if (!rendererReady) return;
     const { renderer } = stateRef.current;
     if (!renderer) return;
 
@@ -1036,7 +1041,7 @@ export function useThreeViewport() {
       renderer.clippingPlanes = [];
     }
     needsRenderRef.current = true;
-  }, [sectionBox, sectionPosition, sectionDirection]);
+  }, [rendererReady, sectionBox, sectionPosition, sectionDirection]);
 
   // ── Scene bounds for adaptive slider range ─────────────────────────────────
   // Computed from the element meshes on every document change so the section
@@ -1418,8 +1423,15 @@ export function useThreeViewport() {
       rendererReadyRef.current = true;
       needsRenderRef.current = true;
       hasAutoZoomedRef.current = false;
+      // Flip rendererReady state so the updateScene / section-clipping /
+      // selection effects — which previously early-returned because the
+      // scene/renderer refs were null — re-run against the current (not
+      // captured-at-mount) document and section state.
+      setRendererReady(true);
 
       updateCamera();
+      const rAny = renderer as GenericRenderer & { localClippingEnabled?: boolean };
+      rAny.localClippingEnabled = true;
 
     // ── TransformControls gizmo ──────────────────────────────────────────
     // Wrapped in try/catch because TransformControls broke its API in
@@ -1587,8 +1599,11 @@ export function useThreeViewport() {
     };
   }, [handleMouseDown, handleMouseMove, handleWheel, handleContextMenu, handleKeyDown]);
 
-  useEffect(() => { updateScene();     }, [updateScene]);
-  useEffect(() => { updateSelection(); }, [updateSelection]);
+  // Scene / selection effects are gated on rendererReady so they don't
+  // early-return before the async renderer has populated stateRef. Once
+  // renderer is ready the callbacks re-run against the latest doc.
+  useEffect(() => { if (rendererReady) updateScene();     }, [updateScene, rendererReady]);
+  useEffect(() => { if (rendererReady) updateSelection(); }, [updateSelection, rendererReady]);
 
   useEffect(() => {
     const onChange = () => {
