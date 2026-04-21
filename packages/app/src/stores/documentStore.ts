@@ -45,6 +45,25 @@ export interface ChangeRecord {
 }
 
 const MAX_CHANGE_HISTORY = 200;
+/** Auto-create a version snapshot every N change records so the history
+ *  panel accumulates real recovery points even when the user never clicks
+ *  "Save Version" manually. Tuned high enough not to flood history, low
+ *  enough that a working session produces several points per hour. */
+const AUTO_VERSION_THRESHOLD = 25;
+
+function maybeAutoVersion(
+  model: DocumentModel | null,
+  priorCount: number,
+  newCount: number,
+): void {
+  if (!model) return;
+  const prior = Math.floor(priorCount / AUTO_VERSION_THRESHOLD);
+  const next  = Math.floor(newCount  / AUTO_VERSION_THRESHOLD);
+  if (next > prior) {
+    try { model.createVersion(`auto @ ${newCount} changes`); }
+    catch { /* version write failure is non-fatal */ }
+  }
+}
 
 interface DocumentState {
   document: DocumentSchema | null;
@@ -366,6 +385,7 @@ export const useDocumentStore = create<DocumentState>()(
           lastSaved: Date.now(),
           changeHistory: [...changeHistory, addRecord].slice(-MAX_CHANGE_HISTORY),
         });
+        maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
         try {
           localStorage.setItem(docKey(newDoc.id), newDocJson);
         } catch { /* ignore storage errors */ }
@@ -397,6 +417,7 @@ export const useDocumentStore = create<DocumentState>()(
             document: { ...model.documentData },
             changeHistory: [...changeHistory, updateRecord].slice(-MAX_CHANGE_HISTORY),
           });
+          maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
         }
       },
 
@@ -419,6 +440,7 @@ export const useDocumentStore = create<DocumentState>()(
           lastSaved: Date.now(),
           changeHistory: [...changeHistory, deleteRecord].slice(-MAX_CHANGE_HISTORY),
         });
+        maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
       },
 
       setElementMaterial: (elementId, materialId) => {
