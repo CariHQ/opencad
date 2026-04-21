@@ -1,3 +1,10 @@
+## [1.1.1](https://github.com/CariHQ/opencad/compare/v1.1.0...v1.1.1) (2026-04-21)
+
+
+### Bug Fixes
+
+* **archicad:** build NUL-terminator regex via RegExp() to satisfy lint ([3186d66](https://github.com/CariHQ/opencad/commit/3186d66d0e8c822db0710d4ab49ce26e7a226d6e))
+
 ## [1.0.10](https://github.com/CariHQ/opencad/compare/v1.0.9...v1.0.10) (2026-04-19)
 
 
