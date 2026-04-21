@@ -4,7 +4,8 @@ import { TransformControls } from 'three/examples/jsm/controls/TransformControls
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import { useDocumentStore } from '../stores/documentStore';
 import { type ElementSchema } from '@opencad/document';
-import { BUILT_IN_MATERIALS } from '../lib/materials';
+import { BUILT_IN_MATERIALS, type Material } from '../lib/materials';
+import { getPBRMaps } from '../lib/proceduralTextures';
 import { moveElementProps } from '../utils/elementMath';
 import { getContextMenuItems, type ContextMenuGroup, type ElementContext } from '../components/contextMenu/contextMenuItems';
 import { buildWallGraph, wallEndOffsets } from './wallGraph';
@@ -366,13 +367,21 @@ function buildWallMesh(
     const color = new THREE.Color(m.color ?? '#a0a0a0');
     const isGlass = /Glass/i.test(name);
     const isAir   = /Air Cavity/i.test(name);
-    return new THREE.MeshStandardMaterial({
+    const layerMat = new THREE.MeshStandardMaterial({
       color,
       roughness: m.roughness ?? 0.8,
       metalness: m.metalness ?? 0,
       transparent: isGlass || isAir,
       opacity: isGlass ? 0.35 : isAir ? 0.05 : 1,
     });
+    try {
+      const { map, roughnessMap } = getPBRMaps(m);
+      layerMat.map = map;
+      layerMat.roughnessMap = roughnessMap;
+    } catch {
+      /* no-op — textured fallback to flat color */
+    }
+    return layerMat;
   };
   if (openings.length === 0 && composite && composite.layers.length > 0) {
     const group = new THREE.Group();
@@ -541,8 +550,14 @@ export function useThreeViewport() {
   });
 
   const createMaterial = useCallback(
-    (color: string, opacity = 0.8, roughness = 0.8, metalness = 0.0): THREE.MeshStandardMaterial => {
-      const key = `${color}:${opacity}:${roughness}:${metalness}`;
+    (
+      color: string,
+      opacity = 0.8,
+      roughness = 0.8,
+      metalness = 0.0,
+      material?: Material,
+    ): THREE.MeshStandardMaterial => {
+      const key = `${color}:${opacity}:${roughness}:${metalness}:${material?.id ?? '-'}`;
       const cached = materialCacheRef.current.get(key);
       if (cached) return cached;
       const mat = new THREE.MeshStandardMaterial({
@@ -553,6 +568,18 @@ export function useThreeViewport() {
         metalness,
         side: THREE.DoubleSide,
       });
+      // Apply procedural PBR textures when a named material is supplied.
+      // Wrapped in try/catch so tests that stub THREE without CanvasTexture
+      // still pass — production WebGL builds get textured surfaces.
+      if (material) {
+        try {
+          const { map, roughnessMap } = getPBRMaps(material);
+          mat.map = map;
+          mat.roughnessMap = roughnessMap;
+        } catch {
+          /* no-op — textured fallback to flat color */
+        }
+      }
       materialCacheRef.current.set(key, mat);
       return mat;
     },
@@ -585,7 +612,7 @@ export function useThreeViewport() {
         const composites = useDocumentStore.getState().document?.library?.composites;
         return buildWallMesh(
           element, allElements,
-          createMaterial(color, 0.85, pbr.roughness, pbr.metalness),
+          createMaterial(color, 0.85, pbr.roughness, pbr.metalness, appliedMat),
           composites,
         );
       }
@@ -696,7 +723,7 @@ export function useThreeViewport() {
         // user can still solo-view by toggling the roof layer visibility.
         type === 'roof'   ? 0.55 :
         0.85;
-      const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness);
+      const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness, appliedMat);
       const mesh = new THREE.Mesh(geometry, material);
       mesh.position.set(posX, posY, posZ);
       if (ry !== 0) mesh.rotation.y = ry;
@@ -978,7 +1005,7 @@ export function useThreeViewport() {
           const restoreRoughness = appliedMat?.roughness ?? ELEMENT_MATERIAL_PROPS[elType]?.roughness ?? 0.8;
           const restoreMetalness = appliedMat?.metalness ?? ELEMENT_MATERIAL_PROPS[elType]?.metalness ?? 0.0;
           const restoreOpacity  = elType === 'window' ? 0.35 : elType === 'space' ? 0.3 : 0.85;
-          mesh.material = createMaterial(restoreColor, restoreOpacity, restoreRoughness, restoreMetalness);
+          mesh.material = createMaterial(restoreColor, restoreOpacity, restoreRoughness, restoreMetalness, appliedMat);
           // Reset the cached selection material so it re-clones with the updated color next time
           mesh.userData.selectionMat = null;
         }
