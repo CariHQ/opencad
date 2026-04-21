@@ -66,6 +66,7 @@ import { CompliancePanel } from './components/CompliancePanel';
 import { RenderPanel } from './components/RenderPanel';
 import { SheetPanel } from './components/SheetPanel';
 import { BCFPanel } from './components/BCFPanel';
+import { parseBCF, serializeBCF, type BCFFile, type BCFTopic } from '@opencad/document';
 import { MaterialLibrary } from './components/MaterialLibrary';
 import { PresenceOverlay } from './components/PresenceOverlay';
 import { EditNotifications } from './components/EditNotifications';
@@ -88,6 +89,17 @@ import type { RoleName } from './config/roles';
 
 const SSO_STORAGE_KEY = 'opencad-sso-config';
 const MEMBERS_STORAGE_KEY = 'opencad-project-members';
+const BCF_STORAGE_KEY = 'opencad-bcf-topics';
+
+function loadBCFTopics(): BCFTopic[] {
+  try {
+    const raw = localStorage.getItem(BCF_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as BCFTopic[]) : [];
+  } catch { return []; }
+}
+function saveBCFTopics(topics: BCFTopic[]): void {
+  try { localStorage.setItem(BCF_STORAGE_KEY, JSON.stringify(topics)); } catch { /* quota */ }
+}
 
 function loadSSOConfig(): SSOConfig | undefined {
   try {
@@ -339,6 +351,9 @@ export function AppLayout() {
   // Boot the plugin host once — loads every installed plugin into a worker
   // sandbox and keeps them in sync as the registry changes.
   React.useEffect(() => { void pluginHost.startAll(); }, []);
+
+  // BCF panel re-mount nonce so imports surface immediately.
+  const [bcfVersion, setBcfVersion] = React.useState(0);
 
   // Plugin notifications → transient toasts.
   const [pluginToasts, setPluginToasts] = React.useState<PluginNotification[]>([]);
@@ -795,7 +810,35 @@ export function AppLayout() {
               {rightPanelTab === 'compliance' && <CompliancePanel />}
               {rightPanelTab === 'render' && <RenderPanel />}
               {rightPanelTab === 'sheets' && <SheetPanel />}
-              {rightPanelTab === 'bcf' && <BCFPanel />}
+              {rightPanelTab === 'bcf' && (
+                <BCFPanel
+                  key={`bcf-${bcfVersion}`}
+                  initialTopics={loadBCFTopics()}
+                  onImport={async (file) => {
+                    const text = await file.text();
+                    try {
+                      const parsed = parseBCF(text);
+                      saveBCFTopics(parsed.topics);
+                      setBcfVersion((v) => v + 1);
+                    } catch { /* surfaced via BCFPanel's own error UI */ }
+                  }}
+                  onExport={(topics) => {
+                    const file: BCFFile = {
+                      version: '3.0',
+                      project: doc ? { project_id: doc.id, project_name: doc.name } : undefined,
+                      topics,
+                    };
+                    const blob = new Blob([serializeBCF(file)], { type: 'application/json' });
+                    const url = URL.createObjectURL(blob);
+                    const a = Object.assign(document.createElement('a'), {
+                      href: url,
+                      download: `${doc?.name ?? 'issues'}.bcf.json`,
+                    });
+                    a.click();
+                    URL.revokeObjectURL(url);
+                  }}
+                />
+              )}
               {rightPanelTab === 'materials' && (
                 <MaterialLibrary
                   selectedCount={selectedIds.length}
