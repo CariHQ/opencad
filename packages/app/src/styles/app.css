@@ -6909,6 +6909,30 @@ input[type='range']::-moz-range-track {
   cursor: not-allowed;
 }
 
+.btn-uninstall {
+  padding: 4px 12px;
+  font-size: 11px;
+  font-family: inherit;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: color 0.12s, border-color 0.12s, background 0.12s;
+}
+
+.btn-uninstall:hover {
+  color: #e74c3c;
+  border-color: #e74c3c;
+  background: rgba(231, 76, 60, 0.08);
+}
+
+.btn-uninstall:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .plugin-icon {
   width: 20px;
   height: 20px;

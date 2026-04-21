@@ -187,12 +187,16 @@ export function MarketplacePanel({
     }
   }, []);
 
-  // ── Legacy catalogue install / uninstall ─────────────────────────────────
+  // ── Bundled-catalogue install / uninstall ────────────────────────────────
+  // These operate on the local registry only (no backend call). The
+  // registry persists to localStorage and the pluginHost subscribes to
+  // mutations, so install → worker starts, uninstall → worker disposes and
+  // the plugin's registered commands are purged.
   const handleInstallPlugin = (manifest: PluginManifest) => {
     if (!validateManifest(manifest)) return;
     pluginRegistry.register(manifest);
   };
-  const _handleUninstallPlugin = (pluginId: string) => {
+  const handleUninstallPlugin = (pluginId: string) => {
     pluginRegistry.unregister(pluginId);
   };
 
@@ -264,7 +268,13 @@ export function MarketplacePanel({
                 </div>
                 <div className="item-actions">
                   {isInstalled ? (
-                    <span className="installed-badge">Installed</span>
+                    <button
+                      aria-label={`Uninstall ${plugin.name}`}
+                      className="btn-uninstall"
+                      onClick={() => handleUninstallPlugin(plugin.id)}
+                    >
+                      Uninstall
+                    </button>
                   ) : (
                     <button
                       aria-label={`Install ${plugin.name}`}
@@ -366,7 +376,15 @@ export function MarketplacePanel({
                 <span className="item-name">{plugin.name}</span>
                 <span className="item-meta">v{plugin.version}</span>
               </div>
-              <span className="installed-badge">Installed</span>
+              <div className="item-actions">
+                <button
+                  aria-label={`Uninstall ${plugin.name}`}
+                  className="btn-uninstall"
+                  onClick={() => handleUninstallPlugin(plugin.id)}
+                >
+                  Uninstall
+                </button>
+              </div>
             </div>
           ))
         )}
