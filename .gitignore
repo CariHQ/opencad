@@ -121,3 +121,6 @@ pnpm-workspace.yaml.local
 
 # Autonomous-build experiment artifacts (screenshots, summaries) — local only
 experiment/
+
+# Fundraising / investor docs — kept local, never committed
+documents/

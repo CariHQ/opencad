@@ -191,3 +191,62 @@ export function adminRevoke(
     body: JSON.stringify({ revoked, reason }),
   });
 }
+
+// ── Publishers ───────────────────────────────────────────────────────────────
+
+export interface Publisher {
+  firebaseUid: string;
+  displayName: string;
+  contactEmail: string;
+  stripeAccountId?: string;
+  stripeOnboarded: boolean;
+  payoutsEnabled: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function registerPublisher(body: {
+  displayName: string;
+  contactEmail: string;
+}): Promise<Publisher> {
+  return apiFetch<Publisher>('/publishers', {
+    method: 'POST',
+    body: JSON.stringify({
+      display_name: body.displayName,
+      contact_email: body.contactEmail,
+    }),
+  });
+}
+
+export function getPublisher(): Promise<Publisher> {
+  return apiFetch<Publisher>('/publishers/me');
+}
+
+export function getOnboardingUrl(): Promise<{ url: string }> {
+  return apiFetch<{ url: string }>('/publishers/me/onboarding-url');
+}
+
+// ── Bundle upload ────────────────────────────────────────────────────────────
+
+/** Upload a plugin's JS bundle. Server hashes it (SHA-384) and stores
+ *  it under plugin-bundles/{id}/{version}/. Returns the final
+ *  entrypoint URL and SRI hash the manifest will reference. */
+export async function uploadBundle(
+  pluginId: string,
+  bundle: File,
+): Promise<{ entrypoint: string; sriHash: string }> {
+  const url = `${baseUrl()}/plugins/${encodeURIComponent(pluginId)}/bundle`;
+  const token = _getToken ? await _getToken().catch(() => null) : null;
+  const form = new FormData();
+  form.append('bundle', bundle);
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+    body: form,
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    throw new Error(`Bundle upload ${res.status}: ${text}`);
+  }
+  return res.json() as Promise<{ entrypoint: string; sriHash: string }>;
+}

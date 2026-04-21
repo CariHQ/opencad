@@ -7139,6 +7139,135 @@ input[type='range']::-moz-range-track {
   background: rgba(231, 76, 60, 0.08);
 }
 
+/* Publisher / admin panel */
+
+.publisher-panel {
+  padding: 8px 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.publisher-loading {
+  padding: 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.publisher-form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+}
+
+.publisher-intro {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.publisher-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.publisher-field > span {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.publisher-field input[type="text"],
+.publisher-field input[type="email"],
+.publisher-field input[type="number"],
+.publisher-field select,
+.publisher-field textarea {
+  padding: 6px 8px;
+  font-size: 12px;
+  font-family: inherit;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+}
+
+.publisher-field textarea {
+  resize: vertical;
+  min-height: 60px;
+  line-height: 1.4;
+}
+
+.publisher-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 10px;
+}
+
+.publisher-perms {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 8px 12px;
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.publisher-perms legend {
+  padding: 0 4px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.publisher-perm-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+}
+
+.publisher-error,
+.publisher-success {
+  padding: 8px 10px;
+  font-size: 12px;
+  border-radius: 4px;
+  line-height: 1.4;
+}
+
+.publisher-error {
+  background: rgba(231, 76, 60, 0.1);
+  border-left: 3px solid #e74c3c;
+  color: var(--text-primary);
+}
+
+.publisher-success {
+  background: rgba(46, 204, 113, 0.1);
+  border-left: 3px solid #2ecc71;
+  color: var(--text-primary);
+}
+
+.publisher-stripe-notice {
+  padding: 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+.publisher-queue {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .plugin-icon {
   width: 20px;
   height: 20px;

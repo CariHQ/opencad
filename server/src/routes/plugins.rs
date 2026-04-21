@@ -6,11 +6,13 @@
 //! for v1.
 
 use axum::{
-    extract::{Path, Query, State},
+    extract::{Multipart, Path, Query, State},
     http::StatusCode,
     Json,
 };
+use base64::{engine::general_purpose::STANDARD as BASE64, Engine as _};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha384};
 
 use crate::{
     auth::AuthUser,
@@ -372,6 +374,123 @@ pub async fn submit(
     )
     .await?;
     Ok((StatusCode::CREATED, Json(plugin)))
+}
+
+// ── Bundle upload ────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BundleUploadResponse {
+    pub entrypoint: String,
+    pub sri_hash: String,
+}
+
+/// POST /api/v1/marketplace/plugins/:id/bundle
+///
+/// Multipart upload: single `bundle` file part (the plugin's JavaScript
+/// bundle). The server:
+///   1. Verifies the caller is the plugin's publisher (or an admin).
+///   2. Computes a SHA-384 SRI hash over the raw bytes.
+///   3. Stores the bundle under `plugin-bundles/{pluginId}/{version}/bundle.js`
+///      in the configured object store.
+///   4. Updates the plugin row's entrypoint + sri_hash fields.
+///   5. Returns the public URL (PLUGIN_BUNDLE_BASE_URL + key) and SRI hash
+///      so the publisher can verify integrity.
+///
+/// The bundle size is capped at 5 MB by tower-http's RequestBodyLimitLayer
+/// (see routes/mod.rs) — larger bundles belong in a plugin that fetches
+/// assets on demand.
+pub async fn upload_bundle(
+    State(s): State<AppState>,
+    user: AuthUser,
+    Path(id): Path<String>,
+    mut multipart: Multipart,
+) -> Result<Json<BundleUploadResponse>> {
+    let uid = user.uid().ok_or(AppError::BadRequest("authentication required".into()))?;
+
+    let plugin = db::get_plugin(&s.db, &id).await?.ok_or(AppError::NotFound)?;
+
+    // Only the publisher or an admin can upload a bundle for this plugin.
+    let is_publisher = plugin.publisher_uid.as_deref() == Some(uid);
+    let is_admin = s
+        .admin_uids
+        .as_deref()
+        .map(|list| list.split(',').any(|a| a.trim() == uid))
+        .unwrap_or(false);
+    if !is_publisher && !is_admin {
+        return Err(AppError::NotFound);
+    }
+
+    // Walk multipart parts; accept the first `bundle` field.
+    let mut bytes: Option<bytes::Bytes> = None;
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|e| AppError::BadRequest(format!("malformed multipart: {e}")))?
+    {
+        if field.name() == Some("bundle") {
+            let data = field
+                .bytes()
+                .await
+                .map_err(|e| AppError::BadRequest(format!("failed to read bundle: {e}")))?;
+            if data.is_empty() {
+                return Err(AppError::BadRequest("bundle is empty".into()));
+            }
+            bytes = Some(data);
+            break;
+        }
+    }
+    let Some(data) = bytes else {
+        return Err(AppError::BadRequest("multipart missing `bundle` field".into()));
+    };
+
+    // Compute SRI hash (sha384-…base64).
+    let mut hasher = Sha384::new();
+    hasher.update(&data);
+    let digest = hasher.finalize();
+    let sri_hash = format!("sha384-{}", BASE64.encode(digest));
+
+    // Key format lets us version bundles alongside the catalogue row. If a
+    // publisher re-uploads for the same version we just overwrite — the
+    // SRI hash changes, so any client holding the old hash will reject
+    // the new bundle, which is the right behaviour.
+    let key = format!("plugin-bundles/{}/{}/bundle.js", plugin.id, plugin.version);
+    s.storage
+        .put(&key, data)
+        .await
+        .map_err(AppError::Internal)?;
+
+    // Public URL: PLUGIN_BUNDLE_BASE_URL is the CDN/GCS base, key is appended.
+    // In local dev we fall back to a synthetic /plugin-bundles/<key> path
+    // that the GCS storage backend doesn't serve — publishers in local dev
+    // are expected to set PLUGIN_BUNDLE_BASE_URL to their dev server.
+    let entrypoint = match &s.plugin_bundle_base_url {
+        Some(base) => format!("{}/{}", base.trim_end_matches('/'), key),
+        None => format!("/{}", key),
+    };
+
+    // Persist entrypoint + SRI hash onto the plugin row.
+    let _updated = db::upsert_plugin(
+        &s.db,
+        db::UpsertPluginParams {
+            id: &plugin.id,
+            name: &plugin.name,
+            description: &plugin.description,
+            version: &plugin.version,
+            author: &plugin.author,
+            category: &plugin.category,
+            icon: plugin.icon.as_deref(),
+            entrypoint: &entrypoint,
+            sri_hash: Some(&sri_hash),
+            permissions: &plugin.permissions,
+            price_cents: plugin.price_cents,
+            publisher_uid: plugin.publisher_uid.as_deref(),
+            moderation_status: &plugin.moderation_status,
+        },
+    )
+    .await?;
+
+    Ok(Json(BundleUploadResponse { entrypoint, sri_hash }))
 }
 
 // ── Unit tests ───────────────────────────────────────────────────────────────

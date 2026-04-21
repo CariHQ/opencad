@@ -39,6 +39,10 @@ object_store = { version = "0.11", features = ["gcp"] }
 jsonwebtoken = "9"
 reqwest      = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
 
+# Hashing (SRI integrity for plugin bundles)
+sha2         = "0.10"
+base64       = "0.22"
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full", "test-util"] }
 tempfile = "3"

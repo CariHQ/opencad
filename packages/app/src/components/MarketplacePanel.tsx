@@ -11,7 +11,9 @@ import {
 } from '../lib/marketplaceApi';
 import { PluginConsentModal } from './PluginConsentModal';
 import { PluginReportModal } from './PluginReportModal';
+import { PluginPublisherPanel } from './PluginPublisherPanel';
 import type { InstalledPlugin } from '../lib/marketplaceApi';
+import { useAuthStore } from '../stores/authStore';
 
 export interface MarketplaceItem {
   id: string;
@@ -116,6 +118,8 @@ export function MarketplacePanel({
 
   // Target of the report-a-plugin modal (null = closed).
   const [reportingPlugin, setReportingPlugin] = useState<{ id: string; name: string } | null>(null);
+  const [showPublisher, setShowPublisher] = useState(false);
+  const userEmail = useAuthStore((s) => s.user?.email ?? undefined);
 
   // Per-user installed plugins from the backend. Used to detect available
   // updates (installedVersion !== version) and to surface the revoked
@@ -385,7 +389,16 @@ export function MarketplacePanel({
       )}
       <div className="panel-header">
         <span className="panel-title">Marketplace</span>
+        <button
+          type="button"
+          className="btn-report"
+          onClick={() => setShowPublisher((v) => !v)}
+          title="Submit a plugin"
+        >
+          {showPublisher ? 'Back to catalogue' : 'Publish'}
+        </button>
       </div>
+      {showPublisher && <PluginPublisherPanel userEmail={userEmail} />}
 
       <input
         type="text"

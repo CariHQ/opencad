@@ -61,8 +61,12 @@ describe('T-MKTPL-001: MarketplacePanel', () => {
     expect(screen.getAllByText(/1,200|1200|downloads/i).length).toBeGreaterThan(0);
   });
 
-  it('does not show a Publish button (removed from panel header)', () => {
+  it('shows a Publish button in the panel header for the publisher flow', () => {
     render(<MarketplacePanel items={items} onInstall={onInstall} onPublish={onPublish} />);
-    expect(screen.queryByRole('button', { name: /publish/i })).not.toBeInTheDocument();
+    // Toggles between "Publish" (default) and "Back to catalogue" (when
+    // the publisher panel is open). Either label satisfies presence here.
+    expect(
+      screen.getByRole('button', { name: /publish|back to catalogue/i }),
+    ).toBeInTheDocument();
   });
 });

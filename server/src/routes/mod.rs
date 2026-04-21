@@ -11,6 +11,7 @@ mod health;
 mod llm;
 mod plugins;
 mod projects;
+mod publishers;
 mod versions;
 pub mod ws;
 
@@ -89,6 +90,22 @@ pub fn build(state: AppState) -> Router {
         .route(
             "/api/v1/marketplace/plugins/:id/report",
             post(plugins::report),
+        )
+        .route(
+            "/api/v1/marketplace/plugins/:id/bundle",
+            post(plugins::upload_bundle),
+        )
+        .route(
+            "/api/v1/marketplace/publishers",
+            post(publishers::register),
+        )
+        .route(
+            "/api/v1/marketplace/publishers/me",
+            get(publishers::get_me),
+        )
+        .route(
+            "/api/v1/marketplace/publishers/me/onboarding-url",
+            get(publishers::onboarding_url),
         )
         .route(
             "/api/v1/marketplace/admin/queue",
