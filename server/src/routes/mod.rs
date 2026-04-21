@@ -8,6 +8,7 @@ mod documents;
 mod feedback;
 mod files;
 mod health;
+mod llm;
 mod projects;
 mod versions;
 pub mod ws;
@@ -61,6 +62,8 @@ pub fn build(state: AppState) -> Router {
             "/api/v1/feedback",
             get(feedback::list).post(feedback::submit),
         )
+        // ── LLM Router ────────────────────────────────────────────────────────
+        .route("/api/v1/llm/chat", post(llm::chat))
         // ── WebSocket ─────────────────────────────────────────────────────────
         .route("/ws/:project_id", get(ws::handler))
         .layer(middleware::from_fn_with_state(

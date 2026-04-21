@@ -130,6 +130,48 @@ export function createOllamaProvider(baseUrl = 'http://localhost:11434', model =
 }
 
 /** Mock provider for testing */
+/**
+ * Server-routed provider — proxies through the Rust backend's
+ * `/api/v1/llm/chat` route so upstream API keys stay on the server.
+ * Non-streaming (upstream is buffered server-side); yields one 'delta'
+ * followed by 'done'.
+ */
+export function createServerProvider(
+  provider: 'openai' | 'anthropic' | 'ollama',
+  model: string,
+  authHeader: () => Promise<string | null> = async () => null,
+): AIProvider {
+  return {
+    name: `server:${provider}`,
+    async *stream(prompt, history = []) {
+      const messages = [
+        ...history.map((h) => ({ role: h.role, content: h.content })),
+        { role: 'user', content: prompt },
+      ];
+      const token = await authHeader();
+      try {
+        const res = await fetch('/api/v1/llm/chat', {
+          method: 'POST',
+          headers: token
+            ? { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }
+            : { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ provider, model, messages }),
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          yield { type: 'error', content: `LLM router ${res.status}: ${text}` };
+          return;
+        }
+        const json = (await res.json()) as { content: string };
+        yield { type: 'delta', content: json.content };
+        yield { type: 'done', content: '' };
+      } catch (err) {
+        yield { type: 'error', content: err instanceof Error ? err.message : String(err) };
+      }
+    },
+  };
+}
+
 export function createMockProvider(responses: string[]): AIProvider {
   let idx = 0;
   return {

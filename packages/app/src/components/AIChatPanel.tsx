@@ -4,8 +4,10 @@ import {
   AIStreamClient,
   createOpenAICompatibleProvider,
   createOllamaProvider,
+  createServerProvider,
   type ChatMessage,
 } from '../hooks/useAIStream';
+import { firebaseAuth, isFirebaseConfigured } from '../lib/firebase';
 import { useDocumentStore } from '../stores/documentStore';
 import { generateProject, parseDesignCommand, applyDesignCommand, type DesignElement } from '@opencad/ai';
 import type { DocumentSchema } from '@opencad/document';
@@ -16,7 +18,9 @@ interface AIConfig {
   baseUrl: string;
   apiKey: string;
   model: string;
-  provider: 'openai' | 'ollama' | 'custom';
+  provider: 'openai' | 'ollama' | 'custom' | 'server';
+  /** When provider is 'server', which upstream the backend should proxy to. */
+  serverUpstream?: 'openai' | 'anthropic' | 'ollama';
 }
 
 const DEFAULT_CONFIG: AIConfig = {
@@ -97,13 +101,28 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const isConfigured = config.baseUrl.length > 0 || config.provider === 'ollama';
+  const isConfigured =
+    config.provider === 'server' ||
+    config.provider === 'ollama' ||
+    config.baseUrl.length > 0;
 
   const buildClient = useCallback((): AIStreamClient => {
     const storage = {
       storageGet: (k: string) => localStorage.getItem(k),
       storageSet: (k: string, v: string) => localStorage.setItem(k, v),
     };
+    if (config.provider === 'server') {
+      const upstream = config.serverUpstream ?? 'openai';
+      const authHeader = async (): Promise<string | null> => {
+        if (!isFirebaseConfigured) return null;
+        const user = firebaseAuth().currentUser;
+        return user ? user.getIdToken().catch(() => null) : null;
+      };
+      return new AIStreamClient(
+        createServerProvider(upstream, config.model, authHeader),
+        storage,
+      );
+    }
     if (config.provider === 'ollama') {
       const url = config.baseUrl || 'http://localhost:11434';
       return new AIStreamClient(createOllamaProvider(url, config.model || 'llama3'), storage);
@@ -349,8 +368,43 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
             >
               <option value="openai">OpenAI / OpenAI-compatible proxy</option>
               <option value="ollama">Ollama (local)</option>
+              <option value="server">Server-routed (enterprise)</option>
             </select>
           </div>
+
+          {configDraft.provider === 'server' && (
+            <>
+              <div className="config-field">
+                <label htmlFor="ai-server-upstream">Upstream via server</label>
+                <select
+                  id="ai-server-upstream"
+                  value={configDraft.serverUpstream ?? 'openai'}
+                  onChange={(e) => setConfigDraft((d) => ({
+                    ...d, serverUpstream: e.target.value as NonNullable<AIConfig['serverUpstream']>,
+                  }))}
+                >
+                  <option value="openai">OpenAI (via server)</option>
+                  <option value="anthropic">Anthropic (via server)</option>
+                  <option value="ollama">Ollama (via server)</option>
+                </select>
+              </div>
+              <div className="config-field">
+                <label htmlFor="ai-server-model">Model</label>
+                <input
+                  id="ai-server-model"
+                  type="text"
+                  value={configDraft.model}
+                  onChange={(e) => setConfigDraft((d) => ({ ...d, model: e.target.value }))}
+                  placeholder="gpt-4o-mini / claude-3-5-sonnet-latest / llama3"
+                />
+              </div>
+              <p className="config-hint">
+                Server-routed mode keeps API keys out of the browser. The
+                server reads OPENAI_API_KEY / ANTHROPIC_API_KEY / OLLAMA_BASE_URL
+                from its environment and forwards your Firebase ID token.
+              </p>
+            </>
+          )}
 
           {configDraft.provider === 'ollama' ? (
             <>
