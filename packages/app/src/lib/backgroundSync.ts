@@ -70,11 +70,31 @@ export function startBackgroundSync(options: BackgroundSyncOptions): () => void 
     backoff = 0;
     scheduleNext();
   };
+
+  // SW → page wake-up message from the 'sync' event handler. When the
+  // browser decides to fire a background sync, the SW broadcasts to any
+  // open client; we drain immediately instead of waiting for the next
+  // pollMs tick.
+  const onSwMessage = (event: MessageEvent): void => {
+    if (event.data?.type !== 'opencad-sync-wake') return;
+    if (timer) clearTimeout(timer);
+    backoff = 0;
+    scheduleNext();
+  };
+
   if (typeof window !== 'undefined') {
     window.addEventListener('online', onOnline);
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.addEventListener('message', onSwMessage);
+    }
   }
   return () => {
-    if (typeof window !== 'undefined') window.removeEventListener('online', onOnline);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('online', onOnline);
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.removeEventListener('message', onSwMessage);
+      }
+    }
     stopBackgroundSync();
   };
 }
@@ -83,4 +103,28 @@ export function stopBackgroundSync(): void {
   running = false;
   if (timer) { clearTimeout(timer); timer = null; }
   backoff = 0;
+}
+
+/**
+ * Native Service Worker SyncManager registration. When available, the
+ * browser fires a 'sync' event on the SW even after the tab is closed —
+ * our in-page loop can't do that. Call this every time offlineStore
+ * gains a pendingSync record so the SW gets a chance to drain it.
+ *
+ * Resolves to true when the registration succeeded, false when the
+ * SyncManager isn't available (tests / Safari / Firefox private mode).
+ */
+export async function registerBackgroundSyncTag(tag = 'opencad-doc-sync'): Promise<boolean> {
+  try {
+    if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return false;
+    const reg = await navigator.serviceWorker.ready;
+    const sync = (reg as ServiceWorkerRegistration & {
+      sync?: { register: (tag: string) => Promise<void> };
+    }).sync;
+    if (!sync) return false;
+    await sync.register(tag);
+    return true;
+  } catch {
+    return false;
+  }
 }

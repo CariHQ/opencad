@@ -12,6 +12,7 @@
  */
 import { openDB, type IDBPDatabase } from 'idb';
 import { opfsWrite, opfsRead, opfsDelete } from './opfs';
+import { registerBackgroundSyncTag } from './backgroundSync';
 
 const DB_NAME = 'opencad-offline';
 const STORE_NAME = 'documents';
@@ -67,6 +68,9 @@ export async function saveDocument(projectId: string, data: string): Promise<voi
     savedAt: Date.now(),
   };
   await db.put(STORE_NAME, record);
+  // Ask the browser's SyncManager (if available) to wake our Service
+  // Worker later so the pending edit syncs even after the tab closes.
+  void registerBackgroundSyncTag();
 }
 
 /**

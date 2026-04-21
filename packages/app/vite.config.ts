@@ -42,6 +42,10 @@ export default defineConfig({
       workbox: {
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024, // 4 MiB — bundle exceeds workbox's 2 MiB default
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Extra SW code — listens for 'sync' events fired by the page via
+        // registerBackgroundSyncTag() and posts a message to open clients
+        // so they can replay pendingSync records when they next reconnect.
+        importScripts: ['sw-sync.js'],
         runtimeCaching: [
           {
             urlPattern: /\.(png|jpg|jpeg|svg|gif|webp|ico|woff2?)$/i,
