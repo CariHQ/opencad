@@ -23,6 +23,7 @@ import {
 } from 'firebase/firestore';
 import { firebaseAuth, firebaseDb, isFirebaseConfigured } from '../lib/firebase';
 import { authApi, registerTokenProvider } from '../lib/serverApi';
+import { registerProjectsTokenProvider } from '../lib/projectsApi';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 export type TrialStatus = 'active' | 'expired' | 'none';
@@ -127,11 +128,16 @@ export const useAuthStore = create<AuthState>((set, _get) => {
     // Let Firebase manage token refresh automatically — do not force-refresh
     // on every call, as that causes unnecessary network round-trips and can
     // transiently fail, dropping the user back to the login screen.
-    registerTokenProvider(async () => {
+    const tokenProvider = async (): Promise<string | null> => {
       const currentUser = auth.currentUser;
       if (!currentUser) return null;
       return currentUser.getIdToken().catch(() => null);
-    });
+    };
+    registerTokenProvider(tokenProvider);
+    // projectsApi.ts has its own token provider registration (separate module
+    // for mockability in tests). Without this the project list/create/delete
+    // calls go out without Authorization and silently 401.
+    registerProjectsTokenProvider(tokenProvider);
 
     onAuthStateChanged(auth, async (user) => {
       if (user) {
