@@ -116,9 +116,6 @@ importers:
       '@opencad/document':
         specifier: workspace:*
         version: link:../document
-      '@opencad/geometry':
-        specifier: workspace:*
-        version: link:../geometry
       '@opencad/shared':
         specifier: workspace:*
         version: link:../shared
@@ -228,25 +225,6 @@ importers:
         version: 1.6.1(@types/node@25.6.0)(happy-dom@14.12.3)(jsdom@29.0.2)(lightningcss@1.32.0)(terser@5.46.1)
 
   packages/document:
-    dependencies:
-      '@opencad/shared':
-        specifier: workspace:*
-        version: link:../shared
-    devDependencies:
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
-      fast-check:
-        specifier: ^4.7.0
-        version: 4.7.0
-      typescript:
-        specifier: ^6.0.2
-        version: 6.0.2
-      vitest:
-        specifier: ^1.4.0
-        version: 1.6.1(@types/node@25.6.0)(happy-dom@14.12.3)(jsdom@29.0.2)(lightningcss@1.32.0)(terser@5.46.1)
-
-  packages/geometry:
     dependencies:
       '@opencad/shared':
         specifier: workspace:*

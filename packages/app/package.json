@@ -20,7 +20,7 @@
   "dependencies": {
     "@opencad/ai": "workspace:*",
     "@opencad/document": "workspace:*",
-    "@opencad/geometry": "workspace:*",
+    
     "@opencad/shared": "workspace:*",
     "@opencad/sync-rs": "workspace:*",
     "@stripe/stripe-js": "^9.2.0",

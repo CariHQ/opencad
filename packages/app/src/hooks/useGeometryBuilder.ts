@@ -37,28 +37,14 @@ let _wasmModule: GeometryWasmModule | null = null;
 let _initPromise: Promise<GeometryWasmModule | null> | null = null;
 
 async function loadWasm(): Promise<GeometryWasmModule | null> {
+  // The Rust/WASM kernel (@opencad/geometry) was removed — the audit flagged
+  // its green tests as false positives that obscured the fact that every
+  // live geometry path runs in pure TypeScript below. Keep the shape of
+  // this function so callers can stay `await loadWasm()` style without
+  // branching, and always fall through to the TS implementations.
   if (_wasmModule) return _wasmModule;
   if (_initPromise) return _initPromise;
-
-  _initPromise = (async () => {
-    try {
-      // Dynamic import resolved at runtime so test/SSR environments that lack
-      // the WASM artefact can still use the TypeScript fallback.
-      // The specifier is intentionally stored in a variable so bundler static
-      // analysis does not try to resolve it at build time.
-      const wasmPkg = '@opencad/geometry/wasm';
-      // eslint-disable-next-line @typescript-eslint/no-implied-eval
-      const mod = await (Function('s', 'return import(s)')(wasmPkg)) as GeometryWasmModule;
-      await mod.default();
-      _wasmModule = mod;
-      return mod;
-    } catch {
-      // WASM unavailable (test environment, old browser, not yet built, etc.)
-      // Callers fall back to pure-TS implementations transparently.
-      return null;
-    }
-  })();
-
+  _initPromise = Promise.resolve(null);
   return _initPromise;
 }
 
