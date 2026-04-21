@@ -1,5 +1,10 @@
 import { create } from 'zustand';
 import { isServerAvailable, projectsApi } from '../lib/serverApi';
+import {
+  saveThumbnail as idbSaveThumbnail,
+  loadAllThumbnails as idbLoadAllThumbnails,
+  deleteThumbnail as idbDeleteThumbnail,
+} from '../lib/thumbnailStore';
 
 export interface ProjectMeta {
   id: string;
@@ -31,6 +36,8 @@ interface ProjectState {
   starProject: (id: string) => void;
   renameProject: (id: string, name: string) => void;
   updateThumbnail: (id: string, thumbnail: string) => void;
+  /** Populate `thumbnail` on each project from the IDB thumbnail store. */
+  hydrateThumbnails: () => Promise<void>;
 
   setViewMode: (mode: ViewMode) => void;
   setSortBy: (sortBy: SortBy) => void;
@@ -63,7 +70,10 @@ function loadProjects(): ProjectMeta[] {
 
 function saveProjects(projects: ProjectMeta[]): void {
   try {
-    localStorage.setItem('opencad-projects', JSON.stringify(projects));
+    // Thumbnails live in IndexedDB (opencad-thumbnails) — strip them here so
+    // a few dozen ~80KB JPEG data URLs don't race localStorage's 5MB quota.
+    const lean = projects.map((p) => ({ ...p, thumbnail: null }));
+    localStorage.setItem('opencad-projects', JSON.stringify(lean));
   } catch { /* ignore */ }
 }
 
@@ -200,6 +210,7 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
       projects,
       activeProjectId: get().activeProjectId === id ? null : get().activeProjectId,
     });
+    void idbDeleteThumbnail(id);
     if (get().serverOnline) {
       projectsApi.delete(id).catch(() => {});
     }
@@ -227,9 +238,21 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
   updateThumbnail: (id, thumbnail) => {
     const projects = get().projects.map((p) =>
-      p.id === id ? { ...p, thumbnail, updatedAt: Date.now() } : p
+      p.id === id ? { ...p, thumbnail } : p
     );
-    saveProjects(projects);
+    // Keep updatedAt stable — a thumbnail refresh shouldn't reorder the
+    // dashboard's "last edited" sort. Persist to IDB; the in-memory list
+    // carries the thumbnail so the card re-renders without a second read.
+    set({ projects });
+    void idbSaveThumbnail(id, thumbnail);
+  },
+
+  hydrateThumbnails: async () => {
+    const map = await idbLoadAllThumbnails();
+    if (Object.keys(map).length === 0) return;
+    const projects = get().projects.map((p) =>
+      map[p.id] ? { ...p, thumbnail: map[p.id] } : p
+    );
     set({ projects });
   },
 

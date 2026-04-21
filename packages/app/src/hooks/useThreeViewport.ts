@@ -67,6 +67,30 @@ export function _publishSelectedCoords(coords: SelectedCoords | null): void {
   _sharedSelectedCoords = coords;
 }
 
+/**
+ * Thumbnail capture — published by the live 3D hook so the dashboard /
+ * autosave can snapshot the current view without threading refs through
+ * multiple components. Returns a JPEG data URL sized for high-DPI cards,
+ * or null if the 3D viewport isn't mounted (e.g. user is in 2D mode).
+ *
+ * Output is center-cropped to the caller's aspect; the live canvas is
+ * usually much wider than 4:3, so cropping avoids distortion.
+ */
+type ThumbnailCapturer = (width: number, height: number, quality?: number) => string | null;
+let _thumbnailCapturer: ThumbnailCapturer | null = null;
+
+export function _setThumbnailCapturer(fn: ThumbnailCapturer | null): void {
+  _thumbnailCapturer = fn;
+}
+
+export function captureProjectThumbnail(
+  width = 800,
+  height = 600,
+  quality = 0.85,
+): string | null {
+  return _thumbnailCapturer ? _thumbnailCapturer(width, height, quality) : null;
+}
+
 const LIGHT_THEME = {
   sceneBackground: 0xf1f5f9,
   gridColor: 0xcbd5e1,
@@ -203,11 +227,11 @@ function isWebGLForced(): boolean {
 async function createRenderer(): Promise<GenericRenderer> {
   if (isWebGLForced()) {
     _setActiveBackend('webgl');
-    return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+    return new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }) as unknown as GenericRenderer;
   }
   if (typeof navigator === 'undefined' || !(navigator as { gpu?: unknown }).gpu) {
     _setActiveBackend('webgl');
-    return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+    return new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }) as unknown as GenericRenderer;
   }
   try {
     const mod = await import('three/webgpu');
@@ -227,7 +251,7 @@ async function createRenderer(): Promise<GenericRenderer> {
     // eslint-disable-next-line no-console
     console.info('[viewport] WebGPU init failed, using WebGL:', err);
     _setActiveBackend('webgl');
-    return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+    return new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true }) as unknown as GenericRenderer;
   }
 }
 
@@ -1654,6 +1678,46 @@ export function useThreeViewport() {
       rendererReadyRef.current = true;
       needsRenderRef.current = true;
       hasAutoZoomedRef.current = false;
+
+      // Register thumbnail capturer against the live renderer/scene/camera.
+      // The capture forces one render synchronously so the backbuffer has
+      // fresh pixels, then center-crops onto a 2D canvas at the target size.
+      _setThumbnailCapturer((w, h, q = 0.85) => {
+        const st = stateRef.current;
+        if (!st.renderer || !st.camera || !st.scene) return null;
+        const liveCanvas = (st.renderer as GenericRenderer & {
+          domElement: HTMLCanvasElement;
+        }).domElement;
+        if (!liveCanvas || liveCanvas.width === 0 || liveCanvas.height === 0) return null;
+        try {
+          st.renderer.render(st.scene, st.camera);
+        } catch {
+          return null;
+        }
+        const out = window.document.createElement('canvas');
+        out.width = w;
+        out.height = h;
+        const ctx = out.getContext('2d');
+        if (!ctx) return null;
+        const sw = liveCanvas.width;
+        const sh = liveCanvas.height;
+        const tAspect = w / h;
+        const sAspect = sw / sh;
+        let sx = 0, sy = 0, cropW = sw, cropH = sh;
+        if (sAspect > tAspect) {
+          cropW = sh * tAspect;
+          sx = (sw - cropW) / 2;
+        } else {
+          cropH = sw / tAspect;
+          sy = (sh - cropH) / 2;
+        }
+        ctx.drawImage(liveCanvas, sx, sy, cropW, cropH, 0, 0, w, h);
+        try {
+          return out.toDataURL('image/jpeg', q);
+        } catch {
+          return null;
+        }
+      });
       // Flip rendererReady state so the updateScene / section-clipping /
       // selection effects — which previously early-returned because the
       // scene/renderer refs were null — re-run against the current (not
@@ -1815,6 +1879,7 @@ export function useThreeViewport() {
     return () => {
       cancelled = true;
       rendererReadyRef.current = false;
+      _setThumbnailCapturer(null);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       ro?.disconnect();
       if (onMouseDown)   container.removeEventListener('mousedown',   onMouseDown);

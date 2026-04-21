@@ -9,6 +9,7 @@ import { useDocumentStore } from '../stores/documentStore';
 import { useProjectStore } from '../stores/projectStore';
 import { isTauri, tauriSaveProject } from './useTauri';
 import { saveDocument as offlineSaveDocument } from '../lib/offlineStore';
+import { captureProjectThumbnail } from './useThreeViewport';
 
 const AUTO_SAVE_INTERVAL_MS = 2000;
 
@@ -23,9 +24,13 @@ function saveToLocalStorage(id: string, data: string): void {
 
 export function useAutoSave(): void {
   const { document, isSaving } = useDocumentStore();
-  const { activeProjectId, projects, renameProject } = useProjectStore();
+  const { activeProjectId, projects, renameProject, updateThumbnail } = useProjectStore();
   const lastSavedRef = useRef<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Throttle thumbnail captures to at most once every 20s — a save fires
+  // every 2s while drafting, but re-encoding the JPEG that often is wasted
+  // work for a card that most users won't look at until they navigate away.
+  const lastThumbAtRef = useRef<number>(0);
 
   useEffect(() => {
     if (!document || !activeProjectId) return;
@@ -55,6 +60,18 @@ export function useAutoSave(): void {
 
         // Update project updatedAt timestamp
         renameProject(activeProjectId, name); // triggers updatedAt refresh
+
+        // Capture a preview from the live 3D viewport for the dashboard card.
+        // No-op when the user is in 2D mode (the 3D renderer isn't mounted,
+        // so captureProjectThumbnail returns null).
+        const nowTs = Date.now();
+        if (nowTs - lastThumbAtRef.current > 20_000) {
+          const dataUrl = captureProjectThumbnail(1024, 768, 0.85);
+          if (dataUrl) {
+            lastThumbAtRef.current = nowTs;
+            updateThumbnail(activeProjectId, dataUrl);
+          }
+        }
       } catch {
         // IndexedDB failed — fall back to localStorage only
         try {
@@ -69,7 +86,7 @@ export function useAutoSave(): void {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [document, activeProjectId, isSaving, projects, renameProject]);
+  }, [document, activeProjectId, isSaving, projects, renameProject, updateThumbnail]);
 }
 
 /** Load a project from storage (browser fallback) */

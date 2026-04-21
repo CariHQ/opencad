@@ -67,11 +67,13 @@ export function ProjectDashboard() {
     setSearchQuery,
     getFilteredProjects,
     syncFromServer,
+    hydrateThumbnails,
   } = useProjectStore();
 
   useEffect(() => {
     void syncFromServer();
-  }, [syncFromServer]);
+    void hydrateThumbnails();
+  }, [syncFromServer, hydrateThumbnails]);
 
   const projects = getFilteredProjects();
 

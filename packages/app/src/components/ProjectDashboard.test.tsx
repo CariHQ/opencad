@@ -48,6 +48,7 @@ function makeStore(overrides = {}) {
     setSearchQuery: vi.fn(),
     getFilteredProjects: vi.fn().mockReturnValue(projects),
     syncFromServer: vi.fn().mockResolvedValue(undefined),
+    hydrateThumbnails: vi.fn().mockResolvedValue(undefined),
     ...overrides,
   };
 }
