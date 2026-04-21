@@ -164,10 +164,54 @@ interface GenericRenderer {
   dispose(): void;
 }
 
-function createRenderer(): GenericRenderer {
-  // WebGL only for now — WebGPU support is experimental and requires async init
-  // which introduced timing issues with the animate loop. Revisit once stable.
+/** Opt-in check: `?renderer=webgpu` or `localStorage.opencad-renderer = 'webgpu'`. */
+function isWebGPURequested(): boolean {
+  try {
+    if (typeof window === 'undefined') return false;
+    const q = new URLSearchParams(window.location.search).get('renderer');
+    if (q === 'webgpu') return true;
+    if (q === 'webgl') return false;
+    return window.localStorage?.getItem('opencad-renderer') === 'webgpu';
+  } catch { return false; }
+}
+
+function createWebGLRenderer(): GenericRenderer {
   return new THREE.WebGLRenderer({ antialias: true }) as unknown as GenericRenderer;
+}
+
+/**
+ * Create the 3D renderer. Synchronously returns WebGL; if the user has opted
+ * into WebGPU (URL param or localStorage) AND `navigator.gpu` is present, also
+ * kicks off an async upgrade to WebGPU via `onUpgrade(newRenderer)`. The caller
+ * is responsible for hot-swapping the renderer on upgrade — the WebGL renderer
+ * keeps the viewport live until the upgrade completes.
+ */
+function createRenderer(
+  onUpgrade?: (next: GenericRenderer) => void,
+): GenericRenderer {
+  const webgl = createWebGLRenderer();
+  if (!onUpgrade || !isWebGPURequested()) return webgl;
+  if (typeof navigator === 'undefined' || !(navigator as { gpu?: unknown }).gpu) return webgl;
+
+  // Defer the WebGPU import so bundlers that don't know about three/webgpu
+  // don't blow up at build time.
+  void (async () => {
+    try {
+      const mod = await import('three/webgpu');
+      const WebGPURenderer = (mod as unknown as { WebGPURenderer: new (params?: unknown) => unknown }).WebGPURenderer;
+      if (!WebGPURenderer) return;
+      const gpu = new WebGPURenderer({ antialias: true }) as unknown as GenericRenderer & { init?: () => Promise<unknown> };
+      await gpu.init?.();
+      onUpgrade(gpu);
+    } catch (err) {
+      // Stay on WebGL silently — WebGPU is opt-in, failures are non-fatal.
+      // Log once so dev-tools users can see what happened.
+      // eslint-disable-next-line no-console
+      console.info('[viewport] WebGPU init failed, staying on WebGL:', err);
+    }
+  })();
+
+  return webgl;
 }
 
 // ─── Module-level geometry helpers ───────────────────────────────────────────
@@ -1289,24 +1333,38 @@ export function useThreeViewport() {
     scene.add(new THREE.AxesHelper(1000));
 
     // Set scene + camera, then create renderer synchronously.
-    const renderer = createRenderer();
-    // Guard against 0×0 initialisation — real canvas size is re-applied by
-    // the ResizeObserver below once layout settles.
+    // When the user has opted into WebGPU the onUpgrade callback hot-swaps
+    // the renderer once the async WebGPU init resolves.
     const safeW = Math.max(100, initW);
     const safeH = Math.max(100, initH);
-    renderer.setSize(safeW, safeH);
-    renderer.setPixelRatio(window.devicePixelRatio);
-    renderer.shadowMap.enabled = true;
+    const configureRenderer = (r: GenericRenderer) => {
+      r.setSize(safeW, safeH);
+      r.setPixelRatio(window.devicePixelRatio);
+      r.shadowMap.enabled = true;
+      r.shadowMap.type = THREE.PCFShadowMap;
+      const el = r.domElement as HTMLCanvasElement;
+      el.style.display = 'block';
+      el.style.width  = '100%';
+      el.style.height = '100%';
+    };
+    let cancelled = false;
+    const renderer = createRenderer((nextRenderer) => {
+      if (cancelled) { nextRenderer.dispose(); return; }
+      const prev = stateRef.current.renderer;
+      if (!prev) { nextRenderer.dispose(); return; }
+      configureRenderer(nextRenderer);
+      const prevEl = prev.domElement;
+      const nextEl = nextRenderer.domElement;
+      prevEl.parentNode?.replaceChild(nextEl, prevEl);
+      prev.dispose();
+      stateRef.current.renderer = nextRenderer;
+      needsRenderRef.current = true;
+    });
     // PCFSoftShadowMap was deprecated in three@0.170+ for the WebGL path —
     // use PCFShadowMap; visual difference is negligible at our quality level
     // and the deprecation warning no longer spams the console.
-    renderer.shadowMap.type    = THREE.PCFShadowMap;
+    configureRenderer(renderer);
     container.appendChild(renderer.domElement);
-    // Make the canvas visibly fill the container so CSS can't accidentally hide it.
-    const canvasEl = renderer.domElement as HTMLCanvasElement;
-    canvasEl.style.display = 'block';
-    canvasEl.style.width  = '100%';
-    canvasEl.style.height = '100%';
 
     // Re-measure after the browser has committed layout — catches the case
     // where initial getBoundingClientRect returned 0s because the parent was
@@ -1316,7 +1374,7 @@ export function useThreeViewport() {
       if (r.width > 0 && r.height > 0) {
         const camObj = stateRef.current.camera;
         if (camObj) { camObj.aspect = r.width / r.height; camObj.updateProjectionMatrix(); }
-        renderer.setSize(r.width, r.height);
+        stateRef.current.renderer?.setSize(r.width, r.height);
         needsRenderRef.current = true;
       }
     });
@@ -1458,6 +1516,7 @@ export function useThreeViewport() {
     ro.observe(container);
 
     return () => {
+      cancelled = true;
       rendererReadyRef.current = false;
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       ro.disconnect();
