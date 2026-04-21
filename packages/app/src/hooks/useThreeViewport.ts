@@ -594,7 +594,11 @@ export function useThreeViewport() {
       const type = element.type;
 
       // Resolve applied material (overrides the type defaults when set)
-      const appliedMatName = props['Material']?.value as string | undefined;
+      // Canonical key is MaterialId (store.setElementMaterial writes there).
+      // Fall back to legacy 'Material' for documents migrated from older builds.
+      const appliedMatName =
+        (props['MaterialId']?.value as string | undefined) ??
+        (props['Material']?.value as string | undefined);
       const appliedMat = appliedMatName
         ? BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName)
         : undefined;
@@ -996,7 +1000,8 @@ export function useThreeViewport() {
           const elId    = (mesh.userData.elementId   as string) || '';
           const freshEl = useDocumentStore.getState().document?.content.elements[elId];
           const appliedMatName = freshEl
-            ? (freshEl.properties as Record<string, { value: unknown }>)['Material']?.value as string | undefined
+            ? ((freshEl.properties as Record<string, { value: unknown }>)['MaterialId']?.value as string | undefined) ??
+              ((freshEl.properties as Record<string, { value: unknown }>)['Material']?.value as string | undefined)
             : undefined;
           const appliedMat = appliedMatName
             ? BUILT_IN_MATERIALS.find((m) => m.name === appliedMatName)

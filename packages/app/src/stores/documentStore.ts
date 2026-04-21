@@ -388,7 +388,11 @@ export const useDocumentStore = create<DocumentState>()(
             elementType: element.type ?? 'unknown',
             userId: model.client,
           };
-          Object.assign(element, updates);
+          // Replace the element reference so consumers that dirty-check by
+          // identity (e.g. the 3D viewport's prev !== element test) rebuild.
+          // Mutating in place silently skipped viewport updates.
+          const nextElement = { ...element, ...updates };
+          model.documentData.content.elements[elementId] = nextElement;
           set({
             document: { ...model.documentData },
             changeHistory: [...changeHistory, updateRecord].slice(-MAX_CHANGE_HISTORY),
@@ -422,8 +426,15 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) return;
         const element = model.getElementById(elementId);
         if (!element) return;
-        if (!element.properties) element.properties = {};
-        (element.properties as Record<string, unknown>)['MaterialId'] = { type: 'string', value: materialId };
+        // Replace the element reference so the 3D viewport's identity-based
+        // dirty check (prev !== element) fires and rebuilds the mesh with
+        // textured materials. Mutating in place was silently skipping rebuild.
+        const nextProperties = {
+          ...(element.properties ?? {}),
+          MaterialId: { type: 'string' as const, value: materialId },
+        };
+        const nextElement = { ...element, properties: nextProperties };
+        model.documentData.content.elements[elementId] = nextElement;
         set({ document: { ...model.documentData } });
       },
 
