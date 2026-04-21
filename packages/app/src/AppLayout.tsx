@@ -48,6 +48,7 @@ import { ImportExportModal } from './components/ImportExportModal';
 import { ColumnBeamPanel } from './components/ColumnBeamPanel';
 import { StairRailingPanel } from './components/StairRailingPanel';
 import { useDocumentStore } from './stores/documentStore';
+import { useProjectStore } from './stores/projectStore';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { WallToolPanel } from './components/WallToolPanel';
 import { CurtainWallPanel } from './components/CurtainWallPanel';
@@ -313,6 +314,7 @@ export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, setElementMaterial, renameProject } = useDocumentStore();
+  const renameProjectInList = useProjectStore((s) => s.renameProject);
   const leftPanelRef = React.useRef<HTMLElement>(null);
   const _rightPanelRef = React.useRef<HTMLElement>(null);
   void _rightPanelRef;
@@ -670,13 +672,19 @@ export function AppLayout() {
                 onChange={(e) => setRenameValue(e.target.value)}
                 onBlur={() => {
                   const trimmed = renameValue.trim();
-                  if (trimmed) renameProject(trimmed);
+                  if (trimmed) {
+                    renameProject(trimmed);
+                    if (projectId) renameProjectInList(projectId, trimmed);
+                  }
                   setIsRenamingProject(false);
                 }}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const trimmed = renameValue.trim();
-                    if (trimmed) renameProject(trimmed);
+                    if (trimmed) {
+                      renameProject(trimmed);
+                      if (projectId) renameProjectInList(projectId, trimmed);
+                    }
                     setIsRenamingProject(false);
                   } else if (e.key === 'Escape') {
                     setIsRenamingProject(false);
