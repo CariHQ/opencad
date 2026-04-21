@@ -7,7 +7,7 @@ import {
   type ChatMessage,
 } from '../hooks/useAIStream';
 import { useDocumentStore } from '../stores/documentStore';
-import { generateProject } from '@opencad/ai';
+import { generateProject, parseDesignCommand, applyDesignCommand, type DesignElement } from '@opencad/ai';
 import type { DocumentSchema } from '@opencad/document';
 
 const AI_CONFIG_KEY = 'opencad-ai-config';
@@ -63,6 +63,9 @@ interface AIChatPanelProps {
 
 const suggestedPrompts = [
   '/plan a two-bedroom cottage with a porch',
+  '/modify scale by 1.2',
+  '/modify rotate 45 degrees',
+  '/modify set material to Oak Timber',
   'Check building code compliance',
   'Add a staircase to level 2',
   'Generate quantity takeoff',
@@ -72,6 +75,8 @@ const suggestedPrompts = [
 export function AIChatPanel({ onClose }: AIChatPanelProps) {
   const { document: doc } = useDocumentStore();
   const loadDocumentSchema = useDocumentStore((s) => s.loadDocumentSchema);
+  const updateElement = useDocumentStore((s) => s.updateElement);
+  const pushHistory = useDocumentStore((s) => s.pushHistory);
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -131,6 +136,62 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setIsLoading(true);
+
+    // /modify <command> — natural-language design mutations (scale / rotate /
+    // translate / setMaterial) applied to the active document.
+    const modifyMatch = /^\/(modify|apply)\s+(.+)/is.exec(userText);
+    if (modifyMatch) {
+      const rawCmd = modifyMatch[2]!.trim();
+      const cmd = parseDesignCommand(rawCmd);
+      const ackId = (Date.now() + 1).toString();
+
+      if (cmd.type === 'unknown') {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: ackId,
+            role: 'assistant',
+            content:
+              `I couldn't parse that. Supported commands:\n` +
+              `- scale by <factor>\n- rotate <n> degrees\n- move left|right|up|down <n>\n- set material to <name>`,
+            timestamp: Date.now(),
+          },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!doc) {
+        setMessages((prev) => [
+          ...prev,
+          { id: ackId, role: 'assistant', content: 'Open a project first.', timestamp: Date.now() },
+        ]);
+        setIsLoading(false);
+        return;
+      }
+
+      const elementsIn = doc.content.elements as unknown as Record<string, DesignElement>;
+      const next = applyDesignCommand(cmd, elementsIn);
+      for (const [id, updated] of Object.entries(next)) {
+        const before = elementsIn[id];
+        if (!before) continue;
+        // Push transform + property changes individually so updateElement's
+        // merge strategy (Object.assign of top-level keys) stays faithful.
+        updateElement(id, { transform: updated.transform, properties: updated.properties });
+      }
+      pushHistory(`AI: ${rawCmd}`);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: ackId,
+          role: 'assistant',
+          content: `Applied ${cmd.type} to ${Object.keys(next).length} element(s).`,
+          timestamp: Date.now(),
+        },
+      ]);
+      setIsLoading(false);
+      return;
+    }
 
     const planMatch = /^\/(plan|generate)\s+(.+)/is.exec(userText);
     if (planMatch) {
