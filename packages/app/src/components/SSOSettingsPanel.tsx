@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { ssoSignIn } from '../lib/ssoAuth';
 
 type SSOProvider = 'saml' | 'oidc';
 
@@ -134,13 +135,27 @@ export function SSOSettingsPanel({ config: initialConfig = DEFAULT_SSO_CONFIG, o
         </div>
       )}
 
-      <button
-        aria-label="Save SSO settings"
-        className="btn-save"
-        onClick={() => onSave?.(config)}
-      >
-        Save Settings
-      </button>
+      <div className="sso-actions">
+        <button
+          aria-label="Save SSO settings"
+          className="btn-save"
+          onClick={() => onSave?.(config)}
+        >
+          Save Settings
+        </button>
+        <button
+          aria-label="Test SSO sign-in"
+          className="btn-secondary"
+          disabled={!config.enabled}
+          onClick={async () => {
+            const result = await ssoSignIn(config);
+            // eslint-disable-next-line no-alert
+            alert(result.ok ? `Signed in as ${result.user.email ?? result.user.uid}` : `Sign-in failed: ${result.error}`);
+          }}
+        >
+          Test Sign-In
+        </button>
+      </div>
     </div>
   );
 }
