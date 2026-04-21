@@ -1,12 +1,17 @@
 /**
- * offlineStore — IndexedDB persistence for offline editing
- * T-OFF-002
+ * offlineStore — offline document persistence (T-OFF-002, PRD §9.2).
+ *
+ * Primary path is OPFS (navigator.storage.getDirectory) so large documents
+ * don't churn the IndexedDB quota. IndexedDB stays as the fallback for
+ * browsers / environments that don't expose OPFS, and also holds the
+ * pendingSync metadata that OPFS can't encode on its own.
  *
  * DB name  : opencad-offline
  * Store    : documents
  * Schema   : { projectId: string, data: string, pendingSync: boolean, savedAt: number }
  */
 import { openDB, type IDBPDatabase } from 'idb';
+import { opfsWrite, opfsRead, opfsDelete } from './opfs';
 
 const DB_NAME = 'opencad-offline';
 const STORE_NAME = 'documents';
@@ -35,16 +40,29 @@ async function getDb(): Promise<IDBPDatabase> {
   return _db;
 }
 
+function opfsKey(projectId: string): string {
+  return `doc-${projectId}.json`;
+}
+
 /**
  * Persist a serialised document for the given project.
  * Marks the project as pending sync so it can be re-pushed when the app comes
  * back online.
+ *
+ * Strategy: the document bytes go to OPFS when available (keeps IndexedDB
+ * quota free for structured small-object data); the pendingSync metadata
+ * always goes to IndexedDB. IDB also keeps the full payload as a fallback
+ * so environments without OPFS still work end-to-end.
  */
 export async function saveDocument(projectId: string, data: string): Promise<void> {
   const db = await getDb();
+  const opfsOk = await opfsWrite(opfsKey(projectId), data);
   const record: OfflineDocRecord = {
     projectId,
-    data,
+    // When OPFS is the primary, keep a small marker in IDB instead of
+    // duplicating the payload. Fall back to storing the full string when
+    // OPFS failed.
+    data: opfsOk ? '' : data,
     pendingSync: true,
     savedAt: Date.now(),
   };
@@ -56,9 +74,11 @@ export async function saveDocument(projectId: string, data: string): Promise<voi
  * Returns null if no record exists.
  */
 export async function loadDocument(projectId: string): Promise<string | null> {
+  const fromOpfs = await opfsRead(opfsKey(projectId));
+  if (fromOpfs !== null) return fromOpfs;
   const db = await getDb();
   const record = await db.get(STORE_NAME, projectId) as OfflineDocRecord | undefined;
-  return record?.data ?? null;
+  return record?.data && record.data.length > 0 ? record.data : null;
 }
 
 /**

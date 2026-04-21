@@ -270,6 +270,11 @@ export function crdtFlushOfflineQueue(): void {
 
 async function _openWs(): Promise<void> {
   if (!_wsProjectId) return;
+  // Guard against Node / SSR contexts (tests) where `window` is undefined —
+  // without this, the unit test that provokes connectToProject raises an
+  // unhandled rejection and flips vitest's exit code even though every
+  // assertion passes, which then blocks the husky pre-commit gate.
+  if (typeof window === 'undefined' || !window.location) return;
 
   const proto = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   let url = `${proto}//${window.location.host}/ws/${_wsProjectId}`;
