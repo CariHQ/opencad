@@ -1362,14 +1362,17 @@ export function useViewport() {
         ctx.fillStyle = theme.element;
         ctx.fillText('Wall', Math.min(p1s.x, p2s.x) + 4, Math.min(p1s.y, p2s.y) + 12);
       }
-      if (type === 'dimension' && props['Value']) {
+      if (type === 'dimension' && props['StartX'] && props['EndX']) {
         const x1 = props['StartX']!.value as number, y1 = props['StartY']!.value as number;
         const x2 = props['EndX']!.value as number, y2 = props['EndY']!.value as number;
-        const d = props['Value']!.value as number;
+        // Live measurement: compute from current endpoints so the label
+        // tracks geometry changes (drag, edit) instead of showing the
+        // value baked at creation time. Stored 'Value' is a hint only.
+        const d = Math.hypot(x2 - x1, y2 - y1);
         const p1s = worldToScreen(x1, y1, cw, ch, v);
         const p2s = worldToScreen(x2, y2, cw, ch, v);
         ctx.fillStyle = selectedIds.includes(typedEl.id) ? theme.selected : theme.element;
-        ctx.fillText(`${Math.round(d / v.scale)}`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
+        ctx.fillText(`${Math.round(d)} mm`, (p1s.x + p2s.x) / 2 + 4, (p1s.y + p2s.y) / 2 - 6);
       }
     }
 
@@ -1380,18 +1383,18 @@ export function useViewport() {
       ctx.fillStyle = theme.accent;
       if (activeTool === 'dimension') {
         const d = dist(drawingState.startPoint, drawingState.currentPoint);
-        ctx.fillText(`${Math.round(d / v.scale)}`, (sp.x + cp2.x) / 2 + 4, (sp.y + cp2.y) / 2 - 6);
+        ctx.fillText(`${Math.round(d)} mm`, (sp.x + cp2.x) / 2 + 4, (sp.y + cp2.y) / 2 - 6);
       }
       if (activeTool === 'wall' || activeTool === 'rectangle') {
         const ww = Math.abs(drawingState.currentPoint.x - drawingState.startPoint.x);
         const hh = Math.abs(drawingState.currentPoint.y - drawingState.startPoint.y);
         ctx.fillText(
-          `${Math.round(ww / v.scale)} × ${Math.round(hh / v.scale)}`,
+          `${Math.round(ww)} × ${Math.round(hh)} mm`,
           Math.min(sp.x, cp2.x) + 4, Math.min(sp.y, cp2.y) - 6
         );
       }
       if (activeTool === 'circle') {
-        const r = dist(drawingState.startPoint, drawingState.currentPoint) / v.scale;
+        const r = dist(drawingState.startPoint, drawingState.currentPoint);
         ctx.fillText(`r=${Math.round(r)}`, sp.x + 4, sp.y - 6);
       }
     }
