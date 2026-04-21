@@ -32,6 +32,7 @@ import {
   Settings,
   History,
   MessageCirclePlus,
+  HelpCircle,
   GitPullRequest,
   Shield,
   Plus,
@@ -94,6 +95,8 @@ import { BillingPanel } from './components/BillingPanel';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { MobileViewer } from './components/MobileViewer';
 import { FeedbackWidget } from './components/FeedbackWidget';
+import { HelpPanel } from './components/HelpPanel';
+import { GuidedTour, hasSeenTour, markTourSeen } from './components/GuidedTour';
 import { AdminPanel } from './components/AdminPanel';
 import { PanelResizer } from './components/PanelResizer';
 import { ProjectHomeScreen } from './components/ProjectHomeScreen';
@@ -172,6 +175,32 @@ export function AppLayout() {
   const renameInputRef = React.useRef<HTMLInputElement>(null);
   const [showUpgrade, setShowUpgrade] = React.useState(false);
   const [showFeedback, setShowFeedback] = React.useState(false);
+  const [showHelp, setShowHelp] = React.useState(false);
+  const [showTour, setShowTour] = React.useState(false);
+
+  // Auto-launch the guided tour on the user's first visit. Marked seen
+  // when the user closes / completes it; replayable from Help.
+  React.useEffect(() => {
+    if (!hasSeenTour()) {
+      const t = setTimeout(() => setShowTour(true), 800);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, []);
+
+  // ? shortcut opens Help (when not typing in an input)
+  React.useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === '?' || (e.shiftKey && e.key === '/')) {
+        e.preventDefault();
+        setShowHelp((v) => !v);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
   const [tauriUpdateInfo, setTauriUpdateInfo] = React.useState<TauriUpdateInfo | null>(null);
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
@@ -483,7 +512,7 @@ export function AppLayout() {
             )}
           </div>
 
-          <div className="toolbar-tabs">
+          <div className="toolbar-tabs" data-tour="view-tabs">
             {allowedViews.includes('floor-plan') && (
               <button className={`tab-btn${activeView === 'floor-plan' ? ' active' : ''}`} onClick={() => setActiveView('floor-plan')}>Floor Plan</button>
             )}
@@ -497,6 +526,7 @@ export function AppLayout() {
 
           <div className="toolbar-right">
             <button className="toolbar-btn" onClick={() => setShowFeedback(true)} title="Send feedback" style={{ color: 'var(--accent-primary)' }}><span className="tool-icon"><MessageCirclePlus size={15} /></span></button>
+            <button className="toolbar-btn" data-tour="help" onClick={() => setShowHelp(true)} title="Help (?)"><span className="tool-icon"><HelpCircle size={15} /></span></button>
             <button className="toolbar-btn" onClick={toggleTheme} title="Toggle Theme"><span className="tool-icon">{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</span></button>
             <button className="toolbar-btn" onClick={() => setShowModal('import')} title="Import IFC"><span className="tool-icon"><FolderOpen size={15} /></span></button>
             <button className="toolbar-btn" onClick={() => setShowModal('export')} title="Export IFC"><span className="tool-icon"><FileDown size={15} /></span></button>
@@ -536,6 +566,7 @@ export function AppLayout() {
       <div className="app-body">
         <aside
           className={`app-left-panel${leftVisible ? '' : ' panel-collapsed'}`}
+          data-tour="navigator"
           style={leftVisible ? { width: leftPanelWidth, minWidth: leftPanelWidth } : undefined}
         >
           <Navigator />
@@ -550,11 +581,14 @@ export function AppLayout() {
         </aside>
         {leftVisible && <PanelResizer panelRef={leftPanelRef} side="right" minWidth={180} maxWidth={480} />}
 
-        <div className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}>
+        <div
+          className={`app-toolshelf-container${chromeVisible ? '' : ' panel-collapsed'}`}
+          data-tour="tools"
+        >
           <ToolShelf />
         </div>
 
-        <main className="app-main">
+        <main className="app-main" data-tour="canvas">
           <PanelErrorBoundary>
             <div className="viewport-wrapper">
               <SplitViewport viewType={activeView} />
@@ -579,6 +613,7 @@ export function AppLayout() {
 
         <aside
           className={`app-right-panel${rightVisible ? '' : ' panel-collapsed'}`}
+          data-tour="properties"
           style={rightVisible ? { width: rightPanelWidth, minWidth: rightPanelWidth } : undefined}
         >
           {rightVisible && (
@@ -656,6 +691,15 @@ export function AppLayout() {
 
       {chromeVisible && <StatusBar viewType={activeView} />}
       <FeedbackWidget open={showFeedback} onClose={() => setShowFeedback(false)} />
+      <HelpPanel
+        open={showHelp}
+        onClose={() => setShowHelp(false)}
+        onStartTour={() => { setShowHelp(false); setShowTour(true); }}
+      />
+      <GuidedTour
+        open={showTour}
+        onClose={() => { setShowTour(false); markTourSeen(); }}
+      />
 
       {showModal && <ImportExportModal mode={showModal} onClose={() => setShowModal(null)} />}
 
