@@ -86,13 +86,14 @@ describe('T-SCHED-001: SchedulePanel', () => {
     expect(select.querySelector('option[value="door"]')).toBeInTheDocument();
   });
 
-  it('shows a table with wall rows when Wall selected', () => {
+  it('renders one card per wall when Wall selected', () => {
     render(<SchedulePanel />);
     const select = screen.getByRole('combobox', { name: /element type/i });
     fireEvent.change(select, { target: { value: 'wall' } });
-    const rows = screen.getAllByRole('row');
-    // header row + 2 wall rows
-    expect(rows.length).toBeGreaterThanOrEqual(3);
+    // Card layout replaces the horizontal-scrolling table — one listitem
+    // per element, visible without side-scroll in a narrow panel.
+    const cards = screen.getAllByRole('listitem');
+    expect(cards.length).toBe(2);
   });
 
   it('shows element IDs in rows', () => {
@@ -127,12 +128,12 @@ describe('T-SCHED-001: SchedulePanel', () => {
     expect(screen.getByText('D-001')).toBeInTheDocument();
   });
 
-  it('shows column headers for properties', () => {
+  it('shows property labels on each card', () => {
     render(<SchedulePanel />);
     const select = screen.getByRole('combobox', { name: /element type/i });
     fireEvent.change(select, { target: { value: 'wall' } });
-    expect(screen.getByText(/id/i)).toBeInTheDocument();
-    expect(screen.getByText(/material/i)).toBeInTheDocument();
+    // Cards label each field; fixtures include a "material" property.
+    expect(screen.getAllByText(/material/i).length).toBeGreaterThan(0);
   });
 
   it('shows Export CSV button', () => {
@@ -159,13 +160,13 @@ describe('T-BIM-002: SchedulePanel quantity takeoff', () => {
     vi.mocked(useDocumentStore).mockReturnValue(makeStore() as ReturnType<typeof useDocumentStore>);
   });
 
-  it('renders column headers: Type, Count, Area, Length', () => {
+  it('renders summary stats: Count, Area, Length', () => {
     render(<SchedulePanel />);
-    // The quantity takeoff summary table should show these column headers
-    expect(screen.getAllByText(/type/i).length).toBeGreaterThan(0);
-    expect(screen.getByText(/count/i)).toBeInTheDocument();
-    expect(screen.getByText(/area/i)).toBeInTheDocument();
-    expect(screen.getByText(/length/i)).toBeInTheDocument();
+    // The compact stat strip at the top replaces the old 5-column summary
+    // table. Each stat has a label and a value.
+    expect(screen.getByText('Count')).toBeInTheDocument();
+    expect(screen.getByText('Area')).toBeInTheDocument();
+    expect(screen.getByText('Length')).toBeInTheDocument();
   });
 
   it('renders empty state when no elements', () => {
@@ -191,12 +192,11 @@ describe('T-BIM-002: SchedulePanel quantity takeoff', () => {
 
   it('groups elements by type', () => {
     render(<SchedulePanel />);
-    // Select wall type — should show 2 walls grouped
+    // Select wall type — should show 2 walls as 2 cards
     const select = screen.getByRole('combobox', { name: /element type/i });
     fireEvent.change(select, { target: { value: 'wall' } });
-    const rows = screen.getAllByRole('row');
-    // header row + 2 wall data rows (+ possible tfoot row)
-    expect(rows.length).toBeGreaterThanOrEqual(3);
+    const cards = screen.getAllByRole('listitem');
+    expect(cards.length).toBe(2);
   });
 
   it('shows correct count per type', () => {

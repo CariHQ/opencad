@@ -118,28 +118,24 @@ export function SchedulePanel() {
         </button>
       </div>
 
-      {/* T-BIM-002: Quantity takeoff summary table */}
-      <div className="schedule-qty-summary">
-        <table className="schedule-qty-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Count</th>
-              <th>Area (m²)</th>
-              <th>Length (m)</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>{selectedType}</td>
-              <td>{qtySummary.count}</td>
-              <td>{qtySummary.totalArea !== null ? qtySummary.totalArea.toFixed(2) : '—'}</td>
-              <td>{qtySummary.totalLength !== null ? qtySummary.totalLength.toFixed(2) : '—'}</td>
-              <td>—</td>
-            </tr>
-          </tbody>
-        </table>
+      {/* T-BIM-002: Quantity takeoff summary — compact stat strip, no side-scroll */}
+      <div className="schedule-qty-summary" data-testid="schedule-qty-summary">
+        <div className="schedule-qty-stat">
+          <span className="schedule-qty-label">Count</span>
+          <span className="schedule-qty-value">{qtySummary.count}</span>
+        </div>
+        <div className="schedule-qty-stat">
+          <span className="schedule-qty-label">Area</span>
+          <span className="schedule-qty-value">
+            {qtySummary.totalArea !== null ? `${qtySummary.totalArea.toFixed(2)} m²` : '—'}
+          </span>
+        </div>
+        <div className="schedule-qty-stat">
+          <span className="schedule-qty-label">Length</span>
+          <span className="schedule-qty-value">
+            {qtySummary.totalLength !== null ? `${qtySummary.totalLength.toFixed(2)} m` : '—'}
+          </span>
+        </div>
       </div>
 
       {elements.length === 0 ? (
@@ -229,36 +225,24 @@ function renderStructuredOrFallback(
     );
   }
   return (
-    <table className="schedule-table">
-      <thead>
-        <tr>
-          <th>ID</th>
-          {columns.map((col) => <th key={col}>{col}</th>)}
-        </tr>
-      </thead>
-      <tbody>
-        {elements.map((el) => (
-          <tr key={el.id}>
-            <td>{el.id}</td>
-            {columns.map((col) => {
+    <>
+      <div className="schedule-cards" role="list">
+        {elements.map((el, idx) => (
+          <ScheduleCard
+            key={el.id}
+            tag={`${type.toUpperCase().slice(0, 3)}-${String(idx + 1).padStart(3, '0')}`}
+            title={el.id.length > 12 ? el.id.slice(0, 12) + '…' : el.id}
+            fields={columns.map((col) => {
               const prop = el.properties[col];
-              return (
-                <td key={col}>
-                  {prop ? `${prop.value}${prop.unit ? ' ' + prop.unit : ''}` : '—'}
-                </td>
-              );
+              return [col, prop ? `${prop.value}${prop.unit ? ' ' + prop.unit : ''}` : '—'] as [string, string];
             })}
-          </tr>
+          />
         ))}
-      </tbody>
-      <tfoot>
-        <tr>
-          <td colSpan={columns.length + 1} className="schedule-total">
-            Total: {elements.length} {type}{elements.length !== 1 ? 's' : ''}
-          </td>
-        </tr>
-      </tfoot>
-    </table>
+      </div>
+      <div className="schedule-total-footer">
+        Total: {elements.length} {type}{elements.length !== 1 ? 's' : ''}
+      </div>
+    </>
   );
 }
 
