@@ -76,6 +76,7 @@ import { CarbonPanel, type CarbonEntry } from './components/CarbonPanel';
 import { CostPanel, type CostItem } from './components/CostPanel';
 import { computeTakeoff } from './lib/quantityTakeoff';
 import { BUILT_IN_MATERIALS } from './lib/materials';
+import { pluginHost, onPluginNotification, type PluginNotification } from './plugins/pluginHost';
 import { HatchPanel } from './components/HatchPanel';
 import { SymbolLibrary } from './components/SymbolLibrary';
 import { ShadowAnalysisPanel } from './components/ShadowAnalysisPanel';
@@ -297,6 +298,21 @@ export function AppLayout() {
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
+
+  // Boot the plugin host once — loads every installed plugin into a worker
+  // sandbox and keeps them in sync as the registry changes.
+  React.useEffect(() => { void pluginHost.startAll(); }, []);
+
+  // Plugin notifications → transient toasts.
+  const [pluginToasts, setPluginToasts] = React.useState<PluginNotification[]>([]);
+  React.useEffect(() => {
+    return onPluginNotification((n) => {
+      setPluginToasts((prev) => [...prev, n]);
+      setTimeout(() => {
+        setPluginToasts((prev) => prev.filter((x) => x.id !== n.id));
+      }, 4000);
+    });
+  }, []);
 
   // Stable local user ID from localStorage so it survives refreshes
   const localUserId = React.useMemo(() => {
@@ -789,6 +805,18 @@ export function AppLayout() {
       </div>
 
       {chromeVisible && <StatusBar viewType={activeView} />}
+
+      {pluginToasts.length > 0 && (
+        <div className="plugin-toast-stack" role="status" aria-live="polite">
+          {pluginToasts.map((t) => (
+            <div key={t.id} className={`plugin-toast plugin-toast--${t.type}`}>
+              <span className="plugin-toast-source">{t.pluginId}</span>
+              <span className="plugin-toast-msg">{t.message}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
       <FeedbackWidget open={showFeedback} onClose={() => setShowFeedback(false)} />
       <HelpPanel
         open={showHelp}

@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { pluginRegistry } from '../plugins/pluginRegistry';
 import { validateManifest, type PluginManifest } from '../plugins/pluginManifest';
+import { BUNDLED_PLUGIN_MANIFESTS } from '../plugins/pluginHost';
 import {
   listPlugins,
   listInstalled,
@@ -22,7 +23,11 @@ export interface MarketplaceItem {
 
 // ─── Hardcoded available plugins (catalogue) ──────────────────────────────────
 
+// Inline bundled examples (actually runnable) come first; the remote catalogue
+// entries below are retained for completeness but point at a CDN so they only
+// load when the network fetch succeeds.
 const AVAILABLE_PLUGINS: PluginManifest[] = [
+  ...BUNDLED_PLUGIN_MANIFESTS,
   {
     id: 'structural-grid-tool',
     name: 'Structural Grid Tool',
@@ -88,10 +93,17 @@ export function MarketplacePanel({
   const [installingIds, setInstallingIds] = useState<Set<string>>(new Set());
   const [uninstallingIds, setUninstallingIds] = useState<Set<string>>(new Set());
 
-  // Track which plugin IDs have been installed via the registry during this session
+  // Track which plugin IDs are currently installed in the local registry.
+  // Subscribe so the UI reflects installs/uninstalls from any code path
+  // (including host-driven reloads after a refresh).
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(
     () => new Set(pluginRegistry.list().map((m) => m.id)),
   );
+  useEffect(() => {
+    return pluginRegistry.subscribe(() => {
+      setRegisteredIds(new Set(pluginRegistry.list().map((m) => m.id)));
+    });
+  }, []);
 
   // ── Debounce search input 300 ms ─────────────────────────────────────────
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -174,11 +186,13 @@ export function MarketplacePanel({
     }
   }, []);
 
-  // ── Legacy catalogue install ─────────────────────────────────────────────
+  // ── Legacy catalogue install / uninstall ─────────────────────────────────
   const handleInstallPlugin = (manifest: PluginManifest) => {
     if (!validateManifest(manifest)) return;
     pluginRegistry.register(manifest);
-    setRegisteredIds((prev) => new Set([...prev, manifest.id]));
+  };
+  const handleUninstallPlugin = (pluginId: string) => {
+    pluginRegistry.unregister(pluginId);
   };
 
   // ── Filter legacy prop items by search ───────────────────────────────────

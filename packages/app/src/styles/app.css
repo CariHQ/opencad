@@ -8117,3 +8117,40 @@ input[type='range']::-moz-range-track {
   text-align: center;
   letter-spacing: 0.1px;
 }
+
+/* Plugin toasts — transient messages surfaced via ui.showNotification. */
+.plugin-toast-stack {
+  position: fixed;
+  bottom: 48px;
+  right: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 9999;
+  pointer-events: none;
+}
+.plugin-toast {
+  background: var(--bg-elevated, #1e1e22);
+  color: var(--text-primary, #fff);
+  border: 1px solid var(--border-color, #303038);
+  border-left: 3px solid var(--accent-primary, #4f46e5);
+  padding: 8px 12px;
+  border-radius: 4px;
+  min-width: 220px;
+  max-width: 360px;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
+  pointer-events: auto;
+}
+.plugin-toast--success { border-left-color: #4ade80; }
+.plugin-toast--error   { border-left-color: #f87171; }
+.plugin-toast-source {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  opacity: 0.65;
+}
+.plugin-toast-msg { line-height: 1.35; }
