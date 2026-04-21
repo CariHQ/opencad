@@ -91,9 +91,11 @@ describe('T-SHEET-001: SheetPanel', () => {
     expect(screen.getByRole('img', { name: /sheet preview/i })).toBeInTheDocument();
   });
 
-  it('shows Add View button', () => {
+  it('shows a views picker section', () => {
     render(<SheetPanel {...defaultProps} />);
-    expect(screen.getByRole('button', { name: /add view/i })).toBeInTheDocument();
+    // Replaced the placeholder "Add View" button with an inline multi-select
+    // views picker that lists the active document's saved views.
+    expect(screen.getByText(/views on sheet/i)).toBeInTheDocument();
   });
 });
 

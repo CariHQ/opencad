@@ -1,6 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { ConfirmModal } from './ConfirmModal';
 import { useDocumentStore } from '../stores/documentStore';
+import {
+  renderTitleBlock,
+  DEFAULT_TITLE_BLOCK_SVG,
+  ISO_SHEET_SIZES,
+  type LayoutContext,
+} from '../lib/titleBlock';
 
 // ---------------------------------------------------------------------------
 // T-DOC-020: Sheet Layout Manager
@@ -174,6 +180,8 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
   const [projectName, setProjectName] = useState('');
   const [drawnBy, setDrawnBy] = useState('');
   const [sheetNumber, setSheetNumber] = useState('A1-01');
+  const [sheetTitle, setSheetTitle] = useState('');
+  const [selectedViewIds, setSelectedViewIds] = useState<string[]>([]);
 
   // Auto-populate project name from the active document
   useEffect(() => {
@@ -181,6 +189,22 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
       setProjectName(doc.name);
     }
   }, [doc?.name]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Default sheet title to "Level 1 Plan" etc. when a doc is loaded
+  useEffect(() => {
+    if (!sheetTitle) setSheetTitle('Floor Plan');
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const availableViews = useMemo(
+    () => (doc ? Object.values(doc.presentation.views) : []),
+    [doc],
+  );
+
+  const toggleView = (viewId: string) => {
+    setSelectedViewIds((prev) =>
+      prev.includes(viewId) ? prev.filter((v) => v !== viewId) : [...prev, viewId],
+    );
+  };
 
   const handleExport = () => {
     const config = { size, orientation, scale, projectName, drawnBy, sheetNumber };
@@ -192,10 +216,43 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
     }
   };
 
-  // Approximate sheet ratio for preview
+  // Compute pixel dimensions from ISO paper sizes, preserving aspect ratio.
+  // `ISO_SHEET_SIZES` is in mm (landscape). For portrait we swap w/h.
+  const iso = ISO_SHEET_SIZES[size as keyof typeof ISO_SHEET_SIZES] ?? ISO_SHEET_SIZES.A1;
   const isLandscape = orientation === 'Landscape';
-  const previewW = isLandscape ? 160 : 110;
-  const previewH = isLandscape ? 110 : 160;
+  const paperMmW = isLandscape ? iso.w : iso.h;
+  const paperMmH = isLandscape ? iso.h : iso.w;
+  // Preview container: max 260 × 200 px, scale to paper aspect.
+  const maxW = 260;
+  const maxH = 200;
+  const ratio = paperMmW / paperMmH;
+  const previewW = ratio >= maxW / maxH ? maxW : Math.round(maxH * ratio);
+  const previewH = ratio >= maxW / maxH ? Math.round(maxW / ratio) : maxH;
+
+  // Resolve title-block tokens against the current panel state.
+  const titleBlockSvg = useMemo(() => {
+    const ctx: LayoutContext = {
+      project: projectName || (doc?.name ?? ''),
+      sheetTitle,
+      sheetNumber,
+      scale,
+      drawnBy,
+      date: new Date().toISOString().slice(0, 10),
+    };
+    return renderTitleBlock(DEFAULT_TITLE_BLOCK_SVG, ctx);
+  }, [projectName, sheetTitle, sheetNumber, scale, drawnBy, doc?.name]);
+
+  // Layout the view tiles: single = full area above title block; 2 side-by
+  // -side; 3/4 as a 2×2 grid.
+  const titleBlockH = 40; // matches DEFAULT_TITLE_BLOCK_SVG viewBox height
+  const paperW = 200;     // arbitrary inner units for SVG layout
+  const paperH = 150 * (paperMmH / paperMmW) + titleBlockH;
+  const availH = paperH - titleBlockH - 6;
+  const tiles = selectedViewIds.slice(0, 4);
+  const cols = tiles.length <= 1 ? 1 : 2;
+  const rows = tiles.length <= 2 ? 1 : 2;
+  const tileW = (paperW - 8) / cols;
+  const tileH = availH / rows;
 
   return (
     <div className="sheet-panel">
@@ -263,6 +320,17 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
           />
         </div>
         <div className="sheet-row">
+          <label htmlFor="sheet-title">Sheet Title</label>
+          <input
+            id="sheet-title"
+            type="text"
+            value={sheetTitle}
+            onChange={(e) => setSheetTitle(e.target.value)}
+            className="sheet-input"
+            placeholder="Level 1 Plan"
+          />
+        </div>
+        <div className="sheet-row">
           <label htmlFor="sheet-drawn-by">Drawn By</label>
           <input
             id="sheet-drawn-by"
@@ -285,28 +353,94 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
         </div>
       </div>
 
+      <div className="sheet-views-picker">
+        <div className="sheet-views-picker-title">Views on sheet (max 4)</div>
+        {availableViews.length === 0 ? (
+          <div className="sheet-views-empty">No saved views. Create views first.</div>
+        ) : (
+          <ul className="sheet-views-list">
+            {availableViews.map((v) => (
+              <li key={v.id} className="sheet-views-list-item">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={selectedViewIds.includes(v.id)}
+                    onChange={() => toggleView(v.id)}
+                    disabled={
+                      !selectedViewIds.includes(v.id) && selectedViewIds.length >= 4
+                    }
+                  />
+                  <span>{v.name}</span>
+                  <span className="sheet-views-list-type">{v.type}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <div className="sheet-preview-wrapper">
-        <div
+        <svg
           role="img"
           aria-label="Sheet preview"
           className="sheet-preview"
-          style={{ width: previewW, height: previewH }}
+          width={previewW}
+          height={previewH}
+          viewBox={`0 0 ${paperW} ${paperH}`}
+          preserveAspectRatio="xMidYMid meet"
         >
-          <div className="sheet-preview-title-block">
-            <span className="sheet-preview-project">{projectName || 'Project'}</span>
-            <span className="sheet-preview-number">{sheetNumber}</span>
-          </div>
-        </div>
+          {/* Paper */}
+          <rect
+            x={0}
+            y={0}
+            width={paperW}
+            height={paperH}
+            fill="white"
+            stroke="#555"
+            strokeWidth={0.8}
+          />
+          {/* View tiles */}
+          {tiles.map((viewId, i) => {
+            const col = i % cols;
+            const row = Math.floor(i / cols);
+            const x = 4 + col * tileW;
+            const y = 4 + row * tileH;
+            const view = availableViews.find((v) => v.id === viewId);
+            return (
+              <g key={viewId}>
+                <rect
+                  x={x}
+                  y={y}
+                  width={tileW - 4}
+                  height={tileH - 4}
+                  fill="#f6f6f6"
+                  stroke="#aaa"
+                  strokeWidth={0.4}
+                  strokeDasharray="2 2"
+                />
+                <text
+                  x={x + (tileW - 4) / 2}
+                  y={y + (tileH - 4) / 2}
+                  fontSize={5}
+                  textAnchor="middle"
+                  fill="#666"
+                >
+                  {view?.name ?? '—'}
+                </text>
+              </g>
+            );
+          })}
+          {/* Title block, bottom-right. DEFAULT template is 200×40; we
+              translate it to the bottom edge of the paper. */}
+          <g
+            transform={`translate(0, ${paperH - titleBlockH})`}
+            // eslint-disable-next-line react/no-danger
+            dangerouslySetInnerHTML={{ __html: titleBlockSvg }}
+          />
+        </svg>
       </div>
 
       <div className="sheet-actions">
-        <button
-          className="btn-secondary"
-          onClick={() => {}}
-          aria-label="Add View"
-        >
-          Add View
-        </button>
         <button
           className="btn-primary"
           onClick={handleExport}
