@@ -6819,36 +6819,16 @@ input[type='range']::-moz-range-track {
 }
 
 .marketplace-notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
   padding: 8px 12px;
   margin: 6px 10px 10px;
   font-size: 11px;
   color: var(--text-secondary);
-  background: transparent;
   border-bottom: 1px solid var(--border-color);
 }
 
 .marketplace-notice-text {
   letter-spacing: 0.02em;
   text-transform: uppercase;
-}
-
-.btn-retry.subtle {
-  margin-top: 0;
-  padding: 2px 8px;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-secondary);
-  font-size: 11px;
-}
-
-.btn-retry.subtle:hover {
-  background: var(--bg-tertiary);
-  border-color: var(--border-color);
-  color: var(--text-primary);
 }
 
 .btn-retry {

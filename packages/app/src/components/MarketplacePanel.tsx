@@ -243,20 +243,15 @@ export function MarketplacePanel({
       {/* Fallback catalogue — shown when the remote marketplace is unreachable
           (or, currently, not yet deployed). The bundled plugins are a real
           usable set, so present them as the default list with a subtle hint
-          rather than a red "error" banner that makes the feature look broken. */}
+          rather than a red "error" banner that makes the feature look broken.
+          No Refresh button: there's no remote catalogue to fetch yet, so it
+          would lie about doing something. */}
       {showFallback && (
         <div className="marketplace-section">
           <div className="marketplace-notice">
             <span className="marketplace-notice-text">
               Bundled plugins · more coming soon
             </span>
-            <button
-              className="btn-retry subtle"
-              onClick={() => void fetchPlugins(debouncedSearch)}
-              title="Check the marketplace again"
-            >
-              Refresh
-            </button>
           </div>
           {AVAILABLE_PLUGINS.map((plugin) => {
             const isInstalled = registeredIds.has(plugin.id);
