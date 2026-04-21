@@ -179,46 +179,47 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
 
       {/* Section cut controls — visible only in section view */}
       {viewType === 'section' && (
-        <div style={{
-          position: 'absolute', bottom: 32, left: 12, right: 12, zIndex: 10,
-          background: 'var(--panel-bg, rgba(20,20,40,0.82))',
-          borderRadius: 6, padding: '8px 10px',
-        }}>
-          <div style={{ display: 'flex', gap: 4, marginBottom: 6 }}>
-            {(['x', 'z', 'y'] as const).map((dir) => (
-              <button
-                key={dir}
-                className={`viewport-control-btn${sectionDirection === dir ? ' active' : ''}`}
-                onClick={() => setSectionDirection(dir)}
-                title={`Cut along ${dir.toUpperCase()} axis`}
-              >
-                {dir.toUpperCase()}
-              </button>
-            ))}
-            <span style={{ flex: 1 }} />
-            <span style={{ fontSize: 10, opacity: 0.6, alignSelf: 'center' }}>
-              {Math.round(sectionPosition)} mm
-            </span>
+        <div className="section-cut-overlay" role="group" aria-label="Section cut controls">
+          <div className="section-cut-row">
+            <div className="section-cut-axis" role="radiogroup" aria-label="Cut axis">
+              {(['x', 'z', 'y'] as const).map((dir) => (
+                <button
+                  key={dir}
+                  className={`section-cut-axis-btn${sectionDirection === dir ? ' active' : ''}`}
+                  onClick={() => setSectionDirection(dir)}
+                  title={`Cut along ${dir.toUpperCase()} axis`}
+                  aria-pressed={sectionDirection === dir}
+                >
+                  {dir.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            <div className="section-cut-label">Position</div>
+            <div className="section-cut-value">{Math.round(sectionPosition)} mm</div>
           </div>
           <input
+            className="section-cut-slider"
             type="range"
             min={-20000}
             max={20000}
             step={100}
             value={sectionPosition}
             onChange={(e) => setSectionPosition(Number(e.target.value))}
-            style={{ width: '100%', cursor: 'pointer' }}
+            aria-label="Cut plane position"
           />
+          <div className="section-cut-hint">
+            Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom
+          </div>
         </div>
       )}
 
-      <div className="viewport-corner bottom-left" style={{ zIndex: 5, pointerEvents: 'none' }}>
-        <span className="viewport-info">
-          {viewType === 'section'
-            ? 'Section: slider moves cut plane · Orbit drag · Two-finger pan · Pinch zoom'
-            : 'Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views'}
-        </span>
-      </div>
+      {viewType !== 'section' && (
+        <div className="viewport-corner bottom-left" style={{ zIndex: 5, pointerEvents: 'none' }}>
+          <span className="viewport-info">
+            Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views
+          </span>
+        </div>
+      )}
 
       {contextMenuState && (
         <ContextMenu
