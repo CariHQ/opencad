@@ -153,6 +153,40 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install --frozen-lockfile
 
+      # Sync the desktop bundle version with the monorepo root so the shipped
+      # DMG / MSI / AppImage reports the same number as the release tag,
+      # instead of the stale 0.0.1 that would otherwise be baked in.
+      - name: Sync desktop version with root package.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          ROOT_VERSION="$(node -p "require('./package.json').version")"
+          echo "Syncing desktop bundle to version $ROOT_VERSION"
+          node -e "
+            const fs = require('fs');
+            const p = 'packages/desktop/src-tauri/tauri.conf.json';
+            const o = JSON.parse(fs.readFileSync(p, 'utf8'));
+            o.version = process.env.ROOT_VERSION;
+            fs.writeFileSync(p, JSON.stringify(o, null, 2) + '\n');
+          "
+          node -e "
+            const fs = require('fs');
+            const p = 'packages/desktop/package.json';
+            const o = JSON.parse(fs.readFileSync(p, 'utf8'));
+            o.version = process.env.ROOT_VERSION;
+            fs.writeFileSync(p, JSON.stringify(o, null, 2) + '\n');
+          "
+          # Replace only the first `version = "..."` (the [package] one) in Cargo.toml.
+          python3 - <<'PY'
+import os, re, pathlib
+p = pathlib.Path('packages/desktop/src-tauri/Cargo.toml')
+s = p.read_text()
+s2 = re.sub(r'(^version = ")[^"]+(")', r'\g<1>' + os.environ['ROOT_VERSION'] + r'\g<2>', s, count=1, flags=re.MULTILINE)
+p.write_text(s2)
+PY
+        env:
+          ROOT_VERSION: ${{ env.ROOT_VERSION || '' }}
+
       - name: Build and publish Tauri app
         uses: tauri-apps/tauri-action@v0.6
         env:
