@@ -1015,7 +1015,18 @@ export function useThreeViewport() {
     const { renderer } = stateRef.current;
     if (!renderer) return;
 
+    // Enable local clipping so materials with clippingPlanes set also cut.
+    // `clippingPlanes` alone (global) works on WebGLRenderer but WebGPURenderer
+    // wants localClippingEnabled to route clipping through its render pass.
+    const r = renderer as GenericRenderer & { localClippingEnabled?: boolean };
+    r.localClippingEnabled = true;
+
     if (sectionBox) {
+      // THREE.Plane(normal, constant) → normal · p + constant = 0.
+      // With normal = (0, 0, -1) and constant = d, the plane is z = d and
+      // points with z < d are clipped. Map sectionDirection to the same
+      // "cut along positive axis" semantics so raising the slider reveals
+      // more of the model, not less.
       const normal =
         sectionDirection === 'x' ? new THREE.Vector3(-1,  0,  0) :
         sectionDirection === 'y' ? new THREE.Vector3( 0, -1,  0) :
@@ -1026,6 +1037,38 @@ export function useThreeViewport() {
     }
     needsRenderRef.current = true;
   }, [sectionBox, sectionPosition, sectionDirection]);
+
+  // ── Scene bounds for adaptive slider range ─────────────────────────────────
+  // Computed from the element meshes on every document change so the section
+  // slider covers only the actual model extent (±padding), not the fixed
+  // ±20,000 mm range that left most useful cut positions outside the slider
+  // travel.
+  const [sceneBounds, setSceneBounds] = useState<{
+    min: { x: number; y: number; z: number };
+    max: { x: number; y: number; z: number };
+  } | null>(null);
+  useEffect(() => {
+    if (!doc) { setSceneBounds(null); return; }
+    const els = Object.values(doc.content.elements);
+    if (els.length === 0) { setSceneBounds(null); return; }
+    let minX = Infinity, minY = Infinity, minZ = Infinity;
+    let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+    for (const el of els) {
+      const bb = el.boundingBox;
+      if (!bb) continue;
+      if (bb.min.x < minX) minX = bb.min.x;
+      if (bb.min.y < minY) minY = bb.min.y;
+      if (bb.min.z < minZ) minZ = bb.min.z;
+      if (bb.max.x > maxX) maxX = bb.max.x;
+      if (bb.max.y > maxY) maxY = bb.max.y;
+      if (bb.max.z > maxZ) maxZ = bb.max.z;
+    }
+    if (!Number.isFinite(minX)) { setSceneBounds(null); return; }
+    setSceneBounds({
+      min: { x: minX, y: minY, z: minZ },
+      max: { x: maxX, y: maxY, z: maxZ },
+    });
+  }, [doc]);
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {
@@ -1576,6 +1619,7 @@ export function useThreeViewport() {
     sectionDirection,
     setSectionDirection,
     saveSectionView,
+    sceneBounds,
     contextMenuState,
     closeContextMenu,
   };

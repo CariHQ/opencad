@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Columns, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
@@ -113,8 +113,20 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
   const {
     containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraTarget,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
-    contextMenuState, closeContextMenu,
+    sceneBounds, contextMenuState, closeContextMenu,
   } = useThreeViewport();
+
+  // Derive the slider range from the actual scene bounds for the current
+  // axis. Falls back to ±20,000 mm when no document is loaded.
+  const axisBounds = useMemo(() => {
+    if (!sceneBounds) return { min: -20000, max: 20000 };
+    const key = sectionDirection;
+    const pad = 500;
+    return {
+      min: Math.floor(sceneBounds.min[key] - pad),
+      max: Math.ceil(sceneBounds.max[key] + pad),
+    };
+  }, [sceneBounds, sectionDirection]);
 
   const zoomToFitRef = useRef(zoomToFit);
   zoomToFitRef.current = zoomToFit;
@@ -130,9 +142,17 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
   useEffect(() => {
     if (viewType === 'section') {
       setSectionBox(true);
-      // Default cut at camera target — put the slice through the model centre
-      const t = getCameraTarget();
-      setSectionPosition(Math.round(t.z));
+      // Default cut through the model's midpoint along the current axis so
+      // the slider starts somewhere inside the model, not at z=0 which is
+      // usually ground level.
+      if (sceneBounds) {
+        const key = sectionDirection;
+        const mid = (sceneBounds.min[key] + sceneBounds.max[key]) / 2;
+        setSectionPosition(Math.round(mid));
+      } else {
+        const t = getCameraTarget();
+        setSectionPosition(Math.round(t.z));
+      }
     } else {
       setSectionBox(false);
     }
@@ -200,9 +220,9 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
           <input
             className="section-cut-slider"
             type="range"
-            min={-20000}
-            max={20000}
-            step={100}
+            min={axisBounds.min}
+            max={axisBounds.max}
+            step={Math.max(10, Math.round((axisBounds.max - axisBounds.min) / 500))}
             value={sectionPosition}
             onChange={(e) => setSectionPosition(Number(e.target.value))}
             aria-label="Cut plane position"
