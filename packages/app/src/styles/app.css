@@ -2346,6 +2346,19 @@ input[type='range']::-moz-range-track {
   gap: 8px;
 }
 
+.project-name-inline {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-color, #3b82f6);
+  border-radius: 4px;
+  padding: 2px 6px;
+  outline: none;
+}
+
 .project-name {
   font-size: 13px;
   font-weight: 500;
@@ -6803,6 +6816,39 @@ input[type='range']::-moz-range-track {
   margin: 8px 10px;
   border-radius: 4px;
   line-height: 1.4;
+}
+
+.marketplace-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 6px 10px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: transparent;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.marketplace-notice-text {
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.btn-retry.subtle {
+  margin-top: 0;
+  padding: 2px 8px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+
+.btn-retry.subtle:hover {
+  background: var(--bg-tertiary);
+  border-color: var(--border-color);
+  color: var(--text-primary);
 }
 
 .btn-retry {

@@ -1680,8 +1680,10 @@ export function useThreeViewport() {
       hasAutoZoomedRef.current = false;
 
       // Register thumbnail capturer against the live renderer/scene/camera.
-      // The capture forces one render synchronously so the backbuffer has
-      // fresh pixels, then center-crops onto a 2D canvas at the target size.
+      // The capture temporarily reframes the camera to fit the model, renders
+      // into the backbuffer, encodes the JPEG, then restores the user's view
+      // and re-renders — all synchronously, so the intermediate fit frame is
+      // never composited and the user sees no flicker.
       _setThumbnailCapturer((w, h, q = 0.85) => {
         const st = stateRef.current;
         if (!st.renderer || !st.camera || !st.scene) return null;
@@ -1689,16 +1691,65 @@ export function useThreeViewport() {
           domElement: HTMLCanvasElement;
         }).domElement;
         if (!liveCanvas || liveCanvas.width === 0 || liveCanvas.height === 0) return null;
+
+        // Build a bounding box of all scene elements so we can frame them.
+        // Falls back to the live camera when the scene has no elements.
+        const bbox = new THREE.Box3();
+        let hasContent = false;
+        for (const m of elementMeshesRef.current.values()) {
+          bbox.expandByObject(m);
+          hasContent = true;
+        }
+
+        // Save the live camera state so we can restore the user's view.
+        const cs = cameraStateRef.current;
+        const savedAzimuth   = cs.azimuth;
+        const savedElevation = cs.elevation;
+        const savedDistance  = cs.distance;
+        const savedTarget    = cs.target.clone();
+
+        if (hasContent && !bbox.isEmpty()) {
+          const center = new THREE.Vector3();
+          const size   = new THREE.Vector3();
+          bbox.getCenter(center);
+          bbox.getSize(size);
+          const diagonal = Math.sqrt(size.x * size.x + size.y * size.y + size.z * size.z);
+          const finite =
+            Number.isFinite(center.x) && Number.isFinite(center.y) && Number.isFinite(center.z) &&
+            Number.isFinite(diagonal);
+          if (finite) {
+            cs.target.copy(center);
+            cs.azimuth   = Math.PI / 4;   // 45° az, shows 3 faces of a box
+            cs.elevation = Math.PI / 4;   // 45° down, nice architectural view
+            cs.distance  = Math.max(2500, Math.min(100000, diagonal * 1.5));
+            updateCamera();
+          }
+        }
+
         try {
           st.renderer.render(st.scene, st.camera);
         } catch {
+          // Restore camera even if render fails.
+          cs.azimuth = savedAzimuth;
+          cs.elevation = savedElevation;
+          cs.distance = savedDistance;
+          cs.target.copy(savedTarget);
+          updateCamera();
           return null;
         }
+
         const out = window.document.createElement('canvas');
         out.width = w;
         out.height = h;
         const ctx = out.getContext('2d');
-        if (!ctx) return null;
+        if (!ctx) {
+          cs.azimuth = savedAzimuth;
+          cs.elevation = savedElevation;
+          cs.distance = savedDistance;
+          cs.target.copy(savedTarget);
+          updateCamera();
+          return null;
+        }
         const sw = liveCanvas.width;
         const sh = liveCanvas.height;
         const tAspect = w / h;
@@ -1712,11 +1763,24 @@ export function useThreeViewport() {
           sy = (sh - cropH) / 2;
         }
         ctx.drawImage(liveCanvas, sx, sy, cropW, cropH, 0, 0, w, h);
+
+        let dataUrl: string | null = null;
         try {
-          return out.toDataURL('image/jpeg', q);
+          dataUrl = out.toDataURL('image/jpeg', q);
         } catch {
-          return null;
+          dataUrl = null;
         }
+
+        // Restore the user's camera and re-render so the live view is back
+        // to where they left it before the next browser composite.
+        cs.azimuth = savedAzimuth;
+        cs.elevation = savedElevation;
+        cs.distance = savedDistance;
+        cs.target.copy(savedTarget);
+        updateCamera();
+        try { st.renderer.render(st.scene, st.camera); } catch { /* ignore */ }
+
+        return dataUrl;
       });
       // Flip rendererReady state so the updateScene / section-clipping /
       // selection effects — which previously early-returned because the

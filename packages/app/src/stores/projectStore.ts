@@ -147,14 +147,19 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
         const merged: ProjectMeta[] = [
           // Every project the server knows about (authoritative list).
+          // Name is client-authoritative: a local rename fires `projectsApi.update`
+          // fire-and-forget, so if we re-fetch before that PUT lands the server
+          // still has the old name. Preferring the local name avoids the
+          // "rename → go to dashboard → old name" flash.
           ...serverProjects.map((s) => {
             const localMeta = liveById.get(s.id);
+            const serverUpdatedAt = new Date(s.updated_at).getTime();
             return {
               id: s.id,
-              name: s.name,
+              name: localMeta?.name ?? s.name,
               thumbnail: localMeta?.thumbnail ?? null,
               createdAt: new Date(s.created_at).getTime(),
-              updatedAt: new Date(s.updated_at).getTime(),
+              updatedAt: Math.max(serverUpdatedAt, localMeta?.updatedAt ?? 0),
               collaborators: [],
               starred: localMeta?.starred ?? false,
             };

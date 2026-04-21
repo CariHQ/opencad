@@ -41,6 +41,9 @@ export function ProjectDashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [settingsTab, setSettingsTab] = useState<SettingsTab>('apikeys');
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameDraft, setRenameDraft] = useState<string>('');
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const { signOut: authSignOut } = useAuthStore();
 
   // Apply stored theme (same key AppLayout uses) so dashboard matches the app
@@ -61,6 +64,7 @@ export function ProjectDashboard() {
     openProject,
     deleteProject,
     starProject,
+    renameProject,
     setViewMode,
     setSortBy,
     setFilterBy,
@@ -87,6 +91,25 @@ export function ProjectDashboard() {
   function handleOpenProject(id: string) {
     openProject(id);
     navigate(`/project/${id}`);
+  }
+
+  function startRename(id: string, currentName: string) {
+    setRenamingId(id);
+    setRenameDraft(currentName);
+    setTimeout(() => renameInputRef.current?.select(), 0);
+  }
+
+  function commitRename() {
+    if (!renamingId) return;
+    const trimmed = renameDraft.trim();
+    if (trimmed) renameProject(renamingId, trimmed);
+    setRenamingId(null);
+    setRenameDraft('');
+  }
+
+  function cancelRename() {
+    setRenamingId(null);
+    setRenameDraft('');
   }
 
   function handleNewProject() {
@@ -214,15 +237,39 @@ export function ProjectDashboard() {
                 )}
               </div>
               <div className="project-card-footer">
-                <span
-                  className="project-name"
-                  onClick={() => handleOpenProject(project.id)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => e.key === 'Enter' && handleOpenProject(project.id)}
-                >
-                  {project.name}
-                </span>
+                {renamingId === project.id ? (
+                  <input
+                    ref={renameInputRef}
+                    className="project-name-input project-name-inline"
+                    value={renameDraft}
+                    onChange={(e) => setRenameDraft(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitRename(); }
+                      else if (e.key === 'Escape') { e.preventDefault(); cancelRename(); }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    autoFocus
+                  />
+                ) : (
+                  <span
+                    className="project-name"
+                    onClick={() => handleOpenProject(project.id)}
+                    onDoubleClick={(e) => {
+                      e.stopPropagation();
+                      startRename(project.id, project.name);
+                    }}
+                    title="Click to open · Double-click to rename"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleOpenProject(project.id);
+                      else if (e.key === 'F2') { e.preventDefault(); startRename(project.id, project.name); }
+                    }}
+                  >
+                    {project.name}
+                  </span>
+                )}
                 <div className="project-card-actions">
                   <button
                     className={`star-btn${project.starred ? ' starred' : ''}`}

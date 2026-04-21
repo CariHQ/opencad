@@ -18,6 +18,7 @@ import {
 } from '../lib/syncAdapter';
 import { isFirebaseConfigured, firebaseAuth } from '../lib/firebase';
 import { type RoleId } from '../config/roles';
+import { useProjectStore } from './projectStore';
 
 /**
  * Per-project localStorage key. Previously a single 'opencad-document' key
@@ -220,6 +221,15 @@ export const useDocumentStore = create<DocumentState>()(
           model = new DocumentModel(projectId, userId);
         }
         const document = model.documentData;
+
+        // The dashboard's projectStore entry is the authoritative source for
+        // the project's display name — a rename from the dashboard may have
+        // happened since this doc blob was last written. Overlay that name
+        // so the editor title bar and the dashboard card stay in sync.
+        const projectMeta = useProjectStore.getState().projects.find((p) => p.id === projectId);
+        if (projectMeta?.name && projectMeta.name !== document.name) {
+          model.documentData.name = projectMeta.name;
+        }
 
         set({
           document,
