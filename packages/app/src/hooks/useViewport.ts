@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
+import { useUnderlayStore } from '../stores/underlayStore';
 import { ElementSchema } from '@opencad/document';
 import { SpatialGrid } from '../utils/spatialIndex';
 import { buildWallGraph, wallEndOffsets } from './wallGraph';
@@ -148,6 +149,7 @@ export function useViewport() {
 
   // Dirty flag: only redraw when something actually changed
   const dirtyRef = useRef(true);
+  const underlayImageCacheRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Cached elements array — recomputed only when doc changes, not on every rAF frame / mousemove
   const elementsRef = useRef<ElementSchema[]>([]);
@@ -959,6 +961,30 @@ export function useViewport() {
 
     ctx.save();
     ctx.setTransform(sx, 0, 0, sx, tx, ty);
+
+    // ── PDF underlays ───────────────────────────────────────────────────────
+    // Render before the grid so tracing sees the underlay beneath guide lines.
+    const underlayEntries = Object.values(useUnderlayStore.getState().entries);
+    for (const entry of underlayEntries) {
+      const img = underlayImageCacheRef.current.get(entry.underlay.id);
+      if (!img) {
+        // Lazy-decode the image and cache it for subsequent frames.
+        const nextImg = new Image();
+        nextImg.onload = () => { dirtyRef.current = true; };
+        nextImg.src = entry.imageDataUrl;
+        underlayImageCacheRef.current.set(entry.underlay.id, nextImg);
+        continue;
+      }
+      if (!img.complete || img.naturalWidth === 0) continue;
+      const u = entry.underlay;
+      ctx.save();
+      ctx.globalAlpha = u.opacity;
+      ctx.translate(u.origin.x, u.origin.y);
+      if (u.rotation !== 0) ctx.rotate((u.rotation * Math.PI) / 180);
+      ctx.scale(u.scale, u.scale);
+      ctx.drawImage(img, 0, 0, entry.pixelWidth, entry.pixelHeight);
+      ctx.restore();
+    }
 
     // Minor grid lines — single batched path
     ctx.strokeStyle = theme.grid;

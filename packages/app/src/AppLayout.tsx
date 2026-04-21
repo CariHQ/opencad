@@ -164,6 +164,7 @@ import { SplitViewport } from './components/SplitViewport';
 import { AuthModal } from './components/AuthModal';
 import { VersionHistoryPanel } from './components/VersionHistoryPanel';
 import { BranchPanel } from './components/BranchPanel';
+import { UnderlayPanel } from './components/UnderlayPanel';
 import { ReviewPanel } from './components/ReviewPanel';
 import { UpdateBanner } from './components/UpdateBanner';
 import { useAuthStore } from './stores/authStore';
@@ -219,7 +220,8 @@ type RightPanelTab =
   | 'review'
   | 'layers'
   | 'compliance'
-  | 'branches';
+  | 'branches'
+  | 'underlay';
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
@@ -245,6 +247,7 @@ const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNod
   { id: 'wind', title: 'Wind Analysis', icon: <Wind size={16} strokeWidth={2} /> },
   { id: 'history', title: 'History', icon: <History size={16} strokeWidth={2} /> },
   { id: 'branches', title: 'Branches', icon: <GitBranch size={16} strokeWidth={2} /> },
+  { id: 'underlay', title: 'PDF Underlay', icon: <FileText size={16} strokeWidth={2} /> },
 ];
 
 /** Build CostPanel items from the document using quantityTakeoff + material rates. */
@@ -915,6 +918,7 @@ export function AppLayout() {
               )}
               {rightPanelTab === 'history' && <VersionHistoryPanel />}
               {rightPanelTab === 'branches' && <BranchPanel />}
+              {rightPanelTab === 'underlay' && <UnderlayPanel />}
               {rightPanelTab === 'review' && <ReviewPanel />}
             </PanelErrorBoundary>
           </div>
