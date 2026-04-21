@@ -2,7 +2,13 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Columns, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
+import { useDocumentStore } from '../stores/documentStore';
 import { ContextMenu } from './contextMenu/ContextMenu';
+import {
+  getContextMenuItems,
+  type ContextMenuGroup,
+  type ElementContext,
+} from './contextMenu/contextMenuItems';
 
 // ─── Floor Plan pane ──────────────────────────────────────────────────────────
 // Always mounted — CSS visibility controls show/hide so canvas state is never lost.
@@ -17,6 +23,51 @@ function FloorPlanCanvas() {
     handleCanvasDoubleClick,
   } = useViewport();
 
+  const { selectedIds, setActiveTool, undo, redo } = useDocumentStore();
+  const [menu, setMenu] = useState<{
+    x: number;
+    y: number;
+    items: ContextMenuGroup;
+  } | null>(null);
+
+  const onContextMenu = useCallback(
+    (e: React.MouseEvent<HTMLCanvasElement>) => {
+      e.preventDefault();
+      const ctx: ElementContext =
+        selectedIds.length > 1 ? 'multi'
+        : selectedIds.length === 1 ? 'wall'
+        : 'empty';
+      setMenu({ x: e.clientX, y: e.clientY, items: getContextMenuItems('2d', ctx) });
+    },
+    [selectedIds],
+  );
+
+  const onAction = useCallback(
+    (actionId: string) => {
+      const toolForAction: Record<string, string | undefined> = {
+        'insert-wall': 'wall', 'insert-door': 'door', 'insert-window': 'window',
+        'insert-slab': 'slab', 'insert-column': 'column', 'insert-beam': 'beam',
+        'insert-roof': 'roof', 'insert-stair': 'stair', 'insert-text': 'text',
+        'insert-dimension': 'dimension', 'insert-line': 'line',
+        'insert-rectangle': 'rectangle', 'insert-circle': 'circle',
+      };
+      const tool = toolForAction[actionId];
+      if (tool) {
+        setActiveTool(tool as Parameters<typeof setActiveTool>[0]);
+        return;
+      }
+      if (actionId === 'undo') { undo(); return; }
+      if (actionId === 'redo') { redo(); return; }
+      if (actionId === 'select-all') {
+        const st = useDocumentStore.getState();
+        const ids = Object.keys(st.document?.content.elements ?? {});
+        st.setSelectedIds(ids);
+        return;
+      }
+    },
+    [setActiveTool, undo, redo],
+  );
+
   return (
     <div ref={containerRef} style={{ width: '100%', height: '100%', position: 'relative' }}>
       <canvas
@@ -27,10 +78,22 @@ function FloorPlanCanvas() {
         onMouseUp={handleCanvasMouseUp}
         onMouseLeave={handleCanvasMouseUp}
         onDoubleClick={handleCanvasDoubleClick}
+        onContextMenu={onContextMenu}
       />
       <div className="viewport-corner bottom-left">
         <span className="viewport-info">Draw: drag · Pan: middle-drag · Zoom: scroll</span>
       </div>
+      {menu && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          viewportW={window.innerWidth}
+          viewportH={window.innerHeight}
+          items={menu.items}
+          onAction={onAction}
+          onClose={() => setMenu(null)}
+        />
+      )}
     </div>
   );
 }
