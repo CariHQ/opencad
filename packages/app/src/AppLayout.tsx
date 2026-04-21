@@ -100,6 +100,22 @@ const SSO_STORAGE_KEY = 'opencad-sso-config';
 const MEMBERS_STORAGE_KEY = 'opencad-project-members';
 const BCF_STORAGE_KEY = 'opencad-bcf-topics';
 
+// Synchronous localStorage view of the async orgStore. We use the async
+// version for writes; for reads we shadow into localStorage directly so
+// panels can render without a load-spinner flash.
+function loadOrgMembersForProject(projectId: string | null): AdminMember[] | undefined {
+  if (!projectId) return undefined;
+  try {
+    const raw = localStorage.getItem('opencad-org-state');
+    if (!raw) return undefined;
+    const state = JSON.parse(raw) as { orgs: Record<string, { members: AdminMember[] }>; projectOrg: Record<string, string> };
+    const orgId = state.projectOrg?.[projectId];
+    if (!orgId) return undefined;
+    const members = state.orgs?.[orgId]?.members;
+    return members && members.length > 0 ? members : undefined;
+  } catch { return undefined; }
+}
+
 function loadBCFTopics(): BCFTopic[] {
   try {
     const raw = localStorage.getItem(BCF_STORAGE_KEY);
@@ -893,7 +909,7 @@ export function AppLayout() {
               {rightPanelTab === 'admin' && (
                 <AdminPanel
                   can={can}
-                  members={loadMembers()}
+                  members={loadOrgMembersForProject(doc?.id ?? null) ?? loadMembers()}
                   onSetRole={(userId, role) => saveMemberRole(userId, role)}
                 />
               )}
