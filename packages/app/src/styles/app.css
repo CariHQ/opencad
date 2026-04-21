@@ -2978,7 +2978,7 @@ input[type='range']::-moz-range-track {
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--text-muted);
-  margin-bottom: 8px;
+  margin: 0 0 8px;
 }
 
 .field-row {
@@ -3030,6 +3030,35 @@ input[type='range']::-moz-range-track {
 .field-row select:focus {
   outline: none;
   border-color: var(--accent-primary);
+}
+
+/* Range sliders inside field rows (shadow-analysis month + hour) */
+.field-row input[type='range'] {
+  flex: 1;
+  min-width: 0;
+  max-width: 140px;
+  accent-color: var(--accent-primary);
+  padding: 0;
+  background: transparent;
+  border: none;
+  text-align: initial;
+}
+
+/* Readonly value column in result rows (Elevation, Azimuth, Daylight) */
+.field-row .field-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.field-row .field-value {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  min-width: 48px;
+  text-align: right;
+  flex-shrink: 0;
 }
 
 .direction-label {
