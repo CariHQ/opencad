@@ -25,23 +25,29 @@ export interface PluginAPI {
   ui: {
     showNotification(message: string, type?: 'info' | 'success' | 'error'): void;
     openPanel(panelId: string): void;
+    /** Register a command that appears in the Plugins menu.
+     *  When the user runs the command the host sends a 'runCommand'
+     *  message back to the worker so the plugin can respond. */
+    registerCommand(command: { id: string; label: string }): void;
   };
   log(message: string): void;
 }
 
 export interface SandboxMessage {
-  type: 'call' | 'return' | 'error' | 'ready' | 'init';
+  type: 'call' | 'return' | 'error' | 'ready' | 'init' | 'runCommand';
   id?: number;
   method?: string;
   args?: unknown[];
   result?: unknown;
   error?: string;
   code?: string;
+  commandId?: string;
 }
 
 // ─── Worker bootstrap code (injected as a Blob URL) ──────────────────────────
 
 const WORKER_BOOTSTRAP = `
+self.__commands__ = {};
 self.onmessage = function(e) {
   var msg = e.data;
   if (msg.type === 'init') {
@@ -51,6 +57,13 @@ self.onmessage = function(e) {
       (function(api) { eval(msg.code); })(self.__api__);
     } catch (err) {
       self.postMessage({ type: 'error', error: String(err) });
+    }
+    return;
+  }
+  if (msg.type === 'runCommand') {
+    var fn = self.__commands__[msg.commandId];
+    if (typeof fn === 'function') {
+      try { fn(); } catch (err) { self.postMessage({ type: 'error', error: String(err) }); }
     }
     return;
   }
@@ -97,6 +110,23 @@ self.__api__ = {
   ui: {
     showNotification: makeApiMethod('ui.showNotification'),
     openPanel: makeApiMethod('ui.openPanel'),
+    // registerCommand stores the handler locally (function can't cross
+    // the postMessage boundary) and announces { id, label } to the host.
+    registerCommand: function(command, handler) {
+      if (command && command.id && typeof handler === 'function') {
+        self.__commands__[command.id] = handler;
+      }
+      var id = self.__nextId__++;
+      return new Promise(function(resolve, reject) {
+        self.__pending__[id] = { resolve: resolve, reject: reject };
+        self.postMessage({
+          type: 'call',
+          id: id,
+          method: 'ui.registerCommand',
+          args: [{ id: command.id, label: command.label }],
+        });
+      });
+    },
   },
   log: makeApiMethod('log'),
 };
@@ -120,6 +150,8 @@ function dispatchAPICall(api: PluginAPI, method: string, args: unknown[]): unkno
       return api.ui.showNotification(args[0] as string, args[1] as 'info' | 'success' | 'error');
     case 'ui.openPanel':
       return api.ui.openPanel(args[0] as string);
+    case 'ui.registerCommand':
+      return api.ui.registerCommand(args[0] as { id: string; label: string });
     case 'log':
       return api.log(args[0] as string);
     default:
@@ -215,6 +247,12 @@ export class WorkerPluginSandbox {
       this.pending.set(id, { resolve, reject });
       this.worker!.postMessage({ type: 'call', id, method, args } satisfies SandboxMessage);
     });
+  }
+
+  /** Invoke a command previously registered by the plugin via ui.registerCommand. */
+  runCommand(commandId: string): void {
+    if (!this.worker) return;
+    this.worker.postMessage({ type: 'runCommand', commandId } satisfies SandboxMessage);
   }
 
   dispose(): void {

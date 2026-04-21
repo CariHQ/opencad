@@ -36,6 +36,7 @@ import {
   GitPullRequest,
   Shield,
   Plus,
+  Zap,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProjectStore } from './stores/projectStore';
@@ -77,7 +78,14 @@ import { CarbonPanel, type CarbonEntry } from './components/CarbonPanel';
 import { CostPanel, type CostItem } from './components/CostPanel';
 import { computeTakeoff } from './lib/quantityTakeoff';
 import { BUILT_IN_MATERIALS } from './lib/materials';
-import { pluginHost, onPluginNotification, type PluginNotification } from './plugins/pluginHost';
+import {
+  pluginHost,
+  onPluginNotification,
+  onPluginCommandsChange,
+  listPluginCommands,
+  type PluginNotification,
+  type PluginCommand,
+} from './plugins/pluginHost';
 import type { AdminMember } from './components/AdminPanel';
 import type { SSOConfig } from './components/SSOSettingsPanel';
 import type { RoleName } from './config/roles';
@@ -354,6 +362,13 @@ export function AppLayout() {
 
   // BCF panel re-mount nonce so imports surface immediately.
   const [bcfVersion, setBcfVersion] = React.useState(0);
+
+  // Plugin-registered commands — rendered as entries in the Plugins menu.
+  const [pluginCommands, setPluginCommands] = React.useState<PluginCommand[]>(() =>
+    listPluginCommands(),
+  );
+  React.useEffect(() => onPluginCommandsChange(setPluginCommands), []);
+  const [showPluginsMenu, setShowPluginsMenu] = React.useState(false);
 
   // Plugin notifications → transient toasts.
   const [pluginToasts, setPluginToasts] = React.useState<PluginNotification[]>([]);
@@ -901,6 +916,41 @@ export function AppLayout() {
               <span className="plugin-toast-msg">{t.message}</span>
             </div>
           ))}
+        </div>
+      )}
+
+      {pluginCommands.length > 0 && (
+        <div className="plugin-menu-root">
+          <button
+            className="plugin-menu-trigger"
+            aria-haspopup="menu"
+            aria-expanded={showPluginsMenu}
+            onClick={() => setShowPluginsMenu((v) => !v)}
+            title="Plugin commands"
+          >
+            <Zap size={14} />
+            Plugins
+            <span className="plugin-menu-count">{pluginCommands.length}</span>
+          </button>
+          {showPluginsMenu && (
+            <div
+              className="plugin-menu-list"
+              role="menu"
+              onClick={() => setShowPluginsMenu(false)}
+            >
+              {pluginCommands.map((cmd) => (
+                <button
+                  key={`${cmd.pluginId}:${cmd.id}`}
+                  role="menuitem"
+                  className="plugin-menu-item"
+                  onClick={() => pluginHost.runCommand(cmd.pluginId, cmd.id)}
+                >
+                  <span className="plugin-menu-item-label">{cmd.label}</span>
+                  <span className="plugin-menu-item-source">{cmd.pluginId}</span>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

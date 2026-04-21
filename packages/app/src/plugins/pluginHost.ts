@@ -32,6 +32,31 @@ export function onPluginNotification(fn: NotifListener): () => void {
   return () => { notifListeners.delete(fn); };
 }
 
+// ─── Command registry (plugins → UI) ─────────────────────────────────────────
+
+export interface PluginCommand {
+  pluginId: string;
+  id: string;
+  label: string;
+}
+
+const registeredCommands: PluginCommand[] = [];
+type CommandListener = (commands: PluginCommand[]) => void;
+const commandListeners = new Set<CommandListener>();
+
+export function listPluginCommands(): PluginCommand[] {
+  return [...registeredCommands];
+}
+
+export function onPluginCommandsChange(fn: CommandListener): () => void {
+  commandListeners.add(fn);
+  return () => { commandListeners.delete(fn); };
+}
+
+function notifyCommands(): void {
+  for (const fn of commandListeners) fn(listPluginCommands());
+}
+
 // ─── Example plugins shipped inline ──────────────────────────────────────────
 
 /**
@@ -43,6 +68,12 @@ const INLINE_PLUGINS: Record<string, string> = {
   'hello-opencad': `
     api.log('Hello OpenCAD plugin loaded');
     api.ui.showNotification('Hello OpenCAD is running', 'success');
+    api.ui.registerCommand(
+      { id: 'say-hi', label: 'Say hi again' },
+      function() {
+        api.ui.showNotification('Hi from the hello-opencad plugin.', 'info');
+      },
+    );
   `,
   'element-counter': `
     (async () => {
@@ -53,6 +84,14 @@ const INLINE_PLUGINS: Record<string, string> = {
         api.log('element-counter failed: ' + err);
       }
     })();
+    api.ui.registerCommand(
+      { id: 'count-again', label: 'Count elements' },
+      function() {
+        api.document.getElements().then(function(els) {
+          api.ui.showNotification('Document has ' + els.length + ' element(s)', 'info');
+        });
+      },
+    );
   `,
 };
 
@@ -113,6 +152,16 @@ function buildPluginAPI(pluginId: string): PluginAPI {
         // Reserved for richer UI contribution — plugins can't open arbitrary
         // panels today, only post notifications.
       },
+      registerCommand(command): void {
+        // Idempotent: replace if a plugin re-registers the same id.
+        const idx = registeredCommands.findIndex(
+          (c) => c.pluginId === pluginId && c.id === command.id,
+        );
+        const entry: PluginCommand = { pluginId, id: command.id, label: command.label };
+        if (idx >= 0) registeredCommands[idx] = entry;
+        else registeredCommands.push(entry);
+        notifyCommands();
+      },
     },
     log(message): void {
       // eslint-disable-next-line no-console
@@ -126,6 +175,11 @@ function buildPluginAPI(pluginId: string): PluginAPI {
 class PluginHost {
   private sandboxes = new Map<string, WorkerPluginSandbox>();
   private started = false;
+
+  /** Invoke a command previously registered by a plugin. */
+  runCommand(pluginId: string, commandId: string): void {
+    this.sandboxes.get(pluginId)?.runCommand(commandId);
+  }
 
   async startAll(): Promise<void> {
     if (this.started) return;
@@ -169,6 +223,11 @@ class PluginHost {
     if (!sb) return;
     sb.dispose();
     this.sandboxes.delete(id);
+    // Purge any commands the plugin had registered.
+    for (let i = registeredCommands.length - 1; i >= 0; i--) {
+      if (registeredCommands[i]!.pluginId === id) registeredCommands.splice(i, 1);
+    }
+    notifyCommands();
   }
 
   private async loadSource(manifest: PluginManifest): Promise<string | null> {
