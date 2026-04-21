@@ -35,7 +35,8 @@ vi.mock('@opencad/document', async (importOriginal) => {
     serializeDXF: vi.fn().mockReturnValue('DXF_CONTENT'),
     parseDWG: vi.fn().mockReturnValue({ id: 'imported', name: 'DWG Import' }),
     parseRVT: vi.fn().mockReturnValue({ id: 'imported', name: 'RVT Import' }),
-    serializePDF: vi.fn().mockReturnValue('%PDF-1.4 CONTENT'),
+    renderDocumentToPDF: vi.fn().mockReturnValue(new Blob(['%PDF-1.4 CANVAS'], { type: 'application/pdf' })),
+    exportToPDFDataURL: vi.fn().mockReturnValue('data:application/pdf;base64,JVBERi0xLjQK'),
   };
 });
 

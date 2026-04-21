@@ -6,10 +6,10 @@ import {
   parseDXF, serializeDXF,
   parseDWG,
   parseRVT,
-  serializePDF,
   exportToIFC,
   exportToDXF,
   exportToPDFDataURL,
+  renderDocumentToPDF,
 } from '@opencad/document';
 
 interface ImportExportModalProps {
@@ -71,19 +71,24 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
       const dxfContent = exportToDXF(doc) || serializeDXF(doc);
       triggerDownload(dxfContent, `${name}.dxf`, 'application/dxf');
     } else if (format === 'pdf') {
-      const dataUrl = exportToPDFDataURL(doc);
-      const base64 = dataUrl.replace('data:application/pdf;base64,', '');
-      let pdfContent: string;
-      try {
-        pdfContent = atob(base64);
-      } catch {
-        pdfContent = serializePDF(doc);
+      // Prefer the canvas-aware renderer so the exported PDF embeds the
+      // actual viewport image. Fall back to the vector-primitive exporter
+      // when no canvas is in the DOM (e.g. viewless export path).
+      const canvas = document.querySelector<HTMLCanvasElement>('.viewport-container canvas')
+        ?? document.querySelector<HTMLCanvasElement>('canvas');
+      let blob: Blob;
+      if (canvas) {
+        blob = renderDocumentToPDF(doc, canvas, { title: name });
+      } else {
+        const dataUrl = exportToPDFDataURL(doc);
+        const base64 = dataUrl.replace('data:application/pdf;base64,', '');
+        const pdfContent = atob(base64);
+        const bytes = new Uint8Array(pdfContent.length);
+        for (let i = 0; i < pdfContent.length; i++) {
+          bytes[i] = pdfContent.charCodeAt(i);
+        }
+        blob = new Blob([bytes], { type: 'application/pdf' });
       }
-      const bytes = new Uint8Array(pdfContent.length);
-      for (let i = 0; i < pdfContent.length; i++) {
-        bytes[i] = pdfContent.charCodeAt(i);
-      }
-      const blob = new Blob([bytes], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
