@@ -15,6 +15,7 @@ export * from './element';
 export * from './storage';
 export * from './ifc';
 export * from './ifcCertification';
+export * from './ifcCertFixtures';
 export * from './versioning';
 export * from './io';
 export * from './material';
