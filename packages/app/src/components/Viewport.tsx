@@ -2,8 +2,10 @@ import { useRef, useState, useEffect } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
+import { useCursorBroadcast } from '../hooks/useCursorBroadcast';
 import { ViewCube } from './ViewCube';
 import { CoordBox, type CoordField, type CoordBoxValues } from './CoordBox';
+import { RemoteCursors } from './RemoteCursors';
 
 interface ViewportProps {
   viewType?: 'floor-plan' | '3d' | 'section';
@@ -60,6 +62,10 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
     setSectionBox,
   } = useThreeViewport();
 
+  // Broadcast local cursor on every viewport mousemove so collaborators
+  // see it; safe no-op when no sync connection is open.
+  useCursorBroadcast(containerRef);
+
   return (
     <div className="viewport-container" ref={containerRef}>
       {show3D ? (
@@ -94,6 +100,7 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           onCancel={cancelDrawing}
         />
       )}
+      <RemoteCursors />
       <div className="viewport-overlay">
         <div className="viewport-corner top-left">
           <span>

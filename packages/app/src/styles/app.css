@@ -7965,3 +7965,39 @@ input[type='range']::-moz-range-track {
   border-bottom: 1px solid var(--border-color);
   font-variant-numeric: tabular-nums;
 }
+
+/* ── Remote cursors overlay (real-time presence) ───────────────────────── */
+.remote-cursors {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 60;
+  overflow: hidden;
+}
+
+.remote-cursor {
+  position: absolute;
+  top: 0;
+  left: 0;
+  will-change: transform;
+  transition: transform 80ms linear;
+}
+
+.remote-cursor-arrow {
+  display: block;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.4));
+}
+
+.remote-cursor-label {
+  position: absolute;
+  top: 18px;
+  left: 16px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  color: white;
+  border-radius: 3px;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+  font-variant-numeric: tabular-nums;
+}
