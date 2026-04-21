@@ -228,7 +228,11 @@ function findWallOpenings(
   const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
   const x2 = pv('EndX', x1 + 1000), y2 = pv('EndY', y1);
   const wallLen = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) || 1;
-  const wallT   = pv('Width', 200);
+  // Prefer explicit Thickness when present (panel edits may write here);
+  // fall back to Width (the original wall-creation key) for existing docs.
+  const wallT   = typeof props['Thickness']?.value === 'number'
+    ? (props['Thickness']!.value as number)
+    : pv('Width', 200);
   const uX = (x2 - x1) / wallLen;
   const uY = (y2 - y1) / wallLen;
 
@@ -312,7 +316,9 @@ function buildWallMesh(
   const x1 = pv('StartX', 0), y1 = pv('StartY', 0);
   const x2 = pv('EndX',   x1 + 1000), y2 = pv('EndY', y1);
   const wallH = pv('Height', 3000);
-  const wallT = pv('Width',  200);
+  const wallT = typeof props['Thickness']?.value === 'number'
+    ? (props['Thickness']!.value as number)
+    : pv('Width',  200);
   // Per-level vertical offset lets multi-story buildings stack walls at
   // story heights (e.g. ground floor at 0, second floor at 3000). Defaults
   // to 0 for single-story plans.
@@ -837,8 +843,16 @@ export function useThreeViewport() {
         0.85;
       const material = createMaterial(color, opacity, pbr.roughness, pbr.metalness, appliedMat);
       const mesh = new THREE.Mesh(geometry, material);
-      mesh.position.set(posX, posY, posZ);
+      // Property-derived placement plus the element's transform.translation.
+      // The panel's Translation fields write to transform.translation, so
+      // applying it here makes those edits visible in 3D instead of being
+      // silently dropped.
+      const tt = element.transform?.translation ?? { x: 0, y: 0, z: 0 };
+      mesh.position.set(posX + tt.x, posY + tt.z, posZ + tt.y);
       if (ry !== 0) mesh.rotation.y = ry;
+      // Element-level rotation about the vertical axis via transform.rotation.z
+      const tr = element.transform?.rotation?.z ?? 0;
+      if (tr !== 0) mesh.rotation.y += tr;
       mesh.userData.elementId   = element.id;
       mesh.userData.elementType = type;
       mesh.castShadow    = true;
