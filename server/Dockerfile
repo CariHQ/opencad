@@ -14,6 +14,7 @@ RUN mkdir src && echo 'fn main() {}' > src/main.rs && \
 # Build the real source.
 COPY src ./src
 COPY migrations ./migrations
+COPY data ./data
 # Touch main.rs so cargo knows to rebuild
 RUN touch src/main.rs && cargo build --release
 
@@ -28,6 +29,9 @@ RUN apt-get update && \
 
 WORKDIR /app
 COPY --from=builder /build/target/release/opencad-server .
+# Catalogue JSON read at runtime by src/seed.rs. Path is relative to the
+# working directory, so copy it under /app/data.
+COPY --from=builder /build/data ./data
 
 USER opencad
 EXPOSE 3000

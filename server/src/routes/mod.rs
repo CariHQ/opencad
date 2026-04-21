@@ -1,4 +1,4 @@
-use axum::{middleware, routing::{get, post}, Router};
+use axum::{middleware, routing::{delete, get, patch, post}, Router};
 use tower_http::{cors::CorsLayer, trace::TraceLayer};
 
 use crate::{auth, state::AppState};
@@ -9,6 +9,7 @@ mod feedback;
 mod files;
 mod health;
 mod llm;
+mod plugins;
 mod projects;
 mod versions;
 pub mod ws;
@@ -64,6 +65,43 @@ pub fn build(state: AppState) -> Router {
         )
         // ── LLM Router ────────────────────────────────────────────────────────
         .route("/api/v1/llm/chat", post(llm::chat))
+        // ── Marketplace ───────────────────────────────────────────────────────
+        .route(
+            "/api/v1/marketplace/plugins",
+            get(plugins::list).post(plugins::submit),
+        )
+        .route(
+            "/api/v1/marketplace/plugins/installed",
+            get(plugins::installed),
+        )
+        .route(
+            "/api/v1/marketplace/plugins/:id",
+            get(plugins::get_one),
+        )
+        .route(
+            "/api/v1/marketplace/plugins/:id/install",
+            post(plugins::install),
+        )
+        .route(
+            "/api/v1/marketplace/plugins/:id/uninstall",
+            delete(plugins::uninstall),
+        )
+        .route(
+            "/api/v1/marketplace/plugins/:id/report",
+            post(plugins::report),
+        )
+        .route(
+            "/api/v1/marketplace/admin/queue",
+            get(plugins::admin_queue),
+        )
+        .route(
+            "/api/v1/marketplace/admin/plugins/:id/moderation",
+            patch(plugins::admin_set_moderation),
+        )
+        .route(
+            "/api/v1/marketplace/admin/plugins/:id/revoke",
+            patch(plugins::admin_revoke),
+        )
         // ── WebSocket ─────────────────────────────────────────────────────────
         .route("/ws/:project_id", get(ws::handler))
         .layer(middleware::from_fn_with_state(

@@ -25,6 +25,15 @@ pub struct Config {
     pub github_token: Option<String>,
     /// GitHub repo in owner/repo format (e.g. "opencad/opencad")
     pub github_repo: Option<String>,
+    /// Comma-separated Firebase UIDs granted marketplace admin rights
+    /// (moderation queue, revoke kill switch). None → no admins.
+    pub admin_uids: Option<String>,
+    /// Public base URL where plugin bundles are hosted. When set, submissions
+    /// without an absolute entrypoint URL have this prepended.
+    pub plugin_bundle_base_url: Option<String>,
+    /// Stripe secret key for marketplace payouts (optional; only needed for
+    /// paid plugins).
+    pub stripe_secret_key: Option<String>,
 }
 
 impl Config {
@@ -69,6 +78,9 @@ impl Config {
                 .collect(),
             github_token: std::env::var("GITHUB_TOKEN").ok(),
             github_repo: std::env::var("GITHUB_REPO").ok(),
+            admin_uids: std::env::var("ADMIN_UIDS").ok().filter(|s| !s.is_empty()),
+            plugin_bundle_base_url: std::env::var("PLUGIN_BUNDLE_BASE_URL").ok(),
+            stripe_secret_key: std::env::var("STRIPE_SECRET_KEY").ok(),
         })
     }
 }

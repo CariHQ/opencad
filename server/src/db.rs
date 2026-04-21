@@ -290,3 +290,359 @@ pub async fn list_feedback_by_user(
     .fetch_all(pool)
     .await
 }
+
+// ── Marketplace ──────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct Plugin {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub version: String,
+    pub author: String,
+    pub category: String,
+    pub icon: Option<String>,
+    pub entrypoint: String,
+    pub sri_hash: Option<String>,
+    pub permissions: serde_json::Value,
+    pub price_cents: i32,
+    pub rating: f32,
+    pub download_count: i64,
+    pub publisher_uid: Option<String>,
+    pub moderation_status: String,
+    pub moderation_notes: Option<String>,
+    pub revoked: bool,
+    pub revoked_reason: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+pub struct UpsertPluginParams<'a> {
+    pub id: &'a str,
+    pub name: &'a str,
+    pub description: &'a str,
+    pub version: &'a str,
+    pub author: &'a str,
+    pub category: &'a str,
+    pub icon: Option<&'a str>,
+    pub entrypoint: &'a str,
+    pub sri_hash: Option<&'a str>,
+    pub permissions: &'a serde_json::Value,
+    pub price_cents: i32,
+    pub publisher_uid: Option<&'a str>,
+    pub moderation_status: &'a str,
+}
+
+pub async fn upsert_plugin(
+    pool: &PgPool,
+    p: UpsertPluginParams<'_>,
+) -> Result<Plugin, sqlx::Error> {
+    sqlx::query_as::<_, Plugin>(
+        r#"INSERT INTO plugins (id, name, description, version, author, category, icon,
+                                entrypoint, sri_hash, permissions, price_cents,
+                                publisher_uid, moderation_status)
+           VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)
+           ON CONFLICT (id) DO UPDATE SET
+             name              = EXCLUDED.name,
+             description       = EXCLUDED.description,
+             version           = EXCLUDED.version,
+             author            = EXCLUDED.author,
+             category          = EXCLUDED.category,
+             icon              = EXCLUDED.icon,
+             entrypoint        = EXCLUDED.entrypoint,
+             sri_hash          = EXCLUDED.sri_hash,
+             permissions       = EXCLUDED.permissions,
+             price_cents       = EXCLUDED.price_cents,
+             moderation_status = EXCLUDED.moderation_status,
+             updated_at        = now()
+           RETURNING id, name, description, version, author, category, icon, entrypoint,
+                     sri_hash, permissions, price_cents, rating, download_count,
+                     publisher_uid, moderation_status, moderation_notes,
+                     revoked, revoked_reason, created_at, updated_at"#,
+    )
+    .bind(p.id)
+    .bind(p.name)
+    .bind(p.description)
+    .bind(p.version)
+    .bind(p.author)
+    .bind(p.category)
+    .bind(p.icon)
+    .bind(p.entrypoint)
+    .bind(p.sri_hash)
+    .bind(p.permissions)
+    .bind(p.price_cents)
+    .bind(p.publisher_uid)
+    .bind(p.moderation_status)
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn list_plugins(
+    pool: &PgPool,
+    search: Option<&str>,
+    category: Option<&str>,
+) -> Result<Vec<Plugin>, sqlx::Error> {
+    // Only approved + non-revoked plugins are visible in the public catalogue.
+    // Search is a simple ILIKE across name/description — good enough until
+    // the catalogue is large enough to justify full-text search.
+    let pattern = search.map(|s| format!("%{}%", s));
+    sqlx::query_as::<_, Plugin>(
+        r#"SELECT id, name, description, version, author, category, icon, entrypoint,
+                  sri_hash, permissions, price_cents, rating, download_count,
+                  publisher_uid, moderation_status, moderation_notes,
+                  revoked, revoked_reason, created_at, updated_at
+           FROM plugins
+           WHERE moderation_status = 'approved' AND revoked = FALSE
+             AND ($1::text IS NULL OR name ILIKE $1 OR description ILIKE $1)
+             AND ($2::text IS NULL OR category = $2)
+           ORDER BY download_count DESC, name ASC"#,
+    )
+    .bind(pattern)
+    .bind(category)
+    .fetch_all(pool)
+    .await
+}
+
+pub async fn get_plugin(pool: &PgPool, id: &str) -> Result<Option<Plugin>, sqlx::Error> {
+    sqlx::query_as::<_, Plugin>(
+        r#"SELECT id, name, description, version, author, category, icon, entrypoint,
+                  sri_hash, permissions, price_cents, rating, download_count,
+                  publisher_uid, moderation_status, moderation_notes,
+                  revoked, revoked_reason, created_at, updated_at
+           FROM plugins WHERE id = $1"#,
+    )
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn set_plugin_revoked(
+    pool: &PgPool,
+    id: &str,
+    revoked: bool,
+    reason: Option<&str>,
+) -> Result<Option<Plugin>, sqlx::Error> {
+    sqlx::query_as::<_, Plugin>(
+        r#"UPDATE plugins SET revoked = $1, revoked_reason = $2, updated_at = now()
+           WHERE id = $3
+           RETURNING id, name, description, version, author, category, icon, entrypoint,
+                     sri_hash, permissions, price_cents, rating, download_count,
+                     publisher_uid, moderation_status, moderation_notes,
+                     revoked, revoked_reason, created_at, updated_at"#,
+    )
+    .bind(revoked)
+    .bind(reason)
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn set_plugin_moderation(
+    pool: &PgPool,
+    id: &str,
+    status: &str,
+    notes: Option<&str>,
+) -> Result<Option<Plugin>, sqlx::Error> {
+    sqlx::query_as::<_, Plugin>(
+        r#"UPDATE plugins SET moderation_status = $1, moderation_notes = $2, updated_at = now()
+           WHERE id = $3
+           RETURNING id, name, description, version, author, category, icon, entrypoint,
+                     sri_hash, permissions, price_cents, rating, download_count,
+                     publisher_uid, moderation_status, moderation_notes,
+                     revoked, revoked_reason, created_at, updated_at"#,
+    )
+    .bind(status)
+    .bind(notes)
+    .bind(id)
+    .fetch_optional(pool)
+    .await
+}
+
+pub async fn list_plugins_pending_moderation(
+    pool: &PgPool,
+) -> Result<Vec<Plugin>, sqlx::Error> {
+    sqlx::query_as::<_, Plugin>(
+        r#"SELECT id, name, description, version, author, category, icon, entrypoint,
+                  sri_hash, permissions, price_cents, rating, download_count,
+                  publisher_uid, moderation_status, moderation_notes,
+                  revoked, revoked_reason, created_at, updated_at
+           FROM plugins WHERE moderation_status = 'pending'
+           ORDER BY created_at ASC"#,
+    )
+    .fetch_all(pool)
+    .await
+}
+
+// ── Plugin installs (per-user) ───────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginInstall {
+    pub firebase_uid: String,
+    pub plugin_id: String,
+    pub version: String,
+    pub installed_at: DateTime<Utc>,
+}
+
+pub async fn install_plugin(
+    pool: &PgPool,
+    firebase_uid: &str,
+    plugin_id: &str,
+) -> Result<Option<(PluginInstall, Plugin)>, sqlx::Error> {
+    // Transactional: look up the plugin's current version, insert the install
+    // record (or update if already present), and bump download_count.
+    // Returns None if the plugin doesn't exist, is not approved, or is
+    // revoked — callers expect that to map to a 404.
+    let mut tx = pool.begin().await?;
+
+    let plugin = sqlx::query_as::<_, Plugin>(
+        r#"SELECT id, name, description, version, author, category, icon, entrypoint,
+                  sri_hash, permissions, price_cents, rating, download_count,
+                  publisher_uid, moderation_status, moderation_notes,
+                  revoked, revoked_reason, created_at, updated_at
+           FROM plugins
+           WHERE id = $1 AND moderation_status = 'approved' AND revoked = FALSE"#,
+    )
+    .bind(plugin_id)
+    .fetch_optional(&mut *tx)
+    .await?;
+
+    let Some(plugin) = plugin else {
+        tx.rollback().await?;
+        return Ok(None);
+    };
+
+    let install = sqlx::query_as::<_, PluginInstall>(
+        r#"INSERT INTO plugin_installs (firebase_uid, plugin_id, version)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (firebase_uid, plugin_id) DO UPDATE
+             SET version      = EXCLUDED.version,
+                 installed_at = now()
+           RETURNING firebase_uid, plugin_id, version, installed_at"#,
+    )
+    .bind(firebase_uid)
+    .bind(&plugin.id)
+    .bind(&plugin.version)
+    .fetch_one(&mut *tx)
+    .await?;
+
+    // Best-effort counter bump — not load-bearing for the response.
+    let _ = sqlx::query("UPDATE plugins SET download_count = download_count + 1 WHERE id = $1")
+        .bind(&plugin.id)
+        .execute(&mut *tx)
+        .await;
+
+    tx.commit().await?;
+    Ok(Some((install, plugin)))
+}
+
+pub async fn uninstall_plugin(
+    pool: &PgPool,
+    firebase_uid: &str,
+    plugin_id: &str,
+) -> Result<bool, sqlx::Error> {
+    let r = sqlx::query(
+        "DELETE FROM plugin_installs WHERE firebase_uid = $1 AND plugin_id = $2",
+    )
+    .bind(firebase_uid)
+    .bind(plugin_id)
+    .execute(pool)
+    .await?;
+    Ok(r.rows_affected() > 0)
+}
+
+/// Flat row for the installed-plugins join — plugin catalogue fields plus
+/// the per-user install metadata (installed version + timestamp).
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct InstalledPlugin {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub version: String,                // current catalogue version
+    pub installed_version: String,      // what the user has locally
+    pub author: String,
+    pub category: String,
+    pub icon: Option<String>,
+    pub entrypoint: String,
+    pub sri_hash: Option<String>,
+    pub permissions: serde_json::Value,
+    pub price_cents: i32,
+    pub rating: f32,
+    pub revoked: bool,
+    pub revoked_reason: Option<String>,
+    pub installed_at: DateTime<Utc>,
+}
+
+pub async fn list_installed_plugins(
+    pool: &PgPool,
+    firebase_uid: &str,
+) -> Result<Vec<InstalledPlugin>, sqlx::Error> {
+    // Join installs → plugins so callers get catalogue metadata plus the
+    // user-specific installed version in one round trip.
+    sqlx::query_as::<_, InstalledPlugin>(
+        r#"SELECT
+             p.id, p.name, p.description, p.version,
+             i.version AS installed_version,
+             p.author, p.category, p.icon, p.entrypoint, p.sri_hash,
+             p.permissions, p.price_cents, p.rating,
+             p.revoked, p.revoked_reason,
+             i.installed_at
+           FROM plugin_installs i
+           JOIN plugins p ON p.id = i.plugin_id
+           WHERE i.firebase_uid = $1
+           ORDER BY i.installed_at DESC"#,
+    )
+    .bind(firebase_uid)
+    .fetch_all(pool)
+    .await
+}
+
+// ── Plugin reports ───────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, sqlx::FromRow)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginReport {
+    pub id: Uuid,
+    pub plugin_id: String,
+    pub reporter_uid: String,
+    pub reason: String,
+    pub details: Option<String>,
+    pub resolved: bool,
+    pub created_at: DateTime<Utc>,
+}
+
+pub async fn create_plugin_report(
+    pool: &PgPool,
+    plugin_id: &str,
+    reporter_uid: &str,
+    reason: &str,
+    details: Option<&str>,
+) -> Result<PluginReport, sqlx::Error> {
+    sqlx::query_as::<_, PluginReport>(
+        r#"INSERT INTO plugin_reports (plugin_id, reporter_uid, reason, details)
+           VALUES ($1, $2, $3, $4)
+           RETURNING id, plugin_id, reporter_uid, reason, details, resolved, created_at"#,
+    )
+    .bind(plugin_id)
+    .bind(reporter_uid)
+    .bind(reason)
+    .bind(details)
+    .fetch_one(pool)
+    .await
+}
+
+pub async fn list_plugin_reports(
+    pool: &PgPool,
+    only_open: bool,
+) -> Result<Vec<PluginReport>, sqlx::Error> {
+    let sql = if only_open {
+        r#"SELECT id, plugin_id, reporter_uid, reason, details, resolved, created_at
+           FROM plugin_reports WHERE resolved = FALSE ORDER BY created_at DESC"#
+    } else {
+        r#"SELECT id, plugin_id, reporter_uid, reason, details, resolved, created_at
+           FROM plugin_reports ORDER BY created_at DESC LIMIT 500"#
+    };
+    sqlx::query_as::<_, PluginReport>(sql).fetch_all(pool).await
+}

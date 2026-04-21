@@ -24,6 +24,12 @@ pub struct AppState {
     pub github_token: Option<String>,
     /// GitHub repo in owner/repo format (e.g. "opencad/opencad").
     pub github_repo: Option<String>,
+    /// Comma-separated Firebase UIDs granted marketplace admin rights.
+    pub admin_uids: Option<String>,
+    /// Public base URL for plugin bundles.
+    pub plugin_bundle_base_url: Option<String>,
+    /// Stripe secret key (paid plugins).
+    pub stripe_secret_key: Option<String>,
 }
 
 impl AppState {
@@ -35,6 +41,9 @@ impl AppState {
             verifier,
             github_token: cfg.github_token.clone(),
             github_repo: cfg.github_repo.clone(),
+            admin_uids: cfg.admin_uids.clone(),
+            plugin_bundle_base_url: cfg.plugin_bundle_base_url.clone(),
+            stripe_secret_key: cfg.stripe_secret_key.clone(),
         }
     }
 

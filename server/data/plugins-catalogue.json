@@ -1,0 +1,70 @@
+{
+  "_comment": "Curated marketplace catalogue. Every entry is upserted into the plugins table on server startup (server/src/seed.rs). Submissions via POST /api/v1/marketplace/plugins override on conflict only for their publisher_uid; the seeder always owns rows whose publisher_uid is NULL.",
+  "plugins": [
+    {
+      "id": "hello-opencad",
+      "name": "Hello OpenCAD",
+      "description": "A minimal example plugin — posts a welcome notification on load.",
+      "version": "1.0.0",
+      "author": "OpenCAD",
+      "category": "examples",
+      "icon": null,
+      "entrypoint": "inline:hello-opencad",
+      "sri_hash": null,
+      "permissions": ["ui"],
+      "price_cents": 0
+    },
+    {
+      "id": "element-counter",
+      "name": "Element Counter",
+      "description": "Counts elements in the active document and posts a notification.",
+      "version": "1.0.0",
+      "author": "OpenCAD",
+      "category": "examples",
+      "icon": null,
+      "entrypoint": "inline:element-counter",
+      "sri_hash": null,
+      "permissions": ["document", "ui"],
+      "price_cents": 0
+    },
+    {
+      "id": "structural-grid-tool",
+      "name": "Structural Grid Tool",
+      "description": "Generate and manage structural grids with parametric column placement.",
+      "version": "1.3.0",
+      "author": "OpenCAD",
+      "category": "structural",
+      "icon": null,
+      "entrypoint": "inline:structural-grid-tool",
+      "sri_hash": null,
+      "permissions": ["document", "ui"],
+      "price_cents": 0
+    },
+    {
+      "id": "energy-analysis-pro",
+      "name": "Energy Analysis Pro",
+      "description": "Run HVAC and thermal energy simulations directly in the browser.",
+      "version": "2.1.0",
+      "author": "OpenCAD",
+      "category": "analysis",
+      "icon": null,
+      "entrypoint": "inline:energy-analysis-pro",
+      "sri_hash": null,
+      "permissions": ["document", "ui", "network"],
+      "price_cents": 0
+    },
+    {
+      "id": "bim-clash-detector",
+      "name": "BIM Clash Detector",
+      "description": "Detect and report clashes between building elements across disciplines.",
+      "version": "1.0.4",
+      "author": "OpenCAD",
+      "category": "analysis",
+      "icon": null,
+      "entrypoint": "inline:bim-clash-detector",
+      "sri_hash": null,
+      "permissions": ["document", "ui"],
+      "price_cents": 0
+    }
+  ]
+}

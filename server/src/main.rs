@@ -7,6 +7,7 @@ mod config;
 mod db;
 mod error;
 mod routes;
+mod seed;
 mod state;
 mod storage;
 
@@ -43,6 +44,11 @@ async fn main() -> anyhow::Result<()> {
         .context("database migration failed")?;
 
     tracing::info!("database ready");
+
+    // Seed the curated marketplace catalogue. Non-fatal on failure.
+    if let Err(err) = seed::seed_marketplace(&db).await {
+        tracing::warn!(error = %err, "marketplace seed failed");
+    }
 
     // ── Storage ───────────────────────────────────────────────────────────────
     let storage = storage::init(&cfg).context("failed to initialise storage")?;
