@@ -92,6 +92,10 @@ export default defineConfig({
         target: process.env.VITE_SERVER_URL ?? 'http://localhost:47821',
         changeOrigin: true,
       },
+      '/health': {
+        target: process.env.VITE_SERVER_URL ?? 'http://localhost:47821',
+        changeOrigin: true,
+      },
       '/ws': {
         target: (process.env.VITE_SERVER_URL ?? 'http://localhost:47821')
           .replace(/^http/, 'ws'),

@@ -87,7 +87,9 @@ export interface UserProfile {
 }
 
 export const authApi = {
-  me: (): Promise<UserProfile> => apiFetch<UserProfile>('/auth/me'),
+  // Server route is POST /api/v1/auth/me — it upserts the user row in Postgres
+  // as a side-effect of returning the profile.
+  me: (): Promise<UserProfile> => apiFetch<UserProfile>('/auth/me', { method: 'POST' }),
 };
 
 // ── Server health ─────────────────────────────────────────────────────────────
@@ -101,11 +103,12 @@ export const SERVER_WS_URL = (import.meta.env.VITE_SERVER_WS_URL as string | und
 
 /**
  * Returns true if the OpenCAD backend is reachable.
- * Uses the /api/v1/auth/me endpoint (unauthenticated 401 counts as "online").
+ * Server exposes /health at the root (not under /api/v1) — matches the
+ * Cloud Run liveness probe path in server/src/routes/mod.rs.
  */
 export async function isServerAvailable(): Promise<boolean> {
   try {
-    const res = await fetch('/api/v1/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
+    const res = await fetch('/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
     return res.status < 500;
   } catch {
     return false;
