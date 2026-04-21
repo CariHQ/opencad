@@ -214,7 +214,10 @@ class PluginHost {
     if (typeof Worker === 'undefined') return;
 
     const sandbox = new WorkerPluginSandbox();
-    await sandbox.load(src, buildPluginAPI(manifest.id));
+    // Pass the manifest's declared permissions to the sandbox so every
+    // PluginAPI call is gated by what the user consented to at install
+    // time. The bundled/curated plugins declare only what they need.
+    await sandbox.load(src, buildPluginAPI(manifest.id), manifest.permissions);
     this.sandboxes.set(manifest.id, sandbox);
   }
 

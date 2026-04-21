@@ -134,9 +134,46 @@ self.__api__ = {
 self.postMessage({ type: 'ready' });
 `;
 
+// ─── Permission gating ───────────────────────────────────────────────────────
+
+export type SandboxPermission = 'network' | 'storage' | 'ui' | 'document';
+
+/** Every API method → the manifest permission it requires. Methods not in
+ *  this map are either always-allowed (e.g. `log`) or rejected as unknown. */
+const METHOD_PERMISSION: Readonly<Record<string, SandboxPermission | null>> = {
+  'document.getElements': 'document',
+  'document.addElement': 'document',
+  'document.updateElement': 'document',
+  'document.deleteElement': 'document',
+  'ui.showNotification': 'ui',
+  'ui.openPanel': 'ui',
+  'ui.registerCommand': 'ui',
+  'log': null, // always allowed — diagnostic output has no blast radius
+};
+
+/** Thrown from dispatchAPICall when the plugin tries to use an API method
+ *  that its manifest does not declare permission for. The sandbox
+ *  serialises the message back to the plugin, where it surfaces as a
+ *  Promise rejection on the method call. */
+export class PluginPermissionError extends Error {
+  constructor(method: string, required: SandboxPermission) {
+    super(`Plugin permission denied: '${method}' requires '${required}' in manifest.permissions`);
+    this.name = 'PluginPermissionError';
+  }
+}
+
 // ─── API method dispatcher ────────────────────────────────────────────────────
 
-function dispatchAPICall(api: PluginAPI, method: string, args: unknown[]): unknown {
+function dispatchAPICall(
+  api: PluginAPI,
+  method: string,
+  args: unknown[],
+  permissions: readonly SandboxPermission[],
+): unknown {
+  const required = METHOD_PERMISSION[method];
+  if (required !== undefined && required !== null && !permissions.includes(required)) {
+    throw new PluginPermissionError(method, required);
+  }
   switch (method) {
     case 'document.getElements':
       return api.document.getElements();
@@ -166,8 +203,14 @@ export class WorkerPluginSandbox {
   private pending: Map<number, { resolve: (v: unknown) => void; reject: (e: Error) => void }> =
     new Map();
   private messageId = 0;
+  private permissions: readonly SandboxPermission[] = [];
 
-  async load(pluginCode: string, api: PluginAPI): Promise<void> {
+  async load(
+    pluginCode: string,
+    api: PluginAPI,
+    permissions: readonly SandboxPermission[] = [],
+  ): Promise<void> {
+    this.permissions = permissions;
     const blob = new Blob([WORKER_BOOTSTRAP], { type: 'application/javascript' });
     const blobUrl = URL.createObjectURL(blob);
     this.worker = new Worker(blobUrl);
@@ -205,10 +248,12 @@ export class WorkerPluginSandbox {
 
   private _handleMessage(msg: SandboxMessage, api: PluginAPI): void {
     if (msg.type === 'call') {
-      // Worker is calling an API method — dispatch and return result
+      // Worker is calling an API method. Dispatch through the permission
+      // gate and return the result, or send back an error that the plugin
+      // will see as a rejected promise.
       const { id, method, args = [] } = msg;
       try {
-        const result = dispatchAPICall(api, method ?? '', args);
+        const result = dispatchAPICall(api, method ?? '', args, this.permissions);
         this.worker!.postMessage({ type: 'return', id, result } satisfies SandboxMessage);
       } catch (err) {
         this.worker!.postMessage({

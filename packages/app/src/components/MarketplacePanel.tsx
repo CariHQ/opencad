@@ -9,6 +9,7 @@ import {
   uninstallPlugin,
   type Plugin,
 } from '../lib/marketplaceApi';
+import { PluginConsentModal } from './PluginConsentModal';
 
 export interface MarketplaceItem {
   id: string;
@@ -100,6 +101,16 @@ export function MarketplacePanel({
   const [registeredIds, setRegisteredIds] = useState<Set<string>>(
     () => new Set(pluginRegistry.list().map((m) => m.id)),
   );
+
+  // Plugin pending consent approval. When non-null, PluginConsentModal
+  // renders and blocks the install until the user clicks Install or
+  // Cancel. We stash either a backend Plugin (for the remote-catalogue
+  // path) or a local PluginManifest (for the bundled fallback path) so
+  // the same dialog handles both.
+  type ConsentPending =
+    | { kind: 'remote'; plugin: Plugin }
+    | { kind: 'bundled'; manifest: PluginManifest };
+  const [pendingConsent, setPendingConsent] = useState<ConsentPending | null>(null);
   useEffect(() => {
     return pluginRegistry.subscribe(() => {
       setRegisteredIds(new Set(pluginRegistry.list().map((m) => m.id)));
@@ -143,13 +154,22 @@ export function MarketplacePanel({
     void fetchPlugins(debouncedSearch);
   }, [debouncedSearch, fetchPlugins]);
 
-  // ── Install handler ──────────────────────────────────────────────────────
-  // Registers the manifest locally (so pluginHost spawns a worker) AND
-  // records the install on the server (so the user's library follows them
-  // across devices and the download counter increments). If the server
-  // call fails we revert both the UI and the local registration so the
-  // Install button reappears.
-  const handleApiInstall = useCallback(async (plugin: Plugin) => {
+  // ── Install handlers ─────────────────────────────────────────────────────
+  // Button click opens the consent modal. The modal's Install button calls
+  // performApiInstall / performBundledInstall below to actually register
+  // the manifest and round-trip to the server.
+
+  const handleApiInstall = useCallback((plugin: Plugin) => {
+    setPendingConsent({ kind: 'remote', plugin });
+  }, []);
+
+  /** Runs once the user clicks Install in the consent modal for a
+   *  remote-catalogue plugin. Registers the manifest locally (so
+   *  pluginHost spawns a worker) AND records the install on the server
+   *  (so the user's library follows them across devices and the download
+   *  counter increments). If the server call fails we revert both the UI
+   *  and the local registration so the Install button reappears. */
+  const performApiInstall = useCallback(async (plugin: Plugin) => {
     const pluginId = plugin.id;
     const manifest: PluginManifest = {
       id: plugin.id,
@@ -217,6 +237,9 @@ export function MarketplacePanel({
   // the plugin's registered commands are purged.
   const handleInstallPlugin = (manifest: PluginManifest) => {
     if (!validateManifest(manifest)) return;
+    setPendingConsent({ kind: 'bundled', manifest });
+  };
+  const performBundledInstall = (manifest: PluginManifest) => {
     pluginRegistry.register(manifest);
   };
   const handleUninstallPlugin = (pluginId: string) => {
@@ -243,8 +266,49 @@ export function MarketplacePanel({
   const showApiList = !loading && !error && apiPlugins.length > 0;
   const showEmpty = !loading && !error && apiPlugins.length === 0;
 
+  // ── Consent modal handlers ───────────────────────────────────────────────
+  const handleConsentAccept = useCallback(() => {
+    const pending = pendingConsent;
+    setPendingConsent(null);
+    if (!pending) return;
+    if (pending.kind === 'remote') {
+      void performApiInstall(pending.plugin);
+    } else {
+      performBundledInstall(pending.manifest);
+    }
+  }, [pendingConsent, performApiInstall]);
+  const handleConsentCancel = useCallback(() => {
+    setPendingConsent(null);
+  }, []);
+
   return (
     <div className="marketplace-panel">
+      {pendingConsent && (
+        <PluginConsentModal
+          pluginName={
+            pendingConsent.kind === 'remote'
+              ? pendingConsent.plugin.name
+              : pendingConsent.manifest.name
+          }
+          pluginAuthor={
+            pendingConsent.kind === 'remote'
+              ? pendingConsent.plugin.author
+              : pendingConsent.manifest.author
+          }
+          pluginVersion={
+            pendingConsent.kind === 'remote'
+              ? pendingConsent.plugin.version
+              : pendingConsent.manifest.version
+          }
+          permissions={
+            pendingConsent.kind === 'remote'
+              ? pendingConsent.plugin.permissions
+              : pendingConsent.manifest.permissions
+          }
+          onAccept={handleConsentAccept}
+          onCancel={handleConsentCancel}
+        />
+      )}
       <div className="panel-header">
         <span className="panel-title">Marketplace</span>
       </div>

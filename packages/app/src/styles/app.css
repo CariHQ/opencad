@@ -6933,6 +6933,124 @@ input[type='range']::-moz-range-track {
   cursor: not-allowed;
 }
 
+/* Plugin consent modal (install-time permission prompt) */
+
+.plugin-consent-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.plugin-consent-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: var(--shadow-lg, 0 20px 40px rgba(0, 0, 0, 0.35));
+  width: min(480px, calc(100vw - 48px));
+  max-height: calc(100vh - 96px);
+  overflow-y: auto;
+  padding: 24px;
+  color: var(--text-primary);
+}
+
+.plugin-consent-header {
+  margin-bottom: 14px;
+}
+
+.plugin-consent-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.plugin-consent-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.plugin-consent-intro {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.plugin-consent-noperm {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.plugin-consent-perms {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.plugin-consent-perm {
+  padding: 10px 12px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plugin-consent-perm-title {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.plugin-consent-perm-detail {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.plugin-consent-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.plugin-consent-cancel {
+  padding: 6px 14px;
+  font-size: 12px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.plugin-consent-cancel:hover {
+  background: var(--bg-tertiary);
+}
+
+.plugin-consent-accept {
+  padding: 6px 14px;
+  font-size: 12px;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.plugin-consent-accept:hover {
+  filter: brightness(1.08);
+}
+
 .plugin-icon {
   width: 20px;
   height: 20px;
