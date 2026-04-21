@@ -297,6 +297,176 @@ function escapePdfString(s: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Multi-page sheet-set export (PRD §7.3.1)
+// ---------------------------------------------------------------------------
+
+export interface SheetPage {
+  /** Display name for the sheet (e.g. "A-101 Floor Plan"). */
+  title: string;
+  /** Optional page size override; defaults to A3 landscape for sheets. */
+  pageSize?: NonNullable<PDFExportOptions['pageSize']>;
+  orientation?: NonNullable<PDFExportOptions['orientation']>;
+  /** Pre-rendered canvas for this sheet. Null pages render blank. */
+  canvas: HTMLCanvasElement | null;
+}
+
+/**
+ * Render a multi-page PDF from an ordered list of sheet pages. Each page
+ * embeds its own JPEG-encoded canvas and is labelled via a PDF /Title-style
+ * page-level /UserUnit attribute is skipped in favour of explicit title
+ * objects on the page so PDF viewers that surface page labels show the
+ * sheet number. Pages are concatenated into a single PDF object graph.
+ */
+export function renderSheetSetToPDF(
+  doc: DocumentSchema,
+  sheets: readonly SheetPage[],
+  options: Pick<PDFExportOptions, 'title'> = {},
+): Blob {
+  if (sheets.length === 0) {
+    // Delegate to the single-page renderer for an empty-canvas blank page.
+    return renderDocumentToPDF(doc, null, { title: options.title ?? doc.name });
+  }
+
+  type Page = {
+    pageW: number;
+    pageH: number;
+    imageBytes: Uint8Array | null;
+    imgW: number;
+    imgH: number;
+    label: string;
+  };
+
+  const pages: Page[] = sheets.map((s) => {
+    const pageSize = s.pageSize ?? 'A3';
+    const orientation = s.orientation ?? 'landscape';
+    const [rw, rh] = PAGE_SIZES[pageSize];
+    const [pageW, pageH] = orientation === 'landscape'
+      ? [Math.max(rw, rh), Math.min(rw, rh)]
+      : [rw, rh];
+
+    let imageBytes: Uint8Array | null = null;
+    let imgW = 0, imgH = 0;
+    if (s.canvas) {
+      try {
+        const dataUrl = s.canvas.toDataURL('image/jpeg', 0.88);
+        const base64 = dataUrl.replace(/^data:[^;]+;base64,/, '');
+        imageBytes = base64ToUint8Array(base64);
+        imgW = s.canvas.width || pageW;
+        imgH = s.canvas.height || pageH;
+      } catch { /* canvas tainted — blank page */ }
+    }
+    return { pageW, pageH, imageBytes, imgW, imgH, label: s.title };
+  });
+
+  // ── Object layout ─────────────────────────────────────────────────────────
+  // 1 /Catalog   → /Pages 2 0 R
+  // 2 /Pages     → /Kids [...] /Count N
+  // For each page i (0-based):
+  //   pageObj   = 3 + 3*i         (Page)
+  //   contents  = 3 + 3*i + 1     (content stream)
+  //   image     = 3 + 3*i + 2     (only when canvas present)
+  // Info object  = last slot
+  //
+  // To keep indexing simple we always allocate 3 slots per page even when no
+  // image — the unused slot is filled with an empty placeholder object.
+
+  const N = pages.length;
+  const objsPerPage = 3;
+  const firstPageObj = 3;
+  const infoObjNum = firstPageObj + objsPerPage * N;
+  const xrefObjCount = infoObjNum + 1;
+
+  const parts: (string | Uint8Array)[] = [];
+  const offsets: number[] = new Array(xrefObjCount);
+  let byteOffset = 0;
+
+  const encoder = new TextEncoder();
+  const push = (chunk: string | Uint8Array): void => {
+    parts.push(chunk);
+    byteOffset += typeof chunk === 'string' ? chunk.length : chunk.byteLength;
+  };
+
+  push('%PDF-1.4\n');
+
+  // 1 — Catalog
+  offsets[1] = byteOffset;
+  push('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+
+  // 2 — Pages
+  offsets[2] = byteOffset;
+  const kidRefs = pages.map((_p, i) => `${firstPageObj + objsPerPage * i} 0 R`).join(' ');
+  push(`2 0 obj\n<< /Type /Pages /Kids [${kidRefs}] /Count ${N} >>\nendobj\n`);
+
+  // Pages — three objects each
+  for (let i = 0; i < N; i++) {
+    const p = pages[i]!;
+    const pageObjNum = firstPageObj + objsPerPage * i;
+    const contentsObjNum = pageObjNum + 1;
+    const imageObjNum = pageObjNum + 2;
+
+    const contentStream = p.imageBytes
+      ? `q ${p.pageW} 0 0 ${p.pageH} 0 0 cm /Im${i} Do Q\n`
+      : '';
+    const resources = p.imageBytes
+      ? `<< /XObject << /Im${i} ${imageObjNum} 0 R >> >>`
+      : '<< >>';
+
+    offsets[pageObjNum] = byteOffset;
+    push(
+      `${pageObjNum} 0 obj\n` +
+      `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${p.pageW} ${p.pageH}] ` +
+      `/Contents ${contentsObjNum} 0 R /Resources ${resources} >>\nendobj\n`,
+    );
+
+    offsets[contentsObjNum] = byteOffset;
+    push(`${contentsObjNum} 0 obj\n<< /Length ${contentStream.length} >>\nstream\n${contentStream}endstream\nendobj\n`);
+
+    offsets[imageObjNum] = byteOffset;
+    if (p.imageBytes) {
+      push(
+        `${imageObjNum} 0 obj\n` +
+        `<< /Type /XObject /Subtype /Image /Width ${p.imgW} /Height ${p.imgH} ` +
+        `/ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${p.imageBytes.length} >>\n` +
+        `stream\n`,
+      );
+      push(p.imageBytes);
+      push('endstream\nendobj\n');
+    } else {
+      // Empty placeholder — keeps indexing stable.
+      push(`${imageObjNum} 0 obj\n<< >>\nendobj\n`);
+    }
+  }
+
+  // Info object
+  const docTitle = options.title ?? doc.name ?? 'OpenCAD Sheet Set';
+  offsets[infoObjNum] = byteOffset;
+  push(`${infoObjNum} 0 obj\n<< /Title (${escapePdfString(docTitle)}) /Producer (OpenCAD) >>\nendobj\n`);
+
+  // xref + trailer
+  const xrefOffset = byteOffset;
+  const xrefLines = ['xref', `0 ${xrefObjCount}`, '0000000000 65535 f \n'];
+  for (let i = 1; i < xrefObjCount; i++) {
+    xrefLines.push(`${String(offsets[i] ?? 0).padStart(10, '0')} 00000 n \n`);
+  }
+  push(xrefLines.join('\n') + '\n');
+  push(`trailer\n<< /Size ${xrefObjCount} /Root 1 0 R /Info ${infoObjNum} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF\n`);
+
+  // Concatenate to one Blob — merge everything into a single Uint8Array
+  // with ArrayBuffer backing (Blob constructor is picky about SAB-typed
+  // TypedArrays in strict lib.dom.d.ts).
+  let totalLen = 0;
+  const encoded: Uint8Array[] = parts.map((p) => {
+    const u8 = typeof p === 'string' ? encoder.encode(p) : p;
+    totalLen += u8.byteLength;
+    return u8;
+  });
+  const merged = new Uint8Array(totalLen);
+  let pos = 0;
+  for (const u8 of encoded) { merged.set(u8, pos); pos += u8.byteLength; }
+  return new Blob([merged], { type: 'application/pdf' });
+}
+
+// ---------------------------------------------------------------------------
 // PDF Import (existing functionality)
 // ---------------------------------------------------------------------------
 
