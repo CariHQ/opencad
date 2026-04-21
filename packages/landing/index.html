@@ -617,6 +617,105 @@
       flex-shrink: 0;
     }
 
+    /* ─── Pricing teaser ───────────────────────────────────────────────── */
+    .pricing-teaser { padding: 0 40px 140px; }
+    .pricing-teaser-inner {
+      max-width: 1040px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .pricing-teaser-title {
+      font-size: clamp(28px, 4vw, 44px);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      color: var(--black);
+      margin-bottom: 16px;
+    }
+    .pricing-teaser-sub {
+      font-size: 17px;
+      color: var(--gray-600);
+      max-width: 480px;
+      margin: 0 auto 48px;
+    }
+    .pricing-teaser-tiers {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-bottom: 40px;
+    }
+    .pricing-teaser-tier {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      padding: 28px 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+    .pricing-teaser-tier.featured {
+      background: var(--black);
+      border-color: var(--black);
+      color: var(--white);
+    }
+    .pricing-teaser-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: var(--blue);
+      color: white;
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 100px;
+    }
+    .pricing-teaser-name {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gray-400);
+    }
+    .pricing-teaser-tier.featured .pricing-teaser-name { color: rgba(255, 255, 255, 0.55); }
+    .pricing-teaser-price {
+      font-size: 40px;
+      font-weight: 600;
+      letter-spacing: -0.04em;
+      line-height: 1;
+      color: inherit;
+    }
+    .pricing-teaser-unit {
+      font-size: 13px;
+      color: var(--gray-600);
+    }
+    .pricing-teaser-tier.featured .pricing-teaser-unit { color: rgba(255, 255, 255, 0.65); }
+    .pricing-teaser-actions {
+      display: inline-flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+    .pricing-teaser-btn-primary {
+      background: var(--black);
+      color: var(--white);
+      padding: 12px 24px;
+      border-radius: 100px;
+      font-size: 15px;
+      font-weight: 500;
+      transition: opacity 0.15s;
+    }
+    .pricing-teaser-btn-primary:hover { opacity: 0.85; }
+    .pricing-teaser-btn-secondary {
+      color: var(--black);
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 500;
+    }
+    .pricing-teaser-btn-secondary:hover { color: var(--blue); }
+
     /* ─── Responsive ─────────────────────────────────────────────────────── */
     @media (max-width: 768px) {
       .nav-inner { padding: 0 20px; }
@@ -635,6 +734,14 @@
       .preview-img { height: 280px; }
 
       .divider { padding: 0 20px; }
+
+      .pricing-teaser { padding: 0 20px 100px; }
+      .pricing-teaser-tiers { grid-template-columns: 1fr; gap: 12px; }
+      .pricing-teaser-tier { padding: 22px 20px; }
+      .pricing-teaser-price { font-size: 36px; }
+      .pricing-teaser-actions { flex-direction: column; width: 100%; }
+      .pricing-teaser-btn-primary,
+      .pricing-teaser-btn-secondary { width: 100%; text-align: center; }
     }
   </style>
 </head>
@@ -646,7 +753,7 @@
     <a href="/" class="nav-logo">OpenCAD</a>
     <div class="nav-links">
       <a href="#features" class="nav-link">Features</a>
-      <a href="#pricing" class="nav-link">Pricing</a>
+      <a href="/pricing.html" class="nav-link">Pricing</a>
       <a href="/download" class="nav-link">Download</a>
       <a href="https://github.com/CariHQ/opencad" class="nav-link" target="_blank" rel="noopener">GitHub</a>
       <a href="#get-started" class="btn-nav">Get started</a>
@@ -794,55 +901,35 @@
   </div>
 </div>
 
-<!-- Pricing -->
-<section class="section" id="pricing" style="padding:0 40px 140px;max-width:1120px;margin:0 auto;">
-  <div style="text-align:center;margin-bottom:64px;">
+<!-- Pricing teaser — full comparison lives at /pricing -->
+<section class="section pricing-teaser" id="pricing">
+  <div class="pricing-teaser-inner">
     <p class="section-label">Pricing</p>
-    <h2 style="font-size:clamp(28px,4vw,44px);font-weight:600;letter-spacing:-0.03em;color:var(--black);margin-bottom:16px;">Simple, transparent pricing</h2>
-    <p style="font-size:17px;color:var(--gray-600);max-width:480px;margin:0 auto;">14-day trial on all plans. Scale when you need to. No lock-in.</p>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--gray-200);border:1px solid var(--gray-200);border-radius:20px;overflow:hidden;">
-    <!-- Starter -->
-    <div style="background:var(--white);padding:44px 40px;">
-      <p style="font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-400);margin-bottom:12px;">Starter</p>
-      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:var(--black);line-height:1;margin-bottom:8px;">$0</p>
-      <p style="font-size:14px;color:var(--gray-600);margin-bottom:32px;">Up to 3 projects</p>
-      <ul style="list-style:none;font-size:15px;color:var(--gray-600);line-height:2.1;margin-bottom:36px;">
-        <li>✓ 3 projects</li>
-        <li>✓ 2D &amp; 3D drafting</li>
-        <li>✓ IFC import/export</li>
-        <li>✓ 5 GB storage</li>
-        <li>✓ Community support</li>
-      </ul>
-      <a href="#get-started" style="display:block;text-align:center;padding:12px 24px;border:1.5px solid var(--gray-200);border-radius:100px;font-size:15px;font-weight:500;color:var(--black);transition:background 0.15s;" onmouseover="this.style.background='var(--gray-100)'" onmouseout="this.style.background=''">Start free trial</a>
+    <h2 class="pricing-teaser-title">Start free. Scale when you need to.</h2>
+    <p class="pricing-teaser-sub">14-day trial on every paid plan. No credit card. No lock-in.</p>
+
+    <div class="pricing-teaser-tiers">
+      <div class="pricing-teaser-tier">
+        <span class="pricing-teaser-name">Starter</span>
+        <span class="pricing-teaser-price">$0</span>
+        <span class="pricing-teaser-unit">forever free</span>
+      </div>
+      <div class="pricing-teaser-tier featured">
+        <span class="pricing-teaser-badge">Most popular</span>
+        <span class="pricing-teaser-name">Pro</span>
+        <span class="pricing-teaser-price">$29</span>
+        <span class="pricing-teaser-unit">per user / month</span>
+      </div>
+      <div class="pricing-teaser-tier">
+        <span class="pricing-teaser-name">Business</span>
+        <span class="pricing-teaser-price">$99</span>
+        <span class="pricing-teaser-unit">per user / month</span>
+      </div>
     </div>
-    <!-- Pro -->
-    <div style="background:var(--black);padding:44px 40px;position:relative;">
-      <span style="position:absolute;top:20px;right:20px;background:var(--blue);color:white;font-size:11px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:4px 10px;border-radius:100px;">Most popular</span>
-      <p style="font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:12px;">Pro</p>
-      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:white;line-height:1;margin-bottom:8px;">$29</p>
-      <p style="font-size:14px;color:rgba(255,255,255,0.5);margin-bottom:32px;">per user / month</p>
-      <ul style="list-style:none;font-size:15px;color:rgba(255,255,255,0.7);line-height:2.1;margin-bottom:36px;">
-        <li>✓ Unlimited projects</li>
-        <li>✓ AI design assistant</li>
-        <li>✓ Real-time collaboration</li>
-        <li>✓ 100 GB storage</li>
-        <li>✓ Priority support</li>
-      </ul>
-      <a href="#get-started" style="display:block;text-align:center;padding:12px 24px;background:white;border-radius:100px;font-size:15px;font-weight:600;color:var(--black);transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Start free trial</a>
-    </div>
-    <!-- Business -->
-    <div style="background:var(--white);padding:44px 40px;">
-      <p style="font-size:13px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;color:var(--gray-400);margin-bottom:12px;">Business</p>
-      <p style="font-size:48px;font-weight:600;letter-spacing:-0.04em;color:var(--black);line-height:1;margin-bottom:8px;">$99</p>
-      <p style="font-size:14px;color:var(--gray-600);margin-bottom:32px;">per user / month</p>
-      <ul style="list-style:none;font-size:15px;color:var(--gray-600);line-height:2.1;margin-bottom:36px;">
-        <li>✓ Everything in Pro</li>
-        <li>✓ SSO / SAML</li>
-        <li>✓ 1 TB storage</li>
-        <li>✓ Dedicated support</li>
-      </ul>
-      <a href="mailto:sales@opencad.archi" style="display:block;text-align:center;padding:12px 24px;border:1.5px solid var(--gray-200);border-radius:100px;font-size:15px;font-weight:500;color:var(--black);transition:background 0.15s;" onmouseover="this.style.background='var(--gray-100)'" onmouseout="this.style.background=''">Contact sales</a>
+
+    <div class="pricing-teaser-actions">
+      <a href="/pricing.html" class="pricing-teaser-btn-primary">Compare plans</a>
+      <a href="#get-started" class="pricing-teaser-btn-secondary">Start free trial →</a>
     </div>
   </div>
 </section>
@@ -900,7 +987,7 @@
     <div class="footer-col">
       <p class="footer-col-heading">Product</p>
       <a href="/#features">Features</a>
-      <a href="/#pricing">Pricing</a>
+      <a href="/pricing.html">Pricing</a>
       <a href="/download">Download</a>
       <a href="https://app.opencad.archi">Open app</a>
     </div>

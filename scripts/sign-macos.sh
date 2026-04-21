@@ -22,6 +22,7 @@ set -euo pipefail
 DEFAULT_APP="packages/desktop/src-tauri/target/release/bundle/macos/OpenCAD.app"
 APP_BUNDLE="${APP_BUNDLE:-$DEFAULT_APP}"
 ENTITLEMENTS="packages/desktop/src-tauri/entitlements.plist"
+DMG_DIR="packages/desktop/src-tauri/target/release/bundle/dmg"
 
 if [[ ! -d "$APP_BUNDLE" ]]; then
   echo "error: app bundle not found at $APP_BUNDLE"
@@ -74,3 +75,61 @@ xcrun stapler staple "$APP_BUNDLE"
 xcrun stapler validate "$APP_BUNDLE"
 
 echo "✓ signed, notarized, and stapled: $APP_BUNDLE"
+
+# ── DMG — optional second-stage. When a .dmg exists alongside the app, we
+# rebuild it from the now-notarized app, sign the DMG itself, ship it to
+# Apple for its own notarization pass, then staple the ticket back to the
+# DMG. This is what lets users double-click the downloaded DMG without
+# Gatekeeper throwing the "could not verify" dialog.
+DMG_PATH=""
+if [[ -d "$DMG_DIR" ]]; then
+  DMG_PATH="$(/bin/ls "$DMG_DIR"/*.dmg 2>/dev/null | head -n1 || true)"
+fi
+
+if [[ -n "$DMG_PATH" && "${SKIP_DMG:-}" != "1" ]]; then
+  echo ""
+  echo "──────────────────────────────────────────────"
+  echo "DMG stage"
+  echo "──────────────────────────────────────────────"
+
+  echo "→ rebuilding DMG from signed app"
+  # Replace the app inside the DMG. Simplest path: produce a fresh DMG with
+  # create-dmg (if available) or hdiutil. Fall back to hdiutil which is
+  # present on every macOS install.
+  NEW_DMG_TMP="$(mktemp -d)"
+  NEW_DMG="$NEW_DMG_TMP/OpenCAD.dmg"
+  STAGE="$NEW_DMG_TMP/stage"
+  mkdir -p "$STAGE"
+  /bin/cp -R "$APP_BUNDLE" "$STAGE/"
+  /bin/ln -s /Applications "$STAGE/Applications"
+  hdiutil create -volname "OpenCAD" \
+    -srcfolder "$STAGE" \
+    -ov -format UDZO \
+    "$NEW_DMG" >/dev/null
+
+  # Replace the original DMG with the freshly built one.
+  /bin/mv "$NEW_DMG" "$DMG_PATH"
+  rm -rf "$NEW_DMG_TMP"
+
+  echo "→ codesign: $DMG_PATH"
+  codesign \
+    --force \
+    --timestamp \
+    --sign "$APPLE_SIGNING_IDENTITY" \
+    "$DMG_PATH"
+
+  codesign --verify --verbose=2 "$DMG_PATH"
+
+  if [[ "${SKIP_NOTARIZATION:-}" == "1" ]]; then
+    echo "✓ DMG signed (notarization skipped)"
+  else
+    echo "→ submitting DMG to notary service"
+    xcrun notarytool submit "$DMG_PATH" \
+      --keychain-profile "$APPLE_NOTARY_PROFILE" \
+      --wait
+    echo "→ stapling ticket to DMG"
+    xcrun stapler staple "$DMG_PATH"
+    xcrun stapler validate "$DMG_PATH"
+    echo "✓ DMG signed, notarized, and stapled: $DMG_PATH"
+  fi
+fi

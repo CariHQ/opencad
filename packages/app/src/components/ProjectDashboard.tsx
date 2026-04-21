@@ -1,16 +1,47 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { LayoutGrid, List, Star } from 'lucide-react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import {
+  LayoutGrid,
+  List,
+  Star,
+  Settings as SettingsIcon,
+  LogOut,
+  CreditCard,
+  ChevronDown,
+} from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useProjectStore } from '../stores/projectStore';
+import { useAuthStore } from '../stores/authStore';
 import { ProjectTemplates } from './ProjectTemplates';
 import { isTauri, tauriStartDragging } from '../hooks/useTauri';
 import { ConfirmModal } from './ConfirmModal';
+import { APIKeyPanel } from './APIKeyPanel';
+import { PermissionsPanel } from './PermissionsPanel';
+import { SSOSettingsPanel, type SSOConfig } from './SSOSettingsPanel';
+import { BillingPanel } from './BillingPanel';
+import { SubscriptionModal } from './SubscriptionModal';
+
+const SSO_STORAGE_KEY = 'opencad-sso-config';
+function loadSSOConfig(): SSOConfig | undefined {
+  try {
+    const raw = localStorage.getItem(SSO_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as SSOConfig) : undefined;
+  } catch { return undefined; }
+}
+function saveSSOConfig(cfg: SSOConfig): void {
+  try { localStorage.setItem(SSO_STORAGE_KEY, JSON.stringify(cfg)); } catch { /* quota */ }
+}
+
+type SettingsTab = 'apikeys' | 'permissions' | 'sso' | 'billing';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
   const [showTemplates, setShowTemplates] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('apikeys');
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const { signOut: authSignOut } = useAuthStore();
 
   // Apply stored theme (same key AppLayout uses) so dashboard matches the app
   useEffect(() => {
@@ -75,12 +106,18 @@ export function ProjectDashboard() {
     <div className="project-dashboard">
       <header className="dashboard-header" data-tauri-drag-region onMouseDown={handleHeaderMouseDown}>
         <h1 className="dashboard-title">Projects</h1>
+        <div className="dashboard-header-spacer" />
         <button className="btn-secondary" onClick={() => setShowTemplates(true)}>
           From Template
         </button>
         <button className="btn-primary" onClick={handleNewProject}>
           New Project
         </button>
+        <DashboardUserMenu
+          onOpenSettings={() => setShowSettings(true)}
+          onOpenBilling={() => { setSettingsTab('billing'); setShowSettings(true); }}
+          onOpenUpgrade={() => setShowUpgrade(true)}
+        />
       </header>
 
       <div className="dashboard-toolbar">
@@ -237,7 +274,130 @@ export function ProjectDashboard() {
           </div>
         </div>
       )}
+
+      {showSettings && (
+        <div className="settings-overlay" onClick={() => setShowSettings(false)}>
+          <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-modal-header">
+              <h2 className="settings-modal-title">Settings</h2>
+              <div className="settings-header-actions">
+                <button
+                  className="settings-signout"
+                  aria-label="Sign out"
+                  onClick={() => { setShowSettings(false); void authSignOut(); }}
+                >
+                  Sign out
+                </button>
+                <button
+                  className="settings-close"
+                  aria-label="Close settings"
+                  onClick={() => setShowSettings(false)}
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+            <div className="settings-tabs">
+              <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
+              <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
+              <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+              <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
+            </div>
+            <div className="settings-content">
+              {settingsTab === 'apikeys' && <APIKeyPanel />}
+              {settingsTab === 'permissions' && <PermissionsPanel />}
+              {settingsTab === 'sso' && (
+                <SSOSettingsPanel
+                  config={loadSSOConfig()}
+                  onSave={(cfg) => saveSSOConfig(cfg)}
+                />
+              )}
+              {settingsTab === 'billing' && (
+                <BillingPanel onUpgrade={() => { setShowSettings(false); setShowUpgrade(true); }} />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showUpgrade && <SubscriptionModal onClose={() => setShowUpgrade(false)} />}
     </div>
     </>
+  );
+}
+
+// ─── User menu ────────────────────────────────────────────────────────────────
+
+interface DashboardUserMenuProps {
+  onOpenSettings: () => void;
+  onOpenBilling: () => void;
+  onOpenUpgrade: () => void;
+}
+
+function DashboardUserMenu({ onOpenSettings, onOpenBilling, onOpenUpgrade }: DashboardUserMenuProps): React.JSX.Element | null {
+  const { status, profile, signOut } = useAuthStore();
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // Click-outside close.
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent): void => {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, [open]);
+
+  if (status !== 'authenticated' || !profile) return null;
+
+  const initial = (profile.name || profile.email || '?').trim().charAt(0).toUpperCase();
+
+  return (
+    <div className="dashboard-user-menu" ref={rootRef}>
+      <button
+        className="dashboard-user-chip"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="dashboard-user-avatar">{initial}</span>
+        <span className="dashboard-user-label">
+          <span className="dashboard-user-name">{profile.name || profile.email}</span>
+          <span className={`dashboard-user-plan dashboard-user-plan--${profile.plan}`}>
+            {profile.plan === 'free' ? 'Free' : profile.plan === 'trial' ? 'Trial' : profile.plan === 'pro' ? 'Pro' : 'Team'}
+          </span>
+        </span>
+        <ChevronDown size={14} />
+      </button>
+
+      {open && (
+        <div className="dashboard-user-dropdown" role="menu">
+          <div className="dashboard-user-dropdown-header">
+            <span className="dashboard-user-dropdown-name">{profile.name || 'Unnamed'}</span>
+            <span className="dashboard-user-dropdown-email">{profile.email}</span>
+          </div>
+          <button className="dashboard-user-dropdown-item" onClick={() => { setOpen(false); onOpenSettings(); }}>
+            <SettingsIcon size={14} />
+            <span>Settings</span>
+          </button>
+          <button className="dashboard-user-dropdown-item" onClick={() => { setOpen(false); onOpenBilling(); }}>
+            <CreditCard size={14} />
+            <span>Billing</span>
+          </button>
+          {profile.plan === 'free' && (
+            <button className="dashboard-user-dropdown-item dashboard-user-dropdown-upgrade" onClick={() => { setOpen(false); onOpenUpgrade(); }}>
+              <span>Upgrade to Pro</span>
+              <span className="dashboard-user-dropdown-arrow">→</span>
+            </button>
+          )}
+          <div className="dashboard-user-dropdown-divider" />
+          <button className="dashboard-user-dropdown-item" onClick={() => { setOpen(false); void signOut(); }}>
+            <LogOut size={14} />
+            <span>Sign out</span>
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

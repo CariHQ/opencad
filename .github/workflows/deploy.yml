@@ -142,19 +142,55 @@ jobs:
           gsutil -m rsync -r -d packages/app/dist gs://opencad-app
 
       - name: Deploy landing pages to GCS (opencad.archi)
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
         run: |
+          set -euo pipefail
+          # Inject the public Firebase web config into every HTML so the
+          # landing auth forms can actually create users. (Not a secret —
+          # these values are restricted by domain allow-list on Firebase.)
+          LANDING_TMP="$(mktemp -d)"
+          cp -R packages/landing/. "$LANDING_TMP"
+          INJECT="<script>
+            window.FIREBASE_API_KEY            = '${VITE_FIREBASE_API_KEY}';
+            window.FIREBASE_AUTH_DOMAIN        = '${VITE_FIREBASE_AUTH_DOMAIN}';
+            window.FIREBASE_PROJECT_ID         = '${VITE_FIREBASE_PROJECT_ID}';
+            window.FIREBASE_STORAGE_BUCKET     = '${VITE_FIREBASE_STORAGE_BUCKET}';
+            window.FIREBASE_MESSAGING_SENDER_ID= '${VITE_FIREBASE_MESSAGING_SENDER_ID}';
+            window.FIREBASE_APP_ID             = '${VITE_FIREBASE_APP_ID}';
+          </script>"
+          while IFS= read -r -d '' f; do
+            python3 -c "
+import sys, pathlib
+p = pathlib.Path(sys.argv[1])
+p.write_text(p.read_text().replace('<!-- FIREBASE_CONFIG_INJECT -->', sys.argv[2]))
+" "$f" "$INJECT"
+          done < <(find "$LANDING_TMP" -name '*.html' -print0)
+
           # Marketing homepage
-          gsutil cp packages/landing/index.html gs://opencad-landing/index.html
+          gsutil cp "$LANDING_TMP/index.html" gs://opencad-landing/index.html
+          # Pricing page
+          gsutil cp "$LANDING_TMP/pricing.html" gs://opencad-landing/pricing.html
           # Legal pages
-          gsutil cp packages/landing/privacy.html gs://opencad-landing/privacy.html
-          gsutil cp packages/landing/terms.html gs://opencad-landing/terms.html
+          gsutil cp "$LANDING_TMP/privacy.html" gs://opencad-landing/privacy.html
+          gsutil cp "$LANDING_TMP/terms.html" gs://opencad-landing/terms.html
           # Download page
-          gsutil cp packages/landing/download.html gs://opencad-landing/download.html
+          gsutil cp "$LANDING_TMP/download.html" gs://opencad-landing/download.html
           # Role-specific pages
-          gsutil -m rsync -r packages/landing/for gs://opencad-landing/for
+          gsutil -m rsync -r "$LANDING_TMP/for" gs://opencad-landing/for
           # OG social images
-          gsutil -m cp packages/landing/og*.png gs://opencad-landing/ 2>/dev/null || true
-          gsutil -m rsync -r packages/landing/screenshots gs://opencad-landing/screenshots
+          gsutil -m cp "$LANDING_TMP"/og*.png gs://opencad-landing/ 2>/dev/null || true
+          gsutil -m rsync -r "$LANDING_TMP/screenshots" gs://opencad-landing/screenshots
+          # Landing HTML is no-cache so deploys reflect instantly.
+          gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
+            "gs://opencad-landing/*.html" 2>/dev/null || true
+          gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
+            "gs://opencad-landing/for/**/*.html" 2>/dev/null || true
 
       - name: Invalidate CDN cache
         env:
