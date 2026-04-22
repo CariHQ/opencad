@@ -30,6 +30,24 @@ const LEGACY_DOC_KEY = 'opencad-document';
 const docKey = (projectId: string): string => `opencad-document:${projectId}`;
 
 /**
+ * Write the active document to BOTH localStorage (fast path for the next
+ * page load) and the offline IndexedDB store (survives quota pressure +
+ * feeds the offline sync queue). Called from every mutating action so
+ * edits survive refresh. Without this helper, only addElement actually
+ * persisted — update / delete / layer / level / rename mutations all
+ * looked saved in memory but vanished on reload.
+ */
+function persistDocument(doc: DocumentSchema): void {
+  try {
+    localStorage.setItem(docKey(doc.id), JSON.stringify(doc));
+  } catch {
+    // Quota exhausted or serialisation failure — non-fatal, the offline
+    // store below is the authoritative persistence layer.
+  }
+  void offlineSaveDocument(doc.id, JSON.stringify(doc)).catch(() => {});
+}
+
+/**
  * Global write-lock. Flipped true by useDocumentReadOnlySync when the
  * user's subscription has lapsed. All element-mutating actions consult
  * this via assertWritable below and become no-ops when locked. View /
@@ -365,10 +383,9 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) throw new Error('No document loaded');
 
         const layerId = model.addLayer(params);
-        set({
-          document: { ...model.documentData },
-          lastSaved: Date.now(),
-        });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
         return layerId;
       },
 
@@ -377,7 +394,9 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) return;
 
         model.updateLayer(layerId, updates as Record<string, unknown>);
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       deleteLayer: (layerId) => {
@@ -385,7 +404,9 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) return;
 
         model.deleteLayer(layerId);
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       addElement: (params) => {
@@ -412,7 +433,6 @@ export const useDocumentStore = create<DocumentState>()(
         }
 
         const newDoc = { ...model.documentData };
-        const newDocJson = JSON.stringify(newDoc);
         const addRecord: ChangeRecord = {
           id: crypto.randomUUID(),
           timestamp: Date.now(),
@@ -427,11 +447,7 @@ export const useDocumentStore = create<DocumentState>()(
           changeHistory: [...changeHistory, addRecord].slice(-MAX_CHANGE_HISTORY),
         });
         maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
-        try {
-          localStorage.setItem(docKey(newDoc.id), newDocJson);
-        } catch { /* ignore storage errors */ }
-        // Also save to offline store so it persists across sessions
-        void offlineSaveDocument(newDoc.id, newDocJson).catch(() => {});
+        persistDocument(newDoc);
         return elementId;
       },
 
@@ -455,11 +471,14 @@ export const useDocumentStore = create<DocumentState>()(
           // Mutating in place silently skipped viewport updates.
           const nextElement = { ...element, ...updates };
           model.documentData.content.elements[elementId] = nextElement;
+          const doc = { ...model.documentData };
           set({
-            document: { ...model.documentData },
+            document: doc,
+            lastSaved: Date.now(),
             changeHistory: [...changeHistory, updateRecord].slice(-MAX_CHANGE_HISTORY),
           });
           maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
+          persistDocument(doc);
         }
       },
 
@@ -478,12 +497,14 @@ export const useDocumentStore = create<DocumentState>()(
           userId: model.client,
         };
         delete document.content.elements[elementId];
+        const doc = { ...document };
         set({
-          document: { ...document },
+          document: doc,
           lastSaved: Date.now(),
           changeHistory: [...changeHistory, deleteRecord].slice(-MAX_CHANGE_HISTORY),
         });
         maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
+        persistDocument(doc);
       },
 
       setElementMaterial: (elementId, materialId) => {
@@ -506,7 +527,9 @@ export const useDocumentStore = create<DocumentState>()(
         // textured materials. Mutating in place silently skipped rebuild.
         const nextElement = { ...element, properties: nextProperties };
         model.documentData.content.elements[elementId] = nextElement;
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       setToolParam: (tool, key, value) => {
@@ -533,7 +556,9 @@ export const useDocumentStore = create<DocumentState>()(
           ),
         };
         element.propertySets = [...(element.propertySets ?? []), newPset];
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       updatePsetProperty: (elementId, psetId, key, value) => {
@@ -554,7 +579,9 @@ export const useDocumentStore = create<DocumentState>()(
             },
           };
         });
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       removePset: (elementId, psetId) => {
@@ -563,7 +590,9 @@ export const useDocumentStore = create<DocumentState>()(
         const element = model.getElementById(elementId);
         if (!element) return;
         element.propertySets = (element.propertySets ?? []).filter((pset: PropertySet) => pset.id !== psetId);
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       setUserRole: (role) => set({ userRole: role }),
@@ -594,10 +623,8 @@ export const useDocumentStore = create<DocumentState>()(
           },
         };
         const newDoc = { ...model.documentData };
-        const newDocJson = JSON.stringify(newDoc);
         set({ document: newDoc, lastSaved: Date.now() });
-        try { localStorage.setItem(docKey(newDoc.id), newDocJson); } catch { /* ignore quota */ }
-        void offlineSaveDocument(newDoc.id, newDocJson).catch(() => {});
+        persistDocument(newDoc);
         return id;
       },
 
@@ -609,10 +636,8 @@ export const useDocumentStore = create<DocumentState>()(
         if (!view || view.type !== 'render') return;
         delete model.documentData.presentation.views[viewId];
         const newDoc = { ...model.documentData };
-        const newDocJson = JSON.stringify(newDoc);
         set({ document: newDoc, lastSaved: Date.now() });
-        try { localStorage.setItem(docKey(newDoc.id), newDocJson); } catch { /* ignore */ }
-        void offlineSaveDocument(newDoc.id, newDocJson).catch(() => {});
+        persistDocument(newDoc);
       },
 
       pushHistory: (description) => {
@@ -644,12 +669,15 @@ export const useDocumentStore = create<DocumentState>()(
         if (historyIndex <= 0) return;
 
         const newIndex = historyIndex - 1;
+        const doc = JSON.parse(JSON.stringify(history[newIndex].document)) as DocumentSchema;
         set({
-          document: JSON.parse(JSON.stringify(history[newIndex].document)),
+          document: doc,
           historyIndex: newIndex,
           canUndo: newIndex > 0,
           canRedo: true,
+          lastSaved: Date.now(),
         });
+        persistDocument(doc);
       },
 
       redo: () => {
@@ -657,12 +685,15 @@ export const useDocumentStore = create<DocumentState>()(
         if (historyIndex >= history.length - 1) return;
 
         const newIndex = historyIndex + 1;
+        const doc = JSON.parse(JSON.stringify(history[newIndex].document)) as DocumentSchema;
         set({
-          document: JSON.parse(JSON.stringify(history[newIndex].document)),
+          document: doc,
           historyIndex: newIndex,
           canUndo: true,
           canRedo: newIndex < history.length - 1,
+          lastSaved: Date.now(),
         });
+        persistDocument(doc);
       },
 
       createVersion: (message) => {
@@ -670,7 +701,9 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) return;
 
         model.createVersion(message);
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       restoreVersion: (versionNumber) => {
@@ -678,7 +711,9 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) return;
 
         model.restoreVersion(versionNumber);
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       getVersionList: () => {
@@ -692,8 +727,9 @@ export const useDocumentStore = create<DocumentState>()(
         const userId = existing ? existing.documentData.metadata.createdBy : 'user-1';
         const newModel = new DocumentModel(schema.id, userId);
         newModel.loadDocument(schema);
+        const doc = { ...newModel.documentData };
         set({
-          document: { ...newModel.documentData },
+          document: doc,
           model: newModel,
           lastSaved: Date.now(),
           history: [],
@@ -701,6 +737,7 @@ export const useDocumentStore = create<DocumentState>()(
           canUndo: false,
           canRedo: false,
         });
+        persistDocument(doc);
       },
 
       setActiveLevel: (levelId) => {
@@ -712,11 +749,13 @@ export const useDocumentStore = create<DocumentState>()(
         if (!model) throw new Error('No document loaded');
 
         const levelId = model.addLevel({ name: params.name, elevation: params.elevation, height: params.height });
+        const doc = { ...model.documentData };
         set({
-          document: { ...model.documentData },
+          document: doc,
           selectedLevelId: levelId,
           lastSaved: Date.now(),
         });
+        persistDocument(doc);
         return levelId;
       },
 
@@ -727,15 +766,15 @@ export const useDocumentStore = create<DocumentState>()(
         // Match updateLayer's throw-on-missing contract (audit 2026-04-19).
         if (!level) throw new Error(`Level not found: ${levelId}`);
         Object.assign(level, updates);
-        set({
-          document: {
-            ...document,
-            organization: {
-              ...document.organization,
-              levels: { ...document.organization.levels, [levelId]: { ...level } },
-            },
+        const doc = {
+          ...document,
+          organization: {
+            ...document.organization,
+            levels: { ...document.organization.levels, [levelId]: { ...level } },
           },
-        });
+        };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       deleteLevel: (levelId) => {
@@ -750,11 +789,13 @@ export const useDocumentStore = create<DocumentState>()(
 
         delete levels[levelId];
         const remainingIds = Object.keys(levels);
+        const doc = { ...model.documentData };
         set({
-          document: { ...model.documentData },
+          document: doc,
           selectedLevelId: remainingIds[0] ?? null,
           lastSaved: Date.now(),
         });
+        persistDocument(doc);
       },
 
       renameLevel: (levelId, name) => {
@@ -765,7 +806,9 @@ export const useDocumentStore = create<DocumentState>()(
         if (!level) return;
         level.name = name;
         model.documentData.metadata.updatedAt = Date.now();
-        set({ document: { ...model.documentData } });
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
       },
 
       renameProject: (name) => {
@@ -774,10 +817,8 @@ export const useDocumentStore = create<DocumentState>()(
         model.documentData.name = name;
         model.documentData.metadata.updatedAt = Date.now();
         const newDoc = { ...model.documentData };
-        set({ document: newDoc });
-        try {
-          localStorage.setItem(docKey(newDoc.id), JSON.stringify(newDoc));
-        } catch { /* ignore storage errors */ }
+        set({ document: newDoc, lastSaved: Date.now() });
+        persistDocument(newDoc);
       },
     }),
     {
