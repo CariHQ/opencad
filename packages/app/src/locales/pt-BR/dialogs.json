@@ -6,15 +6,15 @@
     "submit": "Entrar",
     "submitting": "Entrando…",
     "noAccount": "Não tem conta?",
-    "createAccount": "Criar conta gratuita",
+    "createAccount": "Criar uma gratuita",
     "or": "ou",
     "forgotPassword": "Esqueceu a senha?",
     "continueWithGoogle": "Continuar com Google",
     "continueWithMicrosoft": "Continuar com Microsoft",
     "invalidCredentials": "E-mail ou senha incorretos.",
     "mfaTitle": "Verifique sua identidade",
-    "mfaHint": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
-    "mfaCode": "Código de verificação",
+    "mfaHint": "Digite o código de 6 dígitos do seu app autenticador.",
+    "mfaCode": "Código do autenticador",
     "mfaVerify": "Verificar"
   },
   "signUp": {
@@ -27,14 +27,14 @@
     "haveAccount": "Já tem uma conta?",
     "signIn": "Entrar",
     "passwordHint": "Pelo menos 8 caracteres.",
-    "termsAgree": "Ao criar uma conta você concorda com nossos <a>Termos</a> e <a2>Política de Privacidade</a2>."
+    "termsAgree": "Ao criar uma conta você aceita nossos <a>Termos</a> e <a2>Política de Privacidade</a2>."
   },
   "forgotPassword": {
     "title": "Redefinir senha",
     "hint": "Enviaremos um link de redefinição para seu e-mail.",
     "submit": "Enviar link",
-    "sent": "Verifique sua caixa de entrada.",
-    "backToSignIn": "Voltar para o login"
+    "sent": "Verifique sua caixa de entrada para o link de redefinição.",
+    "backToSignIn": "Voltar para entrar"
   },
   "newProject": {
     "title": "Novo projeto",
@@ -47,7 +47,7 @@
   "openProject": {
     "title": "Abrir projeto",
     "placeholder": "Buscar projetos…",
-    "empty": "Nenhum projeto ainda."
+    "empty": "Ainda sem projetos."
   },
   "confirmDelete": {
     "title": "Excluir {{name}}?",
@@ -59,7 +59,7 @@
     "importTitle": "Importar arquivo",
     "exportTitle": "Exportar arquivo",
     "dropHint": "Solte um arquivo aqui ou clique para procurar.",
-    "supportedFormats": "Compatíveis: IFC, DWG, DXF, SKP, RVT, PDF",
+    "supportedFormats": "Suportados: IFC, DWG, DXF, SKP, RVT, PDF",
     "exporting": "Exportando…",
     "export": "Exportar",
     "format": "Formato",
@@ -67,27 +67,28 @@
   },
   "subscription": {
     "title": "Escolha seu plano",
-    "subtitle": "Mude quando quiser — sem compromisso de longo prazo.",
+    "subtitle": "Mude de plano quando quiser — sem compromisso de longo prazo.",
     "currentPlan": "Plano atual",
     "upgradeTo": "Mudar para {{plan}}",
     "manageBilling": "Gerenciar cobrança",
     "perUserMonth": "por usuário / mês",
     "mostPopular": "Mais popular",
+    "close": "Fechar",
     "plans": {
       "free": {
-        "label": "Gratuito",
-        "price": "US$ 0",
+        "label": "Grátis",
+        "price": "R$ 0",
         "priceDetail": "para sempre",
         "features": {
           "f1": "1 projeto",
-          "f2": "Ferramentas básicas de desenho 2D",
+          "f2": "Ferramentas 2D básicas",
           "f3": "Apenas armazenamento local",
           "f4": "Suporte da comunidade"
         }
       },
       "pro": {
         "label": "Pro",
-        "price": "US$ 29",
+        "price": "R$ 149",
         "features": {
           "f1": "Projetos ilimitados",
           "f2": "Colaboração em tempo real",
@@ -97,7 +98,7 @@
       },
       "business": {
         "label": "Business",
-        "price": "US$ 99",
+        "price": "R$ 499",
         "features": {
           "f1": "Tudo do Pro",
           "f2": "Papéis e permissões de admin",
@@ -105,47 +106,46 @@
           "f4": "Suporte prioritário por telefone"
         }
       }
-    },
-    "close": "Fechar"
+    }
   },
   "commandPalette": {
     "placeholder": "Buscar comandos…",
     "empty": "Nenhum comando encontrado.",
     "groups": {
       "tools": "Ferramentas",
-      "views": "Visualizações",
+      "views": "Vistas",
       "panels": "Painéis",
       "file": "Arquivo",
       "edit": "Editar",
       "help": "Ajuda"
     }
   },
+  "help": {
+    "title": "Ajuda",
+    "close": "Fechar ajuda",
+    "tabs": {
+      "shortcuts": "Atalhos",
+      "howTo": "Como fazer",
+      "tips": "Dicas"
+    },
+    "takeGuidedTour": "Iniciar tour guiado",
+    "searchShortcuts": "Buscar atalhos…",
+    "noShortcutsMatch": "Nenhum atalho corresponde a \"{{query}}\".",
+    "needMore": "Precisa de mais?",
+    "openIssue": "Abrir um chamado"
+  },
   "feedback": {
     "title": "Enviar feedback",
     "categoryLabel": "Tipo",
     "titleLabel": "Título",
     "descriptionLabel": "Descrição",
-    "submit": "Enviar comentário",
+    "submit": "Enviar feedback",
     "submitting": "Enviando…",
     "sent": "Obrigado pelo seu feedback!",
     "categories": {
-      "bug": "Bug",
+      "bug": "Erro",
       "feature": "Solicitação de funcionalidade",
       "question": "Pergunta"
     }
-  },
-  "help": {
-    "title": "Help",
-    "close": "Close help",
-    "tabs": {
-      "shortcuts": "Shortcuts",
-      "howTo": "How To",
-      "tips": "Tips"
-    },
-    "takeGuidedTour": "Take the guided tour",
-    "searchShortcuts": "Search shortcuts…",
-    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
-    "needMore": "Need more?",
-    "openIssue": "Open an issue"
   }
 }

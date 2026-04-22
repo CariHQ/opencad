@@ -41,13 +41,13 @@
     "saved": "Enregistré",
     "syncing": "Synchronisation…",
     "storageAlmostFull": "⚠ Stockage presque plein",
-    "storageWarningTooltip": "L'utilisation du stockage dépasse 80 % — pensez à exporter vos projets",
+    "storageWarningTooltip": "Utilisation du stockage supérieure à 80 % — pensez à exporter vos projets",
     "selected_one": "{{count}} sélectionné",
     "selected_other": "{{count}} sélectionnés",
     "elements_one": "{{count}} élément",
     "elements_other": "{{count}} éléments",
-    "fpsTooltip": "Taux de rafraîchissement moyen glissant",
-    "webgpuTooltip": "Three.js WebGPURenderer — compute shaders activés",
+    "fpsTooltip": "Fréquence d'images moyenne",
+    "webgpuTooltip": "Three.js WebGPURenderer — shaders de calcul activés",
     "webglTooltip": "Repli WebGL 2.0 — WebGPU indisponible ou désactivé",
     "currentRole": "Rôle actuel : {{label}}"
   },
@@ -55,31 +55,91 @@
     "floorPlan": "Plan d'étage",
     "threeD": "Vue 3D",
     "section": "Coupe",
+    "sectionAA": "Coupe A-A",
     "elevation": "Élévation",
-    "sectionAA": "Section A-A",
-    "layout1": "Layout 1"
+    "layout1": "Présentation 1"
+  },
+  "coord": {
+    "inputAria": "Saisie de coordonnées"
+  },
+  "error": {
+    "somethingWentWrong": "Une erreur est survenue",
+    "panelFailed": "Le panneau n'a pas pu se charger",
+    "tryAgain": "Réessayer"
+  },
+  "tour": {
+    "title": "Visite guidée",
+    "close": "Fermer la visite",
+    "skip": "Passer la visite",
+    "next": "Suivant",
+    "back": "Retour",
+    "finish": "Terminer"
+  },
+  "language": {
+    "aria": "Langue",
+    "detected": "Détectée depuis votre système"
+  },
+  "resizer": {
+    "aria": "Glisser pour redimensionner le panneau"
+  },
+  "contextMenu": {
+    "aria": "Menu contextuel"
+  },
+  "viewport": {
+    "zoomIn": "Zoom avant",
+    "zoomInShort": "Zoom avant",
+    "zoomInWithShortcut": "Zoom avant (+)",
+    "zoomOut": "Zoom arrière",
+    "zoomOutShort": "Zoom arrière",
+    "zoomOutWithShortcut": "Zoom arrière (-)",
+    "zoomToFit": "Cadrer",
+    "zoomToFitWithShortcut": "Cadrer (0)",
+    "fit": "Cadrer",
+    "resetCamera": "Réinitialiser la caméra",
+    "sectionBox": "Boîte de coupe",
+    "topView": "Vue de dessus",
+    "topViewWithShortcut": "Vue de dessus (1)",
+    "frontView": "Vue de face",
+    "frontViewWithShortcut": "Vue de face (2)",
+    "rightView": "Vue de droite",
+    "rightViewWithShortcut": "Vue de droite (3)",
+    "perspective": "Perspective",
+    "perspectiveWithShortcut": "Perspective (4)",
+    "presetView": "Vue {{preset}}",
+    "cutAlongAxis": "Couper selon l'axe {{axis}}",
+    "cutAxis": "Axe de coupe",
+    "cutPlanePosition": "Position du plan de coupe",
+    "position": "Position",
+    "sectionCutControls": "Commandes de coupe",
+    "sectionCutHint": "Le curseur déplace le plan de coupe · Glisser pour orbiter · Maj+glisser pour panoramiquer · Molette pour zoomer",
+    "info2D": "Zoom : molette | Pan : clic milieu | Ctrl : magnétisme désactivé",
+    "info3D": "Orbite : glisser | Pan : Maj+glisser | Zoom : molette | Cadrer : 0",
+    "info3DLong": "Orbite par glisser · Pan à deux doigts · Pincer/Ctrl+molette pour zoomer · Flèches pour orbiter · Maj+flèches pour panoramiquer · Alt pour précision · 0 pour cadrer · 1/2/3/4 pour les vues",
+    "info2DShort": "Dessiner : glisser · Pan : clic milieu · Zoom : molette",
+    "splitView": "Vue scindée : plan d'étage + 3D",
+    "viewCubeAria": "Cube d'orientation"
   },
   "settings": {
     "title": "Paramètres",
     "tabs": {
       "language": "Langue",
       "apiKeys": "Clés API",
-      "permissions": "Autorisations",
+      "permissions": "Permissions",
       "sso": "SSO",
       "billing": "Facturation"
     }
   },
   "tooltip": {
     "backToProjects": "Accueil — retour aux projets",
-    "toggleLeftPanel": "Basculer le navigateur",
-    "toggleRightPanel": "Basculer les propriétés",
+    "toggleLeftPanel": "Afficher/masquer le navigateur",
+    "toggleRightPanel": "Afficher/masquer les propriétés",
     "renameProject": "Cliquer pour renommer le projet",
     "newProject": "Nouveau projet",
     "openProject": "Ouvrir un projet",
     "saveProject": "Enregistrer",
     "importFile": "Importer IFC",
     "exportFile": "Exporter IFC",
-    "toggleTheme": "Basculer thème clair/sombre"
+    "toggleTheme": "Basculer le thème clair/sombre"
   },
   "update": {
     "available": "La version {{version}} est disponible",
@@ -92,11 +152,32 @@
     "before": "Appuyez sur",
     "after": "pour quitter le mode focus"
   },
+  "home": {
+    "newProject": "Nouveau projet",
+    "newBlankProject": "Nouveau projet vide",
+    "signIn": "Se connecter",
+    "recentProjects": "Projets récents",
+    "importIfcDwgPdf": "Importer IFC / DWG / PDF",
+    "emptyText": "Démarrez un nouveau projet ou importez un fichier",
+    "importFile": "Importer un fichier",
+    "open": "Ouvrir",
+    "startFromTemplate": "Démarrer à partir d'un modèle",
+    "chooseTemplate": "Choisir un modèle",
+    "projectTemplates": "Modèles de projet"
+  },
+  "browser": {
+    "searchProjects": "Rechercher des projets…",
+    "recentFirst": "Les plus récents",
+    "oldestFirst": "Les plus anciens",
+    "gridView": "Vue en grille",
+    "listView": "Vue en liste",
+    "noProjects": "Aucun projet trouvé"
+  },
   "dashboard": {
     "title": "Projets",
     "fromTemplate": "Depuis un modèle",
     "newProject": "Nouveau projet",
-    "newBlankProject": "Nouveau projet vierge",
+    "newBlankProject": "Nouveau projet vide",
     "filter": {
       "all": "Tous",
       "starred": "Favoris",
@@ -107,20 +188,20 @@
     "sortBy": "Trier par",
     "sort": {
       "lastEdited": "Dernière modification",
-      "created": "Création",
+      "created": "Créé",
       "name": "Nom",
       "size": "Taille"
     },
     "gridView": "Vue en grille",
     "listView": "Vue en liste",
     "empty": {
-      "title": "Aucun projet pour le moment",
-      "subtitle": "Commencez par un canevas vierge ou choisissez un modèle ci-dessous.",
-      "orTemplate": "Ou partez d'un modèle"
+      "title": "Aucun projet pour l'instant",
+      "subtitle": "Commencez par une toile vierge ou choisissez un modèle ci-dessous.",
+      "orTemplate": "Ou démarrez à partir d'un modèle"
     },
     "card": {
-      "clickToOpen": "Cliquer pour ouvrir · double-clic pour renommer",
-      "star": "Mettre en favori",
+      "clickToOpen": "Cliquer pour ouvrir · Double-cliquer pour renommer",
+      "star": "Marquer comme favori",
       "unstar": "Retirer des favoris",
       "delete": "Supprimer le projet"
     },
@@ -128,86 +209,5 @@
     "closeSettings": "Fermer les paramètres",
     "signOut": "Se déconnecter",
     "upgradeToPro": "Passer à Pro"
-  },
-  "coord": {
-    "inputAria": "Coordinate input"
-  },
-  "error": {
-    "somethingWentWrong": "Something went wrong",
-    "panelFailed": "Panel failed to load",
-    "tryAgain": "Try again"
-  },
-  "tour": {
-    "title": "Guided tour",
-    "close": "Close tour",
-    "skip": "Skip tour",
-    "next": "Next",
-    "back": "Back",
-    "finish": "Finish"
-  },
-  "language": {
-    "aria": "Language",
-    "detected": "Detected from your system"
-  },
-  "resizer": {
-    "aria": "Drag to resize panel"
-  },
-  "contextMenu": {
-    "aria": "Context menu"
-  },
-  "viewport": {
-    "zoomIn": "Zoom In",
-    "zoomInShort": "Zoom in",
-    "zoomInWithShortcut": "Zoom In (+)",
-    "zoomOut": "Zoom Out",
-    "zoomOutShort": "Zoom out",
-    "zoomOutWithShortcut": "Zoom Out (-)",
-    "zoomToFit": "Zoom to Fit",
-    "zoomToFitWithShortcut": "Zoom to Fit (0)",
-    "fit": "Fit",
-    "resetCamera": "Reset camera",
-    "sectionBox": "Section Box",
-    "topView": "Top view",
-    "topViewWithShortcut": "Top view (1)",
-    "frontView": "Front view",
-    "frontViewWithShortcut": "Front view (2)",
-    "rightView": "Right view",
-    "rightViewWithShortcut": "Right view (3)",
-    "perspective": "Perspective",
-    "perspectiveWithShortcut": "Perspective (4)",
-    "presetView": "{{preset}} View",
-    "cutAlongAxis": "Cut along {{axis}} axis",
-    "cutAxis": "Cut axis",
-    "cutPlanePosition": "Cut plane position",
-    "position": "Position",
-    "sectionCutControls": "Section cut controls",
-    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
-    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
-    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
-    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
-    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
-    "splitView": "Split view: floor plan + 3D",
-    "viewCubeAria": "View orientation cube"
-  },
-  "home": {
-    "newProject": "New Project",
-    "newBlankProject": "New Blank Project",
-    "signIn": "Sign In",
-    "recentProjects": "Recent Projects",
-    "importIfcDwgPdf": "Import IFC / DWG / PDF",
-    "emptyText": "Start a new project or import a file",
-    "importFile": "Import a File",
-    "open": "Open",
-    "startFromTemplate": "Start from a Template",
-    "chooseTemplate": "Choose a Template",
-    "projectTemplates": "Project Templates"
-  },
-  "browser": {
-    "searchProjects": "Search projects…",
-    "recentFirst": "Recent first",
-    "oldestFirst": "Oldest first",
-    "gridView": "Grid view",
-    "listView": "List view",
-    "noProjects": "No projects found"
   }
 }

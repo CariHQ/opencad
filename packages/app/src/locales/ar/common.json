@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "OpenCAD",
-    "tagline": "BIM أصلي للمتصفح"
+    "tagline": "BIM أصلي في المتصفح"
   },
   "action": {
     "save": "حفظ",
@@ -27,11 +27,11 @@
     "home": "الرئيسية",
     "projects": "المشاريع",
     "settings": "الإعدادات",
-    "billing": "الفواتير",
+    "billing": "الفوترة",
     "signOut": "تسجيل الخروج",
-    "help": "مساعدة",
-    "feedback": "ملاحظات",
-    "ai": "مساعد ذكاء اصطناعي",
+    "help": "المساعدة",
+    "feedback": "الملاحظات",
+    "ai": "مساعد الذكاء الاصطناعي",
     "plugins": "الإضافات"
   },
   "status": {
@@ -40,24 +40,84 @@
     "saving": "جارٍ الحفظ…",
     "saved": "تم الحفظ",
     "syncing": "جارٍ المزامنة…",
-    "storageAlmostFull": "⚠ مساحة التخزين شبه ممتلئة",
-    "storageWarningTooltip": "استخدام التخزين تجاوز 80٪ — فكّر في تصدير مشاريعك",
-    "selected_one": "{{count}} محدد",
-    "selected_other": "{{count}} محددة",
+    "storageAlmostFull": "⚠ التخزين ممتلئ تقريبًا",
+    "storageWarningTooltip": "استخدام التخزين تجاوز 80% — يُنصح بتصدير مشاريعك",
+    "selected_one": "تم تحديد {{count}}",
+    "selected_other": "تم تحديد {{count}}",
     "elements_one": "{{count}} عنصر",
-    "elements_other": "{{count}} عنصر",
-    "fpsTooltip": "متوسط معدل الإطارات (متحرك)",
-    "webgpuTooltip": "Three.js WebGPURenderer — تم تمكين compute shaders",
-    "webglTooltip": "احتياطي WebGL 2.0 — WebGPU غير متاح أو معطل",
+    "elements_other": "{{count}} عناصر",
+    "fpsTooltip": "متوسط معدل الإطارات",
+    "webgpuTooltip": "Three.js WebGPURenderer — تشيدرز الحوسبة مفعّلة",
+    "webglTooltip": "WebGL 2.0 احتياطي — WebGPU غير متاح أو معطّل",
     "currentRole": "الدور الحالي: {{label}}"
   },
   "view": {
-    "floorPlan": "مسقط",
+    "floorPlan": "المسقط الأفقي",
     "threeD": "عرض ثلاثي الأبعاد",
     "section": "مقطع",
+    "sectionAA": "مقطع A-A",
     "elevation": "واجهة",
-    "sectionAA": "Section A-A",
-    "layout1": "Layout 1"
+    "layout1": "تخطيط 1"
+  },
+  "coord": {
+    "inputAria": "إدخال الإحداثيات"
+  },
+  "error": {
+    "somethingWentWrong": "حدث خطأ ما",
+    "panelFailed": "تعذّر تحميل اللوحة",
+    "tryAgain": "إعادة المحاولة"
+  },
+  "tour": {
+    "title": "جولة إرشادية",
+    "close": "إغلاق الجولة",
+    "skip": "تخطي الجولة",
+    "next": "التالي",
+    "back": "السابق",
+    "finish": "إنهاء"
+  },
+  "language": {
+    "aria": "اللغة",
+    "detected": "تم اكتشافه من نظامك"
+  },
+  "resizer": {
+    "aria": "اسحب لتغيير حجم اللوحة"
+  },
+  "contextMenu": {
+    "aria": "قائمة سياقية"
+  },
+  "viewport": {
+    "zoomIn": "تكبير",
+    "zoomInShort": "تكبير",
+    "zoomInWithShortcut": "تكبير (+)",
+    "zoomOut": "تصغير",
+    "zoomOutShort": "تصغير",
+    "zoomOutWithShortcut": "تصغير (-)",
+    "zoomToFit": "ملاءمة العرض",
+    "zoomToFitWithShortcut": "ملاءمة العرض (0)",
+    "fit": "ملاءمة",
+    "resetCamera": "إعادة ضبط الكاميرا",
+    "sectionBox": "صندوق المقطع",
+    "topView": "العرض العلوي",
+    "topViewWithShortcut": "العرض العلوي (1)",
+    "frontView": "العرض الأمامي",
+    "frontViewWithShortcut": "العرض الأمامي (2)",
+    "rightView": "العرض الأيمن",
+    "rightViewWithShortcut": "العرض الأيمن (3)",
+    "perspective": "منظور",
+    "perspectiveWithShortcut": "منظور (4)",
+    "presetView": "عرض {{preset}}",
+    "cutAlongAxis": "قطع على طول المحور {{axis}}",
+    "cutAxis": "محور القطع",
+    "cutPlanePosition": "موضع مستوى القطع",
+    "position": "الموضع",
+    "sectionCutControls": "عناصر تحكم القطع",
+    "sectionCutHint": "ينقل المنزلق مستوى القطع · اسحب للدوران · Shift+سحب للتحريك · مرّر للتكبير",
+    "info2D": "تكبير: تمرير | تحريك: سحب الزر الأوسط | Ctrl: إيقاف الالتقاط",
+    "info3D": "دوران: سحب | تحريك: Shift+سحب | تكبير: تمرير | ملاءمة: 0",
+    "info3DLong": "دوران بالسحب · تحريك بإصبعين · Pinch/Ctrl+تمرير للتكبير · أسهم للدوران · Shift+أسهم للتحريك · Alt للضبط الدقيق · 0 للملاءمة · 1/2/3/4 للعروض",
+    "info2DShort": "رسم: سحب · تحريك: زر أوسط · تكبير: تمرير",
+    "splitView": "عرض مقسم: المسقط الأفقي + ثلاثي الأبعاد",
+    "viewCubeAria": "مكعب توجيه العرض"
   },
   "settings": {
     "title": "الإعدادات",
@@ -65,32 +125,53 @@
       "language": "اللغة",
       "apiKeys": "مفاتيح API",
       "permissions": "الصلاحيات",
-      "sso": "تسجيل الدخول الموحد",
-      "billing": "الفواتير"
+      "sso": "SSO",
+      "billing": "الفوترة"
     }
   },
   "tooltip": {
     "backToProjects": "الرئيسية — العودة إلى المشاريع",
-    "toggleLeftPanel": "تبديل المتصفح",
-    "toggleRightPanel": "تبديل الخصائص",
+    "toggleLeftPanel": "إظهار/إخفاء المتصفح",
+    "toggleRightPanel": "إظهار/إخفاء الخصائص",
     "renameProject": "انقر لإعادة تسمية المشروع",
     "newProject": "مشروع جديد",
     "openProject": "فتح مشروع",
     "saveProject": "حفظ",
     "importFile": "استيراد IFC",
     "exportFile": "تصدير IFC",
-    "toggleTheme": "تبديل بين الوضع الفاتح والداكن"
+    "toggleTheme": "تبديل السمة الفاتحة/الداكنة"
   },
   "update": {
     "available": "الإصدار {{version}} متاح",
     "install": "تثبيت التحديث",
-    "installing": "جارٍ التثبيت…",
+    "installing": "جارٍ التثبيت...",
     "dismiss": "تجاهل",
     "dismissAria": "تجاهل إشعار التحديث"
   },
   "focusHint": {
     "before": "اضغط",
     "after": "للخروج من وضع التركيز"
+  },
+  "home": {
+    "newProject": "مشروع جديد",
+    "newBlankProject": "مشروع فارغ جديد",
+    "signIn": "تسجيل الدخول",
+    "recentProjects": "المشاريع الحديثة",
+    "importIfcDwgPdf": "استيراد IFC / DWG / PDF",
+    "emptyText": "ابدأ مشروعًا جديدًا أو استورد ملفًا",
+    "importFile": "استيراد ملف",
+    "open": "فتح",
+    "startFromTemplate": "ابدأ من قالب",
+    "chooseTemplate": "اختر قالبًا",
+    "projectTemplates": "قوالب المشاريع"
+  },
+  "browser": {
+    "searchProjects": "ابحث في المشاريع…",
+    "recentFirst": "الأحدث أولًا",
+    "oldestFirst": "الأقدم أولًا",
+    "gridView": "عرض شبكي",
+    "listView": "عرض قائمة",
+    "noProjects": "لم يتم العثور على مشاريع"
   },
   "dashboard": {
     "title": "المشاريع",
@@ -99,11 +180,11 @@
     "newBlankProject": "مشروع فارغ جديد",
     "filter": {
       "all": "الكل",
-      "starred": "المميزة",
-      "mine": "مشاريعي",
-      "shared": "المشترَكة"
+      "starred": "المفضلة",
+      "mine": "خاصتي",
+      "shared": "مشتركة"
     },
-    "searchPlaceholder": "ابحث عن المشاريع…",
+    "searchPlaceholder": "ابحث في المشاريع…",
     "sortBy": "ترتيب حسب",
     "sort": {
       "lastEdited": "آخر تعديل",
@@ -119,95 +200,14 @@
       "orTemplate": "أو ابدأ من قالب"
     },
     "card": {
-      "clickToOpen": "انقر للفتح · انقر نقرًا مزدوجًا لإعادة التسمية",
-      "star": "تمييز المشروع",
-      "unstar": "إلغاء التمييز",
+      "clickToOpen": "انقر للفتح · انقر مرتين لإعادة التسمية",
+      "star": "إضافة إلى المفضلة",
+      "unstar": "إزالة من المفضلة",
       "delete": "حذف المشروع"
     },
     "closeTemplates": "إغلاق القوالب",
     "closeSettings": "إغلاق الإعدادات",
     "signOut": "تسجيل الخروج",
     "upgradeToPro": "الترقية إلى Pro"
-  },
-  "coord": {
-    "inputAria": "Coordinate input"
-  },
-  "error": {
-    "somethingWentWrong": "Something went wrong",
-    "panelFailed": "Panel failed to load",
-    "tryAgain": "Try again"
-  },
-  "tour": {
-    "title": "Guided tour",
-    "close": "Close tour",
-    "skip": "Skip tour",
-    "next": "Next",
-    "back": "Back",
-    "finish": "Finish"
-  },
-  "language": {
-    "aria": "Language",
-    "detected": "Detected from your system"
-  },
-  "resizer": {
-    "aria": "Drag to resize panel"
-  },
-  "contextMenu": {
-    "aria": "Context menu"
-  },
-  "viewport": {
-    "zoomIn": "Zoom In",
-    "zoomInShort": "Zoom in",
-    "zoomInWithShortcut": "Zoom In (+)",
-    "zoomOut": "Zoom Out",
-    "zoomOutShort": "Zoom out",
-    "zoomOutWithShortcut": "Zoom Out (-)",
-    "zoomToFit": "Zoom to Fit",
-    "zoomToFitWithShortcut": "Zoom to Fit (0)",
-    "fit": "Fit",
-    "resetCamera": "Reset camera",
-    "sectionBox": "Section Box",
-    "topView": "Top view",
-    "topViewWithShortcut": "Top view (1)",
-    "frontView": "Front view",
-    "frontViewWithShortcut": "Front view (2)",
-    "rightView": "Right view",
-    "rightViewWithShortcut": "Right view (3)",
-    "perspective": "Perspective",
-    "perspectiveWithShortcut": "Perspective (4)",
-    "presetView": "{{preset}} View",
-    "cutAlongAxis": "Cut along {{axis}} axis",
-    "cutAxis": "Cut axis",
-    "cutPlanePosition": "Cut plane position",
-    "position": "Position",
-    "sectionCutControls": "Section cut controls",
-    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
-    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
-    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
-    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
-    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
-    "splitView": "Split view: floor plan + 3D",
-    "viewCubeAria": "View orientation cube"
-  },
-  "home": {
-    "newProject": "New Project",
-    "newBlankProject": "New Blank Project",
-    "signIn": "Sign In",
-    "recentProjects": "Recent Projects",
-    "importIfcDwgPdf": "Import IFC / DWG / PDF",
-    "emptyText": "Start a new project or import a file",
-    "importFile": "Import a File",
-    "open": "Open",
-    "startFromTemplate": "Start from a Template",
-    "chooseTemplate": "Choose a Template",
-    "projectTemplates": "Project Templates"
-  },
-  "browser": {
-    "searchProjects": "Search projects…",
-    "recentFirst": "Recent first",
-    "oldestFirst": "Oldest first",
-    "gridView": "Grid view",
-    "listView": "List view",
-    "noProjects": "No projects found"
   }
 }

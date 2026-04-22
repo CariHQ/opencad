@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "OpenCAD",
-    "tagline": "Нативный BIM для браузера"
+    "tagline": "BIM прямо в браузере"
   },
   "action": {
     "save": "Сохранить",
@@ -18,8 +18,8 @@
     "loading": "Загрузка…",
     "retry": "Повторить",
     "done": "Готово",
-    "import": "Импорт",
-    "export": "Экспорт",
+    "import": "Импортировать",
+    "export": "Экспортировать",
     "undo": "Отменить",
     "redo": "Повторить"
   },
@@ -27,7 +27,7 @@
     "home": "Главная",
     "projects": "Проекты",
     "settings": "Настройки",
-    "billing": "Оплата",
+    "billing": "Биллинг",
     "signOut": "Выйти",
     "help": "Справка",
     "feedback": "Обратная связь",
@@ -36,61 +36,144 @@
   },
   "status": {
     "online": "В сети",
-    "offline": "Нет сети",
+    "offline": "Не в сети",
     "saving": "Сохранение…",
     "saved": "Сохранено",
     "syncing": "Синхронизация…",
     "storageAlmostFull": "⚠ Хранилище почти заполнено",
-    "storageWarningTooltip": "Использование хранилища превысило 80 % — рекомендуем экспортировать проекты",
-    "selected_one": "выбран {{count}}",
-    "selected_other": "выбрано {{count}}",
+    "storageWarningTooltip": "Использовано более 80 % хранилища — рекомендуем экспортировать проекты",
+    "selected_one": "Выбран {{count}}",
+    "selected_few": "Выбрано {{count}}",
+    "selected_other": "Выбрано {{count}}",
     "elements_one": "{{count}} элемент",
+    "elements_few": "{{count}} элемента",
     "elements_other": "{{count}} элементов",
     "fpsTooltip": "Скользящее среднее частоты кадров",
-    "webgpuTooltip": "Three.js WebGPURenderer — compute-шейдеры включены",
-    "webglTooltip": "Откат на WebGL 2.0 — WebGPU недоступен или отключён",
+    "webgpuTooltip": "Three.js WebGPURenderer — вычислительные шейдеры включены",
+    "webglTooltip": "Запасной вариант WebGL 2.0 — WebGPU недоступен или отключён",
     "currentRole": "Текущая роль: {{label}}"
   },
   "view": {
     "floorPlan": "План этажа",
     "threeD": "3D-вид",
     "section": "Разрез",
+    "sectionAA": "Разрез А-А",
     "elevation": "Фасад",
-    "sectionAA": "Section A-A",
-    "layout1": "Layout 1"
+    "layout1": "Лист 1"
+  },
+  "coord": {
+    "inputAria": "Ввод координат"
+  },
+  "error": {
+    "somethingWentWrong": "Что-то пошло не так",
+    "panelFailed": "Не удалось загрузить панель",
+    "tryAgain": "Повторить"
+  },
+  "tour": {
+    "title": "Обзорный тур",
+    "close": "Закрыть тур",
+    "skip": "Пропустить тур",
+    "next": "Далее",
+    "back": "Назад",
+    "finish": "Завершить"
+  },
+  "language": {
+    "aria": "Язык",
+    "detected": "Определено по системе"
+  },
+  "resizer": {
+    "aria": "Перетащите, чтобы изменить размер панели"
+  },
+  "contextMenu": {
+    "aria": "Контекстное меню"
+  },
+  "viewport": {
+    "zoomIn": "Увеличить",
+    "zoomInShort": "Увеличить",
+    "zoomInWithShortcut": "Увеличить (+)",
+    "zoomOut": "Уменьшить",
+    "zoomOutShort": "Уменьшить",
+    "zoomOutWithShortcut": "Уменьшить (-)",
+    "zoomToFit": "По размеру окна",
+    "zoomToFitWithShortcut": "По размеру окна (0)",
+    "fit": "По размеру",
+    "resetCamera": "Сбросить камеру",
+    "sectionBox": "Секущий бокс",
+    "topView": "Вид сверху",
+    "topViewWithShortcut": "Вид сверху (1)",
+    "frontView": "Вид спереди",
+    "frontViewWithShortcut": "Вид спереди (2)",
+    "rightView": "Вид справа",
+    "rightViewWithShortcut": "Вид справа (3)",
+    "perspective": "Перспектива",
+    "perspectiveWithShortcut": "Перспектива (4)",
+    "presetView": "Вид {{preset}}",
+    "cutAlongAxis": "Сечение по оси {{axis}}",
+    "cutAxis": "Ось сечения",
+    "cutPlanePosition": "Положение секущей плоскости",
+    "position": "Позиция",
+    "sectionCutControls": "Управление сечением",
+    "sectionCutHint": "Ползунок перемещает секущую плоскость · Перетаскивание — орбита · Shift+перетаскивание — панорама · Колёсико — масштаб",
+    "info2D": "Масштаб: колёсико | Панорама: средняя кнопка | Ctrl: без привязки",
+    "info3D": "Орбита: перетаскивание | Панорама: Shift+перетаскивание | Масштаб: колёсико | По размеру: 0",
+    "info3DLong": "Орбита перетаскиванием · Панорама двумя пальцами · Pinch/Ctrl+колёсико для масштаба · Стрелки — орбита · Shift+стрелки — панорама · Alt — точная настройка · 0 — по размеру · 1/2/3/4 — виды",
+    "info2DShort": "Рисование: перетаскивание · Панорама: средняя кнопка · Масштаб: колёсико",
+    "splitView": "Разделённый вид: план + 3D",
+    "viewCubeAria": "Куб ориентации видов"
   },
   "settings": {
     "title": "Настройки",
     "tabs": {
       "language": "Язык",
-      "apiKeys": "Ключи API",
+      "apiKeys": "API-ключи",
       "permissions": "Разрешения",
       "sso": "SSO",
-      "billing": "Оплата"
+      "billing": "Биллинг"
     }
   },
   "tooltip": {
-    "backToProjects": "Главная — вернуться к проектам",
-    "toggleLeftPanel": "Переключить навигатор",
-    "toggleRightPanel": "Переключить свойства",
+    "backToProjects": "Главная — назад к проектам",
+    "toggleLeftPanel": "Показать/скрыть навигатор",
+    "toggleRightPanel": "Показать/скрыть свойства",
     "renameProject": "Нажмите, чтобы переименовать проект",
     "newProject": "Новый проект",
     "openProject": "Открыть проект",
     "saveProject": "Сохранить",
     "importFile": "Импорт IFC",
     "exportFile": "Экспорт IFC",
-    "toggleTheme": "Светлая / тёмная тема"
+    "toggleTheme": "Светлая/тёмная тема"
   },
   "update": {
     "available": "Доступна версия {{version}}",
     "install": "Установить обновление",
-    "installing": "Установка…",
-    "dismiss": "Скрыть",
-    "dismissAria": "Скрыть уведомление об обновлении"
+    "installing": "Установка...",
+    "dismiss": "Закрыть",
+    "dismissAria": "Закрыть уведомление об обновлении"
   },
   "focusHint": {
     "before": "Нажмите",
-    "after": "для выхода из режима фокуса"
+    "after": "для выхода из режима фокусировки"
+  },
+  "home": {
+    "newProject": "Новый проект",
+    "newBlankProject": "Новый пустой проект",
+    "signIn": "Войти",
+    "recentProjects": "Недавние проекты",
+    "importIfcDwgPdf": "Импорт IFC / DWG / PDF",
+    "emptyText": "Создайте новый проект или импортируйте файл",
+    "importFile": "Импортировать файл",
+    "open": "Открыть",
+    "startFromTemplate": "Начать с шаблона",
+    "chooseTemplate": "Выберите шаблон",
+    "projectTemplates": "Шаблоны проектов"
+  },
+  "browser": {
+    "searchProjects": "Поиск проектов…",
+    "recentFirst": "Сначала новые",
+    "oldestFirst": "Сначала старые",
+    "gridView": "Сетка",
+    "listView": "Список",
+    "noProjects": "Проекты не найдены"
   },
   "dashboard": {
     "title": "Проекты",
@@ -99,7 +182,7 @@
     "newBlankProject": "Новый пустой проект",
     "filter": {
       "all": "Все",
-      "starred": "Избранные",
+      "starred": "Избранное",
       "mine": "Мои",
       "shared": "Общие"
     },
@@ -107,20 +190,20 @@
     "sortBy": "Сортировать по",
     "sort": {
       "lastEdited": "Последнее изменение",
-      "created": "Дата создания",
+      "created": "Создано",
       "name": "Имя",
       "size": "Размер"
     },
-    "gridView": "Сеткой",
-    "listView": "Списком",
+    "gridView": "Сетка",
+    "listView": "Список",
     "empty": {
       "title": "Проектов пока нет",
       "subtitle": "Начните с пустого холста или выберите шаблон ниже.",
       "orTemplate": "Или начните с шаблона"
     },
     "card": {
-      "clickToOpen": "Клик — открыть · двойной клик — переименовать",
-      "star": "Добавить в избранное",
+      "clickToOpen": "Клик — открыть · Двойной клик — переименовать",
+      "star": "В избранное",
       "unstar": "Убрать из избранного",
       "delete": "Удалить проект"
     },
@@ -128,86 +211,5 @@
     "closeSettings": "Закрыть настройки",
     "signOut": "Выйти",
     "upgradeToPro": "Перейти на Pro"
-  },
-  "coord": {
-    "inputAria": "Coordinate input"
-  },
-  "error": {
-    "somethingWentWrong": "Something went wrong",
-    "panelFailed": "Panel failed to load",
-    "tryAgain": "Try again"
-  },
-  "tour": {
-    "title": "Guided tour",
-    "close": "Close tour",
-    "skip": "Skip tour",
-    "next": "Next",
-    "back": "Back",
-    "finish": "Finish"
-  },
-  "language": {
-    "aria": "Language",
-    "detected": "Detected from your system"
-  },
-  "resizer": {
-    "aria": "Drag to resize panel"
-  },
-  "contextMenu": {
-    "aria": "Context menu"
-  },
-  "viewport": {
-    "zoomIn": "Zoom In",
-    "zoomInShort": "Zoom in",
-    "zoomInWithShortcut": "Zoom In (+)",
-    "zoomOut": "Zoom Out",
-    "zoomOutShort": "Zoom out",
-    "zoomOutWithShortcut": "Zoom Out (-)",
-    "zoomToFit": "Zoom to Fit",
-    "zoomToFitWithShortcut": "Zoom to Fit (0)",
-    "fit": "Fit",
-    "resetCamera": "Reset camera",
-    "sectionBox": "Section Box",
-    "topView": "Top view",
-    "topViewWithShortcut": "Top view (1)",
-    "frontView": "Front view",
-    "frontViewWithShortcut": "Front view (2)",
-    "rightView": "Right view",
-    "rightViewWithShortcut": "Right view (3)",
-    "perspective": "Perspective",
-    "perspectiveWithShortcut": "Perspective (4)",
-    "presetView": "{{preset}} View",
-    "cutAlongAxis": "Cut along {{axis}} axis",
-    "cutAxis": "Cut axis",
-    "cutPlanePosition": "Cut plane position",
-    "position": "Position",
-    "sectionCutControls": "Section cut controls",
-    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
-    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
-    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
-    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
-    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
-    "splitView": "Split view: floor plan + 3D",
-    "viewCubeAria": "View orientation cube"
-  },
-  "home": {
-    "newProject": "New Project",
-    "newBlankProject": "New Blank Project",
-    "signIn": "Sign In",
-    "recentProjects": "Recent Projects",
-    "importIfcDwgPdf": "Import IFC / DWG / PDF",
-    "emptyText": "Start a new project or import a file",
-    "importFile": "Import a File",
-    "open": "Open",
-    "startFromTemplate": "Start from a Template",
-    "chooseTemplate": "Choose a Template",
-    "projectTemplates": "Project Templates"
-  },
-  "browser": {
-    "searchProjects": "Search projects…",
-    "recentFirst": "Recent first",
-    "oldestFirst": "Oldest first",
-    "gridView": "Grid view",
-    "listView": "List view",
-    "noProjects": "No projects found"
   }
 }

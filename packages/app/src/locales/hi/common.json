@@ -6,31 +6,31 @@
   "action": {
     "save": "सहेजें",
     "cancel": "रद्द करें",
-    "delete": "मिटाएँ",
+    "delete": "हटाएं",
     "rename": "नाम बदलें",
     "close": "बंद करें",
     "open": "खोलें",
-    "back": "पीछे",
-    "next": "आगे",
-    "create": "बनाएँ",
+    "back": "वापस",
+    "next": "अगला",
+    "create": "बनाएं",
     "upgrade": "अपग्रेड",
-    "resubscribe": "फिर से सब्सक्राइब करें",
+    "resubscribe": "पुनः सदस्यता लें",
     "loading": "लोड हो रहा है…",
     "retry": "पुनः प्रयास",
-    "done": "हो गया",
-    "import": "इंपोर्ट",
-    "export": "एक्सपोर्ट",
+    "done": "पूर्ण",
+    "import": "आयात",
+    "export": "निर्यात",
     "undo": "पूर्ववत करें",
-    "redo": "फिर से करें"
+    "redo": "पुनः करें"
   },
   "nav": {
     "home": "होम",
-    "projects": "परियोजनाएँ",
+    "projects": "प्रोजेक्ट",
     "settings": "सेटिंग्स",
     "billing": "बिलिंग",
     "signOut": "साइन आउट",
     "help": "सहायता",
-    "feedback": "फ़ीडबैक",
+    "feedback": "प्रतिक्रिया",
     "ai": "AI सहायक",
     "plugins": "प्लगइन"
   },
@@ -40,174 +40,174 @@
     "saving": "सहेजा जा रहा है…",
     "saved": "सहेजा गया",
     "syncing": "सिंक हो रहा है…",
-    "storageAlmostFull": "⚠ स्टोरेज लगभग भर चुका है",
-    "storageWarningTooltip": "स्टोरेज उपयोग 80% से अधिक — अपनी परियोजनाओं को एक्सपोर्ट करने पर विचार करें",
+    "storageAlmostFull": "⚠ स्टोरेज लगभग भर गया",
+    "storageWarningTooltip": "स्टोरेज उपयोग 80% से ऊपर है — अपने प्रोजेक्ट निर्यात करने पर विचार करें",
     "selected_one": "{{count}} चयनित",
     "selected_other": "{{count}} चयनित",
     "elements_one": "{{count}} तत्व",
     "elements_other": "{{count}} तत्व",
-    "fpsTooltip": "रोलिंग औसत फ़्रेम दर",
-    "webgpuTooltip": "Three.js WebGPURenderer — कंप्यूट शेडर सक्षम",
-    "webglTooltip": "WebGL 2.0 फ़ॉलबैक — WebGPU अनुपलब्ध या अक्षम",
+    "fpsTooltip": "औसत फ्रेम दर",
+    "webgpuTooltip": "Three.js WebGPURenderer — कम्प्यूट शेडर सक्षम",
+    "webglTooltip": "WebGL 2.0 फ़ॉलबैक — WebGPU अनुपलब्ध या निष्क्रिय",
     "currentRole": "वर्तमान भूमिका: {{label}}"
   },
   "view": {
     "floorPlan": "फ़्लोर प्लान",
     "threeD": "3D दृश्य",
-    "section": "सेक्शन",
-    "elevation": "ऐलिवेशन",
-    "sectionAA": "Section A-A",
-    "layout1": "Layout 1"
+    "section": "खंड",
+    "sectionAA": "खंड A-A",
+    "elevation": "उन्नयन",
+    "layout1": "लेआउट 1"
+  },
+  "coord": {
+    "inputAria": "निर्देशांक इनपुट"
+  },
+  "error": {
+    "somethingWentWrong": "कुछ गलत हो गया",
+    "panelFailed": "पैनल लोड नहीं हो सका",
+    "tryAgain": "पुनः प्रयास"
+  },
+  "tour": {
+    "title": "गाइडेड टूर",
+    "close": "टूर बंद करें",
+    "skip": "टूर छोड़ें",
+    "next": "अगला",
+    "back": "वापस",
+    "finish": "समाप्त"
+  },
+  "language": {
+    "aria": "भाषा",
+    "detected": "आपके सिस्टम से पहचानी गई"
+  },
+  "resizer": {
+    "aria": "पैनल का आकार बदलने के लिए खींचें"
+  },
+  "contextMenu": {
+    "aria": "संदर्भ मेनू"
+  },
+  "viewport": {
+    "zoomIn": "ज़ूम इन",
+    "zoomInShort": "ज़ूम इन",
+    "zoomInWithShortcut": "ज़ूम इन (+)",
+    "zoomOut": "ज़ूम आउट",
+    "zoomOutShort": "ज़ूम आउट",
+    "zoomOutWithShortcut": "ज़ूम आउट (-)",
+    "zoomToFit": "फ़िट करें",
+    "zoomToFitWithShortcut": "फ़िट करें (0)",
+    "fit": "फ़िट",
+    "resetCamera": "कैमरा रीसेट करें",
+    "sectionBox": "खंड बॉक्स",
+    "topView": "शीर्ष दृश्य",
+    "topViewWithShortcut": "शीर्ष दृश्य (1)",
+    "frontView": "सामने का दृश्य",
+    "frontViewWithShortcut": "सामने का दृश्य (2)",
+    "rightView": "दाएँ दृश्य",
+    "rightViewWithShortcut": "दाएँ दृश्य (3)",
+    "perspective": "परिप्रेक्ष्य",
+    "perspectiveWithShortcut": "परिप्रेक्ष्य (4)",
+    "presetView": "{{preset}} दृश्य",
+    "cutAlongAxis": "{{axis}} अक्ष के साथ काटें",
+    "cutAxis": "कट अक्ष",
+    "cutPlanePosition": "कट तल स्थिति",
+    "position": "स्थिति",
+    "sectionCutControls": "सेक्शन कट नियंत्रण",
+    "sectionCutHint": "स्लाइडर कट तल को घुमाता है · घुमाने के लिए खींचें · पैन के लिए Shift+खींचें · ज़ूम के लिए स्क्रॉल",
+    "info2D": "ज़ूम: स्क्रॉल | पैन: मध्य-खींचें | Ctrl: स्नैप बंद",
+    "info3D": "ऑर्बिट: खींचें | पैन: Shift+खींचें | ज़ूम: स्क्रॉल | फ़िट: 0",
+    "info3DLong": "खींचकर ऑर्बिट · दो-उंगली पैन · पिंच/Ctrl+स्क्रॉल ज़ूम · तीर ऑर्बिट · Shift+तीर पैन · Alt फ़ाइन · 0 फ़िट · 1/2/3/4 दृश्य",
+    "info2DShort": "ड्रॉ: खींचें · पैन: मध्य-खींचें · ज़ूम: स्क्रॉल",
+    "splitView": "विभाजित दृश्य: फ़्लोर प्लान + 3D",
+    "viewCubeAria": "दृश्य अभिमुखीकरण क्यूब"
   },
   "settings": {
     "title": "सेटिंग्स",
     "tabs": {
       "language": "भाषा",
-      "apiKeys": "API कुंजियाँ",
+      "apiKeys": "API कुंजी",
       "permissions": "अनुमतियाँ",
       "sso": "SSO",
       "billing": "बिलिंग"
     }
   },
   "tooltip": {
-    "backToProjects": "होम — परियोजनाओं पर वापस",
+    "backToProjects": "होम — प्रोजेक्ट पर वापस",
     "toggleLeftPanel": "नेविगेटर टॉगल करें",
     "toggleRightPanel": "गुण टॉगल करें",
-    "renameProject": "परियोजना का नाम बदलने के लिए क्लिक करें",
-    "newProject": "नई परियोजना",
-    "openProject": "कोई परियोजना खोलें",
+    "renameProject": "प्रोजेक्ट का नाम बदलने के लिए क्लिक करें",
+    "newProject": "नया प्रोजेक्ट",
+    "openProject": "प्रोजेक्ट खोलें",
     "saveProject": "सहेजें",
     "importFile": "IFC आयात करें",
     "exportFile": "IFC निर्यात करें",
-    "toggleTheme": "हल्की/गहरी थीम टॉगल करें"
+    "toggleTheme": "लाइट/डार्क थीम टॉगल करें"
   },
   "update": {
     "available": "संस्करण {{version}} उपलब्ध है",
     "install": "अपडेट इंस्टॉल करें",
-    "installing": "इंस्टॉल हो रहा है…",
+    "installing": "इंस्टॉल हो रहा है...",
     "dismiss": "खारिज करें",
     "dismissAria": "अपडेट सूचना खारिज करें"
   },
   "focusHint": {
-    "before": "दबाएँ",
-    "after": "फोकस मोड से बाहर निकलने के लिए"
+    "before": "दबाएं",
+    "after": "फ़ोकस मोड से बाहर निकलने के लिए"
+  },
+  "home": {
+    "newProject": "नया प्रोजेक्ट",
+    "newBlankProject": "नया खाली प्रोजेक्ट",
+    "signIn": "साइन इन",
+    "recentProjects": "हाल के प्रोजेक्ट",
+    "importIfcDwgPdf": "IFC / DWG / PDF आयात करें",
+    "emptyText": "नया प्रोजेक्ट शुरू करें या फ़ाइल आयात करें",
+    "importFile": "फ़ाइल आयात करें",
+    "open": "खोलें",
+    "startFromTemplate": "टेम्पलेट से शुरू करें",
+    "chooseTemplate": "टेम्पलेट चुनें",
+    "projectTemplates": "प्रोजेक्ट टेम्पलेट"
+  },
+  "browser": {
+    "searchProjects": "प्रोजेक्ट खोजें…",
+    "recentFirst": "नए पहले",
+    "oldestFirst": "पुराने पहले",
+    "gridView": "ग्रिड दृश्य",
+    "listView": "सूची दृश्य",
+    "noProjects": "कोई प्रोजेक्ट नहीं मिला"
   },
   "dashboard": {
-    "title": "परियोजनाएँ",
+    "title": "प्रोजेक्ट",
     "fromTemplate": "टेम्पलेट से",
-    "newProject": "नई परियोजना",
-    "newBlankProject": "नई खाली परियोजना",
+    "newProject": "नया प्रोजेक्ट",
+    "newBlankProject": "नया खाली प्रोजेक्ट",
     "filter": {
       "all": "सभी",
-      "starred": "तारांकित",
-      "mine": "मेरी",
+      "starred": "स्टार किए गए",
+      "mine": "मेरे",
       "shared": "साझा"
     },
-    "searchPlaceholder": "परियोजनाएँ खोजें…",
-    "sortBy": "इसके अनुसार क्रमबद्ध",
+    "searchPlaceholder": "प्रोजेक्ट खोजें…",
+    "sortBy": "इसके अनुसार क्रमबद्ध करें",
     "sort": {
-      "lastEdited": "अंतिम संपादन",
-      "created": "निर्मित",
+      "lastEdited": "अंतिम संपादित",
+      "created": "बनाया गया",
       "name": "नाम",
       "size": "आकार"
     },
     "gridView": "ग्रिड दृश्य",
     "listView": "सूची दृश्य",
     "empty": {
-      "title": "अभी कोई परियोजना नहीं",
-      "subtitle": "खाली कैनवास से शुरू करें या नीचे से कोई टेम्पलेट चुनें।",
-      "orTemplate": "या किसी टेम्पलेट से शुरू करें"
+      "title": "अभी तक कोई प्रोजेक्ट नहीं",
+      "subtitle": "खाली कैनवास से शुरू करें या नीचे एक टेम्पलेट चुनें।",
+      "orTemplate": "या टेम्पलेट से शुरू करें"
     },
     "card": {
-      "clickToOpen": "खोलने के लिए क्लिक करें · नाम बदलने के लिए डबल-क्लिक करें",
-      "star": "परियोजना को तारांकित करें",
-      "unstar": "तारांकन हटाएँ",
-      "delete": "परियोजना मिटाएँ"
+      "clickToOpen": "खोलने के लिए क्लिक · नाम बदलने के लिए डबल-क्लिक",
+      "star": "प्रोजेक्ट को स्टार करें",
+      "unstar": "स्टार हटाएं",
+      "delete": "प्रोजेक्ट हटाएं"
     },
     "closeTemplates": "टेम्पलेट बंद करें",
     "closeSettings": "सेटिंग्स बंद करें",
     "signOut": "साइन आउट",
-    "upgradeToPro": "Pro पर अपग्रेड करें"
-  },
-  "coord": {
-    "inputAria": "Coordinate input"
-  },
-  "error": {
-    "somethingWentWrong": "Something went wrong",
-    "panelFailed": "Panel failed to load",
-    "tryAgain": "Try again"
-  },
-  "tour": {
-    "title": "Guided tour",
-    "close": "Close tour",
-    "skip": "Skip tour",
-    "next": "Next",
-    "back": "Back",
-    "finish": "Finish"
-  },
-  "language": {
-    "aria": "Language",
-    "detected": "Detected from your system"
-  },
-  "resizer": {
-    "aria": "Drag to resize panel"
-  },
-  "contextMenu": {
-    "aria": "Context menu"
-  },
-  "viewport": {
-    "zoomIn": "Zoom In",
-    "zoomInShort": "Zoom in",
-    "zoomInWithShortcut": "Zoom In (+)",
-    "zoomOut": "Zoom Out",
-    "zoomOutShort": "Zoom out",
-    "zoomOutWithShortcut": "Zoom Out (-)",
-    "zoomToFit": "Zoom to Fit",
-    "zoomToFitWithShortcut": "Zoom to Fit (0)",
-    "fit": "Fit",
-    "resetCamera": "Reset camera",
-    "sectionBox": "Section Box",
-    "topView": "Top view",
-    "topViewWithShortcut": "Top view (1)",
-    "frontView": "Front view",
-    "frontViewWithShortcut": "Front view (2)",
-    "rightView": "Right view",
-    "rightViewWithShortcut": "Right view (3)",
-    "perspective": "Perspective",
-    "perspectiveWithShortcut": "Perspective (4)",
-    "presetView": "{{preset}} View",
-    "cutAlongAxis": "Cut along {{axis}} axis",
-    "cutAxis": "Cut axis",
-    "cutPlanePosition": "Cut plane position",
-    "position": "Position",
-    "sectionCutControls": "Section cut controls",
-    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
-    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
-    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
-    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
-    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
-    "splitView": "Split view: floor plan + 3D",
-    "viewCubeAria": "View orientation cube"
-  },
-  "home": {
-    "newProject": "New Project",
-    "newBlankProject": "New Blank Project",
-    "signIn": "Sign In",
-    "recentProjects": "Recent Projects",
-    "importIfcDwgPdf": "Import IFC / DWG / PDF",
-    "emptyText": "Start a new project or import a file",
-    "importFile": "Import a File",
-    "open": "Open",
-    "startFromTemplate": "Start from a Template",
-    "chooseTemplate": "Choose a Template",
-    "projectTemplates": "Project Templates"
-  },
-  "browser": {
-    "searchProjects": "Search projects…",
-    "recentFirst": "Recent first",
-    "oldestFirst": "Oldest first",
-    "gridView": "Grid view",
-    "listView": "List view",
-    "noProjects": "No projects found"
+    "upgradeToPro": "Pro में अपग्रेड करें"
   }
 }

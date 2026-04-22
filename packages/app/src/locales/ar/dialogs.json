@@ -5,17 +5,17 @@
     "password": "كلمة المرور",
     "submit": "تسجيل الدخول",
     "submitting": "جارٍ تسجيل الدخول…",
-    "noAccount": "ليس لديك حساب؟",
-    "createAccount": "إنشاء حساب مجاني",
+    "noAccount": "لا تملك حسابًا؟",
+    "createAccount": "أنشئ حسابًا مجانيًا",
     "or": "أو",
     "forgotPassword": "نسيت كلمة المرور؟",
     "continueWithGoogle": "المتابعة باستخدام Google",
     "continueWithMicrosoft": "المتابعة باستخدام Microsoft",
     "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
-    "mfaTitle": "تحقق من هويتك",
-    "mfaHint": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة.",
-    "mfaCode": "رمز التحقق",
-    "mfaVerify": "تحقق"
+    "mfaTitle": "تحقّق من هويتك",
+    "mfaHint": "أدخل الرمز المكوّن من 6 أرقام من تطبيق المصادقة لديك.",
+    "mfaCode": "رمز المصادقة",
+    "mfaVerify": "تحقّق"
   },
   "signUp": {
     "title": "أنشئ حسابك",
@@ -24,22 +24,22 @@
     "password": "كلمة المرور",
     "submit": "إنشاء حساب مجاني",
     "submitting": "جارٍ الإنشاء…",
-    "haveAccount": "لديك حساب بالفعل؟",
+    "haveAccount": "هل لديك حساب بالفعل؟",
     "signIn": "تسجيل الدخول",
     "passwordHint": "8 أحرف على الأقل.",
     "termsAgree": "بإنشاء حساب فأنت توافق على <a>الشروط</a> و<a2>سياسة الخصوصية</a2>."
   },
   "forgotPassword": {
     "title": "إعادة تعيين كلمة المرور",
-    "hint": "سنرسل رابط إعادة التعيين إلى بريدك الإلكتروني.",
-    "submit": "إرسال الرابط",
-    "sent": "تحقق من بريدك الوارد للحصول على رابط إعادة التعيين.",
+    "hint": "سنرسل رابط إعادة تعيين كلمة المرور إلى بريدك.",
+    "submit": "إرسال رابط الإعادة",
+    "sent": "تحقّق من صندوق الوارد للحصول على رابط الإعادة.",
     "backToSignIn": "العودة إلى تسجيل الدخول"
   },
   "newProject": {
     "title": "مشروع جديد",
     "name": "اسم المشروع",
-    "template": "القالب",
+    "template": "قالب",
     "blank": "فارغ",
     "create": "إنشاء المشروع",
     "creating": "جارٍ الإنشاء…"
@@ -57,68 +57,82 @@
   },
   "importExport": {
     "importTitle": "استيراد ملف",
-    "exportTitle": "تصدير ملف",
-    "dropHint": "أفلت ملفًا هنا أو انقر للتصفح.",
-    "supportedFormats": "المدعوم: IFC، DWG، DXF، SKP، RVT، PDF",
+    "exportTitle": "تصدير الملف",
+    "dropHint": "أفلت ملفًا هنا أو انقر للاستعراض.",
+    "supportedFormats": "المدعوم: IFC, DWG, DXF, SKP, RVT, PDF",
     "exporting": "جارٍ التصدير…",
     "export": "تصدير",
-    "format": "التنسيق",
+    "format": "الصيغة",
     "cancel": "إلغاء"
   },
   "subscription": {
     "title": "اختر خطتك",
-    "subtitle": "ارفع المستوى متى شئت — دون التزام طويل الأمد.",
+    "subtitle": "ارقِ في أي وقت — دون التزامات طويلة الأجل.",
     "currentPlan": "الخطة الحالية",
     "upgradeTo": "الترقية إلى {{plan}}",
     "manageBilling": "إدارة الفوترة",
-    "perUserMonth": "لكل مستخدم / شهر",
-    "mostPopular": "الأكثر شيوعًا",
+    "perUserMonth": "لكل مستخدم / شهريًا",
+    "mostPopular": "الأكثر شعبية",
+    "close": "إغلاق",
     "plans": {
       "free": {
         "label": "مجاني",
-        "price": "0 $",
+        "price": "0$",
         "priceDetail": "إلى الأبد",
         "features": {
           "f1": "مشروع واحد",
-          "f2": "أدوات رسم ثنائي الأبعاد أساسية",
+          "f2": "أدوات رسم 2D أساسية",
           "f3": "تخزين محلي فقط",
           "f4": "دعم مجتمعي"
         }
       },
       "pro": {
         "label": "Pro",
-        "price": "29 $",
+        "price": "29$",
         "features": {
           "f1": "مشاريع غير محدودة",
-          "f2": "تعاون في الوقت الحقيقي",
+          "f2": "تعاون فوري",
           "f3": "مساعد تصميم بالذكاء الاصطناعي",
-          "f4": "دعم بريد إلكتروني ذو أولوية"
+          "f4": "دعم بريدي ذو أولوية"
         }
       },
       "business": {
         "label": "Business",
-        "price": "99 $",
+        "price": "99$",
         "features": {
           "f1": "كل ما في Pro",
-          "f2": "أدوار وصلاحيات للمسؤولين",
+          "f2": "أدوار وصلاحيات إدارية",
           "f3": "SSO / SAML",
           "f4": "دعم هاتفي ذو أولوية"
         }
       }
-    },
-    "close": "إغلاق"
+    }
   },
   "commandPalette": {
-    "placeholder": "بحث عن الأوامر…",
+    "placeholder": "ابحث عن أوامر…",
     "empty": "لم يتم العثور على أوامر.",
     "groups": {
       "tools": "الأدوات",
-      "views": "المشاهد",
+      "views": "العروض",
       "panels": "اللوحات",
       "file": "ملف",
       "edit": "تحرير",
-      "help": "المساعدة"
+      "help": "مساعدة"
     }
+  },
+  "help": {
+    "title": "المساعدة",
+    "close": "إغلاق المساعدة",
+    "tabs": {
+      "shortcuts": "اختصارات",
+      "howTo": "كيف",
+      "tips": "نصائح"
+    },
+    "takeGuidedTour": "ابدأ الجولة الإرشادية",
+    "searchShortcuts": "ابحث في الاختصارات…",
+    "noShortcutsMatch": "لا توجد اختصارات تطابق «{{query}}».",
+    "needMore": "تحتاج المزيد؟",
+    "openIssue": "فتح بلاغ"
   },
   "feedback": {
     "title": "إرسال ملاحظات",
@@ -133,19 +147,5 @@
       "feature": "طلب ميزة",
       "question": "سؤال"
     }
-  },
-  "help": {
-    "title": "Help",
-    "close": "Close help",
-    "tabs": {
-      "shortcuts": "Shortcuts",
-      "howTo": "How To",
-      "tips": "Tips"
-    },
-    "takeGuidedTour": "Take the guided tour",
-    "searchShortcuts": "Search shortcuts…",
-    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
-    "needMore": "Need more?",
-    "openIssue": "Open an issue"
   }
 }

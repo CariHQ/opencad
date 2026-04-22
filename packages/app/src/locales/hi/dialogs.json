@@ -5,16 +5,16 @@
     "password": "पासवर्ड",
     "submit": "साइन इन",
     "submitting": "साइन इन हो रहा है…",
-    "noAccount": "कोई खाता नहीं?",
-    "createAccount": "मुफ्त खाता बनाएं",
+    "noAccount": "खाता नहीं है?",
+    "createAccount": "मुफ़्त में बनाएं",
     "or": "या",
     "forgotPassword": "पासवर्ड भूल गए?",
     "continueWithGoogle": "Google के साथ जारी रखें",
     "continueWithMicrosoft": "Microsoft के साथ जारी रखें",
-    "invalidCredentials": "ईमेल या पासवर्ड ग़लत है।",
+    "invalidCredentials": "ईमेल या पासवर्ड गलत है।",
     "mfaTitle": "अपनी पहचान सत्यापित करें",
-    "mfaHint": "अपने ऑथेंटिकेटर ऐप से 6-अंकीय कोड दर्ज करें।",
-    "mfaCode": "सत्यापन कोड",
+    "mfaHint": "अपने ऑथेंटिकेटर ऐप से 6 अंकों का कोड दर्ज करें।",
+    "mfaCode": "ऑथेंटिकेटर कोड",
     "mfaVerify": "सत्यापित करें"
   },
   "signUp": {
@@ -22,7 +22,7 @@
     "name": "पूरा नाम",
     "email": "ईमेल",
     "password": "पासवर्ड",
-    "submit": "मुफ्त खाता बनाएं",
+    "submit": "मुफ़्त खाता बनाएं",
     "submitting": "बनाया जा रहा है…",
     "haveAccount": "पहले से खाता है?",
     "signIn": "साइन इन",
@@ -31,82 +31,82 @@
   },
   "forgotPassword": {
     "title": "पासवर्ड रीसेट करें",
-    "hint": "हम आपके ईमेल पर पासवर्ड-रीसेट लिंक भेजेंगे।",
+    "hint": "हम आपके ईमेल पर पासवर्ड रीसेट लिंक भेजेंगे।",
     "submit": "रीसेट लिंक भेजें",
     "sent": "रीसेट लिंक के लिए अपना इनबॉक्स देखें।",
     "backToSignIn": "साइन इन पर वापस"
   },
   "newProject": {
-    "title": "नई परियोजना",
-    "name": "परियोजना का नाम",
+    "title": "नया प्रोजेक्ट",
+    "name": "प्रोजेक्ट का नाम",
     "template": "टेम्पलेट",
     "blank": "खाली",
-    "create": "परियोजना बनाएँ",
+    "create": "प्रोजेक्ट बनाएं",
     "creating": "बनाया जा रहा है…"
   },
   "openProject": {
-    "title": "परियोजना खोलें",
-    "placeholder": "परियोजनाएँ खोजें…",
-    "empty": "अभी कोई परियोजना नहीं।"
+    "title": "प्रोजेक्ट खोलें",
+    "placeholder": "प्रोजेक्ट खोजें…",
+    "empty": "अभी तक कोई प्रोजेक्ट नहीं।"
   },
   "confirmDelete": {
-    "title": "{{name}} मिटाएँ?",
-    "body": "यह वापस नहीं किया जा सकता।",
-    "confirm": "मिटाएँ",
+    "title": "{{name}} हटाएं?",
+    "body": "यह क्रिया पूर्ववत नहीं की जा सकती।",
+    "confirm": "हटाएं",
     "cancel": "रद्द करें"
   },
   "importExport": {
-    "importTitle": "फ़ाइल इंपोर्ट करें",
+    "importTitle": "फ़ाइल आयात करें",
     "exportTitle": "फ़ाइल निर्यात करें",
-    "dropHint": "फ़ाइल यहाँ छोड़ें या ब्राउज़ करने के लिए क्लिक करें।",
+    "dropHint": "यहाँ फ़ाइल छोड़ें या ब्राउज़ करने के लिए क्लिक करें।",
     "supportedFormats": "समर्थित: IFC, DWG, DXF, SKP, RVT, PDF",
-    "exporting": "एक्सपोर्ट हो रहा है…",
-    "export": "एक्सपोर्ट",
-    "format": "फ़ॉर्मैट",
+    "exporting": "निर्यात हो रहा है…",
+    "export": "निर्यात",
+    "format": "प्रारूप",
     "cancel": "रद्द करें"
   },
   "subscription": {
-    "title": "अपनी योजना चुनें",
-    "subtitle": "कभी भी अपग्रेड करें — कोई दीर्घकालिक प्रतिबद्धता नहीं।",
-    "currentPlan": "वर्तमान योजना",
-    "upgradeTo": "{{plan}} पर अपग्रेड करें",
+    "title": "अपना प्लान चुनें",
+    "subtitle": "कभी भी अपग्रेड करें — कोई दीर्घकालिक प्रतिबद्धता आवश्यक नहीं।",
+    "currentPlan": "वर्तमान प्लान",
+    "upgradeTo": "{{plan}} में अपग्रेड करें",
     "manageBilling": "बिलिंग प्रबंधित करें",
     "perUserMonth": "प्रति उपयोगकर्ता / माह",
     "mostPopular": "सर्वाधिक लोकप्रिय",
+    "close": "बंद करें",
     "plans": {
       "free": {
-        "label": "नि:शुल्क",
+        "label": "मुफ़्त",
         "price": "$0",
-        "priceDetail": "हमेशा",
+        "priceDetail": "हमेशा के लिए",
         "features": {
-          "f1": "1 परियोजना",
-          "f2": "बुनियादी 2D ड्राफ्टिंग उपकरण",
-          "f3": "केवल स्थानीय भंडारण",
-          "f4": "सामुदायिक सहायता"
+          "f1": "1 प्रोजेक्ट",
+          "f2": "बेसिक 2D ड्राफ्टिंग टूल",
+          "f3": "केवल स्थानीय स्टोरेज",
+          "f4": "समुदाय समर्थन"
         }
       },
       "pro": {
         "label": "Pro",
         "price": "$29",
         "features": {
-          "f1": "असीमित परियोजनाएँ",
+          "f1": "असीमित प्रोजेक्ट",
           "f2": "रीयल-टाइम सहयोग",
           "f3": "AI डिज़ाइन सहायक",
-          "f4": "प्राथमिकता ईमेल सहायता"
+          "f4": "प्राथमिकता ईमेल समर्थन"
         }
       },
       "business": {
         "label": "Business",
         "price": "$99",
         "features": {
-          "f1": "Pro की सभी सुविधाएँ",
-          "f2": "व्यवस्थापक भूमिकाएँ और अनुमतियाँ",
+          "f1": "Pro की सभी सुविधाएं",
+          "f2": "व्यवस्थापक भूमिकाएं और अनुमतियाँ",
           "f3": "SSO / SAML",
-          "f4": "प्राथमिकता फ़ोन सहायता"
+          "f4": "प्राथमिकता फ़ोन समर्थन"
         }
       }
-    },
-    "close": "बंद करें"
+    }
   },
   "commandPalette": {
     "placeholder": "कमांड खोजें…",
@@ -116,36 +116,36 @@
       "views": "दृश्य",
       "panels": "पैनल",
       "file": "फ़ाइल",
-      "edit": "संपादन",
+      "edit": "संपादित करें",
       "help": "सहायता"
     }
   },
+  "help": {
+    "title": "सहायता",
+    "close": "सहायता बंद करें",
+    "tabs": {
+      "shortcuts": "शॉर्टकट",
+      "howTo": "कैसे करें",
+      "tips": "टिप्स"
+    },
+    "takeGuidedTour": "गाइडेड टूर लें",
+    "searchShortcuts": "शॉर्टकट खोजें…",
+    "noShortcutsMatch": "\"{{query}}\" से मेल खाने वाला कोई शॉर्टकट नहीं।",
+    "needMore": "और चाहिए?",
+    "openIssue": "इश्यू खोलें"
+  },
   "feedback": {
-    "title": "फ़ीडबैक भेजें",
+    "title": "प्रतिक्रिया भेजें",
     "categoryLabel": "प्रकार",
     "titleLabel": "शीर्षक",
     "descriptionLabel": "विवरण",
-    "submit": "फ़ीडबैक भेजें",
+    "submit": "प्रतिक्रिया भेजें",
     "submitting": "भेजा जा रहा है…",
-    "sent": "आपके फ़ीडबैक के लिए धन्यवाद!",
+    "sent": "आपकी प्रतिक्रिया के लिए धन्यवाद!",
     "categories": {
       "bug": "बग",
       "feature": "फ़ीचर अनुरोध",
       "question": "प्रश्न"
     }
-  },
-  "help": {
-    "title": "Help",
-    "close": "Close help",
-    "tabs": {
-      "shortcuts": "Shortcuts",
-      "howTo": "How To",
-      "tips": "Tips"
-    },
-    "takeGuidedTour": "Take the guided tour",
-    "searchShortcuts": "Search shortcuts…",
-    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
-    "needMore": "Need more?",
-    "openIssue": "Open an issue"
   }
 }

@@ -1,27 +1,63 @@
 {
+  "tabs": {
+    "properties": "Propriétés",
+    "schedule": "Nomenclatures",
+    "spaces": "Espaces",
+    "clash": "Collisions",
+    "compliance": "Conformité",
+    "render": "Rendu",
+    "sheets": "Présentations",
+    "bcf": "Problèmes",
+    "materials": "Matériaux",
+    "comments": "Commentaires",
+    "carbon": "Carbone",
+    "cost": "Coût",
+    "hatch": "Hachures",
+    "symbols": "Symboles",
+    "shadow": "Ombres",
+    "section": "Coupe",
+    "site": "Import terrain",
+    "specs": "CCTP",
+    "photo": "Photo vers modèle",
+    "marketplace": "Marketplace",
+    "wind": "Analyse du vent",
+    "history": "Historique",
+    "branches": "Branches",
+    "underlay": "Calque PDF",
+    "admin": "Administration",
+    "review": "Revue",
+    "layers": "Calques"
+  },
   "navigator": {
     "title": "Navigateur",
     "views": "Vues",
     "layers": "Calques",
+    "levels": "Niveaux",
     "elements": "Éléments",
     "empty": "Aucun élément — dessinez quelque chose pour commencer.",
-    "searchPlaceholder": "Rechercher des éléments…",
-    "levels": "Niveaux"
+    "searchPlaceholder": "Rechercher des éléments…"
+  },
+  "levels": {
+    "title": "Niveaux",
+    "addLevel": "Ajouter un niveau",
+    "levelName": "Nom du niveau",
+    "elevation": "Élévation (mm)",
+    "deleteLevel": "Supprimer le niveau"
   },
   "layers": {
     "title": "Calques",
     "newLayer": "Nouveau calque",
+    "addLayer": "Ajouter un calque",
+    "settings": "Paramètres du calque",
     "visible": "Visible",
     "locked": "Verrouillé",
     "color": "Couleur",
-    "addLayer": "Add Layer",
-    "settings": "Layer Settings",
-    "hideLayer": "Hide layer (toggle visibility)",
-    "showLayer": "Show layer (toggle visibility)",
-    "lockLayer": "Lock layer",
-    "unlockLayer": "Unlock layer",
-    "hideLayerShort": "Hide Layer",
-    "showLayerShort": "Show Layer"
+    "hideLayer": "Masquer le calque (basculer la visibilité)",
+    "showLayer": "Afficher le calque (basculer la visibilité)",
+    "hideLayerShort": "Masquer le calque",
+    "showLayerShort": "Afficher le calque",
+    "lockLayer": "Verrouiller le calque",
+    "unlockLayer": "Déverrouiller le calque"
   },
   "properties": {
     "title": "Propriétés",
@@ -69,13 +105,13 @@
     "publish": "Publier",
     "backToCatalogue": "Retour au catalogue",
     "searchPlaceholder": "Rechercher des extensions…",
+    "searchAria": "Rechercher des extensions",
+    "loading": "Chargement des extensions",
     "myPlugins": "Mes extensions",
     "available": "Disponibles",
     "noInstalled": "Aucune extension installée.",
     "empty": "Aucune extension trouvée.",
-    "searchAria": "Search plugins",
-    "loading": "Loading plugins",
-    "submitPlugin": "Submit a plugin"
+    "submitPlugin": "Soumettre une extension"
   },
   "readonly": {
     "title": "Mode lecture seule.",
@@ -124,39 +160,39 @@
     "title": "Conformité aux normes",
     "run": "Vérifier",
     "running": "Vérification…",
-    "noViolations": "Aucune infraction — votre modèle respecte le jeu de règles actuel.",
+    "noViolations": "Aucune infraction — le modèle est conforme.",
     "violations_one": "{{count}} infraction",
     "violations_other": "{{count}} infractions",
+    "violationsFound_one": "{{count}} infraction détectée",
+    "violationsFound_other": "{{count}} infractions détectées",
+    "runFull": "Lancer la vérification de conformité",
+    "runHint": "Lancez la vérification pour valider le modèle face aux règles IBC.",
+    "errorsHeading": "Erreurs ({{count}})",
+    "warningsHeading": "Avertissements ({{count}})",
+    "applyFix": "Appliquer la correction",
     "fix": "Corriger",
     "fixing": "Correction…",
     "applied": "Correction appliquée",
     "rule": "Règle",
-    "element": "Élément",
-    "violationsFound_one": "{{count}} violation found",
-    "violationsFound_other": "{{count}} violations found",
-    "runFull": "Run Compliance Check",
-    "runHint": "Run check to verify the model against IBC rules.",
-    "errorsHeading": "Errors ({{count}})",
-    "warningsHeading": "Warnings ({{count}})",
-    "applyFix": "Apply Fix"
+    "element": "Élément"
   },
   "schedule": {
     "title": "Nomenclatures",
     "empty": "Aucune nomenclature.",
     "export": "Exporter",
     "exportCsv": "Exporter CSV",
-    "doors": "Portes",
-    "windows": "Fenêtres",
-    "rooms": "Pièces",
+    "elementType": "Type d'élément",
     "count": "Nombre",
     "area": "Surface",
     "length": "Longueur",
-    "elementType": "Type d'élément",
     "noElements": "Aucun élément {{type}} dans le modèle",
     "noElementsModel": "Aucun élément dans le modèle",
     "quantityTitle": "Métré",
+    "doors": "Portes",
+    "windows": "Fenêtres",
+    "rooms": "Pièces",
     "total_one": "Total : {{count}} {{type}}",
-    "total_other": "Total : {{count}} {{type}}"
+    "total_other": "Total : {{count}} {{type}}s"
   },
   "field": {
     "name": "Nom",
@@ -202,184 +238,218 @@
     "color": "Couleur",
     "roughness": "Rugosité",
     "metalness": "Métallicité",
-    "searchPlaceholder": "Search materials…",
-    "category": "Category",
-    "density": "Density",
-    "thermalConductivity": "Thermal Conductivity",
-    "embodiedCarbon": "Embodied Carbon",
-    "assignToSelection": "Assign to Selection"
+    "searchPlaceholder": "Rechercher des matériaux…",
+    "category": "Catégorie",
+    "density": "Densité",
+    "thermalConductivity": "Conductivité thermique",
+    "embodiedCarbon": "Carbone incorporé",
+    "assignToSelection": "Affecter à la sélection"
   },
   "carbon": {
     "title": "Carbone incorporé",
+    "calculatorTitle": "Calculateur carbone",
     "total": "Carbone incorporé total",
     "empty": "Aucun élément à mesurer.",
+    "emptyDetail": "Aucune donnée carbone. Ajoutez des matériaux avec facteurs carbone pour calculer.",
     "byType": "Par type d'élément",
     "byMaterial": "Par matériau",
-    "calculatorTitle": "Carbon Calculator",
-    "emptyDetail": "No carbon data. Add materials with carbon factors to calculate.",
-    "export": "Export",
-    "exportReport": "Export carbon report",
-    "material": "Material",
-    "qty": "Qty",
-    "unit": "Unit",
-    "perUnit": "kgCO2e/unit",
+    "export": "Exporter",
+    "exportReport": "Exporter le rapport carbone",
+    "material": "Matériau",
+    "qty": "Qté",
+    "unit": "Unité",
+    "perUnit": "kgCO2e/unité",
     "totalUnit": "Total kgCO2e",
-    "stage": "Stage"
+    "stage": "Phase"
   },
   "cost": {
     "title": "Coût du projet",
+    "estimateTitle": "Estimation des coûts",
     "total": "Total",
     "empty": "Aucune donnée de coût.",
+    "emptyDetail": "Aucun poste de coût. Ajoutez des éléments pour générer une estimation.",
     "item": "Article",
     "quantity": "Quantité",
     "rate": "Tarif",
     "amount": "Montant",
-    "estimateTitle": "Cost Estimate",
-    "emptyDetail": "No cost items. Add elements to generate an estimate.",
-    "export": "Export",
-    "exportEstimate": "Export cost estimate",
+    "export": "Exporter",
+    "exportEstimate": "Exporter l'estimation des coûts",
     "description": "Description",
     "type": "Type",
-    "qty": "Qty",
-    "unit": "Unit"
+    "qty": "Qté",
+    "unit": "Unité"
   },
   "clash": {
-    "title": "Détection des collisions",
+    "title": "Détection de collisions",
     "run": "Lancer la détection",
-    "noClashes": "Aucune collision détectée.",
-    "clashes_one": "{{count}} collision",
-    "clashes_other": "{{count}} collisions",
-    "runFull": "Run Clash Detection",
-    "runHint": "Run detection to check for clashes between elements.",
-    "elementA": "Element A",
-    "elementB": "Element B",
-    "severity": "Severity",
-    "overlap": "Overlap (m³)",
-    "exportCsv": "Export CSV",
-    "hard": "Hard",
-    "soft": "Soft"
+    "runFull": "Lancer la détection de collisions",
+    "runHint": "Lancez la détection pour vérifier les collisions entre éléments.",
+    "noClashes": "0 collision détectée — le modèle est propre.",
+    "clashes_one": "{{count}} collision détectée",
+    "clashes_other": "{{count}} collisions détectées",
+    "elementA": "Élément A",
+    "elementB": "Élément B",
+    "severity": "Sévérité",
+    "overlap": "Recouvrement (m³)",
+    "exportCsv": "Exporter CSV",
+    "hard": "Forte",
+    "soft": "Faible"
   },
   "shadow": {
     "title": "Étude d'ombres",
-    "time": "Heure du jour",
+    "fullTitle": "Analyse d'ombres et lumière du jour",
+    "time": "Heure",
     "date": "Date",
     "play": "Lecture",
     "pause": "Pause",
-    "fullTitle": "Shadow & Daylight Analysis",
-    "location": "Location",
+    "location": "Lieu",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "sunPosition": "Sun Position",
-    "month": "Month",
-    "hour": "Hour",
-    "solarAnalysis": "Solar Analysis",
-    "elevation": "Elevation",
-    "azimuth": "Azimuth",
-    "daylightHours": "Daylight Hours",
+    "sunPosition": "Position du soleil",
+    "month": "Mois",
+    "hour": "Heure",
+    "solarAnalysis": "Analyse solaire",
+    "elevation": "Élévation",
+    "azimuth": "Azimut",
+    "daylightHours": "Heures d'ensoleillement",
     "visualisation": "Visualisation",
-    "showSunPath": "Show Sun Path",
-    "showShadowMap": "Show Shadow Map",
-    "runAnalysis": "Run Analysis"
+    "showSunPath": "Afficher la course du soleil",
+    "showShadowMap": "Afficher la carte des ombres",
+    "runAnalysis": "Lancer l'analyse"
   },
   "wind": {
     "title": "Analyse du vent",
+    "fullTitle": "Analyse du vent et microclimat",
     "run": "Lancer l'analyse",
+    "runAnalysis": "Lancer l'analyse",
     "direction": "Direction du vent",
     "speed": "Vitesse du vent",
-    "fullTitle": "Wind & Microclimate Analysis",
-    "runAnalysis": "Run Analysis",
-    "location": "Location",
+    "location": "Lieu",
     "latitude": "Latitude",
     "longitude": "Longitude",
-    "windData": "Wind Data",
-    "prevailingDirection": "Prevailing Wind Direction (°)",
-    "averageSpeed": "Average Speed (m/s)",
-    "compassReference": "Compass reference",
-    "compassLegend": "North: 0° | South: 180° | East: 90° | West: 270°",
+    "windData": "Données de vent",
+    "prevailingDirection": "Direction dominante (°)",
+    "averageSpeed": "Vitesse moyenne (m/s)",
+    "compassReference": "Référence boussole",
+    "compassLegend": "Nord : 0° | Sud : 180° | Est : 90° | Ouest : 270°",
     "visualisation": "Visualisation",
-    "showWindRose": "Show Wind Rose",
-    "showVentilation": "Show Ventilation Potential"
+    "showWindRose": "Afficher la rose des vents",
+    "showVentilation": "Afficher le potentiel de ventilation"
+  },
+  "rendering": {
+    "title": "Paramètres de rendu",
+    "photorealTitle": "Rendu photoréaliste",
+    "lighting": "Éclairage",
+    "ambientOcclusion": "Occlusion ambiante",
+    "shadows": "Ombres",
+    "shadowIntensity": "Intensité des ombres",
+    "exposure": "Exposition",
+    "toneMapping": "Mappage tonal",
+    "environment": "Environnement",
+    "environmentMap": "Carte d'environnement",
+    "renderQuality": "Qualité du rendu",
+    "groundReflections": "Reflets au sol",
+    "postProcessing": "Post-traitement",
+    "bloom": "Bloom",
+    "bloomStrength": "Intensité du bloom",
+    "tone": {
+      "linear": "Linéaire",
+      "aces": "ACES Filmic",
+      "reinhard": "Reinhard",
+      "cineon": "Cineon"
+    },
+    "env": {
+      "studio": "Studio",
+      "outdoor": "Extérieur",
+      "interior": "Intérieur",
+      "night": "Nuit"
+    },
+    "quality": {
+      "draft": "Brouillon",
+      "standard": "Standard",
+      "high": "Haute"
+    }
   },
   "spaces": {
     "title": "Espaces",
     "empty": "Aucun espace détecté.",
-    "tool": "Space Tool",
-    "roomName": "Room Name",
-    "usageType": "Usage Type",
-    "requiredArea": "Required Area (m²)",
-    "placeHint": "Click inside walls to place space",
-    "heading": "Spaces ({{count}})",
-    "areaDeficit": "Area deficit: {{actual}} m² < required {{required}} m²",
-    "totalFloor": "Total floor area: {{area}} m²"
+    "tool": "Outil Espace",
+    "roomName": "Nom de la pièce",
+    "usageType": "Type d'usage",
+    "requiredArea": "Surface requise (m²)",
+    "placeHint": "Cliquez à l'intérieur des murs pour placer un espace",
+    "heading": "Espaces ({{count}})",
+    "areaDeficit": "Déficit de surface : {{actual}} m² < requis {{required}} m²",
+    "totalFloor": "Surface de plancher totale : {{area}} m²"
   },
   "hatch": {
-    "title": "Motifs de hachure",
+    "title": "Motifs de hachures",
     "empty": "Aucun motif disponible.",
-    "selectHint": "Select elements to apply a hatch pattern.",
-    "scale": "Scale",
+    "selectHint": "Sélectionnez des éléments pour appliquer une hachure.",
+    "scale": "Échelle",
     "angle": "Angle (°)",
-    "spacing": "Spacing (mm)",
-    "apply": "Apply",
-    "applyToCount_one": "Apply to {{count}} element",
-    "applyToCount_other": "Apply to {{count}} elements"
+    "spacing": "Espacement (mm)",
+    "apply": "Appliquer",
+    "applyToCount_one": "Appliquer à {{count}} élément",
+    "applyToCount_other": "Appliquer à {{count}} éléments"
   },
   "symbols": {
     "title": "Bibliothèque de symboles",
     "empty": "Aucun symbole disponible.",
-    "searchPlaceholder": "Search symbols…",
-    "insert": "Insert",
-    "insertName": "Insert {{name}}"
+    "searchPlaceholder": "Rechercher des symboles…",
+    "insert": "Insérer",
+    "insertName": "Insérer {{name}}"
   },
   "bcf": {
-    "title": "Problèmes (BCF)",
+    "title": "Problèmes BCF",
     "newIssue": "Nouveau problème",
     "empty": "Aucun problème.",
+    "emptyDetail": "Aucun problème BCF. Importez un fichier .bcf ou créez des problèmes depuis le modèle.",
+    "import": "Importer BCF",
+    "export": "Exporter BCF",
     "status": {
       "open": "Ouvert",
       "inProgress": "En cours",
       "resolved": "Résolu",
       "closed": "Fermé"
-    },
-    "emptyDetail": "No BCF issues. Import a .bcf file or create issues from the model.",
-    "import": "Import BCF",
-    "export": "Export BCF"
+    }
   },
   "comments": {
     "title": "Commentaires",
     "empty": "Aucun commentaire.",
+    "emptyDetail": "Aucun commentaire. Ajoutez-en un ci-dessous.",
     "placeholder": "Ajouter un commentaire…",
     "post": "Publier",
-    "emptyDetail": "No comments yet. Add one below.",
-    "resolved": "Resolved",
-    "resolve": "Resolve",
-    "resolveAria": "Resolve comment {{id}}",
-    "reply": "Reply",
-    "replyPlaceholder": "Reply…",
-    "addComment": "Add comment"
+    "resolved": "Résolu",
+    "resolve": "Résoudre",
+    "resolveAria": "Résoudre le commentaire {{id}}",
+    "reply": "Répondre",
+    "replyPlaceholder": "Réponse…",
+    "addComment": "Ajouter un commentaire"
   },
   "underlay": {
-    "title": "PDF support",
-    "upload": "Importer un PDF",
-    "empty": "Aucun support chargé.",
+    "title": "Calque PDF",
+    "upload": "Téléverser un PDF",
+    "loadPdf": "Charger un PDF",
+    "rendering": "Rendu…",
+    "empty": "Aucun calque chargé.",
+    "emptyDetail": "Aucun calque. Chargez un PDF pour le décalquer.",
     "opacity": "Opacité",
     "scale": "Échelle",
-    "loadPdf": "Load PDF",
-    "rendering": "Rendering…",
-    "emptyDetail": "No underlays. Load a PDF to trace over it.",
     "rotation": "Rotation",
-    "origin": "Origin",
-    "hide": "Hide underlay",
-    "show": "Show underlay",
-    "delete": "Delete",
-    "rasterSize": "{{w}}×{{h}} px raster",
-    "calibrate": "Calibrate",
-    "apply": "Apply",
-    "rasteriseFailed": "Failed to rasterise PDF."
+    "origin": "Origine",
+    "hide": "Masquer le calque",
+    "show": "Afficher le calque",
+    "delete": "Supprimer",
+    "rasterSize": "Trame {{w}}×{{h}} px",
+    "calibrate": "Calibrer",
+    "apply": "Appliquer",
+    "rasteriseFailed": "Échec de la rastérisation du PDF."
   },
   "photo": {
     "title": "Photo vers modèle",
     "empty": "Déposez une photo pour commencer.",
-    "uploading": "Envoi…",
+    "uploading": "Téléversement…",
     "analysing": "Analyse…"
   },
   "site": {
@@ -421,47 +491,190 @@
     "axis": "Axe",
     "position": "Position"
   },
+  "tool": {
+    "column": {
+      "title": "Poteau",
+      "height": "Hauteur (mm)",
+      "sectionType": "Type de section",
+      "diameter": "Diamètre (mm)",
+      "width": "Largeur (mm)",
+      "depth": "Profondeur (mm)",
+      "material": "Matériau",
+      "placeHint": "Cliquez pour placer le poteau"
+    },
+    "beam": {
+      "title": "Poutre",
+      "span": "Portée (mm)",
+      "sectionProfile": "Profilé de section",
+      "sectionSize": "Taille de section",
+      "material": "Matériau",
+      "placeHint": "Cliquez sur les points de début et de fin pour placer la poutre"
+    },
+    "curtainWall": {
+      "title": "Mur-rideau",
+      "glazingType": "Type de vitrage",
+      "frameColor": "Couleur du cadre",
+      "panelWidth": "Largeur du panneau (mm)",
+      "panelHeight": "Hauteur du panneau (mm)",
+      "height": "Hauteur (mm)",
+      "frameThickness": "Épaisseur du cadre (mm)",
+      "frameDepth": "Profondeur du cadre (mm)",
+      "placeHint": "Cliquez sur les points de début et de fin pour placer le mur-rideau"
+    },
+    "door": {
+      "title": "Porte",
+      "width": "Largeur (mm)",
+      "height": "Hauteur (mm)",
+      "swing": "Battement (°)",
+      "frameType": "Type de cadre",
+      "placeHint": "Cliquez sur un mur pour placer la porte"
+    },
+    "window": {
+      "title": "Fenêtre",
+      "width": "Largeur (mm)",
+      "height": "Hauteur (mm)",
+      "sillHeight": "Hauteur d'allège (mm)",
+      "frameType": "Type de cadre",
+      "placeHint": "Cliquez sur un mur pour placer la fenêtre"
+    },
+    "slab": {
+      "title": "Dalle",
+      "type": "Type",
+      "thickness": "Épaisseur (mm)",
+      "material": "Matériau",
+      "slopeAngle": "Angle de pente (°)",
+      "elevationOffset": "Décalage d'élévation (mm)",
+      "placeHint": "Tracez le contour polygonal pour placer la dalle"
+    },
+    "stair": {
+      "title": "Escalier",
+      "totalRise": "Hauteur totale (mm)",
+      "riserCount": "Nombre de contremarches",
+      "treadDepth": "Profondeur de giron (mm)",
+      "width": "Largeur (mm)",
+      "material": "Matériau",
+      "railingHeight": "Hauteur de garde-corps (mm)",
+      "complianceWarning": "Le rapport contremarche/giron viole le code (2H+G = {{value}} mm, doit être 550–700 mm)",
+      "placeHint": "Glissez pour placer la boîte englobante de l'escalier"
+    },
+    "railing": {
+      "title": "Garde-corps",
+      "height": "Hauteur (mm)",
+      "material": "Matériau",
+      "balusterSpacing": "Espacement des balustres (mm)",
+      "placeHint": "Tracez le chemin pour placer le garde-corps"
+    },
+    "materialLibrary": {
+      "title": "Bibliothèque de matériaux",
+      "searchPlaceholder": "Rechercher des matériaux…",
+      "category": "Catégorie",
+      "allCategories": "Toutes les catégories",
+      "noMaterials": "Aucun matériau trouvé",
+      "addCustom": "Ajouter un matériau personnalisé"
+    },
+    "objectLibrary": {
+      "title": "Bibliothèque d'objets",
+      "searchPlaceholder": "Rechercher des objets…",
+      "category": "Catégorie",
+      "allCategories": "Toutes les catégories",
+      "noObjects": "Aucun objet trouvé"
+    }
+  },
+  "settings": {
+    "sso": {
+      "enableSso": "Activer le SSO",
+      "entityId": "Identifiant d'entité",
+      "clientId": "Identifiant client",
+      "clientSecret": "Secret client",
+      "discoveryUrl": "URL de découverte",
+      "certPlaceholder": "Collez ici le certificat X.509 de votre IdP…"
+    },
+    "apiKeys": {
+      "createNew": "Créer une nouvelle clé API",
+      "keyNamePlaceholder": "Nom de la clé (ex. CI/CD Pipeline)",
+      "generate": "Générer la clé",
+      "empty": "Aucune clé API"
+    },
+    "permissions": {
+      "invitePlaceholder": "Inviter par e-mail…",
+      "roleForInvite": "Rôle pour l'invitation",
+      "inviteMember": "Inviter un membre"
+    },
+    "admin": {
+      "projectMembers": "Membres du projet"
+    },
+    "billing": {
+      "cancelConfirmAria": "Confirmer l'annulation de l'abonnement"
+    },
+    "sheets": {
+      "sheetListAria": "Liste des présentations"
+    },
+    "mfa": {
+      "enterCode": "Saisir le code"
+    },
+    "saveSso": "Enregistrer les paramètres SSO",
+    "saveSettings": "Enregistrer les paramètres",
+    "testSso": "Tester la connexion SSO"
+  },
+  "ai": {
+    "upstream": "Via le serveur amont",
+    "ollamaBaseUrl": "URL de base Ollama",
+    "baseUrl": "URL de base",
+    "saveConfigAria": "Enregistrer la configuration IA",
+    "configureAria": "Configurer le fournisseur IA",
+    "closeSettingsAria": "Fermer les paramètres IA",
+    "closeChat": "Fermer le chat IA",
+    "configureToChat": "Configurez un fournisseur IA pour activer le chat.",
+    "setupAria": "Configurer le fournisseur IA",
+    "setUp": "Configurer",
+    "askPlaceholder": "Posez-moi n'importe quelle question…",
+    "configurePlaceholder": "Configurez le fournisseur IA pour discuter",
+    "stopGeneration": "Arrêter la génération",
+    "stop": "Arrêter",
+    "sendMessage": "Envoyer le message",
+    "send": "Envoyer"
+  },
   "pluginConsent": {
     "installPrompt": "Installer {{name}} ?",
     "byAuthor": "par {{author}}",
-    "noPermissions": "Cette extension ne demande aucune autorisation. Elle s'exécute dans un bac à sable et peut seulement enregistrer des messages de diagnostic.",
-    "permissionsIntro": "Cette extension demande les autorisations suivantes.",
+    "noPermissions": "Cette extension ne demande aucune permission. Elle s'exécute dans un bac à sable et ne peut que journaliser des messages de diagnostic.",
+    "permissionsIntro": "Cette extension demande les permissions suivantes.",
     "accept": "Installer",
     "cancel": "Annuler",
     "permissions": {
       "document": "Lire et modifier vos dessins",
-      "documentDetail": "Peut ajouter, modifier et supprimer des éléments (murs, portes, dalles, etc.) dans les documents ouverts.",
+      "documentDetail": "Peut ajouter, mettre à jour et supprimer des éléments (murs, portes, dalles, etc.) dans les documents que vous avez ouverts.",
       "ui": "Afficher des notifications et enregistrer des commandes",
-      "uiDetail": "Peut publier des messages dans la zone de notifications et ajouter des entrées au menu Extensions.",
+      "uiDetail": "Peut publier des messages dans la zone de notification et ajouter des entrées au menu Extensions.",
       "network": "Effectuer des requêtes réseau",
-      "networkDetail": "Peut contacter des serveurs externes. N'installez que des extensions d'auteurs de confiance — une extension avec cette autorisation peut exfiltrer les données auxquelles elle a accès.",
+      "networkDetail": "Peut contacter des serveurs externes. N'installez que les extensions d'auteurs de confiance — une extension avec cette permission peut exfiltrer les données auxquelles elle a accès.",
       "storage": "Stocker des données localement",
-      "storageDetail": "Peut conserver son état dans votre navigateur entre les sessions."
+      "storageDetail": "Peut conserver l'état dans votre navigateur entre les sessions."
     }
   },
   "pluginReport": {
     "title": "Signaler {{name}}",
-    "subtitle": "Envoyer cette extension aux modérateurs pour examen.",
+    "subtitle": "Soumettre cette extension aux modérateurs pour examen.",
     "reason": "Motif",
     "details": "Détails (facultatif)",
-    "detailsPlaceholder": "Que s'est-il passé ? Incluez les étapes de reproduction si possible.",
+    "detailsPlaceholder": "Que s'est-il passé ? Incluez les étapes pour reproduire si possible.",
     "submit": "Envoyer le signalement",
     "submitting": "Envoi…",
     "reasons": {
-      "malware": "Malware ou problème de sécurité",
-      "broken": "Ne fonctionne pas ou plante",
+      "malware": "Logiciel malveillant ou problème de sécurité",
+      "broken": "Cassé ou plante",
       "spam": "Spam ou comportement indésirable",
-      "policy": "Violation de la politique / du contenu",
+      "policy": "Violation de politique / contenu",
       "other": "Autre"
     }
   },
   "publisher": {
     "registerTitle": "Devenir éditeur d'extensions",
-    "registerIntro": "Publiez des extensions sur la marketplace OpenCAD. Publication gratuite. Répartition 70/30 sur les extensions payantes.",
+    "registerIntro": "Publiez des extensions sur le marketplace OpenCAD. Publication gratuite. Partage des revenus 70/30 sur les extensions payantes.",
     "displayName": "Nom affiché",
-    "contactEmail": "Email de contact",
-    "register": "S'inscrire comme éditeur",
-    "registering": "Inscription…",
+    "contactEmail": "E-mail de contact",
+    "register": "S'enregistrer comme éditeur",
+    "registering": "Enregistrement…",
     "submitTitle": "Soumettre une extension",
     "signedInAs": "Connecté en tant que <strong>{{who}}</strong>.",
     "idLabel": "ID (slug compatible URL, ex. « mon-extension »)",
@@ -470,234 +683,21 @@
     "version": "Version",
     "category": "Catégorie",
     "priceCents": "Prix (centimes)",
-    "permissions": "Autorisations",
+    "permissions": "Permissions",
     "bundle": "Bundle (.js)",
-    "submitReview": "Soumettre à l'examen",
+    "submitReview": "Soumettre pour examen",
     "submitting": "Envoi…",
-    "submittedMsg": "« {{name}} » v{{version}} envoyé. Il apparaîtra dans le catalogue après approbation d'OpenCAD.",
-    "stripeNotice": "Pour recevoir des paiements pour les extensions payantes, complétez l'inscription Stripe.",
-    "completeStripe": "Compléter l'inscription Stripe",
+    "submittedMsg": "« {{name}} » v{{version}} soumis. L'extension apparaîtra au catalogue après approbation par OpenCAD.",
+    "stripeNotice": "Pour recevoir les paiements des extensions payantes, complétez l'intégration Stripe.",
+    "completeStripe": "Compléter l'intégration Stripe",
     "queueTitle": "File de modération",
     "queueIntro": "Extensions en attente d'examen.",
     "approve": "Approuver",
     "reject": "Rejeter",
     "revoke": "Révoquer",
-    "revokeTitle": "Arrêt d'urgence : les clients installés désinstalleront automatiquement",
+    "revokeTitle": "Bouton d'arrêt : les clients installés se désinstallent automatiquement",
     "rejectPrompt": "Notes de rejet (envoyées à l'éditeur, facultatif) :",
     "revokePrompt": "Motif de l'arrêt (affiché aux utilisateurs au prochain chargement) :",
-    "loading": "Chargement de l'état d'éditeur…"
-  },
-  "tabs": {
-    "properties": "Propriétés",
-    "schedule": "Nomenclatures",
-    "spaces": "Espaces",
-    "clash": "Collisions",
-    "compliance": "Conformité",
-    "render": "Rendu",
-    "sheets": "Présentations",
-    "bcf": "Problèmes",
-    "materials": "Matériaux",
-    "comments": "Commentaires",
-    "carbon": "Carbone",
-    "cost": "Coût",
-    "hatch": "Hachures",
-    "symbols": "Symboles",
-    "shadow": "Ombres",
-    "section": "Coupe",
-    "site": "Import terrain",
-    "specs": "CCTP",
-    "photo": "Photo vers modèle",
-    "marketplace": "Marketplace",
-    "wind": "Analyse du vent",
-    "history": "Historique",
-    "branches": "Branches",
-    "underlay": "PDF support",
-    "admin": "Administration",
-    "review": "Revue",
-    "layers": "Calques"
-  },
-  "levels": {
-    "title": "Levels",
-    "addLevel": "Add level",
-    "levelName": "Level name",
-    "elevation": "Elevation (mm)",
-    "deleteLevel": "Delete level"
-  },
-  "rendering": {
-    "title": "Render Settings",
-    "photorealTitle": "Photoreal render",
-    "lighting": "Lighting",
-    "ambientOcclusion": "Ambient Occlusion",
-    "shadows": "Shadows",
-    "shadowIntensity": "Shadow Intensity",
-    "exposure": "Exposure",
-    "toneMapping": "Tone Mapping",
-    "environment": "Environment",
-    "environmentMap": "Environment Map",
-    "renderQuality": "Render Quality",
-    "groundReflections": "Ground Reflections",
-    "postProcessing": "Post-Processing",
-    "bloom": "Bloom",
-    "bloomStrength": "Bloom Strength",
-    "tone": {
-      "linear": "Linear",
-      "aces": "ACES Filmic",
-      "reinhard": "Reinhard",
-      "cineon": "Cineon"
-    },
-    "env": {
-      "studio": "Studio",
-      "outdoor": "Outdoor",
-      "interior": "Interior",
-      "night": "Night"
-    },
-    "quality": {
-      "draft": "Draft",
-      "standard": "Standard",
-      "high": "High"
-    }
-  },
-  "tool": {
-    "column": {
-      "title": "Column",
-      "height": "Height (mm)",
-      "sectionType": "Section Type",
-      "diameter": "Diameter (mm)",
-      "width": "Width (mm)",
-      "depth": "Depth (mm)",
-      "material": "Material",
-      "placeHint": "Click to place column"
-    },
-    "beam": {
-      "title": "Beam",
-      "span": "Span (mm)",
-      "sectionProfile": "Section Profile",
-      "sectionSize": "Section Size",
-      "material": "Material",
-      "placeHint": "Click start and end points to place beam"
-    },
-    "curtainWall": {
-      "title": "Curtain Wall",
-      "glazingType": "Glazing Type",
-      "frameColor": "Frame Color",
-      "panelWidth": "Panel Width (mm)",
-      "panelHeight": "Panel Height (mm)",
-      "height": "Height (mm)",
-      "frameThickness": "Frame Thickness (mm)",
-      "frameDepth": "Frame Depth (mm)",
-      "placeHint": "Click start and end points to place curtain wall"
-    },
-    "door": {
-      "title": "Door",
-      "width": "Width (mm)",
-      "height": "Height (mm)",
-      "swing": "Swing (°)",
-      "frameType": "Frame Type",
-      "placeHint": "Click on a wall to place door"
-    },
-    "window": {
-      "title": "Window",
-      "width": "Width (mm)",
-      "height": "Height (mm)",
-      "sillHeight": "Sill Height (mm)",
-      "frameType": "Frame Type",
-      "placeHint": "Click on a wall to place window"
-    },
-    "slab": {
-      "title": "Slab",
-      "type": "Type",
-      "thickness": "Thickness (mm)",
-      "material": "Material",
-      "slopeAngle": "Slope Angle (°)",
-      "elevationOffset": "Elevation Offset (mm)",
-      "placeHint": "Draw polygon boundary to place slab"
-    },
-    "stair": {
-      "title": "Stair",
-      "totalRise": "Total Rise (mm)",
-      "riserCount": "Riser count",
-      "treadDepth": "Tread Depth (mm)",
-      "width": "Width (mm)",
-      "material": "Material",
-      "railingHeight": "Railing Height (mm)",
-      "complianceWarning": "Riser/tread ratio violates building code (2R+G = {{value}}mm, must be 550–700mm)",
-      "placeHint": "Drag to place stair bounding box"
-    },
-    "railing": {
-      "title": "Railing",
-      "height": "Height (mm)",
-      "material": "Material",
-      "balusterSpacing": "Baluster Spacing (mm)",
-      "placeHint": "Draw path to place railing"
-    },
-    "materialLibrary": {
-      "title": "Material Library",
-      "searchPlaceholder": "Search materials…",
-      "category": "Category",
-      "allCategories": "All Categories",
-      "noMaterials": "No materials found",
-      "addCustom": "Add custom material"
-    },
-    "objectLibrary": {
-      "title": "Object Library",
-      "searchPlaceholder": "Search objects…",
-      "category": "Category",
-      "allCategories": "All Categories",
-      "noObjects": "No objects found"
-    }
-  },
-  "settings": {
-    "sso": {
-      "enableSso": "Enable SSO",
-      "entityId": "Entity ID",
-      "clientId": "Client ID",
-      "clientSecret": "Client Secret",
-      "discoveryUrl": "Discovery URL",
-      "certPlaceholder": "Paste your IdP X.509 certificate here…"
-    },
-    "apiKeys": {
-      "createNew": "Create new API key",
-      "keyNamePlaceholder": "Key name (e.g. CI/CD Pipeline)",
-      "generate": "Generate key",
-      "empty": "No API keys yet"
-    },
-    "permissions": {
-      "invitePlaceholder": "Invite by email…",
-      "roleForInvite": "Role for invite",
-      "inviteMember": "Invite member"
-    },
-    "admin": {
-      "projectMembers": "Project members"
-    },
-    "billing": {
-      "cancelConfirmAria": "Confirm subscription cancellation"
-    },
-    "sheets": {
-      "sheetListAria": "Sheet list"
-    },
-    "mfa": {
-      "enterCode": "Enter code"
-    },
-    "saveSso": "Save SSO settings",
-    "saveSettings": "Save Settings",
-    "testSso": "Test SSO sign-in"
-  },
-  "ai": {
-    "upstream": "Upstream via server",
-    "ollamaBaseUrl": "Ollama base URL",
-    "baseUrl": "Base URL",
-    "saveConfigAria": "Save AI configuration",
-    "configureAria": "Configure AI provider",
-    "closeSettingsAria": "Close AI settings",
-    "closeChat": "Close AI chat",
-    "configureToChat": "Configure an AI provider to enable chat.",
-    "setupAria": "Set up AI provider",
-    "setUp": "Set up",
-    "askPlaceholder": "Ask me anything…",
-    "configurePlaceholder": "Configure AI provider to chat",
-    "stopGeneration": "Stop generation",
-    "stop": "Stop",
-    "sendMessage": "Send message",
-    "send": "Send"
+    "loading": "Chargement du statut éditeur…"
   }
 }

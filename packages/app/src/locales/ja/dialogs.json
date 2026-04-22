@@ -1,39 +1,39 @@
 {
   "signIn": {
     "title": "サインイン",
-    "email": "メールアドレス",
+    "email": "メール",
     "password": "パスワード",
     "submit": "サインイン",
     "submitting": "サインイン中…",
-    "noAccount": "アカウントをお持ちでない方",
-    "createAccount": "無料アカウントを作成",
+    "noAccount": "アカウントをお持ちでないですか?",
+    "createAccount": "無料で作成",
     "or": "または",
     "forgotPassword": "パスワードをお忘れですか?",
-    "continueWithGoogle": "Google で続ける",
-    "continueWithMicrosoft": "Microsoft で続ける",
-    "invalidCredentials": "メールアドレスまたはパスワードが違います。",
+    "continueWithGoogle": "Google で続行",
+    "continueWithMicrosoft": "Microsoft で続行",
+    "invalidCredentials": "メールまたはパスワードが正しくありません。",
     "mfaTitle": "本人確認",
-    "mfaHint": "認証アプリの 6 桁コードを入力してください。",
-    "mfaCode": "確認コード",
+    "mfaHint": "認証アプリの 6 桁のコードを入力してください。",
+    "mfaCode": "認証コード",
     "mfaVerify": "確認"
   },
   "signUp": {
     "title": "アカウントを作成",
     "name": "氏名",
-    "email": "メールアドレス",
+    "email": "メール",
     "password": "パスワード",
     "submit": "無料アカウントを作成",
     "submitting": "作成中…",
-    "haveAccount": "すでにアカウントをお持ちの方",
+    "haveAccount": "すでにアカウントをお持ちですか?",
     "signIn": "サインイン",
     "passwordHint": "8 文字以上。",
-    "termsAgree": "アカウントを作成すると、<a>利用規約</a>および<a2>プライバシーポリシー</a2>に同意したものとみなされます。"
+    "termsAgree": "アカウントを作成すると、<a>利用規約</a> と <a2>プライバシーポリシー</a2> に同意したことになります。"
   },
   "forgotPassword": {
     "title": "パスワードをリセット",
-    "hint": "パスワードリセットのリンクをメールで送信します。",
+    "hint": "リセットリンクをメールで送信します。",
     "submit": "リセットリンクを送信",
-    "sent": "受信トレイでリセットリンクをご確認ください。",
+    "sent": "リセットリンクをお受け取りください(受信トレイをご確認ください)。",
     "backToSignIn": "サインインに戻る"
   },
   "newProject": {
@@ -51,32 +51,33 @@
   },
   "confirmDelete": {
     "title": "{{name}} を削除しますか?",
-    "body": "この操作は取り消せません。",
+    "body": "この操作は元に戻せません。",
     "confirm": "削除",
     "cancel": "キャンセル"
   },
   "importExport": {
     "importTitle": "ファイルをインポート",
     "exportTitle": "ファイルをエクスポート",
-    "dropHint": "ファイルをここにドロップするか、クリックして選択してください。",
-    "supportedFormats": "対応形式: IFC、DWG、DXF、SKP、RVT、PDF",
+    "dropHint": "ここにファイルをドロップするか、クリックして参照してください。",
+    "supportedFormats": "対応: IFC、DWG、DXF、SKP、RVT、PDF",
     "exporting": "エクスポート中…",
     "export": "エクスポート",
-    "format": "形式",
+    "format": "フォーマット",
     "cancel": "キャンセル"
   },
   "subscription": {
     "title": "プランを選択",
-    "subtitle": "いつでも変更可能 — 長期契約は不要です。",
+    "subtitle": "いつでもアップグレード可能 — 長期契約は不要です。",
     "currentPlan": "現在のプラン",
     "upgradeTo": "{{plan}} にアップグレード",
     "manageBilling": "請求を管理",
-    "perUserMonth": "1 ユーザー / 月",
-    "mostPopular": "人気",
+    "perUserMonth": "ユーザー / 月あたり",
+    "mostPopular": "人気プラン",
+    "close": "閉じる",
     "plans": {
       "free": {
-        "label": "Free",
-        "price": "$0",
+        "label": "無料",
+        "price": "¥0",
         "priceDetail": "永続",
         "features": {
           "f1": "1 プロジェクト",
@@ -87,26 +88,25 @@
       },
       "pro": {
         "label": "Pro",
-        "price": "$29",
+        "price": "¥2,900",
         "features": {
           "f1": "無制限のプロジェクト",
-          "f2": "リアルタイム共同編集",
+          "f2": "リアルタイムコラボレーション",
           "f3": "AI デザインアシスタント",
-          "f4": "優先メールサポート"
+          "f4": "メール優先サポート"
         }
       },
       "business": {
         "label": "Business",
-        "price": "$99",
+        "price": "¥9,900",
         "features": {
           "f1": "Pro のすべての機能",
           "f2": "管理者ロールと権限",
           "f3": "SSO / SAML",
-          "f4": "優先電話サポート"
+          "f4": "電話優先サポート"
         }
       }
-    },
-    "close": "閉じる"
+    }
   },
   "commandPalette": {
     "placeholder": "コマンドを検索…",
@@ -120,6 +120,20 @@
       "help": "ヘルプ"
     }
   },
+  "help": {
+    "title": "ヘルプ",
+    "close": "ヘルプを閉じる",
+    "tabs": {
+      "shortcuts": "ショートカット",
+      "howTo": "使い方",
+      "tips": "ヒント"
+    },
+    "takeGuidedTour": "ガイドツアーを開始",
+    "searchShortcuts": "ショートカットを検索…",
+    "noShortcutsMatch": "「{{query}}」に一致するショートカットはありません。",
+    "needMore": "もっと必要ですか?",
+    "openIssue": "イシューを開く"
+  },
   "feedback": {
     "title": "フィードバックを送信",
     "categoryLabel": "種類",
@@ -129,23 +143,9 @@
     "submitting": "送信中…",
     "sent": "フィードバックありがとうございます!",
     "categories": {
-      "bug": "不具合",
+      "bug": "バグ",
       "feature": "機能リクエスト",
       "question": "質問"
     }
-  },
-  "help": {
-    "title": "Help",
-    "close": "Close help",
-    "tabs": {
-      "shortcuts": "Shortcuts",
-      "howTo": "How To",
-      "tips": "Tips"
-    },
-    "takeGuidedTour": "Take the guided tour",
-    "searchShortcuts": "Search shortcuts…",
-    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
-    "needMore": "Need more?",
-    "openIssue": "Open an issue"
   }
 }

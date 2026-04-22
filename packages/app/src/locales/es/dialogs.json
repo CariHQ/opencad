@@ -1,12 +1,12 @@
 {
   "signIn": {
     "title": "Iniciar sesión",
-    "email": "Correo electrónico",
+    "email": "Correo",
     "password": "Contraseña",
     "submit": "Iniciar sesión",
     "submitting": "Iniciando sesión…",
     "noAccount": "¿No tienes cuenta?",
-    "createAccount": "Crear cuenta gratis",
+    "createAccount": "Crear una cuenta gratis",
     "or": "o",
     "forgotPassword": "¿Olvidaste tu contraseña?",
     "continueWithGoogle": "Continuar con Google",
@@ -14,17 +14,17 @@
     "invalidCredentials": "Correo o contraseña incorrectos.",
     "mfaTitle": "Verifica tu identidad",
     "mfaHint": "Introduce el código de 6 dígitos de tu app de autenticación.",
-    "mfaCode": "Código de verificación",
+    "mfaCode": "Código de autenticación",
     "mfaVerify": "Verificar"
   },
   "signUp": {
     "title": "Crea tu cuenta",
     "name": "Nombre completo",
-    "email": "Correo electrónico",
+    "email": "Correo",
     "password": "Contraseña",
     "submit": "Crear cuenta gratis",
     "submitting": "Creando…",
-    "haveAccount": "¿Ya tienes cuenta?",
+    "haveAccount": "¿Ya tienes una cuenta?",
     "signIn": "Iniciar sesión",
     "passwordHint": "Al menos 8 caracteres.",
     "termsAgree": "Al crear una cuenta aceptas nuestros <a>Términos</a> y nuestra <a2>Política de privacidad</a2>."
@@ -33,8 +33,8 @@
     "title": "Restablecer contraseña",
     "hint": "Te enviaremos un enlace de restablecimiento por correo.",
     "submit": "Enviar enlace",
-    "sent": "Revisa tu bandeja de entrada.",
-    "backToSignIn": "Volver al inicio de sesión"
+    "sent": "Revisa tu bandeja de entrada para el enlace de restablecimiento.",
+    "backToSignIn": "Volver a iniciar sesión"
   },
   "newProject": {
     "title": "Nuevo proyecto",
@@ -58,8 +58,8 @@
   "importExport": {
     "importTitle": "Importar archivo",
     "exportTitle": "Exportar archivo",
-    "dropHint": "Suelta un archivo aquí o haz clic para buscar.",
-    "supportedFormats": "Compatibles: IFC, DWG, DXF, SKP, RVT, PDF",
+    "dropHint": "Arrastra un archivo aquí o haz clic para examinar.",
+    "supportedFormats": "Soportados: IFC, DWG, DXF, SKP, RVT, PDF",
     "exporting": "Exportando…",
     "export": "Exportar",
     "format": "Formato",
@@ -67,27 +67,28 @@
   },
   "subscription": {
     "title": "Elige tu plan",
-    "subtitle": "Cambia cuando quieras — sin compromiso de permanencia.",
+    "subtitle": "Mejora cuando quieras — sin compromiso de larga duración.",
     "currentPlan": "Plan actual",
-    "upgradeTo": "Cambiar a {{plan}}",
+    "upgradeTo": "Pasar a {{plan}}",
     "manageBilling": "Gestionar facturación",
     "perUserMonth": "por usuario / mes",
-    "mostPopular": "Más popular",
+    "mostPopular": "El más popular",
+    "close": "Cerrar",
     "plans": {
       "free": {
         "label": "Gratis",
-        "price": "$0",
+        "price": "0 €",
         "priceDetail": "para siempre",
         "features": {
           "f1": "1 proyecto",
-          "f2": "Herramientas básicas de dibujo 2D",
+          "f2": "Herramientas 2D básicas",
           "f3": "Solo almacenamiento local",
-          "f4": "Soporte comunitario"
+          "f4": "Soporte de la comunidad"
         }
       },
       "pro": {
         "label": "Pro",
-        "price": "$29",
+        "price": "29 €",
         "features": {
           "f1": "Proyectos ilimitados",
           "f2": "Colaboración en tiempo real",
@@ -97,16 +98,15 @@
       },
       "business": {
         "label": "Business",
-        "price": "$99",
+        "price": "99 €",
         "features": {
           "f1": "Todo lo de Pro",
-          "f2": "Roles y permisos de administrador",
+          "f2": "Roles y permisos de admin",
           "f3": "SSO / SAML",
-          "f4": "Soporte prioritario por teléfono"
+          "f4": "Soporte telefónico prioritario"
         }
       }
-    },
-    "close": "Cerrar"
+    }
   },
   "commandPalette": {
     "placeholder": "Buscar comandos…",
@@ -116,9 +116,23 @@
       "views": "Vistas",
       "panels": "Paneles",
       "file": "Archivo",
-      "edit": "Editar",
+      "edit": "Edición",
       "help": "Ayuda"
     }
+  },
+  "help": {
+    "title": "Ayuda",
+    "close": "Cerrar ayuda",
+    "tabs": {
+      "shortcuts": "Atajos",
+      "howTo": "Cómo hacer",
+      "tips": "Consejos"
+    },
+    "takeGuidedTour": "Hacer la visita guiada",
+    "searchShortcuts": "Buscar atajos…",
+    "noShortcutsMatch": "Ningún atajo coincide con «{{query}}».",
+    "needMore": "¿Necesitas más?",
+    "openIssue": "Abrir un ticket"
   },
   "feedback": {
     "title": "Enviar comentarios",
@@ -133,19 +147,5 @@
       "feature": "Solicitud de función",
       "question": "Pregunta"
     }
-  },
-  "help": {
-    "title": "Help",
-    "close": "Close help",
-    "tabs": {
-      "shortcuts": "Shortcuts",
-      "howTo": "How To",
-      "tips": "Tips"
-    },
-    "takeGuidedTour": "Take the guided tour",
-    "searchShortcuts": "Search shortcuts…",
-    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
-    "needMore": "Need more?",
-    "openIssue": "Open an issue"
   }
 }

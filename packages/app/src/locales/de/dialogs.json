@@ -4,7 +4,7 @@
     "email": "E-Mail",
     "password": "Passwort",
     "submit": "Anmelden",
-    "submitting": "Anmeldung…",
+    "submitting": "Wird angemeldet…",
     "noAccount": "Kein Konto?",
     "createAccount": "Kostenloses Konto erstellen",
     "or": "oder",
@@ -14,11 +14,11 @@
     "invalidCredentials": "E-Mail oder Passwort falsch.",
     "mfaTitle": "Identität bestätigen",
     "mfaHint": "Gib den 6-stelligen Code aus deiner Authenticator-App ein.",
-    "mfaCode": "Bestätigungscode",
+    "mfaCode": "Authenticator-Code",
     "mfaVerify": "Bestätigen"
   },
   "signUp": {
-    "title": "Konto erstellen",
+    "title": "Erstelle dein Konto",
     "name": "Vollständiger Name",
     "email": "E-Mail",
     "password": "Passwort",
@@ -27,13 +27,13 @@
     "haveAccount": "Schon ein Konto?",
     "signIn": "Anmelden",
     "passwordHint": "Mindestens 8 Zeichen.",
-    "termsAgree": "Mit der Kontoerstellung akzeptierst du unsere <a>Bedingungen</a> und <a2>Datenschutzerklärung</a2>."
+    "termsAgree": "Mit der Erstellung eines Kontos akzeptierst du unsere <a>AGB</a> und unsere <a2>Datenschutzerklärung</a2>."
   },
   "forgotPassword": {
     "title": "Passwort zurücksetzen",
-    "hint": "Wir senden dir einen Link zum Zurücksetzen per E-Mail.",
-    "submit": "Link senden",
-    "sent": "Prüfe dein Postfach auf den Link.",
+    "hint": "Wir senden dir einen Reset-Link per E-Mail.",
+    "submit": "Reset-Link senden",
+    "sent": "Prüfe deinen Posteingang auf den Reset-Link.",
     "backToSignIn": "Zurück zur Anmeldung"
   },
   "newProject": {
@@ -58,55 +58,55 @@
   "importExport": {
     "importTitle": "Datei importieren",
     "exportTitle": "Datei exportieren",
-    "dropHint": "Datei hier ablegen oder klicken, um zu durchsuchen.",
+    "dropHint": "Datei hier ablegen oder zum Durchsuchen klicken.",
     "supportedFormats": "Unterstützt: IFC, DWG, DXF, SKP, RVT, PDF",
-    "exporting": "Wird exportiert…",
+    "exporting": "Exportiert…",
     "export": "Exportieren",
     "format": "Format",
     "cancel": "Abbrechen"
   },
   "subscription": {
     "title": "Wähle deinen Tarif",
-    "subtitle": "Jederzeit wechseln — keine Mindestlaufzeit.",
+    "subtitle": "Jederzeit upgraden — keine langfristige Bindung erforderlich.",
     "currentPlan": "Aktueller Tarif",
-    "upgradeTo": "Auf {{plan}} upgraden",
+    "upgradeTo": "Upgrade auf {{plan}}",
     "manageBilling": "Abrechnung verwalten",
     "perUserMonth": "pro Nutzer / Monat",
     "mostPopular": "Am beliebtesten",
+    "close": "Schließen",
     "plans": {
       "free": {
         "label": "Kostenlos",
-        "price": "0 $",
-        "priceDetail": "dauerhaft",
+        "price": "0 €",
+        "priceDetail": "für immer",
         "features": {
           "f1": "1 Projekt",
-          "f2": "Grundlegende 2D-Zeichenwerkzeuge",
+          "f2": "Grundlegende 2D-Werkzeuge",
           "f3": "Nur lokaler Speicher",
           "f4": "Community-Support"
         }
       },
       "pro": {
         "label": "Pro",
-        "price": "29 $",
+        "price": "29 €",
         "features": {
           "f1": "Unbegrenzte Projekte",
-          "f2": "Echtzeit-Zusammenarbeit",
-          "f3": "KI-Design-Assistent",
-          "f4": "Priorisierter E-Mail-Support"
+          "f2": "Echtzeit-Kollaboration",
+          "f3": "KI-Designassistent",
+          "f4": "Bevorzugter E-Mail-Support"
         }
       },
       "business": {
         "label": "Business",
-        "price": "99 $",
+        "price": "99 €",
         "features": {
           "f1": "Alles aus Pro",
           "f2": "Admin-Rollen & Berechtigungen",
           "f3": "SSO / SAML",
-          "f4": "Priorisierter Telefonsupport"
+          "f4": "Bevorzugter Telefon-Support"
         }
       }
-    },
-    "close": "Schließen"
+    }
   },
   "commandPalette": {
     "placeholder": "Befehle suchen…",
@@ -120,32 +120,32 @@
       "help": "Hilfe"
     }
   },
+  "help": {
+    "title": "Hilfe",
+    "close": "Hilfe schließen",
+    "tabs": {
+      "shortcuts": "Tastenkürzel",
+      "howTo": "Anleitungen",
+      "tips": "Tipps"
+    },
+    "takeGuidedTour": "Geführte Tour starten",
+    "searchShortcuts": "Tastenkürzel suchen…",
+    "noShortcutsMatch": "Kein Tastenkürzel passt zu „{{query}}“.",
+    "needMore": "Brauchst du mehr?",
+    "openIssue": "Issue eröffnen"
+  },
   "feedback": {
     "title": "Feedback senden",
     "categoryLabel": "Typ",
     "titleLabel": "Titel",
     "descriptionLabel": "Beschreibung",
-    "submit": "Feedback senden",
+    "submit": "Feedback absenden",
     "submitting": "Wird gesendet…",
-    "sent": "Danke für Ihr Feedback!",
+    "sent": "Danke für dein Feedback!",
     "categories": {
       "bug": "Fehler",
-      "feature": "Feature-Wunsch",
+      "feature": "Funktionswunsch",
       "question": "Frage"
     }
-  },
-  "help": {
-    "title": "Help",
-    "close": "Close help",
-    "tabs": {
-      "shortcuts": "Shortcuts",
-      "howTo": "How To",
-      "tips": "Tips"
-    },
-    "takeGuidedTour": "Take the guided tour",
-    "searchShortcuts": "Search shortcuts…",
-    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
-    "needMore": "Need more?",
-    "openIssue": "Open an issue"
   }
 }
