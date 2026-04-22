@@ -28,11 +28,16 @@ import { calculateSolarPosition } from '../lib/solarAnalysis';
 
 // ─── Path-tracer dynamic import ──────────────────────────────────────────────
 
+interface BVHGeneratorLike {
+  generate: (geometry: THREE.BufferGeometry, options?: unknown) => Promise<unknown>;
+}
+
 type WebGLPathTracerCtor = new (renderer: THREE.WebGLRenderer) => {
   bounces: number;
   renderScale: number;
   renderToCanvas: boolean;
   samples: number;
+  setBVHWorker: (worker: BVHGeneratorLike) => void;
   setSceneAsync: (scene: THREE.Scene, camera: THREE.Camera) => Promise<void>;
   renderSample: () => void;
   dispose: () => void;
@@ -43,6 +48,29 @@ async function loadPathTracer(): Promise<WebGLPathTracerCtor> {
   const mod = await import('three-gpu-pathtracer');
   _cachedWebGLPathTracer = mod.WebGLPathTracer as unknown as WebGLPathTracerCtor;
   return _cachedWebGLPathTracer;
+}
+
+/**
+ * Synchronous stand-in for `ParallelMeshBVHWorker` / `GenerateMeshBVHWorker`.
+ * three-gpu-pathtracer 0.0.22+ requires a BVH worker before `generateAsync`
+ * will run — otherwise it throws:
+ *   'PathTracingSceneGenerator: "setBVHWorker" must be called before
+ *    "generateAsync" can be called.'
+ *
+ * The upstream workers spin up Web Workers, which needs Vite's worker
+ * bundling to be configured to resolve `./generateMeshBVH.worker.js`
+ * relative to node_modules. For a single-shot photoreal render, running
+ * BVH construction on the main thread is fine — it blocks the UI for
+ * ~1s then samples render async on the GPU. This wrapper matches the
+ * `.generate(geometry, options) => Promise<bvh>` contract the path
+ * tracer expects.
+ */
+async function makeInlineBVHGenerator(): Promise<BVHGeneratorLike> {
+  const { MeshBVH } = await import('three-mesh-bvh');
+  return {
+    generate: (geometry, options) =>
+      Promise.resolve(new MeshBVH(geometry, options as ConstructorParameters<typeof MeshBVH>[1])),
+  };
 }
 
 // ─── Presets ─────────────────────────────────────────────────────────────────
@@ -169,6 +197,10 @@ export function RenderingPanel(): React.ReactElement {
       tracer.bounces = preset === 'draft' ? 2 : preset === 'preview' ? 5 : 8;
       tracer.renderScale = preset === 'draft' ? 0.5 : 1.0;
       tracer.renderToCanvas = true;
+
+      // Required since three-gpu-pathtracer 0.0.22+ — must be set before
+      // setSceneAsync triggers generateAsync or the scene generator throws.
+      tracer.setBVHWorker(await makeInlineBVHGenerator());
 
       await tracer.setSceneAsync(scene, camera);
       if (cancelRef.current) return;
