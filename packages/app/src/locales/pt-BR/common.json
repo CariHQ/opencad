@@ -17,14 +17,22 @@
     "resubscribe": "Reinscrever-se",
     "loading": "Carregando…",
     "retry": "Tentar de novo",
-    "done": "Concluído"
+    "done": "Concluído",
+    "import": "Importar",
+    "export": "Exportar",
+    "undo": "Desfazer",
+    "redo": "Refazer"
   },
   "nav": {
     "home": "Início",
     "projects": "Projetos",
     "settings": "Configurações",
     "billing": "Cobrança",
-    "signOut": "Sair"
+    "signOut": "Sair",
+    "help": "Ajuda",
+    "feedback": "Feedback",
+    "ai": "IA",
+    "plugins": "Plugins"
   },
   "status": {
     "online": "Online",
@@ -32,5 +40,33 @@
     "saving": "Salvando…",
     "saved": "Salvo",
     "syncing": "Sincronizando…"
+  },
+  "view": {
+    "floorPlan": "Planta",
+    "threeD": "Vista 3D",
+    "section": "Corte",
+    "elevation": "Elevação"
+  },
+  "settings": {
+    "title": "Configurações",
+    "tabs": {
+      "language": "Idioma",
+      "apiKeys": "Chaves de API",
+      "permissions": "Permissões",
+      "sso": "SSO",
+      "billing": "Cobrança"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "Início — voltar aos projetos",
+    "toggleLeftPanel": "Alternar painel esquerdo",
+    "toggleRightPanel": "Alternar painel direito",
+    "renameProject": "Clique para renomear o projeto",
+    "newProject": "Novo projeto",
+    "openProject": "Abrir um projeto",
+    "saveProject": "Salvar",
+    "importFile": "Importar arquivo",
+    "exportFile": "Exportar",
+    "toggleTheme": "Alternar tema claro/escuro"
   }
 }

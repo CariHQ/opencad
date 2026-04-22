@@ -17,14 +17,22 @@
     "resubscribe": "Resubscribe",
     "loading": "Loading…",
     "retry": "Retry",
-    "done": "Done"
+    "done": "Done",
+    "import": "Import",
+    "export": "Export",
+    "undo": "Undo",
+    "redo": "Redo"
   },
   "nav": {
     "home": "Home",
     "projects": "Projects",
     "settings": "Settings",
     "billing": "Billing",
-    "signOut": "Sign out"
+    "signOut": "Sign out",
+    "help": "Help",
+    "feedback": "Feedback",
+    "ai": "AI",
+    "plugins": "Plugins"
   },
   "status": {
     "online": "Online",
@@ -32,5 +40,33 @@
     "saving": "Saving…",
     "saved": "Saved",
     "syncing": "Syncing…"
+  },
+  "view": {
+    "floorPlan": "Floor Plan",
+    "threeD": "3D View",
+    "section": "Section",
+    "elevation": "Elevation"
+  },
+  "settings": {
+    "title": "Settings",
+    "tabs": {
+      "language": "Language",
+      "apiKeys": "API Keys",
+      "permissions": "Permissions",
+      "sso": "SSO",
+      "billing": "Billing"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "Home — back to projects",
+    "toggleLeftPanel": "Toggle left panel",
+    "toggleRightPanel": "Toggle right panel",
+    "renameProject": "Click to rename project",
+    "newProject": "New project",
+    "openProject": "Open a project",
+    "saveProject": "Save",
+    "importFile": "Import file",
+    "exportFile": "Export",
+    "toggleTheme": "Toggle light/dark theme"
   }
 }

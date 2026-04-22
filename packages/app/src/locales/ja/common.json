@@ -17,14 +17,22 @@
     "resubscribe": "再契約",
     "loading": "読み込み中…",
     "retry": "再試行",
-    "done": "完了"
+    "done": "完了",
+    "import": "インポート",
+    "export": "エクスポート",
+    "undo": "元に戻す",
+    "redo": "やり直す"
   },
   "nav": {
     "home": "ホーム",
     "projects": "プロジェクト",
     "settings": "設定",
     "billing": "請求",
-    "signOut": "サインアウト"
+    "signOut": "サインアウト",
+    "help": "ヘルプ",
+    "feedback": "フィードバック",
+    "ai": "AI",
+    "plugins": "プラグイン"
   },
   "status": {
     "online": "オンライン",
@@ -32,5 +40,33 @@
     "saving": "保存中…",
     "saved": "保存済み",
     "syncing": "同期中…"
+  },
+  "view": {
+    "floorPlan": "平面図",
+    "threeD": "3Dビュー",
+    "section": "断面",
+    "elevation": "立面"
+  },
+  "settings": {
+    "title": "設定",
+    "tabs": {
+      "language": "言語",
+      "apiKeys": "APIキー",
+      "permissions": "権限",
+      "sso": "シングルサインオン",
+      "billing": "請求"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "ホーム — プロジェクト一覧に戻る",
+    "toggleLeftPanel": "左パネルを切り替え",
+    "toggleRightPanel": "右パネルを切り替え",
+    "renameProject": "クリックしてプロジェクト名を変更",
+    "newProject": "新規プロジェクト",
+    "openProject": "プロジェクトを開く",
+    "saveProject": "保存",
+    "importFile": "ファイルをインポート",
+    "exportFile": "エクスポート",
+    "toggleTheme": "ライト/ダークを切り替え"
   }
 }

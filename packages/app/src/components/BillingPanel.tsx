@@ -25,6 +25,7 @@
  *   cancel-confirm-no         — dismiss button
  */
 import React, { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useSubscription } from '../hooks/useSubscription';
 import { subscriptionApi, type Invoice, type SubscriptionTier } from '../lib/serverApi';
 
@@ -72,6 +73,7 @@ interface BillingPanelProps {
 }
 
 export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.ReactElement {
+  const { t } = useTranslation('panels');
   const {
     tier,
     subscriptionStatus,
@@ -135,7 +137,7 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
     <div className="billing-panel">
       {/* ── Plan badge ─────────────────────────────────────────────────────── */}
       <section className="billing-section billing-plan-section">
-        <h3 className="billing-section-title">Current Plan</h3>
+        <h3 className="billing-section-title">{t('billing.currentPlan')}</h3>
         <div className="billing-plan-row">
           <span
             className={`billing-plan-badge billing-plan-badge--${tier}`}
@@ -146,7 +148,7 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
 
           {isTrial && validUntil !== null && (
             <span className="billing-trial-countdown" data-testid="trial-countdown">
-              {daysRemaining(validUntil)} days remaining in trial
+              {t('billing.daysRemaining', { days: daysRemaining(validUntil) })}
             </span>
           )}
         </div>
@@ -157,19 +159,17 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
           onClick={handleUpgrade}
           type="button"
         >
-          Upgrade Plan
+          {t('billing.upgradePlan')}
         </button>
       </section>
 
       {/* ── Invoice history ─────────────────────────────────────────────────── */}
       <section className="billing-section billing-invoices-section">
-        <h3 className="billing-section-title">Invoice History</h3>
+        <h3 className="billing-section-title">{t('billing.invoiceHistory')}</h3>
         {invoicesLoading ? (
           <p className="billing-loading-text">Loading invoices…</p>
         ) : invoices.length === 0 ? (
-          <p className="billing-empty-text">
-            No invoices yet. They&apos;ll appear here once you&apos;re on a paid plan.
-          </p>
+          <p className="billing-empty-text">{t('billing.noInvoices')}</p>
         ) : (
           <table className="billing-invoice-table" data-testid="invoice-table">
             <thead>
@@ -216,18 +216,15 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
       {/* ── Cancel subscription ─────────────────────────────────────────────── */}
       {canCancel && (
         <section className="billing-section billing-cancel-section">
-          <h3 className="billing-section-title">Cancel Subscription</h3>
-          <p className="billing-cancel-description">
-            You can cancel your subscription at any time. You will retain access until the
-            end of the current billing period.
-          </p>
+          <h3 className="billing-section-title">{t('billing.cancelSubscription')}</h3>
+          <p className="billing-cancel-description">{t('billing.cancelDescription')}</p>
           <button
             className="billing-cancel-btn"
             data-testid="cancel-subscription-btn"
             onClick={() => setShowCancelDialog(true)}
             type="button"
           >
-            Cancel Subscription
+            {t('billing.cancelSubscription')}
           </button>
         </section>
       )}
@@ -242,11 +239,8 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
           aria-label="Cancel subscription confirmation"
         >
           <div className="billing-cancel-dialog">
-            <h4 className="billing-cancel-dialog-title">Cancel subscription?</h4>
-            <p className="billing-cancel-dialog-body">
-              Are you sure you want to cancel? Your plan will stay active until the end of
-              the billing period.
-            </p>
+            <h4 className="billing-cancel-dialog-title">{t('billing.cancelConfirmTitle')}</h4>
+            <p className="billing-cancel-dialog-body">{t('billing.cancelConfirmBody')}</p>
             <div className="billing-cancel-dialog-actions">
               <button
                 className="billing-cancel-confirm-yes"
@@ -254,7 +248,7 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
                 onClick={handleCancelConfirm}
                 type="button"
               >
-                Yes, cancel
+                {t('billing.cancelYes')}
               </button>
               <button
                 className="billing-cancel-confirm-no"
@@ -262,7 +256,7 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
                 onClick={() => setShowCancelDialog(false)}
                 type="button"
               >
-                Keep my plan
+                {t('billing.cancelKeep')}
               </button>
             </div>
           </div>

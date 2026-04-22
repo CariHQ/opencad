@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import type { PropertyValue, PropertySet } from '@opencad/document';
 import { getSharedSelectedCoords } from '../hooks/useThreeViewport';
@@ -63,6 +64,7 @@ function summarizeStructuredValue(key: string, prop: PropertyValue): string | nu
 }
 
 export function PropertiesPanel() {
+  const { t } = useTranslation('panels');
   const { document: doc, selectedIds, updateElement, pushHistory } = useDocumentStore();
   const [pendingProps, setPendingProps] = useState<PendingProp[]>([]);
   // Live-polled position from the 3D viewport so the Location X/Y/Z inputs
@@ -82,10 +84,10 @@ export function PropertiesPanel() {
     return (
       <div className="properties-panel">
         <div className="panel-header">
-          <span className="panel-title">Properties</span>
+          <span className="panel-title">{t('properties.title')}</span>
         </div>
         <div className="properties-content empty">
-          <p className="properties-empty-hint">Select an element to view its properties</p>
+          <p className="properties-empty-hint">{t('properties.noSelection')}</p>
         </div>
       </div>
     );
@@ -95,7 +97,7 @@ export function PropertiesPanel() {
     return (
       <div className="properties-panel">
         <div className="panel-header">
-          <span className="panel-title">Properties</span>
+          <span className="panel-title">{t('properties.title')}</span>
         </div>
         <div className="properties-content empty">
           <p className="properties-empty-hint">{selectedIds.length} elements selected</p>

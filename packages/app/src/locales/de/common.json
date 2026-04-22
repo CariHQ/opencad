@@ -17,14 +17,22 @@
     "resubscribe": "Erneut abonnieren",
     "loading": "Lädt…",
     "retry": "Erneut versuchen",
-    "done": "Fertig"
+    "done": "Fertig",
+    "import": "Importieren",
+    "export": "Exportieren",
+    "undo": "Rückgängig",
+    "redo": "Wiederholen"
   },
   "nav": {
     "home": "Start",
     "projects": "Projekte",
     "settings": "Einstellungen",
     "billing": "Abrechnung",
-    "signOut": "Abmelden"
+    "signOut": "Abmelden",
+    "help": "Hilfe",
+    "feedback": "Feedback",
+    "ai": "KI",
+    "plugins": "Plugins"
   },
   "status": {
     "online": "Online",
@@ -32,5 +40,33 @@
     "saving": "Wird gespeichert…",
     "saved": "Gespeichert",
     "syncing": "Synchronisiert…"
+  },
+  "view": {
+    "floorPlan": "Grundriss",
+    "threeD": "3D-Ansicht",
+    "section": "Schnitt",
+    "elevation": "Ansicht"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "tabs": {
+      "language": "Sprache",
+      "apiKeys": "API-Schlüssel",
+      "permissions": "Berechtigungen",
+      "sso": "SSO",
+      "billing": "Abrechnung"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "Start — zurück zu Projekten",
+    "toggleLeftPanel": "Linkes Panel umschalten",
+    "toggleRightPanel": "Rechtes Panel umschalten",
+    "renameProject": "Klicken, um das Projekt umzubenennen",
+    "newProject": "Neues Projekt",
+    "openProject": "Projekt öffnen",
+    "saveProject": "Speichern",
+    "importFile": "Datei importieren",
+    "exportFile": "Exportieren",
+    "toggleTheme": "Hell/Dunkel-Modus umschalten"
   }
 }

@@ -17,14 +17,22 @@
     "resubscribe": "重新订阅",
     "loading": "加载中…",
     "retry": "重试",
-    "done": "完成"
+    "done": "完成",
+    "import": "导入",
+    "export": "导出",
+    "undo": "撤销",
+    "redo": "重做"
   },
   "nav": {
     "home": "主页",
     "projects": "项目",
     "settings": "设置",
     "billing": "账单",
-    "signOut": "退出"
+    "signOut": "退出",
+    "help": "帮助",
+    "feedback": "反馈",
+    "ai": "AI",
+    "plugins": "插件"
   },
   "status": {
     "online": "在线",
@@ -32,5 +40,33 @@
     "saving": "保存中…",
     "saved": "已保存",
     "syncing": "同步中…"
+  },
+  "view": {
+    "floorPlan": "平面图",
+    "threeD": "三维视图",
+    "section": "剖面",
+    "elevation": "立面"
+  },
+  "settings": {
+    "title": "设置",
+    "tabs": {
+      "language": "语言",
+      "apiKeys": "API 密钥",
+      "permissions": "权限",
+      "sso": "单点登录",
+      "billing": "账单"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "主页 — 返回项目列表",
+    "toggleLeftPanel": "切换左侧面板",
+    "toggleRightPanel": "切换右侧面板",
+    "renameProject": "点击以重命名项目",
+    "newProject": "新建项目",
+    "openProject": "打开项目",
+    "saveProject": "保存",
+    "importFile": "导入文件",
+    "exportFile": "导出",
+    "toggleTheme": "切换明暗主题"
   }
 }

@@ -17,14 +17,22 @@
     "resubscribe": "Возобновить подписку",
     "loading": "Загрузка…",
     "retry": "Повторить",
-    "done": "Готово"
+    "done": "Готово",
+    "import": "Импорт",
+    "export": "Экспорт",
+    "undo": "Отменить",
+    "redo": "Повторить"
   },
   "nav": {
     "home": "Главная",
     "projects": "Проекты",
     "settings": "Настройки",
     "billing": "Оплата",
-    "signOut": "Выйти"
+    "signOut": "Выйти",
+    "help": "Справка",
+    "feedback": "Обратная связь",
+    "ai": "ИИ",
+    "plugins": "Плагины"
   },
   "status": {
     "online": "В сети",
@@ -32,5 +40,33 @@
     "saving": "Сохранение…",
     "saved": "Сохранено",
     "syncing": "Синхронизация…"
+  },
+  "view": {
+    "floorPlan": "План этажа",
+    "threeD": "3D-вид",
+    "section": "Разрез",
+    "elevation": "Фасад"
+  },
+  "settings": {
+    "title": "Настройки",
+    "tabs": {
+      "language": "Язык",
+      "apiKeys": "Ключи API",
+      "permissions": "Разрешения",
+      "sso": "SSO",
+      "billing": "Оплата"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "Главная — вернуться к проектам",
+    "toggleLeftPanel": "Левая панель",
+    "toggleRightPanel": "Правая панель",
+    "renameProject": "Нажмите, чтобы переименовать проект",
+    "newProject": "Новый проект",
+    "openProject": "Открыть проект",
+    "saveProject": "Сохранить",
+    "importFile": "Импортировать файл",
+    "exportFile": "Экспорт",
+    "toggleTheme": "Светлая / тёмная тема"
   }
 }

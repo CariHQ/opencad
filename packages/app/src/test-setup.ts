@@ -2,6 +2,11 @@ import { expect, vi } from 'vitest';
 import * as matchers from '@testing-library/jest-dom/matchers';
 expect.extend(matchers);
 
+// Initialise i18next for every test so components that call useTranslation
+// resolve real strings instead of raw keys. Importing for side effects
+// triggers the init block in ./i18n.
+import './i18n';
+
 vi.mock('uuid', () => ({
   v4: () => crypto.randomUUID(),
 }));

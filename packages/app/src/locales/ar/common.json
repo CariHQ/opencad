@@ -17,14 +17,22 @@
     "resubscribe": "إعادة الاشتراك",
     "loading": "جارٍ التحميل…",
     "retry": "إعادة المحاولة",
-    "done": "تم"
+    "done": "تم",
+    "import": "استيراد",
+    "export": "تصدير",
+    "undo": "تراجع",
+    "redo": "إعادة"
   },
   "nav": {
     "home": "الرئيسية",
     "projects": "المشاريع",
     "settings": "الإعدادات",
     "billing": "الفواتير",
-    "signOut": "تسجيل الخروج"
+    "signOut": "تسجيل الخروج",
+    "help": "مساعدة",
+    "feedback": "ملاحظات",
+    "ai": "الذكاء الاصطناعي",
+    "plugins": "الإضافات"
   },
   "status": {
     "online": "متصل",
@@ -32,5 +40,33 @@
     "saving": "جارٍ الحفظ…",
     "saved": "تم الحفظ",
     "syncing": "جارٍ المزامنة…"
+  },
+  "view": {
+    "floorPlan": "مسقط",
+    "threeD": "عرض ثلاثي الأبعاد",
+    "section": "مقطع",
+    "elevation": "واجهة"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "tabs": {
+      "language": "اللغة",
+      "apiKeys": "مفاتيح API",
+      "permissions": "الصلاحيات",
+      "sso": "تسجيل الدخول الموحد",
+      "billing": "الفواتير"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "الرئيسية — العودة إلى المشاريع",
+    "toggleLeftPanel": "تبديل اللوحة اليسرى",
+    "toggleRightPanel": "تبديل اللوحة اليمنى",
+    "renameProject": "انقر لإعادة تسمية المشروع",
+    "newProject": "مشروع جديد",
+    "openProject": "فتح مشروع",
+    "saveProject": "حفظ",
+    "importFile": "استيراد ملف",
+    "exportFile": "تصدير",
+    "toggleTheme": "تبديل بين الوضع الفاتح والداكن"
   }
 }

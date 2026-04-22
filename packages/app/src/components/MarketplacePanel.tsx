@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 import { pluginRegistry } from '../plugins/pluginRegistry';
 import { validateManifest, type PluginManifest } from '../plugins/pluginManifest';
 import { BUNDLED_PLUGIN_MANIFESTS, pluginHost } from '../plugins/pluginHost';
@@ -89,6 +90,7 @@ export function MarketplacePanel({
   onPublish: _onPublish,
 }: MarketplacePanelProps = {}) {
   void _onPublish;
+  const { t } = useTranslation('panels');
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -388,7 +390,7 @@ export function MarketplacePanel({
         />
       )}
       <div className="panel-header">
-        <span className="panel-title">Marketplace</span>
+        <span className="panel-title">{t('marketplace.title')}</span>
         <button
           type="button"
           className="btn-report"
@@ -428,7 +430,7 @@ export function MarketplacePanel({
         <div className="marketplace-section">
           <div className="marketplace-notice">
             <span className="marketplace-notice-text">
-              Bundled plugins · more coming soon
+              {t('marketplace.bundledCaption')}
             </span>
           </div>
           {AVAILABLE_PLUGINS.map((plugin) => {
@@ -492,35 +494,35 @@ export function MarketplacePanel({
                       onClick={() => void handleApiUpdate(plugin)}
                       title={`Update to v${plugin.version}`}
                     >
-                      {isInstalling ? 'Updating…' : 'Update'}
+                      {isInstalling ? t('marketplace.update') + '…' : t('marketplace.update')}
                     </button>
                   )}
                   {plugin.installed ? (
                     <button
-                      aria-label={`Uninstall ${plugin.name}`}
+                      aria-label={`${t('marketplace.uninstall')} ${plugin.name}`}
                       className="btn-uninstall"
                       disabled={isUninstalling}
                       onClick={() => void handleApiUninstall(plugin.id)}
                     >
-                      {isUninstalling ? 'Removing…' : 'Uninstall'}
+                      {isUninstalling ? t('marketplace.uninstall') + '…' : t('marketplace.uninstall')}
                     </button>
                   ) : (
                     <button
-                      aria-label={`Install ${plugin.name}`}
+                      aria-label={`${t('marketplace.install')} ${plugin.name}`}
                       className="btn-install"
                       disabled={isInstalling}
                       onClick={() => void handleApiInstall(plugin)}
                     >
-                      {isInstalling ? 'Installing…' : 'Install'}
+                      {isInstalling ? t('marketplace.install') + '…' : t('marketplace.install')}
                     </button>
                   )}
                   <button
-                    aria-label={`Report ${plugin.name}`}
+                    aria-label={`${t('marketplace.report')} ${plugin.name}`}
                     className="btn-report"
                     onClick={() => setReportingPlugin({ id: plugin.id, name: plugin.name })}
-                    title="Report this plugin"
+                    title={t('marketplace.report')}
                   >
-                    Report
+                    {t('marketplace.report')}
                   </button>
                 </div>
               </div>
@@ -559,9 +561,9 @@ export function MarketplacePanel({
 
       {/* My installed plugins */}
       <div className="marketplace-section">
-        <h4 className="section-title">My Plugins</h4>
+        <h4 className="section-title">{t('marketplace.myPlugins')}</h4>
         {installedPlugins.length === 0 ? (
-          <div className="marketplace-empty">No plugins installed yet.</div>
+          <div className="marketplace-empty">{t('marketplace.noInstalled')}</div>
         ) : (
           installedPlugins.map((plugin) => (
             <div key={plugin.id} className="marketplace-item installed">

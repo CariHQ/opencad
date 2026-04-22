@@ -37,6 +37,7 @@ import {
   GitBranch,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { ToolShelf } from './components/ToolShelf';
 import { Navigator } from './components/Navigator';
 
@@ -321,6 +322,7 @@ function computeCarbonEntries(doc: NonNullable<ReturnType<typeof useDocumentStor
 export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
   const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, setElementMaterial, renameProject } = useDocumentStore();
   const renameProjectInList = useProjectStore((s) => s.renameProject);
   const leftPanelRef = React.useRef<HTMLElement>(null);
@@ -763,7 +765,7 @@ export function AppLayout() {
             <button
               className="toolbar-btn"
               onClick={() => navigate('/')}
-              title="Home — back to projects"
+              title={t('tooltip.backToProjects')}
             >
               <span className="tool-icon">
                 <Home size={15} strokeWidth={2} />
@@ -800,7 +802,7 @@ export function AppLayout() {
             ) : (
               <button
                 className="toolbar-btn project-name-btn"
-                title="Click to rename project"
+                title={t('tooltip.renameProject')}
                 onClick={() => {
                   setRenameValue(doc?.name ?? 'Untitled Project');
                   setIsRenamingProject(true);
@@ -814,13 +816,13 @@ export function AppLayout() {
 
           <div className="toolbar-tabs" data-tour="view-tabs">
             {allowedViews.includes('floor-plan') && (
-              <button className={`tab-btn${activeView === 'floor-plan' ? ' active' : ''}`} onClick={() => setActiveView('floor-plan')}>Floor Plan</button>
+              <button className={`tab-btn${activeView === 'floor-plan' ? ' active' : ''}`} onClick={() => setActiveView('floor-plan')}>{t('view.floorPlan')}</button>
             )}
             {allowedViews.includes('3d') && (
-              <button className={`tab-btn${activeView === '3d' ? ' active' : ''}`} onClick={() => setActiveView('3d')}>3D View</button>
+              <button className={`tab-btn${activeView === '3d' ? ' active' : ''}`} onClick={() => setActiveView('3d')}>{t('view.threeD')}</button>
             )}
             {allowedViews.includes('section') && (
-              <button className={`tab-btn${activeView === 'section' ? ' active' : ''}`} onClick={() => setActiveView('section')}>Section</button>
+              <button className={`tab-btn${activeView === 'section' ? ' active' : ''}`} onClick={() => setActiveView('section')}>{t('view.section')}</button>
             )}
           </div>
 
@@ -1127,13 +1129,13 @@ export function AppLayout() {
               </div>
             </div>
             <div className="settings-tabs">
-              <button className={`settings-tab-btn${settingsTab === 'language' ? ' active' : ''}`} onClick={() => setSettingsTab('language')}>Language</button>
-              <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
-              <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
+              <button className={`settings-tab-btn${settingsTab === 'language' ? ' active' : ''}`} onClick={() => setSettingsTab('language')}>{t('settings.tabs.language')}</button>
+              <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>{t('settings.tabs.apiKeys')}</button>
+              <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>{t('settings.tabs.permissions')}</button>
               {ssoEnabled && (
-                <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+                <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>{t('settings.tabs.sso')}</button>
               )}
-              <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
+              <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>{t('settings.tabs.billing')}</button>
             </div>
             <div className="settings-content">
               {settingsTab === 'language' && <LanguageSettingsPanel />}

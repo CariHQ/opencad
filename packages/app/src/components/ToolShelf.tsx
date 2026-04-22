@@ -42,6 +42,7 @@ import {
   PanelBottom,
   Layers3,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import { useRole } from '../hooks/useRole';
 
@@ -131,6 +132,7 @@ const tools: Tool[] = [
 ];
 
 export function ToolShelf() {
+  const { t } = useTranslation('toolbar');
   const { activeTool, setActiveTool } = useDocumentStore();
   const { can } = useRole();
   const [expanded, setExpanded] = useState<boolean>(() => readStoredExpanded());
@@ -158,20 +160,24 @@ export function ToolShelf() {
       {allowedTools.map((tool) => {
         const Icon = tool.icon;
         const isActive = activeTool === tool.id;
+        // tool.name is the English default; t() returns the active
+        // locale's label. Falls back to tool.name when a translation
+        // is missing so we never render a raw key.
+        const label = t(`tools.${tool.id}`, { defaultValue: tool.name });
         return (
           <React.Fragment key={tool.id}>
             {tool.separatorBefore && <div className="toolshelf-divider" />}
             <button
               className={`tool-btn${isActive ? ' active' : ''}`}
               onClick={() => setActiveTool(tool.id)}
-              title={`${tool.name} (${tool.shortcut})`}
+              title={`${label} (${tool.shortcut})`}
               aria-pressed={isActive}
-              aria-label={tool.name}
+              aria-label={label}
             >
               <span className="tool-icon">
                 <Icon size={16} strokeWidth={2} />
               </span>
-              {expanded && <span className="tool-name">{tool.name}</span>}
+              {expanded && <span className="tool-name">{label}</span>}
             </button>
           </React.Fragment>
         );

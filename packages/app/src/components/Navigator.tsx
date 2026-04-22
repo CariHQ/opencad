@@ -19,9 +19,11 @@ import {
   ArrowUpDown,
   Minus,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 
 export function Navigator() {
+  const { t } = useTranslation('panels');
   const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer } = useDocumentStore();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     views: true,
@@ -70,7 +72,7 @@ export function Navigator() {
   return (
     <div className="navigator">
       <div className="navigator-header">
-        <span className="navigator-title">Navigator</span>
+        <span className="navigator-title">{t('navigator.title')}</span>
       </div>
 
       <div className="navigator-search">

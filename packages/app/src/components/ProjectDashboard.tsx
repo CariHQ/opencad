@@ -9,6 +9,7 @@ import {
   ChevronDown,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useProjectStore } from '../stores/projectStore';
 import { useAuthStore } from '../stores/authStore';
 import { ProjectTemplates } from './ProjectTemplates';
@@ -36,6 +37,7 @@ type SettingsTab = 'language' | 'apikeys' | 'permissions' | 'sso' | 'billing';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
+  const { t } = useTranslation('common');
   const [showTemplates, setShowTemplates] = useState(false);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
@@ -349,13 +351,13 @@ export function ProjectDashboard() {
               </div>
             </div>
             <div className="settings-tabs">
-              <button className={`settings-tab-btn${settingsTab === 'language' ? ' active' : ''}`} onClick={() => setSettingsTab('language')}>Language</button>
-              <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
-              <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
+              <button className={`settings-tab-btn${settingsTab === 'language' ? ' active' : ''}`} onClick={() => setSettingsTab('language')}>{t('settings.tabs.language')}</button>
+              <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>{t('settings.tabs.apiKeys')}</button>
+              <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>{t('settings.tabs.permissions')}</button>
               {ssoEnabled && (
-                <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
+                <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>{t('settings.tabs.sso')}</button>
               )}
-              <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
+              <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>{t('settings.tabs.billing')}</button>
             </div>
             <div className="settings-content">
               {settingsTab === 'language' && <LanguageSettingsPanel />}
