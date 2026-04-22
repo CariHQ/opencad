@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "Navigateur",
+    "views": "Vues",
+    "layers": "Calques",
+    "elements": "Éléments",
+    "empty": "Aucun élément — dessinez quelque chose pour commencer."
+  },
+  "layers": {
+    "title": "Calques",
+    "newLayer": "Nouveau calque",
+    "visible": "Visible",
+    "locked": "Verrouillé",
+    "color": "Couleur"
+  },
+  "properties": {
+    "title": "Propriétés",
+    "noSelection": "Sélectionnez un élément pour voir ses propriétés.",
+    "multi": "Sélection multiple"
+  },
+  "billing": {
+    "currentPlan": "Forfait actuel",
+    "daysRemaining": "{{days}} jours restants d'essai",
+    "upgradePlan": "Changer de forfait",
+    "invoiceHistory": "Historique des factures",
+    "noInvoices": "Pas encore de factures. Elles apparaîtront ici une fois que vous aurez un forfait payant.",
+    "cancelSubscription": "Annuler l'abonnement",
+    "cancelDescription": "Vous pouvez annuler votre abonnement à tout moment. Vous conservez l'accès jusqu'à la fin de la période de facturation en cours.",
+    "cancelConfirmTitle": "Annuler l'abonnement ?",
+    "cancelConfirmBody": "Confirmer l'annulation ? Votre forfait reste actif jusqu'à la fin de la période de facturation.",
+    "cancelYes": "Oui, annuler",
+    "cancelKeep": "Conserver mon forfait"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "bundledCaption": "Extensions intégrées · d'autres à venir",
+    "install": "Installer",
+    "uninstall": "Désinstaller",
+    "update": "Mettre à jour",
+    "report": "Signaler",
+    "myPlugins": "Mes extensions",
+    "noInstalled": "Aucune extension installée."
+  },
+  "readonly": {
+    "title": "Mode lecture seule.",
+    "reasonTrialEnded": "Votre essai gratuit est terminé. Abonnez-vous pour continuer à modifier.",
+    "reasonLapsed": "Votre abonnement est expiré. Renouvelez pour continuer à modifier — vos projets sont en sécurité et les exports fonctionnent toujours.",
+    "resubscribe": "Se réabonner"
+  }
+}

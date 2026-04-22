@@ -172,6 +172,7 @@ import { useAuthStore } from './stores/authStore';
 import { APIKeyPanel } from './components/APIKeyPanel';
 import { PermissionsPanel } from './components/PermissionsPanel';
 import { SSOSettingsPanel } from './components/SSOSettingsPanel';
+import { LanguageSettingsPanel } from './components/LanguageSettingsPanel';
 import { BillingPanel } from './components/BillingPanel';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { MobileViewer } from './components/MobileViewer';
@@ -523,7 +524,7 @@ export function AppLayout() {
   const [showAuth, setShowAuth] = useState<'login' | 'register' | null>(null);
   const { status: authStatus, profile: authProfile, signOut: authSignOut } = useAuthStore();
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<'apikeys' | 'permissions' | 'sso' | 'billing'>('apikeys');
+  const [settingsTab, setSettingsTab] = useState<'language' | 'apikeys' | 'permissions' | 'sso' | 'billing'>('language');
   // SSO tab visible only when the deployment has been configured with a
   // real SAML provider. The panel itself is localStorage-only today so
   // we refuse to render it in any other environment.
@@ -1122,19 +1123,16 @@ export function AppLayout() {
               </div>
             </div>
             <div className="settings-tabs">
+              <button className={`settings-tab-btn${settingsTab === 'language' ? ' active' : ''}`} onClick={() => setSettingsTab('language')}>Language</button>
               <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
               <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
-              {/* SSO tab gated behind VITE_SSO_ENABLED. The panel writes
-                  config to localStorage only; there's no real SAML backend
-                  yet, so we hide it to stop promising a feature that
-                  doesn't work. Flip the env var on the moment the Firebase
-                  SAML provider is configured per-org. */}
               {ssoEnabled && (
                 <button className={`settings-tab-btn${settingsTab === 'sso' ? ' active' : ''}`} onClick={() => setSettingsTab('sso')}>SSO</button>
               )}
               <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
             </div>
             <div className="settings-content">
+              {settingsTab === 'language' && <LanguageSettingsPanel />}
               {settingsTab === 'apikeys' && <APIKeyPanel />}
               {settingsTab === 'permissions' && <PermissionsPanel />}
               {settingsTab === 'sso' && ssoEnabled && (

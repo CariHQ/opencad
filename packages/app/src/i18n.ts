@@ -34,14 +34,21 @@ import enPanels  from './locales/en/panels.json';
 import enDialogs from './locales/en/dialogs.json';
 import enErrors  from './locales/en/errors.json';
 
-/** Locales the UI actively offers in the language picker. */
+/** Locales the UI actively offers in the language picker.
+ *  Ordered by the Top-10 most-spoken languages globally (rough L1+L2
+ *  speaker counts, Ethnologue). Arabic is LTR in the menu for now —
+ *  RTL layout flipping is tracked separately (v1 out of scope). */
 export const SUPPORTED_LOCALES: { code: string; label: string; native: string }[] = [
-  { code: 'en',    label: 'English',             native: 'English' },
-  { code: 'es',    label: 'Spanish',             native: 'Español' },
-  { code: 'fr',    label: 'French',              native: 'Français' },
-  { code: 'de',    label: 'German',              native: 'Deutsch' },
-  { code: 'pt-BR', label: 'Portuguese (Brazil)', native: 'Português (BR)' },
+  { code: 'en',    label: 'English',              native: 'English' },
   { code: 'zh-CN', label: 'Chinese (Simplified)', native: '简体中文' },
+  { code: 'hi',    label: 'Hindi',                native: 'हिन्दी' },
+  { code: 'es',    label: 'Spanish',              native: 'Español' },
+  { code: 'fr',    label: 'French',               native: 'Français' },
+  { code: 'ar',    label: 'Arabic',               native: 'العربية' },
+  { code: 'pt-BR', label: 'Portuguese (Brazil)',  native: 'Português (BR)' },
+  { code: 'ru',    label: 'Russian',              native: 'Русский' },
+  { code: 'de',    label: 'German',               native: 'Deutsch' },
+  { code: 'ja',    label: 'Japanese',             native: '日本語' },
 ];
 
 export const DEFAULT_LOCALE = 'en';
@@ -104,13 +111,37 @@ void i18n
         errors: enErrors,
       },
     },
-    fallbackLng: DEFAULT_LOCALE,
+    // Region-variant fallback map. Keys on the left are what the
+    // browser may report (e.g. 'zh-TW' for Traditional Chinese users);
+    // values on the right are the locales we actually ship. Keeps the
+    // UX coherent for users whose exact region code isn't in our list
+    // but who still expect to see their language rather than English.
+    fallbackLng: {
+      // Chinese — all regional variants fall back to Simplified.
+      'zh-TW':    ['zh-CN', 'en'],
+      'zh-HK':    ['zh-CN', 'en'],
+      'zh-SG':    ['zh-CN', 'en'],
+      // Portuguese — European Portuguese users get the Brazilian bundle.
+      'pt-PT':    ['pt-BR', 'en'],
+      'pt':       ['pt-BR', 'en'],
+      // Spanish regions — en-US/en-GB-style collapse to the base locale.
+      'es-MX':    ['es', 'en'],
+      'es-AR':    ['es', 'en'],
+      'es-ES':    ['es', 'en'],
+      // Default fallback when nothing else matches.
+      'default':  [DEFAULT_LOCALE],
+    },
+    // load: 'languageOnly' means 'en-US' → 'en', 'de-AT' → 'de' etc.
+    // We still honour region codes we explicitly ship (pt-BR, zh-CN).
+    load: 'languageOnly',
+    nonExplicitSupportedLngs: true,
+    supportedLngs: SUPPORTED_LOCALES.map((l) => l.code),
     defaultNS: 'common',
     ns: [...NAMESPACES],
     interpolation: { escapeValue: false }, // React already escapes
     detection: {
-      // URL > localStorage > navigator
-      order: ['querystring', 'localStorage', 'navigator'],
+      // URL > localStorage (user override) > navigator (system) > htmlTag
+      order: ['querystring', 'localStorage', 'navigator', 'htmlTag'],
       lookupQuerystring: 'lang',
       lookupLocalStorage: 'opencad-locale',
       caches: ['localStorage'],

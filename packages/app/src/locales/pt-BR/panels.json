@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "Navegador",
+    "views": "Visualizações",
+    "layers": "Camadas",
+    "elements": "Elementos",
+    "empty": "Nenhum elemento ainda — desenhe algo para começar."
+  },
+  "layers": {
+    "title": "Camadas",
+    "newLayer": "Nova camada",
+    "visible": "Visível",
+    "locked": "Bloqueada",
+    "color": "Cor"
+  },
+  "properties": {
+    "title": "Propriedades",
+    "noSelection": "Selecione um elemento para ver suas propriedades.",
+    "multi": "Seleção múltipla"
+  },
+  "billing": {
+    "currentPlan": "Plano atual",
+    "daysRemaining": "{{days}} dias restantes no teste",
+    "upgradePlan": "Atualizar plano",
+    "invoiceHistory": "Histórico de faturas",
+    "noInvoices": "Ainda não há faturas. Elas aparecerão aqui quando você estiver em um plano pago.",
+    "cancelSubscription": "Cancelar assinatura",
+    "cancelDescription": "Você pode cancelar a qualquer momento. O acesso permanece até o fim do período atual.",
+    "cancelConfirmTitle": "Cancelar assinatura?",
+    "cancelConfirmBody": "Tem certeza? Seu plano permanece ativo até o fim do período de cobrança.",
+    "cancelYes": "Sim, cancelar",
+    "cancelKeep": "Manter meu plano"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "bundledCaption": "Plugins inclusos · mais em breve",
+    "install": "Instalar",
+    "uninstall": "Desinstalar",
+    "update": "Atualizar",
+    "report": "Denunciar",
+    "myPlugins": "Meus plugins",
+    "noInstalled": "Nenhum plugin instalado ainda."
+  },
+  "readonly": {
+    "title": "Modo somente leitura.",
+    "reasonTrialEnded": "Seu teste gratuito terminou. Assine para continuar editando.",
+    "reasonLapsed": "Sua assinatura terminou. Renove para continuar editando — seus projetos estão seguros e as exportações continuam funcionando.",
+    "resubscribe": "Reinscrever-se"
+  }
+}

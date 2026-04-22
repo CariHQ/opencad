@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "OpenCAD",
+    "tagline": "ब्राउज़र-नेटिव BIM"
+  },
+  "action": {
+    "save": "सहेजें",
+    "cancel": "रद्द करें",
+    "delete": "मिटाएँ",
+    "rename": "नाम बदलें",
+    "close": "बंद करें",
+    "open": "खोलें",
+    "back": "पीछे",
+    "next": "आगे",
+    "create": "बनाएँ",
+    "upgrade": "अपग्रेड",
+    "resubscribe": "फिर से सब्सक्राइब करें",
+    "loading": "लोड हो रहा है…",
+    "retry": "पुनः प्रयास",
+    "done": "हो गया"
+  },
+  "nav": {
+    "home": "होम",
+    "projects": "परियोजनाएँ",
+    "settings": "सेटिंग्स",
+    "billing": "बिलिंग",
+    "signOut": "साइन आउट"
+  },
+  "status": {
+    "online": "ऑनलाइन",
+    "offline": "ऑफ़लाइन",
+    "saving": "सहेजा जा रहा है…",
+    "saved": "सहेजा गया",
+    "syncing": "सिंक हो रहा है…"
+  }
+}

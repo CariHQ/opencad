@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "ナビゲーター",
+    "views": "ビュー",
+    "layers": "レイヤー",
+    "elements": "要素",
+    "empty": "まだ要素がありません — 何か描いて始めましょう。"
+  },
+  "layers": {
+    "title": "レイヤー",
+    "newLayer": "新しいレイヤー",
+    "visible": "表示",
+    "locked": "ロック",
+    "color": "色"
+  },
+  "properties": {
+    "title": "プロパティ",
+    "noSelection": "プロパティを表示するには要素を選択してください。",
+    "multi": "複数選択"
+  },
+  "billing": {
+    "currentPlan": "現在のプラン",
+    "daysRemaining": "トライアル残り {{days}} 日",
+    "upgradePlan": "プランをアップグレード",
+    "invoiceHistory": "請求履歴",
+    "noInvoices": "まだ請求書はありません。有料プラン契約後にここに表示されます。",
+    "cancelSubscription": "契約をキャンセル",
+    "cancelDescription": "いつでもキャンセルできます。現在の請求期間終了までアクセスは維持されます。",
+    "cancelConfirmTitle": "契約をキャンセルしますか?",
+    "cancelConfirmBody": "本当にキャンセルしますか? 現在の請求期間終了までプランは有効です。",
+    "cancelYes": "はい、キャンセル",
+    "cancelKeep": "プランを継続"
+  },
+  "marketplace": {
+    "title": "マーケットプレイス",
+    "bundledCaption": "同梱プラグイン · 追加予定",
+    "install": "インストール",
+    "uninstall": "アンインストール",
+    "update": "更新",
+    "report": "報告",
+    "myPlugins": "マイプラグイン",
+    "noInstalled": "まだプラグインはインストールされていません。"
+  },
+  "readonly": {
+    "title": "読み取り専用モード。",
+    "reasonTrialEnded": "無料トライアルが終了しました。編集を続けるには契約してください。",
+    "reasonLapsed": "契約が終了しました。編集を続けるには更新してください — プロジェクトは保管され、エクスポートは引き続き使えます。",
+    "resubscribe": "再契約"
+  }
+}

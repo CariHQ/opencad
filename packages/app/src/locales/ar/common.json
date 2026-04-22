@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "OpenCAD",
+    "tagline": "BIM أصلي للمتصفح"
+  },
+  "action": {
+    "save": "حفظ",
+    "cancel": "إلغاء",
+    "delete": "حذف",
+    "rename": "إعادة تسمية",
+    "close": "إغلاق",
+    "open": "فتح",
+    "back": "رجوع",
+    "next": "التالي",
+    "create": "إنشاء",
+    "upgrade": "ترقية",
+    "resubscribe": "إعادة الاشتراك",
+    "loading": "جارٍ التحميل…",
+    "retry": "إعادة المحاولة",
+    "done": "تم"
+  },
+  "nav": {
+    "home": "الرئيسية",
+    "projects": "المشاريع",
+    "settings": "الإعدادات",
+    "billing": "الفواتير",
+    "signOut": "تسجيل الخروج"
+  },
+  "status": {
+    "online": "متصل",
+    "offline": "غير متصل",
+    "saving": "جارٍ الحفظ…",
+    "saved": "تم الحفظ",
+    "syncing": "جارٍ المزامنة…"
+  }
+}

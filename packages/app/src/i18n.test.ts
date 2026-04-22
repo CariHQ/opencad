@@ -12,9 +12,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import i18n, { SUPPORTED_LOCALES, setLocale } from './i18n';
 
-// Locales shipped in-tree (subset of SUPPORTED_LOCALES; Tier-2 languages
-// are community PRs so their JSON files may be absent until contributed).
-const SHIPPED_LOCALES = ['en', 'es', 'de'];
+// Locales shipped in-tree. Any future addition to SUPPORTED_LOCALES that
+// doesn't also land a JSON bundle here will trip the key-shape check.
+const SHIPPED_LOCALES = ['en', 'es', 'de', 'fr', 'pt-BR', 'zh-CN', 'ar', 'hi', 'ja', 'ru'];
 const NAMESPACES = ['common', 'toolbar', 'panels', 'dialogs', 'errors'] as const;
 
 /** Walk an object and return every dotted key path (leaf-only). Used to
@@ -63,6 +63,27 @@ describe('T-I18N-001..004: i18n infrastructure', () => {
     expect(t('readonly.title')).toBe('Read-only mode.');
     expect(t('readonly.resubscribe')).toBe('Resubscribe');
     expect(t('marketplace.install')).toBe('Install');
+  });
+
+  it('T-I18N-006: Top-10 languages are all in SUPPORTED_LOCALES', () => {
+    // By global speaker count (L1+L2, rough order). If we drop one from
+    // this list we're implicitly saying the product doesn't care about
+    // those speakers — don't.
+    const required = ['en', 'zh-CN', 'hi', 'es', 'fr', 'ar', 'pt-BR', 'ru', 'de', 'ja'];
+    const codes = SUPPORTED_LOCALES.map((l) => l.code);
+    for (const r of required) {
+      expect(codes, `Top-10 language '${r}' missing from SUPPORTED_LOCALES`).toContain(r);
+    }
+  });
+
+  it('T-I18N-007: region variants fall back to shipped locale', () => {
+    // i18next is initialised with a fallback map (zh-TW → zh-CN,
+    // pt-PT → pt-BR, es-MX → es). Verify by asking i18next to resolve.
+    const fallbacks = i18n.options.fallbackLng as Record<string, string[]>;
+    expect(fallbacks['zh-TW']).toContain('zh-CN');
+    expect(fallbacks['zh-HK']).toContain('zh-CN');
+    expect(fallbacks['pt-PT']).toContain('pt-BR');
+    expect(fallbacks['es-MX']).toContain('es');
   });
 
   it('T-I18N-005: every shipped locale defines the same key shape as English', async () => {

@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "OpenCAD",
+    "tagline": "ブラウザネイティブ BIM"
+  },
+  "action": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "rename": "名前を変更",
+    "close": "閉じる",
+    "open": "開く",
+    "back": "戻る",
+    "next": "次へ",
+    "create": "作成",
+    "upgrade": "アップグレード",
+    "resubscribe": "再契約",
+    "loading": "読み込み中…",
+    "retry": "再試行",
+    "done": "完了"
+  },
+  "nav": {
+    "home": "ホーム",
+    "projects": "プロジェクト",
+    "settings": "設定",
+    "billing": "請求",
+    "signOut": "サインアウト"
+  },
+  "status": {
+    "online": "オンライン",
+    "offline": "オフライン",
+    "saving": "保存中…",
+    "saved": "保存済み",
+    "syncing": "同期中…"
+  }
+}

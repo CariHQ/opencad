@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "المتصفح",
+    "views": "المشاهد",
+    "layers": "الطبقات",
+    "elements": "العناصر",
+    "empty": "لا توجد عناصر بعد — ارسم شيئًا للبدء."
+  },
+  "layers": {
+    "title": "الطبقات",
+    "newLayer": "طبقة جديدة",
+    "visible": "مرئية",
+    "locked": "مقفلة",
+    "color": "اللون"
+  },
+  "properties": {
+    "title": "الخصائص",
+    "noSelection": "اختر عنصرًا لعرض خصائصه.",
+    "multi": "تحديد متعدد"
+  },
+  "billing": {
+    "currentPlan": "الخطة الحالية",
+    "daysRemaining": "متبقي {{days}} يوم من التجربة",
+    "upgradePlan": "ترقية الخطة",
+    "invoiceHistory": "سجل الفواتير",
+    "noInvoices": "لا توجد فواتير بعد. ستظهر هنا عند الاشتراك في خطة مدفوعة.",
+    "cancelSubscription": "إلغاء الاشتراك",
+    "cancelDescription": "يمكنك الإلغاء في أي وقت. يستمر الوصول حتى نهاية فترة الفوترة الحالية.",
+    "cancelConfirmTitle": "إلغاء الاشتراك؟",
+    "cancelConfirmBody": "هل أنت متأكد؟ تبقى خطتك نشطة حتى نهاية فترة الفوترة.",
+    "cancelYes": "نعم، إلغاء",
+    "cancelKeep": "الاحتفاظ بالخطة"
+  },
+  "marketplace": {
+    "title": "المتجر",
+    "bundledCaption": "إضافات مرفقة · المزيد قادم",
+    "install": "تثبيت",
+    "uninstall": "إزالة",
+    "update": "تحديث",
+    "report": "إبلاغ",
+    "myPlugins": "إضافاتي",
+    "noInstalled": "لا توجد إضافات مثبتة بعد."
+  },
+  "readonly": {
+    "title": "وضع القراءة فقط.",
+    "reasonTrialEnded": "انتهت تجربتك المجانية. اشترك لمواصلة التحرير.",
+    "reasonLapsed": "انتهت صلاحية اشتراكك. جدّد لمواصلة التحرير — مشاريعك آمنة والتصدير يعمل.",
+    "resubscribe": "إعادة الاشتراك"
+  }
+}

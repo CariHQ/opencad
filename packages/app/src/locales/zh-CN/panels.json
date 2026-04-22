@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "导航器",
+    "views": "视图",
+    "layers": "图层",
+    "elements": "元素",
+    "empty": "暂无元素 — 画些东西开始吧。"
+  },
+  "layers": {
+    "title": "图层",
+    "newLayer": "新建图层",
+    "visible": "可见",
+    "locked": "已锁定",
+    "color": "颜色"
+  },
+  "properties": {
+    "title": "属性",
+    "noSelection": "选择一个元素以查看其属性。",
+    "multi": "多选"
+  },
+  "billing": {
+    "currentPlan": "当前方案",
+    "daysRemaining": "试用剩余 {{days}} 天",
+    "upgradePlan": "升级方案",
+    "invoiceHistory": "账单历史",
+    "noInvoices": "暂无账单。订阅付费方案后将显示。",
+    "cancelSubscription": "取消订阅",
+    "cancelDescription": "你可以随时取消订阅。在本次计费周期结束前仍可访问。",
+    "cancelConfirmTitle": "取消订阅?",
+    "cancelConfirmBody": "确认取消? 方案将在本次计费周期结束时失效。",
+    "cancelYes": "是,取消",
+    "cancelKeep": "保留方案"
+  },
+  "marketplace": {
+    "title": "插件市场",
+    "bundledCaption": "内置插件 · 更多即将推出",
+    "install": "安装",
+    "uninstall": "卸载",
+    "update": "更新",
+    "report": "举报",
+    "myPlugins": "我的插件",
+    "noInstalled": "尚未安装插件。"
+  },
+  "readonly": {
+    "title": "只读模式。",
+    "reasonTrialEnded": "你的免费试用已结束。订阅以继续编辑。",
+    "reasonLapsed": "你的订阅已过期。续订以继续编辑 — 你的项目仍然安全,导出功能仍可使用。",
+    "resubscribe": "重新订阅"
+  }
+}

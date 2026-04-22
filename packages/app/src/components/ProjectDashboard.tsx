@@ -17,6 +17,7 @@ import { ConfirmModal } from './ConfirmModal';
 import { APIKeyPanel } from './APIKeyPanel';
 import { PermissionsPanel } from './PermissionsPanel';
 import { SSOSettingsPanel, type SSOConfig } from './SSOSettingsPanel';
+import { LanguageSettingsPanel } from './LanguageSettingsPanel';
 import { BillingPanel } from './BillingPanel';
 import { SubscriptionModal } from './SubscriptionModal';
 
@@ -31,7 +32,7 @@ function saveSSOConfig(cfg: SSOConfig): void {
   try { localStorage.setItem(SSO_STORAGE_KEY, JSON.stringify(cfg)); } catch { /* quota */ }
 }
 
-type SettingsTab = 'apikeys' | 'permissions' | 'sso' | 'billing';
+type SettingsTab = 'language' | 'apikeys' | 'permissions' | 'sso' | 'billing';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
@@ -39,7 +40,7 @@ export function ProjectDashboard() {
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
   const [pendingDeleteName, setPendingDeleteName] = useState<string>('');
   const [showSettings, setShowSettings] = useState(false);
-  const [settingsTab, setSettingsTab] = useState<SettingsTab>('apikeys');
+  const [settingsTab, setSettingsTab] = useState<SettingsTab>('language');
   const [showUpgrade, setShowUpgrade] = useState(false);
   const ssoEnabled = (import.meta.env.VITE_SSO_ENABLED as string | undefined) === 'true';
   const [renamingId, setRenamingId] = useState<string | null>(null);
@@ -348,6 +349,7 @@ export function ProjectDashboard() {
               </div>
             </div>
             <div className="settings-tabs">
+              <button className={`settings-tab-btn${settingsTab === 'language' ? ' active' : ''}`} onClick={() => setSettingsTab('language')}>Language</button>
               <button className={`settings-tab-btn${settingsTab === 'apikeys' ? ' active' : ''}`} onClick={() => setSettingsTab('apikeys')}>API Keys</button>
               <button className={`settings-tab-btn${settingsTab === 'permissions' ? ' active' : ''}`} onClick={() => setSettingsTab('permissions')}>Permissions</button>
               {ssoEnabled && (
@@ -356,6 +358,7 @@ export function ProjectDashboard() {
               <button className={`settings-tab-btn${settingsTab === 'billing' ? ' active' : ''}`} onClick={() => setSettingsTab('billing')}>Billing</button>
             </div>
             <div className="settings-content">
+              {settingsTab === 'language' && <LanguageSettingsPanel />}
               {settingsTab === 'apikeys' && <APIKeyPanel />}
               {settingsTab === 'permissions' && <PermissionsPanel />}
               {settingsTab === 'sso' && ssoEnabled && (

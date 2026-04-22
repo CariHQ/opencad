@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "OpenCAD",
+    "tagline": "浏览器原生 BIM"
+  },
+  "action": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "rename": "重命名",
+    "close": "关闭",
+    "open": "打开",
+    "back": "返回",
+    "next": "下一步",
+    "create": "创建",
+    "upgrade": "升级",
+    "resubscribe": "重新订阅",
+    "loading": "加载中…",
+    "retry": "重试",
+    "done": "完成"
+  },
+  "nav": {
+    "home": "主页",
+    "projects": "项目",
+    "settings": "设置",
+    "billing": "账单",
+    "signOut": "退出"
+  },
+  "status": {
+    "online": "在线",
+    "offline": "离线",
+    "saving": "保存中…",
+    "saved": "已保存",
+    "syncing": "同步中…"
+  }
+}
