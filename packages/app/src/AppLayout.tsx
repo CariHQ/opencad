@@ -64,7 +64,6 @@ import { SchedulePanel } from './components/SchedulePanel';
 import { SpacePanel } from './components/SpacePanel';
 import { ClashDetectionPanel } from './components/ClashDetectionPanel';
 import { CompliancePanel } from './components/CompliancePanel';
-import { RenderPanel } from './components/RenderPanel';
 import { SheetPanel } from './components/SheetPanel';
 import { BCFPanel } from './components/BCFPanel';
 import { parseBCF, serializeBCF, type BCFFile, type BCFTopic } from '@opencad/document';
@@ -961,7 +960,6 @@ export function AppLayout() {
               {rightPanelTab === 'spaces' && <SpacePanel />}
               {rightPanelTab === 'clash' && <ClashDetectionPanel />}
               {rightPanelTab === 'compliance' && <CompliancePanel />}
-              {rightPanelTab === 'render' && <RenderPanel />}
               {rightPanelTab === 'sheets' && <SheetPanel />}
               {rightPanelTab === 'bcf' && (
                 <BCFPanel
@@ -1022,9 +1020,7 @@ export function AppLayout() {
               {rightPanelTab === 'site' && <SiteImportPanel />}
               {rightPanelTab === 'specs' && <SpecWritingPanel />}
               {rightPanelTab === 'photo' && <PhotoToModelPanel />}
-              {rightPanelTab === 'render' && (
-                <RenderingPanel onClose={() => setRightPanelTab('properties')} />
-              )}
+              {rightPanelTab === 'render' && <RenderingPanel />}
               {rightPanelTab === 'marketplace' && <MarketplacePanel />}
               {rightPanelTab === 'wind' && <WindAnalysisPanel />}
               {rightPanelTab === 'admin' && (

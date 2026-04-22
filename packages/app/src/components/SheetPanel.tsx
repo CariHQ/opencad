@@ -91,9 +91,23 @@ export function SheetManager(): React.ReactElement {
             className={`sheet-list-item${selectedId === sheet.id ? ' selected' : ''}`}
             onClick={() => setSelectedId(sheet.id)}
             aria-selected={selectedId === sheet.id}
+            onDragOver={(e) => {
+              if (e.dataTransfer.types.includes('application/x-opencad-view')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+              }
+            }}
+            onDrop={(e) => {
+              const viewId = e.dataTransfer.getData('application/x-opencad-view');
+              if (!viewId) return;
+              e.preventDefault();
+              if (sheet.views.includes(viewId)) return;
+              updateSheet(sheet.id, { views: [...sheet.views, viewId] });
+              setSelectedId(sheet.id);
+            }}
           >
             <span className="sheet-list-title">{sheet.title}</span>
-            <span className="sheet-list-meta">{sheet.size} · {sheet.scale}</span>
+            <span className="sheet-list-meta">{sheet.size} · {sheet.scale}{sheet.views.length > 0 ? ` · ${sheet.views.length} view${sheet.views.length === 1 ? '' : 's'}` : ''}</span>
           </li>
         ))}
       </ul>
@@ -141,6 +155,45 @@ export function SheetManager(): React.ReactElement {
             </select>
           </div>
 
+          {selectedSheet.views.length > 0 && (
+            <div className="sheet-prop-row sheet-prop-row--views">
+              <span className="sheet-views-label">
+                {t('sheets.views', { defaultValue: 'Views' })} ({selectedSheet.views.length})
+              </span>
+              <SheetViewThumbs
+                viewIds={selectedSheet.views}
+                onRemove={(id) =>
+                  updateSheet(selectedSheet.id, {
+                    views: selectedSheet.views.filter((v) => v !== id),
+                  })
+                }
+              />
+            </div>
+          )}
+
+          <div
+            className="sheet-drop-hint"
+            onDragOver={(e) => {
+              if (e.dataTransfer.types.includes('application/x-opencad-view')) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+                (e.currentTarget as HTMLElement).classList.add('drop-target');
+              }
+            }}
+            onDragLeave={(e) => {
+              (e.currentTarget as HTMLElement).classList.remove('drop-target');
+            }}
+            onDrop={(e) => {
+              (e.currentTarget as HTMLElement).classList.remove('drop-target');
+              const viewId = e.dataTransfer.getData('application/x-opencad-view');
+              if (!viewId || selectedSheet.views.includes(viewId)) return;
+              e.preventDefault();
+              updateSheet(selectedSheet.id, { views: [...selectedSheet.views, viewId] });
+            }}
+          >
+            {t('sheets.dropHint', { defaultValue: 'Drop a rendering here to add it to this sheet' })}
+          </div>
+
           <button
             className="btn-danger"
             aria-label={t('sheets.deleteSheet', { defaultValue: 'Delete Sheet' })}
@@ -152,6 +205,36 @@ export function SheetManager(): React.ReactElement {
       )}
     </div>
     </>
+  );
+}
+
+/** Render thumbnails for views dropped onto a sheet. */
+function SheetViewThumbs({
+  viewIds,
+  onRemove,
+}: {
+  viewIds: string[];
+  onRemove: (id: string) => void;
+}): React.ReactElement {
+  const doc = useDocumentStore((s) => s.document);
+  return (
+    <div className="sheet-view-thumbs">
+      {viewIds.map((id) => {
+        const view = doc?.presentation.views[id];
+        if (!view) return null;
+        const png = view.render?.png;
+        return (
+          <div key={id} className="sheet-view-thumb" title={view.name}>
+            {png ? <img src={png} alt={view.name} /> : <span>{view.name}</span>}
+            <button
+              className="sheet-view-thumb-remove"
+              aria-label="Remove"
+              onClick={() => onRemove(id)}
+            >×</button>
+          </div>
+        );
+      })}
+    </div>
   );
 }
 

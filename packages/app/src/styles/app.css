@@ -467,7 +467,8 @@ input[type='range']::-moz-range-track {
 .navigator {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  flex: 1 1 0;
+  min-height: 0;
 }
 
 .navigator-header {
@@ -882,6 +883,11 @@ input[type='range']::-moz-range-track {
 /* Level Manager */
 .level-manager {
   border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 40%;
+  min-height: 0;
 }
 
 .level-manager-list {
@@ -889,6 +895,8 @@ input[type='range']::-moz-range-track {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  overflow-y: auto;
+  min-height: 0;
 }
 
 .level-manager-row {
@@ -7338,45 +7346,40 @@ input[type='range']::-moz-range-track {
   border-radius: 10px;
 }
 
-/* Rendering panel (photoreal) */
+/* Rendering panel (photoreal) — uses shared .panel-header / .analysis-section
+   / .field-row style so sections sit flush against the right-panel edges
+   and the horizontal rules run full-width, matching every other panel. */
 
 .rendering-panel {
-  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
   color: var(--text-primary);
 }
 
-.rendering-panel .panel-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0;
-  padding: 0 0 10px;
-  border-bottom: 1px solid var(--border-color);
+/* Scoped .field-row overrides so our selects don't truncate values like
+   "Preview · 16 spp" at the default 90px width, and selects pick up a
+   consistent custom chevron so they match adjacent inputs. */
+.rendering-panel .field-row input,
+.rendering-panel .field-row select {
+  width: 150px;
+  text-align: left;
+  background: var(--bg-tertiary);
 }
-
-.rendering-panel .panel-title {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  font-weight: 600;
+.rendering-panel .field-row input[type='number'] {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
-
-.rendering-panel .panel-close {
-  background: transparent;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
+.rendering-panel .field-row select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 22px;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' fill='none' stroke='%23808080' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 10px 6px;
 }
-
-.rendering-panel .panel-close:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+.rendering-panel .field-row .field-value {
+  font-variant-numeric: tabular-nums;
 }
 
 .rendering-unavailable {
@@ -9190,4 +9193,110 @@ input[type='range']::-moz-range-track {
 .dashboard-user-dropdown-divider {
   height: 1px; background: var(--border-color);
   margin: 4px 0;
+}
+
+/* ── Photoreal render v2 — shares .analysis-section / .field-row style ─── */
+.rendering-panel .rendering-warning {
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--color-warning, #f59e0b) 14%, transparent);
+  border-left: 3px solid var(--color-warning, #f59e0b);
+  font-size: 11px;
+  color: var(--text-primary);
+}
+.rendering-panel .rendering-preview {
+  display: block;
+  width: 100%;
+  margin: 8px 0 0;
+  border-top: 1px solid var(--border-color);
+}
+.rendering-panel .btn-run-analysis--secondary {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  margin-top: 0;
+}
+.rendering-panel .btn-run-analysis--secondary:hover {
+  background: var(--bg-tertiary);
+}
+
+/* Nav view entries for saved renderings — draggable onto sheets. */
+.nav-item--render { cursor: grab; }
+.nav-item--render:active { cursor: grabbing; }
+.nav-render-thumb {
+  width: 24px;
+  height: 16px;
+  object-fit: cover;
+  border-radius: 2px;
+  border: 1px solid var(--border-color);
+  margin-right: 6px;
+}
+
+/* Sheet drop target visuals. */
+.sheet-drop-hint {
+  margin-top: 10px;
+  padding: 10px;
+  border: 2px dashed var(--border-color);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+.sheet-drop-hint.drop-target {
+  border-color: var(--accent-primary);
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  color: var(--text-primary);
+}
+.sheet-list-item { position: relative; }
+.sheet-list-item.drop-target {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: -2px;
+}
+.sheet-prop-row--views { flex-direction: column; align-items: stretch; }
+.sheet-views-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+.sheet-view-thumbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.sheet-view-thumb {
+  position: relative;
+  width: 72px;
+  height: 48px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg-tertiary);
+  font-size: 9px;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.sheet-view-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.sheet-view-thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
 }

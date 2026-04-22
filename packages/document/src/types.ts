@@ -165,8 +165,21 @@ export interface ViewCamera {
 export interface ViewSchema {
   id: string;
   name: string;
-  type: '3d' | '2d' | 'section';
+  type: '3d' | '2d' | 'section' | 'render';
   camera: ViewCamera;
+  /**
+   * Photoreal render payload (only set when `type === 'render'`).
+   * `png` is a data URI so the rendering is self-contained in the doc
+   * without requiring external blob storage.
+   */
+  render?: {
+    png: string;
+    width: number;
+    height: number;
+    samples: number;
+    envPreset?: string;
+    createdAt: number;
+  };
 }
 
 export interface MaterialProperties {

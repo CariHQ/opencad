@@ -18,6 +18,7 @@ import {
   Plus,
   ArrowUpDown,
   Minus,
+  Camera,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
@@ -42,6 +43,9 @@ export function Navigator() {
   const levels = doc?.organization.levels ? Object.values(doc.organization.levels) : [];
   const layers = doc?.organization.layers ? Object.values(doc.organization.layers) : [];
   const elements = doc?.content.elements ? Object.values(doc.content.elements) : [];
+  const renderings = doc?.presentation.views
+    ? Object.values(doc.presentation.views).filter((v) => v.type === 'render')
+    : [];
 
   const filteredElements = search
     ? elements.filter((el) => {
@@ -123,6 +127,26 @@ export function Navigator() {
                 </span>
                 <span className="item-name">{tc('view.layout1', { defaultValue: 'Layout 1' })}</span>
               </div>
+              {/* Renderings — saved photoreal outputs. Draggable onto sheets. */}
+              {renderings.map((view) => (
+                <div
+                  key={view.id}
+                  className="nav-item view nav-item--render"
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData('application/x-opencad-view', view.id);
+                    e.dataTransfer.effectAllowed = 'copy';
+                  }}
+                  title={view.name}
+                >
+                  {view.render?.png ? (
+                    <img className="nav-render-thumb" src={view.render.png} alt="" />
+                  ) : (
+                    <span className="item-icon"><Camera size={14} /></span>
+                  )}
+                  <span className="item-name">{view.name}</span>
+                </div>
+              ))}
             </div>
           )}
         </div>

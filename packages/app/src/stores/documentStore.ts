@@ -157,6 +157,10 @@ interface DocumentState {
   getVersionList: () => Array<{ version: number; timestamp: number; message?: string }>;
   loadDocumentSchema: (schema: DocumentSchema) => void;
 
+  /** T-VIZ-040 v2: Save a finished photoreal render as a 'render'-type view. */
+  addRendering: (params: { name: string; png: string; width: number; height: number; samples: number; envPreset?: string }) => string | null;
+  deleteRendering: (viewId: string) => void;
+
   setActiveLevel: (levelId: string) => void;
   addLevel: (params: { name: string; elevation: number; height?: number }) => string;
   updateLevel: (levelId: string, updates: { name?: string; elevation?: number; height?: number }) => void;
@@ -563,6 +567,53 @@ export const useDocumentStore = create<DocumentState>()(
       },
 
       setUserRole: (role) => set({ userRole: role }),
+
+      /**
+       * Save a photoreal render as a `'render'` view in the document.
+       * The PNG is stored as a data URI alongside the view entry so the
+       * rendering survives refresh without external blob storage.
+       * Returns the new view id so the caller can surface / select it.
+       */
+      addRendering: (params: { name: string; png: string; width: number; height: number; samples: number; envPreset?: string }): string | null => {
+        if (!assertWritable()) return null;
+        const { model } = get();
+        if (!model) return null;
+        const id = `render_${Date.now().toString(36)}_${Math.floor(Math.random() * 0x10000).toString(16)}`;
+        model.documentData.presentation.views[id] = {
+          id,
+          name: params.name,
+          type: 'render',
+          camera: { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 }, up: { x: 0, y: 1, z: 0 }, fov: 50, near: 0.1, far: 10_000 },
+          render: {
+            png: params.png,
+            width: params.width,
+            height: params.height,
+            samples: params.samples,
+            envPreset: params.envPreset,
+            createdAt: Date.now(),
+          },
+        };
+        const newDoc = { ...model.documentData };
+        const newDocJson = JSON.stringify(newDoc);
+        set({ document: newDoc, lastSaved: Date.now() });
+        try { localStorage.setItem(docKey(newDoc.id), newDocJson); } catch { /* ignore quota */ }
+        void offlineSaveDocument(newDoc.id, newDocJson).catch(() => {});
+        return id;
+      },
+
+      deleteRendering: (viewId: string): void => {
+        if (!assertWritable()) return;
+        const { model } = get();
+        if (!model) return;
+        const view = model.documentData.presentation.views[viewId];
+        if (!view || view.type !== 'render') return;
+        delete model.documentData.presentation.views[viewId];
+        const newDoc = { ...model.documentData };
+        const newDocJson = JSON.stringify(newDoc);
+        set({ document: newDoc, lastSaved: Date.now() });
+        try { localStorage.setItem(docKey(newDoc.id), newDocJson); } catch { /* ignore */ }
+        void offlineSaveDocument(newDoc.id, newDocJson).catch(() => {});
+      },
 
       pushHistory: (description) => {
         const MAX_HISTORY = 50;
