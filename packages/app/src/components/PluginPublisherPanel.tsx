@@ -165,7 +165,7 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
         Signed in as <strong>{publisher.displayName || publisher.contactEmail}</strong>.
       </p>
       <label className="publisher-field">
-        <span>ID (URL-safe slug, e.g. "my-plugin")</span>
+        <span>ID (URL-safe slug, e.g. &ldquo;my-plugin&rdquo;)</span>
         <input
           type="text"
           value={id}

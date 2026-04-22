@@ -168,7 +168,7 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
           <p className="billing-loading-text">Loading invoices…</p>
         ) : invoices.length === 0 ? (
           <p className="billing-empty-text">
-            No invoices yet. They'll appear here once you're on a paid plan.
+            No invoices yet. They&apos;ll appear here once you&apos;re on a paid plan.
           </p>
         ) : (
           <table className="billing-invoice-table" data-testid="invoice-table">
