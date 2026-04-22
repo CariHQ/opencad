@@ -26,7 +26,7 @@ import { useDocumentStore } from '../stores/documentStore';
 export function Navigator() {
   const { t } = useTranslation('panels');
   const { t: tc } = useTranslation('common');
-  const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer } = useDocumentStore();
+  const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer, deleteRendering } = useDocumentStore();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     views: true,
     levels: true,
@@ -145,6 +145,15 @@ export function Navigator() {
                     <span className="item-icon"><Camera size={14} /></span>
                   )}
                   <span className="item-name">{view.name}</span>
+                  <button
+                    className="nav-render-delete"
+                    aria-label={t('navigator.deleteRendering', { defaultValue: 'Delete rendering' })}
+                    title={t('navigator.deleteRendering', { defaultValue: 'Delete rendering' })}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteRendering(view.id);
+                    }}
+                  >×</button>
                 </div>
               ))}
             </div>

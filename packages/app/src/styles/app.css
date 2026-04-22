@@ -9220,7 +9220,7 @@ input[type='range']::-moz-range-track {
 }
 
 /* Nav view entries for saved renderings — draggable onto sheets. */
-.nav-item--render { cursor: grab; }
+.nav-item--render { cursor: grab; position: relative; }
 .nav-item--render:active { cursor: grabbing; }
 .nav-render-thumb {
   width: 24px;
@@ -9229,6 +9229,29 @@ input[type='range']::-moz-range-track {
   border-radius: 2px;
   border: 1px solid var(--border-color);
   margin-right: 6px;
+}
+.nav-render-delete {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: 3px;
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease, background 0.12s ease, color 0.12s ease;
+}
+.nav-item--render:hover .nav-render-delete { opacity: 1; }
+.nav-render-delete:hover {
+  background: color-mix(in srgb, var(--accent-danger, #f24822) 14%, transparent);
+  color: var(--accent-danger, #f24822);
 }
 
 /* Sheet drop target visuals. */

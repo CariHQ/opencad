@@ -51,6 +51,63 @@ async function loadPathTracer(): Promise<WebGLPathTracerCtor> {
 }
 
 /**
+ * three-gpu-pathtracer's MaterialsTexture reads `texture.matrix.elements`
+ * across every optional PBR slot (map, roughnessMap, normalMap,
+ * clearcoatMap, transmissionMap, emissiveMap, sheenColorMap,
+ * iridescenceMap, specularColorMap, and a dozen more). If ANY material
+ * in the scene has one of those slots set to a texture-shaped object
+ * whose `.matrix` isn't a real Matrix3, the whole render fails with:
+ *   'Cannot read properties of undefined (reading \'0\')'
+ *
+ * The pathtracer has no guard for this — it trusts that anything with
+ * `.isTexture === true` also has a valid `.matrix`. Under normal three
+ * usage that's true, but PMREM outputs, render-target textures,
+ * imported GLTF textures, and some third-party helpers can violate it.
+ *
+ * Rather than maintain a parallel "safe" scene, this walks the live
+ * scene once and fixes any broken `.matrix` in place. Existing valid
+ * matrices are left untouched, so user UV transforms are preserved.
+ * Called once immediately before setSceneAsync.
+ */
+const TEXTURE_SLOTS = [
+  'map', 'metalnessMap', 'roughnessMap', 'transmissionMap', 'emissiveMap',
+  'normalMap', 'clearcoatMap', 'clearcoatNormalMap', 'clearcoatRoughnessMap',
+  'sheenColorMap', 'sheenRoughnessMap', 'iridescenceMap',
+  'iridescenceThicknessMap', 'specularColorMap', 'specularIntensityMap',
+  'alphaMap', 'aoMap', 'bumpMap', 'displacementMap', 'envMap', 'lightMap',
+] as const;
+function sanitizeSceneTextures(scene: THREE.Scene): number {
+  let repaired = 0;
+  const seen = new WeakSet<object>();
+  const fix = (tex: unknown): void => {
+    if (!tex || typeof tex !== 'object') return;
+    const t = tex as { isTexture?: boolean; matrix?: unknown };
+    if (!t.isTexture) return;
+    if (seen.has(t)) return;
+    seen.add(t);
+    const mat = t.matrix as { elements?: ArrayLike<number> } | null | undefined;
+    if (!mat || !Array.isArray((mat as { elements?: unknown }).elements)
+        && !(mat as { elements?: unknown })?.elements) {
+      (t as { matrix: THREE.Matrix3 }).matrix = new THREE.Matrix3();
+      repaired++;
+    }
+  };
+  scene.traverse((obj) => {
+    const mesh = obj as THREE.Mesh;
+    if (!mesh.material) return;
+    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
+    for (const mat of mats) {
+      const m = mat as unknown as Record<string, unknown>;
+      for (const slot of TEXTURE_SLOTS) fix(m[slot]);
+    }
+  });
+  // Scene-level environment & background are iterated separately by the tracer.
+  fix(scene.environment);
+  fix(scene.background);
+  return repaired;
+}
+
+/**
  * Synchronous stand-in for `ParallelMeshBVHWorker` / `GenerateMeshBVHWorker`.
  * three-gpu-pathtracer 0.0.22+ requires a BVH worker before `generateAsync`
  * will run — otherwise it throws:
@@ -127,6 +184,7 @@ export function RenderingPanel(): React.ReactElement {
   const [resultPng, setResultPng] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fallbackWarning, setFallbackWarning] = useState<string | null>(null);
+  const [savedViewId, setSavedViewId] = useState<string | null>(null);
 
   const cancelRef = useRef(false);
 
@@ -144,8 +202,16 @@ export function RenderingPanel(): React.ReactElement {
       setError(t('rendering.noViewport', { defaultValue: '3D viewport not active.' }));
       return;
     }
-    const { scene, camera } = live;
+    const { scene, camera: liveCamera } = live;
     const targetSamples = PRESETS[preset].samples;
+
+    // Clone the live camera so we can set the correct aspect ratio for the
+    // render output without mutating (and re-triggering) the live viewport.
+    // Without this the projection matrix still matches the viewport aspect
+    // but the renderer is sized width×height, so the image is stretched.
+    const camera = liveCamera.clone() as THREE.PerspectiveCamera;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
 
     setRunning(true);
     setStatus('building');
@@ -153,6 +219,7 @@ export function RenderingPanel(): React.ReactElement {
     setResultPng(null);
     setError(null);
     setFallbackWarning(null);
+    setSavedViewId(null);
     cancelRef.current = false;
 
     let renderer: THREE.WebGLRenderer;
@@ -187,10 +254,70 @@ export function RenderingPanel(): React.ReactElement {
 
     let tracer: InstanceType<WebGLPathTracerCtor> | null = null;
     let rafId = 0;
+
+    // Cleanup that runs whether the render finished, cancelled, or errored.
+    // Previously these steps lived in a returned closure that the onClick
+    // caller discarded, so `running` stayed true forever and the Render /
+    // Render-again button remained disabled after the first run.
+    //
+    // Every step is wrapped in try/catch and the idempotent flag below
+    // guards against double-invocation (e.g. loop completion triggering
+    // cleanup() via both its finally block and an overlapping
+    // cancellation path). three-gpu-pathtracer's WebGLPathTracer.dispose
+    // unconditionally dereferences this._renderQuad.dispose — calling
+    // dispose twice on the same tracer instance throws deep in the
+    // library with a cryptic "reading 'dispose'" error.
+    let cleanedUp = false;
+    const cleanup = (): void => {
+      if (cleanedUp) return;
+      cleanedUp = true;
+      try { cancelAnimationFrame(rafId); } catch { /* ignore */ }
+      try { tracer?.dispose(); } catch { /* tracer internal mid-dispose */ }
+      tracer = null;
+      try {
+        scene.environment = prevEnv;
+        scene.background = prevBg;
+      } catch { /* ignore */ }
+      if (restoreSize && live.renderer instanceof THREE.WebGLRenderer) {
+        try {
+          live.renderer.setPixelRatio(restoreSize.pr);
+          live.renderer.setSize(restoreSize.w, restoreSize.h, false);
+        } catch { /* ignore */ }
+      }
+      try { offscreen?.dispose(); } catch { /* ignore */ }
+      setRunning(false);
+    };
+
     try {
+      // Count meshes for a clear empty-scene message.
+      let meshCount = 0;
+      scene.traverse((o) => {
+        if ((o as THREE.Mesh).isMesh && (o as THREE.Mesh).geometry) meshCount++;
+      });
+      if (meshCount === 0) {
+        throw new Error(
+          'Photoreal render needs at least one solid element in view — the current scene has no meshes the path-tracer can trace. Switch to 3D view and draw a wall / slab / column first.',
+        );
+      }
+
+      // Apply env to the live scene — both the live view and the tracer
+      // use the same scene from here on; no parallel clone to keep in sync.
       const env = await buildEnvPreset(envPreset, renderer, sun);
       scene.environment = env.envMap;
       if (env.background) scene.background = env.background;
+
+      // Fix any texture with a missing/broken .matrix so the pathtracer's
+      // MaterialsTexture can safely read texture.matrix.elements[0..8].
+      const repaired = sanitizeSceneTextures(scene);
+      if (repaired > 0) {
+        // eslint-disable-next-line no-console
+        console.info(`[photoreal] repaired ${repaired} texture matrices before render`);
+      }
+
+      // Warm the renderer so programs/uniforms exist before the path-tracer
+      // snapshots them. Important on the WebGPU-fallback path where the
+      // offscreen WebGL context has never drawn this scene.
+      try { renderer.render(scene, camera); } catch { /* non-fatal */ }
 
       const PathTracer = await loadPathTracer();
       tracer = new PathTracer(renderer);
@@ -202,29 +329,40 @@ export function RenderingPanel(): React.ReactElement {
       // setSceneAsync triggers generateAsync or the scene generator throws.
       tracer.setBVHWorker(await makeInlineBVHGenerator());
 
-      await tracer.setSceneAsync(scene, camera);
+      try {
+        await tracer.setSceneAsync(scene, camera);
+      } catch (sceneErr) {
+        // Log the full library-internal stack — Chrome collapses async
+        // stacks by default so err.stack is the only way to see the
+        // throw site in three-gpu-pathtracer from the console.
+        // eslint-disable-next-line no-console
+        console.error('[photoreal] setSceneAsync failed', (sceneErr as Error)?.stack ?? sceneErr);
+        throw new Error(
+          `Path-tracer failed to build scene (${meshCount} meshes): ${sceneErr instanceof Error ? sceneErr.message : String(sceneErr)}`,
+        );
+      }
       if (cancelRef.current) return;
       setStatus('rendering');
 
       const loop = (): void => {
-        if (cancelRef.current || !tracer) return;
+        if (cancelRef.current || !tracer) { cleanup(); return; }
         if (tracer.samples >= targetSamples) {
           try {
             const canvas = renderer.domElement;
             const png = canvas.toDataURL('image/png');
             setResultPng(png);
             setStatus('done');
-            addRendering({
-              name: `${t('rendering.renderName', { defaultValue: 'Render' })} ${new Date().toLocaleString()}`,
-              png,
-              width,
-              height,
-              samples: targetSamples,
-              envPreset,
-            });
+            // Don't auto-persist. Previously every render silently added a
+            // "Render 4/22/2026, …" entry to the Navigator Views list,
+            // which piled up on iteration. The user now opts in via the
+            // explicit "Save to Views" button below.
           } catch (err) {
             setStatus('error');
             setError(err instanceof Error ? err.message : 'Failed to encode PNG');
+          } finally {
+            // Always release the renderer + `running` flag so the Render
+            // button becomes clickable again for Render-again / cancel.
+            cleanup();
           }
           return;
         }
@@ -236,21 +374,8 @@ export function RenderingPanel(): React.ReactElement {
     } catch (err) {
       setStatus('error');
       setError(err instanceof Error ? err.message : String(err));
+      cleanup();
     }
-
-    return () => {
-      cancelRef.current = true;
-      cancelAnimationFrame(rafId);
-      tracer?.dispose();
-      scene.environment = prevEnv;
-      scene.background = prevBg;
-      if (restoreSize && live.renderer instanceof THREE.WebGLRenderer) {
-        live.renderer.setPixelRatio(restoreSize.pr);
-        live.renderer.setSize(restoreSize.w, restoreSize.h, false);
-      }
-      offscreen?.dispose();
-      setRunning(false);
-    };
   }, [preset, width, height, envPreset, sun, addRendering, t]);
 
   const download = useCallback((): void => {
@@ -496,11 +621,35 @@ export function RenderingPanel(): React.ReactElement {
           <button
             type="button"
             className="btn-run-analysis btn-run-analysis--secondary"
+            disabled={!resultPng || savedViewId !== null}
+            onClick={() => {
+              if (!resultPng) return;
+              const id = addRendering({
+                name: `${t('rendering.renderName', { defaultValue: 'Render' })} ${new Date().toLocaleString()}`,
+                png: resultPng,
+                width,
+                height,
+                samples: PRESETS[preset].samples,
+                envPreset,
+              });
+              if (id) setSavedViewId(id);
+            }}
+          >
+            {savedViewId
+              ? t('rendering.savedToViews', { defaultValue: 'Saved to Views ✓' })
+              : t('rendering.saveToViews', { defaultValue: 'Save to Views' })}
+          </button>
+          <button
+            type="button"
+            className="btn-run-analysis btn-run-analysis--secondary"
             onClick={() => {
               setStatus('idle');
               setResultPng(null);
               setSampleCount(0);
+              setSavedViewId(null);
+              void start();
             }}
+            disabled={running}
           >
             {t('rendering.renderAgain', { defaultValue: 'Render again' })}
           </button>

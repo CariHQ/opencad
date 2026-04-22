@@ -1,17 +1,25 @@
 /**
  * Procedural environment maps for the photoreal renderer.
  *
- * Each preset returns a `Texture` suitable for `scene.environment` (and
- * optionally `scene.background`) plus a human-readable label. Presets
- * are built on-demand with `PMREMGenerator` so we don't ship HDR binary
- * assets in the bundle — everything is generated in the browser.
+ * three-gpu-pathtracer's `EquirectHdrInfoUniform` requires
+ * scene.environment to be an **equirectangular** HDR DataTexture so it
+ * can compute importance-sampling CDFs over the env map. PMREM output
+ * (what the live viewport uses) is a cube-packed structure with a
+ * different `image.data` layout — feeding it in causes `updateFrom` to
+ * reach into undefined offsets and throw 'Cannot read properties of
+ * undefined (reading \'0\')'.
  *
- * Presets:
- *   - studio:   RoomEnvironment (indoor soft box, neutral)
- *   - outdoor:  Sky addon with sun disc at the current scene-store sun
- *   - sunset:   Sky addon with a low sun and warm turbidity
- *   - overcast: Grey dome built from a gradient CubeTexture
- *   - night:    Black void with faint ambient (renders silhouettes only)
+ * So these presets emit raw equirectangular HalfFloat DataTextures
+ * built on the main thread — no HDR binary assets, no PMREM, and no
+ * worker. The render quality is low compared to a real HDRI but
+ * faithful enough for the presets we expose (Studio / Outdoor /
+ * Sunset / Overcast / Night), and the scene.environment slot the live
+ * viewport reads is compatible with equirectangular maps too so the
+ * rasterised view picks up consistent IBL.
+ *
+ * The sun direction feeds a soft hotspot in Outdoor and Sunset so
+ * glass/glossy materials catch a believable highlight at the angle
+ * matching the project's geolocation + time.
  */
 import * as THREE from 'three';
 
@@ -19,10 +27,9 @@ export type EnvPresetId = 'studio' | 'outdoor' | 'sunset' | 'overcast' | 'night'
 
 export interface EnvPreset {
   id: EnvPresetId;
-  /** Processed cube texture suitable for `scene.environment`. */
-  envMap: THREE.Texture;
-  /** Optional background — `null` keeps the existing background. */
-  background: THREE.Texture | THREE.Color | null;
+  envMap: THREE.DataTexture;
+  /** Optional background for the live view. Same texture works for both. */
+  background: THREE.DataTexture | THREE.Color | null;
 }
 
 export interface SunDir {
@@ -30,150 +37,153 @@ export interface SunDir {
   elevationDeg: number;
 }
 
-/**
- * Build the selected environment preset against the provided renderer so
- * the resulting PMREM cube texture is on the same WebGL context as the
- * path-tracer.
- */
+// ─── Core equirectangular builder ────────────────────────────────────────────
+
+type Shader = (u: number, v: number, sunUV: { x: number; y: number } | null) => [number, number, number];
+
+const W = 512;
+const H = 256;
+
+function makeEquirect(id: EnvPresetId, shader: Shader, sun: SunDir | null): THREE.DataTexture {
+  const sunUV = sun ? sunDirectionToUV(sun) : null;
+  const data = new Uint16Array(W * H * 4);
+  for (let y = 0; y < H; y++) {
+    const v = y / (H - 1);
+    for (let x = 0; x < W; x++) {
+      const u = x / (W - 1);
+      const [r, g, b] = shader(u, v, sunUV);
+      const i = (y * W + x) * 4;
+      data[i] = THREE.DataUtils.toHalfFloat(r);
+      data[i + 1] = THREE.DataUtils.toHalfFloat(g);
+      data[i + 2] = THREE.DataUtils.toHalfFloat(b);
+      data[i + 3] = THREE.DataUtils.toHalfFloat(1);
+    }
+  }
+  const tex = new THREE.DataTexture(data, W, H, THREE.RGBAFormat, THREE.HalfFloatType);
+  tex.mapping = THREE.EquirectangularReflectionMapping;
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.generateMipmaps = false;
+  tex.needsUpdate = true;
+  tex.name = `env-${id}`;
+  return tex;
+}
+
+/** Convert sun (azimuth / elevation) into equirectangular UV coords. */
+function sunDirectionToUV(sun: SunDir): { x: number; y: number } {
+  // Azimuth 0° = +Z (south in our convention), wrapping clockwise.
+  // Elevation 0° = horizon, 90° = zenith.
+  const azRad = (sun.azimuthDeg * Math.PI) / 180;
+  const x = (azRad / (2 * Math.PI) + 0.5) % 1;
+  // Map elevation [0, 90] → v [0.5, 0] (top half of the image is sky).
+  const y = 0.5 - (sun.elevationDeg / 180);
+  return { x, y };
+}
+
+/** Squared angular distance on the equirect canvas, with x-wrap. */
+function sunFalloff(u: number, v: number, sunUV: { x: number; y: number }, radius: number): number {
+  let du = u - sunUV.x;
+  if (du > 0.5) du -= 1;
+  if (du < -0.5) du += 1;
+  const dv = v - sunUV.y;
+  const d2 = du * du + dv * dv;
+  const r2 = radius * radius;
+  return d2 >= r2 ? 0 : 1 - d2 / r2;
+}
+
+// ─── Presets ─────────────────────────────────────────────────────────────────
+
 export async function buildEnvPreset(
   preset: EnvPresetId,
-  renderer: THREE.WebGLRenderer,
+  _renderer: THREE.WebGLRenderer,
   sun: SunDir,
 ): Promise<EnvPreset> {
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  pmrem.compileEquirectangularShader();
-
   switch (preset) {
-    case 'studio':
-      return buildStudio(pmrem);
-    case 'outdoor':
-      return buildSky(pmrem, sun, { turbidity: 5, rayleigh: 2, sky: 0xbfd5ff });
-    case 'sunset':
-      return buildSky(pmrem, { ...sun, elevationDeg: Math.min(10, sun.elevationDeg) }, { turbidity: 8, rayleigh: 3, sky: 0xff9f66 });
-    case 'overcast':
-      return buildOvercast(pmrem);
-    case 'night':
-      return buildNight(pmrem);
+    case 'studio': {
+      // Uniform soft studio grey with very slight gradient — no hotspot.
+      const shader: Shader = (_u, v) => {
+        const top = 0.95;
+        const bot = 0.70;
+        const t = 1 - v;
+        const g = bot + (top - bot) * t;
+        return [g, g, g];
+      };
+      const env = makeEquirect('studio', shader, null);
+      return { id: 'studio', envMap: env, background: new THREE.Color(0x2a2a2a) };
+    }
+
+    case 'outdoor': {
+      // Daylight blue sky / green-grey ground with a soft sun hotspot.
+      const shader: Shader = (u, v, sunUV) => {
+        const isSky = v < 0.5;
+        let r: number, g: number, b: number;
+        if (isSky) {
+          const t = 1 - v * 2;
+          r = 0.45 + 0.35 * t;
+          g = 0.65 + 0.25 * t;
+          b = 0.90 + 0.10 * t;
+        } else {
+          const t = (v - 0.5) * 2;
+          r = 0.35 - 0.15 * t;
+          g = 0.37 - 0.12 * t;
+          b = 0.28 - 0.10 * t;
+        }
+        if (sunUV) {
+          const f = sunFalloff(u, v, sunUV, 0.04);
+          if (f > 0) {
+            const i = 6 * f * f;
+            r += i; g += i; b += 0.9 * i;
+          }
+        }
+        return [r, g, b];
+      };
+      const env = makeEquirect('outdoor', shader, sun);
+      return { id: 'outdoor', envMap: env, background: env };
+    }
+
+    case 'sunset': {
+      // Warm horizon with orange-red sun hotspot at low elevation.
+      const lowSun: SunDir = { ...sun, elevationDeg: Math.min(10, sun.elevationDeg) };
+      const shader: Shader = (u, v, sunUV) => {
+        const t = 1 - v;
+        let r = 0.95 * (0.35 + 0.55 * t);
+        let g = 0.55 * (0.25 + 0.45 * t);
+        let b = 0.40 * (0.20 + 0.30 * t);
+        if (sunUV) {
+          const f = sunFalloff(u, v, sunUV, 0.06);
+          if (f > 0) {
+            const i = 8 * f * f;
+            r += 1.2 * i; g += 0.7 * i; b += 0.3 * i;
+          }
+        }
+        return [r, g, b];
+      };
+      const env = makeEquirect('sunset', shader, lowSun);
+      return { id: 'sunset', envMap: env, background: env };
+    }
+
+    case 'overcast': {
+      // Flat grey dome — no sun hotspot; slight top/bottom gradient.
+      const shader: Shader = (_u, v) => {
+        const t = 1 - v;
+        const top = 0.88;
+        const bot = 0.55;
+        const g = bot + (top - bot) * t;
+        return [g, g, g];
+      };
+      const env = makeEquirect('overcast', shader, null);
+      return { id: 'overcast', envMap: env, background: env };
+    }
+
+    case 'night': {
+      // Near-black with a very faint cool tint so silhouettes read.
+      const shader: Shader = () => [0.02, 0.03, 0.06];
+      const env = makeEquirect('night', shader, null);
+      return { id: 'night', envMap: env, background: new THREE.Color(0x05070c) };
+    }
   }
-}
-
-// ─── Studio ──────────────────────────────────────────────────────────────────
-
-async function buildStudio(pmrem: THREE.PMREMGenerator): Promise<EnvPreset> {
-  // RoomEnvironment is an internal three scene that PMREM can convolve.
-  const { RoomEnvironment } = await import('three/examples/jsm/environments/RoomEnvironment.js');
-  const room = new RoomEnvironment();
-  const cube = pmrem.fromScene(room, 0.04);
-  pmrem.dispose();
-  return {
-    id: 'studio',
-    envMap: cube.texture,
-    background: new THREE.Color(0x2a2a2a),
-  };
-}
-
-// ─── Sky (outdoor / sunset) ──────────────────────────────────────────────────
-
-interface SkyOpts {
-  turbidity: number;
-  rayleigh: number;
-  /** Sky tint at horizon. */
-  sky: number;
-}
-
-async function buildSky(
-  pmrem: THREE.PMREMGenerator,
-  sun: SunDir,
-  opts: SkyOpts,
-): Promise<EnvPreset> {
-  const { Sky } = await import('three/examples/jsm/objects/Sky.js');
-  const sky = new Sky();
-  sky.scale.setScalar(450_000);
-  sky.material.uniforms['turbidity'].value = opts.turbidity;
-  sky.material.uniforms['rayleigh'].value = opts.rayleigh;
-  sky.material.uniforms['mieCoefficient'].value = 0.005;
-  sky.material.uniforms['mieDirectionalG'].value = 0.8;
-
-  // Three.js Sky expects a unit direction for the sun.
-  const el = (sun.elevationDeg * Math.PI) / 180;
-  const az = (sun.azimuthDeg * Math.PI) / 180;
-  const sunPos = new THREE.Vector3(
-     Math.sin(az) * Math.cos(el),
-     Math.sin(el),
-    -Math.cos(az) * Math.cos(el),
-  );
-  sky.material.uniforms['sunPosition'].value.copy(sunPos);
-
-  // Render the sky as a small scene and feed it to PMREM.
-  const skyScene = new THREE.Scene();
-  skyScene.add(sky);
-  const cube = pmrem.fromScene(skyScene);
-  pmrem.dispose();
-
-  // Also export a background texture identical to the env — users see sky
-  // through windows in the render. Tint through sky color as a soft fog
-  // fallback where Sky isn't sampled.
-  return {
-    id: opts.rayleigh > 2.5 ? 'sunset' : 'outdoor',
-    envMap: cube.texture,
-    background: cube.texture,
-  };
-}
-
-// ─── Overcast ────────────────────────────────────────────────────────────────
-
-function buildOvercast(pmrem: THREE.PMREMGenerator): EnvPreset {
-  // A simple grey gradient top→horizon, convolved as a PMREM so it
-  // provides diffuse IBL without specular highlights.
-  const scene = new THREE.Scene();
-  const geom = new THREE.SphereGeometry(500, 24, 16);
-  const mat = new THREE.ShaderMaterial({
-    side: THREE.BackSide,
-    uniforms: {
-      top: { value: new THREE.Color(0xdedede) },
-      bottom: { value: new THREE.Color(0x9a9a9a) },
-    },
-    vertexShader: /* glsl */ `
-      varying vec3 vWorldPosition;
-      void main() {
-        vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-      }
-    `,
-    fragmentShader: /* glsl */ `
-      varying vec3 vWorldPosition;
-      uniform vec3 top;
-      uniform vec3 bottom;
-      void main() {
-        float h = clamp(normalize(vWorldPosition).y * 0.5 + 0.5, 0.0, 1.0);
-        gl_FragColor = vec4(mix(bottom, top, h), 1.0);
-      }
-    `,
-  });
-  scene.add(new THREE.Mesh(geom, mat));
-  const cube = pmrem.fromScene(scene);
-  pmrem.dispose();
-  return {
-    id: 'overcast',
-    envMap: cube.texture,
-    background: cube.texture,
-  };
-}
-
-// ─── Night ───────────────────────────────────────────────────────────────────
-
-function buildNight(pmrem: THREE.PMREMGenerator): EnvPreset {
-  const scene = new THREE.Scene();
-  const geom = new THREE.SphereGeometry(500, 16, 12);
-  const mat = new THREE.MeshBasicMaterial({ color: 0x0a0d14, side: THREE.BackSide });
-  scene.add(new THREE.Mesh(geom, mat));
-  const cube = pmrem.fromScene(scene);
-  pmrem.dispose();
-  return {
-    id: 'night',
-    envMap: cube.texture,
-    background: new THREE.Color(0x05070c),
-  };
 }
 
 // ─── Labels ──────────────────────────────────────────────────────────────────
