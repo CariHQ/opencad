@@ -8,10 +8,12 @@
  * access to their own data.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useEntitlements } from '../hooks/useEntitlements';
 import { useSubscription } from '../hooks/useSubscription';
 
 export function ReadOnlyBanner(): React.ReactElement | null {
+  const { t } = useTranslation('panels');
   const { readOnly, readOnlyReason } = useEntitlements();
   const { upgrade, openPortal, tier } = useSubscription();
   const [busy, setBusy] = useState(false);
@@ -56,8 +58,8 @@ export function ReadOnlyBanner(): React.ReactElement | null {
       data-testid="readonly-banner"
     >
       <div className="readonly-banner-text">
-        <strong>Read-only mode.</strong>{' '}
-        {readOnlyReason ?? 'Editing is temporarily disabled.'}
+        <strong>{t('readonly.title')}</strong>{' '}
+        {readOnlyReason ?? t('readonly.reasonLapsed')}
         {error && (
           <>
             {' '}
@@ -72,7 +74,7 @@ export function ReadOnlyBanner(): React.ReactElement | null {
           onClick={() => { void resubscribe(); }}
           disabled={busy}
         >
-          {busy ? 'Opening…' : 'Resubscribe'}
+          {busy ? t('common:action.loading', { defaultValue: 'Loading…' }) : t('readonly.resubscribe')}
         </button>
       </div>
     </div>

@@ -7199,6 +7199,24 @@ input[type='range']::-moz-range-track {
   border-radius: 3px;
 }
 
+/* Language selector in the status bar */
+
+.language-selector {
+  font-size: 11px;
+  font-family: inherit;
+  padding: 2px 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  cursor: pointer;
+}
+
+.language-selector:hover {
+  border-color: var(--accent-primary, #3b82f6);
+  color: var(--text-primary);
+}
+
 [data-theme='dark'] .readonly-banner-error {
   background: rgba(231, 76, 60, 0.22);
   color: #fca5a5;

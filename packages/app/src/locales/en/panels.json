@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "Navigator",
+    "views": "Views",
+    "layers": "Layers",
+    "elements": "Elements",
+    "empty": "No elements yet — draw something to get started."
+  },
+  "layers": {
+    "title": "Layers",
+    "newLayer": "New layer",
+    "visible": "Visible",
+    "locked": "Locked",
+    "color": "Color"
+  },
+  "properties": {
+    "title": "Properties",
+    "noSelection": "Select an element to view its properties.",
+    "multi": "Multiple selection"
+  },
+  "billing": {
+    "currentPlan": "Current Plan",
+    "daysRemaining": "{{days}} days remaining in trial",
+    "upgradePlan": "Upgrade Plan",
+    "invoiceHistory": "Invoice History",
+    "noInvoices": "No invoices yet. They'll appear here once you're on a paid plan.",
+    "cancelSubscription": "Cancel Subscription",
+    "cancelDescription": "You can cancel your subscription at any time. You will retain access until the end of the current billing period.",
+    "cancelConfirmTitle": "Cancel subscription?",
+    "cancelConfirmBody": "Are you sure you want to cancel? Your plan will stay active until the end of the billing period.",
+    "cancelYes": "Yes, cancel",
+    "cancelKeep": "Keep my plan"
+  },
+  "marketplace": {
+    "title": "Marketplace",
+    "bundledCaption": "Bundled plugins · more coming soon",
+    "install": "Install",
+    "uninstall": "Uninstall",
+    "update": "Update",
+    "report": "Report",
+    "myPlugins": "My Plugins",
+    "noInstalled": "No plugins installed yet."
+  },
+  "readonly": {
+    "title": "Read-only mode.",
+    "reasonTrialEnded": "Your free trial has ended. Subscribe to keep editing.",
+    "reasonLapsed": "Your subscription has ended. Renew to keep editing — your projects are safe and exports still work.",
+    "resubscribe": "Resubscribe"
+  }
+}

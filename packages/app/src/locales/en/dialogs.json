@@ -1,0 +1,32 @@
+{
+  "signIn": {
+    "title": "Sign in",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Sign in",
+    "noAccount": "No account?",
+    "createAccount": "Create one",
+    "or": "or"
+  },
+  "signUp": {
+    "title": "Create account",
+    "name": "Name",
+    "email": "Email",
+    "password": "Password",
+    "submit": "Create account",
+    "haveAccount": "Already have an account?",
+    "signIn": "Sign in"
+  },
+  "newProject": {
+    "title": "New project",
+    "name": "Project name",
+    "template": "Template",
+    "create": "Create project"
+  },
+  "confirmDelete": {
+    "title": "Delete {{name}}?",
+    "body": "This cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  }
+}

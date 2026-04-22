@@ -4,6 +4,7 @@ import { SyncStatusBar, type SyncStatus } from './SyncStatusBar';
 import { getStorageUsage, isStorageQuotaWarning } from '@opencad/document';
 import { useRole } from '../hooks/useRole';
 import { RoleSwitcher } from './RoleSwitcher';
+import { LanguageSelector } from './LanguageSelector';
 import {
   getSharedFrameStats,
   getActiveRendererBackend,
@@ -114,6 +115,12 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
         )}
         <div className="status-item" title={`Current role: ${config.label}`}>
           <span className={`role-badge role-badge--${role}`}>{config.label}</span>
+        </div>
+        {/* Language selector — persists to localStorage, lazy-loads the
+            chosen locale's bundle. Placed here for discoverability
+            without adding a dedicated row of chrome. */}
+        <div className="status-item">
+          <LanguageSelector />
         </div>
         {import.meta.env.DEV && <RoleSwitcher />}
       </div>

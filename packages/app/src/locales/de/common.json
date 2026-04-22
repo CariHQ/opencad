@@ -1,0 +1,36 @@
+{
+  "app": {
+    "name": "OpenCAD",
+    "tagline": "Browser-natives BIM"
+  },
+  "action": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "rename": "Umbenennen",
+    "close": "Schließen",
+    "open": "Öffnen",
+    "back": "Zurück",
+    "next": "Weiter",
+    "create": "Erstellen",
+    "upgrade": "Upgrade",
+    "resubscribe": "Erneut abonnieren",
+    "loading": "Lädt…",
+    "retry": "Erneut versuchen",
+    "done": "Fertig"
+  },
+  "nav": {
+    "home": "Start",
+    "projects": "Projekte",
+    "settings": "Einstellungen",
+    "billing": "Abrechnung",
+    "signOut": "Abmelden"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "saving": "Wird gespeichert…",
+    "saved": "Gespeichert",
+    "syncing": "Synchronisiert…"
+  }
+}

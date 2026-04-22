@@ -34,6 +34,13 @@ vi.mock('../lib/serverApi', async (importOriginal) => {
   };
 });
 
+// The hook waits for Firebase auth to resolve before fetching status.
+// Stub authStore so the tests proceed as-if the user is signed in.
+vi.mock('../stores/authStore', () => ({
+  useAuthStore: (selector: (s: { status: string }) => unknown) =>
+    selector({ status: 'authenticated' }),
+}));
+
 // Prevent actual window.location.assign redirects in tests
 const originalLocation = window.location;
 beforeEach(() => {

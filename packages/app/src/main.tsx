@@ -3,6 +3,10 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './styles/index.css';
+// Initialise i18next before any component renders. The module's IIFE
+// registers namespaces and detects the preferred locale; importing it
+// for side effects is enough — no exports are used at this boot layer.
+import './i18n';
 
 // Register service worker for PWA / offline support.
 // vite-plugin-pwa generates the SW and the virtual module at build time.

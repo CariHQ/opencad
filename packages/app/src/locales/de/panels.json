@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "Navigator",
+    "views": "Ansichten",
+    "layers": "Ebenen",
+    "elements": "Elemente",
+    "empty": "Noch keine Elemente — zeichne etwas, um zu beginnen."
+  },
+  "layers": {
+    "title": "Ebenen",
+    "newLayer": "Neue Ebene",
+    "visible": "Sichtbar",
+    "locked": "Gesperrt",
+    "color": "Farbe"
+  },
+  "properties": {
+    "title": "Eigenschaften",
+    "noSelection": "Wähle ein Element, um seine Eigenschaften zu sehen.",
+    "multi": "Mehrfachauswahl"
+  },
+  "billing": {
+    "currentPlan": "Aktueller Tarif",
+    "daysRemaining": "Noch {{days}} Tage Testversion",
+    "upgradePlan": "Tarif upgraden",
+    "invoiceHistory": "Rechnungshistorie",
+    "noInvoices": "Noch keine Rechnungen. Sie erscheinen hier, sobald du einen kostenpflichtigen Tarif hast.",
+    "cancelSubscription": "Abo kündigen",
+    "cancelDescription": "Du kannst dein Abo jederzeit kündigen. Der Zugriff bleibt bis zum Ende des aktuellen Abrechnungszeitraums bestehen.",
+    "cancelConfirmTitle": "Abo kündigen?",
+    "cancelConfirmBody": "Bist du sicher? Dein Tarif bleibt bis zum Ende des Abrechnungszeitraums aktiv.",
+    "cancelYes": "Ja, kündigen",
+    "cancelKeep": "Tarif behalten"
+  },
+  "marketplace": {
+    "title": "Marktplatz",
+    "bundledCaption": "Mitgelieferte Plugins · weitere folgen",
+    "install": "Installieren",
+    "uninstall": "Entfernen",
+    "update": "Aktualisieren",
+    "report": "Melden",
+    "myPlugins": "Meine Plugins",
+    "noInstalled": "Noch keine Plugins installiert."
+  },
+  "readonly": {
+    "title": "Nur-Lese-Modus.",
+    "reasonTrialEnded": "Deine kostenlose Testphase ist beendet. Abonniere, um weiter zu bearbeiten.",
+    "reasonLapsed": "Dein Abo ist abgelaufen. Erneuere es, um weiter zu bearbeiten — deine Projekte bleiben sicher und Exporte funktionieren weiterhin.",
+    "resubscribe": "Erneut abonnieren"
+  }
+}

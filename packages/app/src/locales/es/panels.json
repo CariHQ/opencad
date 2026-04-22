@@ -1,0 +1,50 @@
+{
+  "navigator": {
+    "title": "Navegador",
+    "views": "Vistas",
+    "layers": "Capas",
+    "elements": "Elementos",
+    "empty": "Aún no hay elementos — dibuja algo para empezar."
+  },
+  "layers": {
+    "title": "Capas",
+    "newLayer": "Nueva capa",
+    "visible": "Visible",
+    "locked": "Bloqueada",
+    "color": "Color"
+  },
+  "properties": {
+    "title": "Propiedades",
+    "noSelection": "Selecciona un elemento para ver sus propiedades.",
+    "multi": "Selección múltiple"
+  },
+  "billing": {
+    "currentPlan": "Plan actual",
+    "daysRemaining": "{{days}} días restantes de prueba",
+    "upgradePlan": "Actualizar plan",
+    "invoiceHistory": "Historial de facturas",
+    "noInvoices": "Aún no hay facturas. Aparecerán aquí una vez que tengas un plan de pago.",
+    "cancelSubscription": "Cancelar suscripción",
+    "cancelDescription": "Puedes cancelar tu suscripción en cualquier momento. Conservarás el acceso hasta el final del periodo de facturación actual.",
+    "cancelConfirmTitle": "¿Cancelar suscripción?",
+    "cancelConfirmBody": "¿Seguro que quieres cancelar? Tu plan seguirá activo hasta el final del periodo de facturación.",
+    "cancelYes": "Sí, cancelar",
+    "cancelKeep": "Mantener plan"
+  },
+  "marketplace": {
+    "title": "Mercado",
+    "bundledCaption": "Complementos incluidos · pronto habrá más",
+    "install": "Instalar",
+    "uninstall": "Desinstalar",
+    "update": "Actualizar",
+    "report": "Reportar",
+    "myPlugins": "Mis complementos",
+    "noInstalled": "Aún no hay complementos instalados."
+  },
+  "readonly": {
+    "title": "Modo solo lectura.",
+    "reasonTrialEnded": "Tu prueba gratuita ha terminado. Suscríbete para seguir editando.",
+    "reasonLapsed": "Tu suscripción ha finalizado. Renueva para seguir editando — tus proyectos están a salvo y las exportaciones siguen funcionando.",
+    "resubscribe": "Resuscribirse"
+  }
+}
