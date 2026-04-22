@@ -89,12 +89,24 @@ fn access_mode(row: &UserSubRow, now: DateTime<Utc>) -> &'static str {
     "expired"
 }
 
+fn is_admin(uid: &str, admin_uids: &Option<String>) -> bool {
+    match admin_uids {
+        Some(list) => list.split(',').any(|a| a.trim() == uid),
+        None => false,
+    }
+}
+
 /// GET /api/v1/subscription/status
 pub async fn get_status(
     State(s): State<AppState>,
     user: AuthUser,
 ) -> Result<Json<SubscriptionStatus>> {
     let uid = user.uid().unwrap_or("dev-local");
+    // OpenCAD staff (ADMIN_UIDS) are never put into read-only mode. Their
+    // plan badge still reflects the real DB state, but accessMode is
+    // forced to 'active' so the UI doesn't gate editing on a trial expiry
+    // for the team that builds and demos the product.
+    let admin_bypass = is_admin(uid, &s.admin_uids);
     let row: UserSubRow = sqlx::query_as(
         r#"SELECT plan, trial_expires_at, stripe_customer_id,
                   subscription_status, subscription_current_period_end,
@@ -114,12 +126,15 @@ pub async fn get_status(
         .or(row.trial_expires_at)
         .map(|dt| dt.timestamp_millis());
 
+    let derived = access_mode(&row, now);
+    let effective = if admin_bypass && derived == "expired" { "active" } else { derived };
+
     Ok(Json(SubscriptionStatus {
         tier: row.plan.clone(),
         subscription_status: row.subscription_status.clone(),
         valid_until,
         cancel_at_period_end: row.subscription_cancel_at_period_end,
-        access_mode: access_mode(&row, now).to_string(),
+        access_mode: effective.to_string(),
     }))
 }
 
