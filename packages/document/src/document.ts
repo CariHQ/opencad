@@ -340,15 +340,15 @@ export function computeBoundingBox(
       if (elementType === 'model_text') maxZ = num('Height', 200);
       break;
     }
-    case 'skylight':
-    case 'window': {
-      // Fall-through: skylight has the same width/height shape as window.
-      // Already handled above — this case protects against the
-      // explicit-listed-but-not-implemented path.
+    case 'skylight': {
+      // Roof-mounted window. Uses the same footprint-and-height layout
+      // as 'window' but placed at the Elevation prop instead of
+      // SillHeight — roof opening, not wall opening.
       minX = num('X'); minY = num('Y');
       maxX = minX + num('Width', 1200);
       maxY = minY + num('Height', 1200);
-      minZ = num('SillHeight', 900); maxZ = minZ + num('Height', 1200);
+      const elev = num('Elevation', 3000);
+      minZ = elev; maxZ = elev + num('Height', 1200);
       break;
     }
     case 'ceiling':
