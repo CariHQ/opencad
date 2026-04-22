@@ -8,7 +8,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Globe } from 'lucide-react';
-import i18n, { SUPPORTED_LOCALES, DEFAULT_LOCALE, setLocale } from '../i18n';
+import { SUPPORTED_LOCALES, DEFAULT_LOCALE, setLocale } from '../i18n';
 
 /** Best-effort read of the navigator language(s), collapsed to a code
  *  that matches one of SUPPORTED_LOCALES (or 'en' if nothing matches). */
@@ -49,7 +49,7 @@ export function LanguageSettingsPanel(): React.ReactElement {
     setHasOverride(true);
   };
 
-  const useSystem = async (): Promise<void> => {
+  const resetToSystem = async (): Promise<void> => {
     try { localStorage.removeItem('opencad-locale'); } catch { /* quota */ }
     setHasOverride(false);
     await setLocale(systemLocale);
@@ -72,7 +72,7 @@ export function LanguageSettingsPanel(): React.ReactElement {
             <button
               type="button"
               className="language-settings-clear"
-              onClick={() => { void useSystem(); }}
+              onClick={() => { void resetToSystem(); }}
             >
               Use system language ({SUPPORTED_LOCALES.find((l) => l.code === systemLocale)?.native ?? systemLocale})
             </button>
