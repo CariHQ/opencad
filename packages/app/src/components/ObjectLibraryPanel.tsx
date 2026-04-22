@@ -1,8 +1,10 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import { OBJECT_LIBRARY, OBJECT_CATEGORIES, type ObjectDefinition } from '../lib/objectLibrary';
 
 export function ObjectLibraryPanel() {
+  const { t } = useTranslation('panels');
   const [search,   setSearch]   = useState('');
   const [category, setCategory] = useState('All');
 
@@ -38,28 +40,28 @@ export function ObjectLibraryPanel() {
   return (
     <div className="object-library-panel">
       <div className="panel-header">
-        <span className="panel-title">Object Library</span>
+        <span className="panel-title">{t('tool.objectLibrary.title', { defaultValue: 'Object Library' })}</span>
       </div>
 
       <div className="object-library-controls">
         <input
           type="text"
           className="object-library-search"
-          placeholder="Search objects…"
+          placeholder={t('tool.objectLibrary.searchPlaceholder', { defaultValue: 'Search objects…' })}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          aria-label="Search objects"
+          aria-label={t('tool.objectLibrary.searchPlaceholder', { defaultValue: 'Search objects' })}
         />
 
-        <label htmlFor="obj-category-select" className="sr-only">Category</label>
+        <label htmlFor="obj-category-select" className="sr-only">{t('tool.objectLibrary.category', { defaultValue: 'Category' })}</label>
         <select
           id="obj-category-select"
-          aria-label="Category"
+          aria-label={t('tool.objectLibrary.category', { defaultValue: 'Category' })}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           className="object-library-category-select"
         >
-          <option value="All">All Categories</option>
+          <option value="All">{t('tool.objectLibrary.allCategories', { defaultValue: 'All Categories' })}</option>
           {OBJECT_CATEGORIES.map((c) => (
             <option key={c} value={c}>{c}</option>
           ))}
@@ -67,7 +69,7 @@ export function ObjectLibraryPanel() {
       </div>
 
       {filtered.length === 0 ? (
-        <div className="object-library-empty">No objects found</div>
+        <div className="object-library-empty">{t('tool.objectLibrary.noObjects', { defaultValue: 'No objects found' })}</div>
       ) : (
         <div className="object-library-grid">
           {filtered.map((obj) => (

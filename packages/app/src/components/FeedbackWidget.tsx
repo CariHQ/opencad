@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageCirclePlus, X, Send, CheckCircle, ExternalLink, ChevronDown } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { feedbackApi, type FeedbackCategory, type FeedbackItem } from '../lib/serverApi';
 
 type WidgetState = 'closed' | 'form' | 'submitted';
@@ -23,6 +24,7 @@ const FEASIBILITY_BADGES: Record<string, { label: string; className: string }> =
 };
 
 export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }: FeedbackWidgetProps = {}) {
+  const { t } = useTranslation('dialogs');
   const controlled = externalOpen !== undefined;
   const [state, setState] = useState<WidgetState>('closed');
   const [category, setCategory] = useState<FeedbackCategory>('feature');
@@ -84,7 +86,7 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim() || !description.trim()) {
-      setError('Please fill in all fields.');
+      setError(t('feedback.fillAll', { defaultValue: 'Please fill in all fields.' }));
       return;
     }
     setSubmitting(true);
@@ -94,7 +96,7 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
       setResult(item);
       setState('submitted');
     } catch {
-      setError('Failed to submit feedback. Please try again.');
+      setError(t('feedback.submitFailed', { defaultValue: 'Failed to submit feedback. Please try again.' }));
     } finally {
       setSubmitting(false);
     }
@@ -107,8 +109,8 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
         <button
           className="feedback-trigger"
           onClick={handleOpen}
-          title="Send feedback"
-          aria-label="Send feedback"
+          title={t('feedback.title')}
+          aria-label={t('feedback.title')}
         >
           <MessageCirclePlus size={18} />
         </button>
@@ -116,12 +118,12 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
 
       {/* Panel */}
       {state !== 'closed' && (
-        <div className="feedback-overlay" role="dialog" aria-modal="true" aria-label="Feedback">
+        <div className="feedback-overlay" role="dialog" aria-modal="true" aria-label={t('feedback.title')}>
           <div ref={dialogRef} className="feedback-panel">
             {/* Header */}
             <div className="feedback-panel__header">
               <span className="feedback-panel__title">
-                {state === 'submitted' ? 'Thanks for your feedback!' : 'Send feedback'}
+                {state === 'submitted' ? t('feedback.sent') : t('feedback.title')}
               </span>
               <button className="feedback-panel__close" onClick={close}>
                 <X size={16} />
@@ -133,7 +135,7 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
               <form className="feedback-form" onSubmit={(e) => void handleSubmit(e)}>
                 {/* Category selector */}
                 <div className="feedback-field">
-                  <label className="feedback-label">Type</label>
+                  <label className="feedback-label">{t('feedback.categoryLabel')}</label>
                   <div className="feedback-select-wrapper">
                     <select
                       className="feedback-select"
@@ -152,12 +154,12 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
 
                 {/* Title */}
                 <div className="feedback-field">
-                  <label className="feedback-label" htmlFor="feedback-title">Title</label>
+                  <label className="feedback-label" htmlFor="feedback-title">{t('feedback.titleLabel')}</label>
                   <input
                     id="feedback-title"
                     className="feedback-input"
                     type="text"
-                    placeholder="Short summary"
+                    placeholder={t('feedback.titlePlaceholder', { defaultValue: 'Short summary' })}
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     maxLength={120}
@@ -167,11 +169,11 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
 
                 {/* Description */}
                 <div className="feedback-field">
-                  <label className="feedback-label" htmlFor="feedback-desc">Description</label>
+                  <label className="feedback-label" htmlFor="feedback-desc">{t('feedback.descriptionLabel')}</label>
                   <textarea
                     id="feedback-desc"
                     className="feedback-textarea"
-                    placeholder="Describe the issue or idea in detail…"
+                    placeholder={t('feedback.descriptionPlaceholder', { defaultValue: 'Describe the issue or idea in detail…' })}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={4}
@@ -188,17 +190,17 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
                   disabled={submitting}
                 >
                   {submitting ? (
-                    'Submitting…'
+                    t('feedback.submitting')
                   ) : (
                     <>
                       <Send size={14} />
-                      Submit feedback
+                      {t('feedback.submitLong', { defaultValue: 'Submit feedback' })}
                     </>
                   )}
                 </button>
 
                 <p className="feedback-note">
-                  Feedback is reviewed by the team and tracked as a GitHub issue.
+                  {t('feedback.note', { defaultValue: 'Feedback is reviewed by the team and tracked as a GitHub issue.' })}
                 </p>
               </form>
             )}
@@ -208,25 +210,25 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
               <div className="feedback-success">
                 <CheckCircle size={32} className="feedback-success__icon" />
                 <p className="feedback-success__message">
-                  Your feedback has been received and assessed against the product roadmap.
+                  {t('feedback.successMessage', { defaultValue: 'Your feedback has been received and assessed against the product roadmap.' })}
                 </p>
 
                 <div className="feedback-result">
                   <div className="feedback-result__row">
-                    <span className="feedback-result__key">Feasibility</span>
+                    <span className="feedback-result__key">{t('feedback.feasibility', { defaultValue: 'Feasibility' })}</span>
                     <span className={`feedback-badge ${FEASIBILITY_BADGES[result.feasibility]?.className ?? ''}`}>
                       {FEASIBILITY_BADGES[result.feasibility]?.label ?? result.feasibility}
                     </span>
                   </div>
                   {result.prd_label && (
                     <div className="feedback-result__row">
-                      <span className="feedback-result__key">PRD area</span>
+                      <span className="feedback-result__key">{t('feedback.prdArea', { defaultValue: 'PRD area' })}</span>
                       <span className="feedback-badge feedback-badge--blue">{result.prd_label}</span>
                     </div>
                   )}
                   {result.github_issue_url && (
                     <div className="feedback-result__row">
-                      <span className="feedback-result__key">Issue</span>
+                      <span className="feedback-result__key">{t('feedback.issue', { defaultValue: 'Issue' })}</span>
                       <a
                         href={result.github_issue_url}
                         target="_blank"
@@ -241,7 +243,7 @@ export function FeedbackWidget({ open: externalOpen, onClose: externalOnClose }:
                 </div>
 
                 <button className="feedback-submit" onClick={close}>
-                  Done
+                  {t('feedback.done', { defaultValue: 'Done' })}
                 </button>
               </div>
             )}

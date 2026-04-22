@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import { BUILT_IN_MATERIALS, MATERIAL_CATEGORIES, type Material } from '../lib/materials';
 import { getMaterialTextureStyle } from '../utils/materialTextures';
 
@@ -10,6 +11,7 @@ interface MaterialLibraryProps {
 }
 
 export function MaterialLibrary({ onSelect, selectedCount, currentMaterialName }: MaterialLibraryProps) {
+  const { t } = useTranslation('panels');
   const [search, setSearch] = useState('');
   const [category, setCategory] = useState('All');
   /** Name of the most recently applied material — shown in status for 2 seconds. */
@@ -61,7 +63,7 @@ export function MaterialLibrary({ onSelect, selectedCount, currentMaterialName }
   return (
     <div className="material-library">
       <div className="panel-header">
-        <span className="panel-title">Material Library</span>
+        <span className="panel-title">{t('tool.materialLibrary.title', { defaultValue: 'Material Library' })}</span>
       </div>
 
       <div className="material-selection-status">
@@ -72,22 +74,22 @@ export function MaterialLibrary({ onSelect, selectedCount, currentMaterialName }
         <input
           type="text"
           className="material-search"
-          placeholder="Search materials…"
+          placeholder={t('tool.materialLibrary.searchPlaceholder', { defaultValue: 'Search materials…' })}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <label htmlFor="material-category" className="sr-only">
-          Category
+          {t('tool.materialLibrary.category', { defaultValue: 'Category' })}
         </label>
         <select
           id="material-category"
-          aria-label="Category"
+          aria-label={t('tool.materialLibrary.category', { defaultValue: 'Category' })}
           value={category}
           onChange={(e) => setCategory(e.target.value)}
           className="material-category-select"
         >
-          <option value="All">All Categories</option>
+          <option value="All">{t('tool.materialLibrary.allCategories', { defaultValue: 'All Categories' })}</option>
           {MATERIAL_CATEGORIES.map((c) => (
             <option key={c} value={c}>
               {c}
@@ -97,7 +99,7 @@ export function MaterialLibrary({ onSelect, selectedCount, currentMaterialName }
       </div>
 
       {filtered.length === 0 ? (
-        <div className="material-empty">No materials found</div>
+        <div className="material-empty">{t('tool.materialLibrary.noMaterials', { defaultValue: 'No materials found' })}</div>
       ) : (
         <div className="material-grid">
           {filtered.map((mat) => {
@@ -143,9 +145,9 @@ export function MaterialLibrary({ onSelect, selectedCount, currentMaterialName }
       <div className="material-library-footer">
         <button
           className="btn-secondary"
-          aria-label="Add custom material"
+          aria-label={t('tool.materialLibrary.addCustom', { defaultValue: 'Add custom material' })}
         >
-          + Add Custom
+          + {t('tool.materialLibrary.addCustom', { defaultValue: 'Add Custom' })}
         </button>
       </div>
     </div>

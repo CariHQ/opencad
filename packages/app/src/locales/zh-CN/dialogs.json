@@ -1,0 +1,151 @@
+{
+  "signIn": {
+    "title": "登录",
+    "email": "电子邮箱",
+    "password": "密码",
+    "submit": "登录",
+    "submitting": "登录中…",
+    "noAccount": "没有账号?",
+    "createAccount": "创建免费账户",
+    "or": "或",
+    "forgotPassword": "忘记密码?",
+    "continueWithGoogle": "使用 Google 继续",
+    "continueWithMicrosoft": "使用 Microsoft 继续",
+    "invalidCredentials": "邮箱或密码错误。",
+    "mfaTitle": "验证身份",
+    "mfaHint": "请输入身份验证器应用中的 6 位验证码。",
+    "mfaCode": "验证码",
+    "mfaVerify": "验证"
+  },
+  "signUp": {
+    "title": "创建您的账户",
+    "name": "全名",
+    "email": "电子邮箱",
+    "password": "密码",
+    "submit": "创建免费账户",
+    "submitting": "创建中…",
+    "haveAccount": "已有账号?",
+    "signIn": "登录",
+    "passwordHint": "至少 8 个字符。",
+    "termsAgree": "创建账号即表示你同意我们的<a>服务条款</a>和<a2>隐私政策</a2>。"
+  },
+  "forgotPassword": {
+    "title": "重置密码",
+    "hint": "我们会将密码重置链接发送到你的邮箱。",
+    "submit": "发送重置链接",
+    "sent": "请查收邮箱中的重置链接。",
+    "backToSignIn": "返回登录"
+  },
+  "newProject": {
+    "title": "新建项目",
+    "name": "项目名称",
+    "template": "模板",
+    "blank": "空白",
+    "create": "创建项目",
+    "creating": "创建中…"
+  },
+  "openProject": {
+    "title": "打开项目",
+    "placeholder": "搜索项目…",
+    "empty": "暂无项目。"
+  },
+  "confirmDelete": {
+    "title": "删除 {{name}}?",
+    "body": "此操作无法撤销。",
+    "confirm": "删除",
+    "cancel": "取消"
+  },
+  "importExport": {
+    "importTitle": "导入文件",
+    "exportTitle": "导出文件",
+    "dropHint": "将文件拖到此处,或点击浏览。",
+    "supportedFormats": "支持:IFC、DWG、DXF、SKP、RVT、PDF",
+    "exporting": "导出中…",
+    "export": "导出",
+    "format": "格式",
+    "cancel": "取消"
+  },
+  "subscription": {
+    "title": "选择你的方案",
+    "subtitle": "随时升级 — 无需长期承诺。",
+    "currentPlan": "当前方案",
+    "upgradeTo": "升级到 {{plan}}",
+    "manageBilling": "管理账单",
+    "perUserMonth": "每用户 / 每月",
+    "mostPopular": "最受欢迎",
+    "plans": {
+      "free": {
+        "label": "免费",
+        "price": "$0",
+        "priceDetail": "永久",
+        "features": {
+          "f1": "1 个项目",
+          "f2": "基础 2D 绘图工具",
+          "f3": "仅本地存储",
+          "f4": "社区支持"
+        }
+      },
+      "pro": {
+        "label": "专业版",
+        "price": "$29",
+        "features": {
+          "f1": "无限项目",
+          "f2": "实时协作",
+          "f3": "AI 设计助手",
+          "f4": "优先邮件支持"
+        }
+      },
+      "business": {
+        "label": "商业版",
+        "price": "$99",
+        "features": {
+          "f1": "包含专业版的所有功能",
+          "f2": "管理员角色与权限",
+          "f3": "SSO / SAML",
+          "f4": "优先电话支持"
+        }
+      }
+    },
+    "close": "关闭"
+  },
+  "commandPalette": {
+    "placeholder": "搜索命令…",
+    "empty": "未找到命令。",
+    "groups": {
+      "tools": "工具",
+      "views": "视图",
+      "panels": "面板",
+      "file": "文件",
+      "edit": "编辑",
+      "help": "帮助"
+    }
+  },
+  "feedback": {
+    "title": "发送反馈",
+    "categoryLabel": "类型",
+    "titleLabel": "标题",
+    "descriptionLabel": "描述",
+    "submit": "提交反馈",
+    "submitting": "发送中…",
+    "sent": "感谢您的反馈!",
+    "categories": {
+      "bug": "缺陷",
+      "feature": "功能建议",
+      "question": "问题"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "close": "Close help",
+    "tabs": {
+      "shortcuts": "Shortcuts",
+      "howTo": "How To",
+      "tips": "Tips"
+    },
+    "takeGuidedTour": "Take the guided tour",
+    "searchShortcuts": "Search shortcuts…",
+    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
+    "needMore": "Need more?",
+    "openIssue": "Open an issue"
+  }
+}

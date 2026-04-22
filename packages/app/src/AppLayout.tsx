@@ -323,6 +323,7 @@ export function AppLayout() {
   const { id: projectId } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation('common');
+  const { t: tPanels } = useTranslation('panels');
   const { document: doc, initProject, activeTool, selectedIds, setActiveTool, undo, redo, canUndo, canRedo, loadDocumentSchema, setElementMaterial, renameProject } = useDocumentStore();
   const renameProjectInList = useProjectStore((s) => s.renameProject);
   const leftPanelRef = React.useRef<HTMLElement>(null);
@@ -755,7 +756,7 @@ export function AppLayout() {
             <button
               className={`toolbar-btn panel-toggle-btn${leftVisible ? ' panel-on' : ''}`}
               onClick={() => setShowLeftPanel((v) => !v)}
-              title="Toggle navigator (⌘[)"
+              title={t('tooltip.toggleLeftPanel') + ' (⌘[)'}
             >
               <span className="tool-icon">
                 <PanelLeft size={15} strokeWidth={2} />
@@ -827,13 +828,13 @@ export function AppLayout() {
           </div>
 
           <div className="toolbar-right">
-            <button className="toolbar-btn" onClick={() => setShowFeedback(true)} title="Send feedback" style={{ color: 'var(--accent-primary)' }}><span className="tool-icon"><MessageCirclePlus size={15} /></span></button>
-            <button className="toolbar-btn" data-tour="help" onClick={() => setShowHelp(true)} title="Help (?)"><span className="tool-icon"><HelpCircle size={15} /></span></button>
-            <button className="toolbar-btn" onClick={toggleTheme} title="Toggle Theme"><span className="tool-icon">{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</span></button>
-            <button className="toolbar-btn" onClick={() => setShowModal('import')} title="Import IFC"><span className="tool-icon"><FolderOpen size={15} /></span></button>
-            <button className="toolbar-btn" onClick={() => setShowModal('export')} title="Export IFC"><span className="tool-icon"><FileDown size={15} /></span></button>
+            <button className="toolbar-btn" onClick={() => setShowFeedback(true)} title={t('nav.feedback')} style={{ color: 'var(--accent-primary)' }}><span className="tool-icon"><MessageCirclePlus size={15} /></span></button>
+            <button className="toolbar-btn" data-tour="help" onClick={() => setShowHelp(true)} title={t('nav.help') + ' (?)'}><span className="tool-icon"><HelpCircle size={15} /></span></button>
+            <button className="toolbar-btn" onClick={toggleTheme} title={t('tooltip.toggleTheme')}><span className="tool-icon">{theme === 'light' ? <Moon size={15} /> : <Sun size={15} />}</span></button>
+            <button className="toolbar-btn" onClick={() => setShowModal('import')} title={t('tooltip.importFile')}><span className="tool-icon"><FolderOpen size={15} /></span></button>
+            <button className="toolbar-btn" onClick={() => setShowModal('export')} title={t('tooltip.exportFile')}><span className="tool-icon"><FileDown size={15} /></span></button>
             {can('panel:ai') && (
-              <button className="toolbar-btn" onClick={toggleAIChat} title="AI Assistant"><span className="tool-icon"><Bot size={15} /></span></button>
+              <button className="toolbar-btn" onClick={toggleAIChat} title={t('nav.ai')}><span className="tool-icon"><Bot size={15} /></span></button>
             )}
             {authStatus === 'authenticated' && authProfile ? (
               <button
@@ -846,13 +847,13 @@ export function AppLayout() {
                 </span>
               </button>
             ) : (
-              <button className="toolbar-btn" onClick={() => setShowAuth('login')} title="Sign In"><span className="tool-icon"><User size={15} /></span></button>
+              <button className="toolbar-btn" onClick={() => setShowAuth('login')} title={t('nav.signIn', { defaultValue: 'Sign In' })}><span className="tool-icon"><User size={15} /></span></button>
             )}
             <div className="toolbar-sep" />
             <button
               className={`toolbar-btn panel-toggle-btn${rightVisible ? ' panel-on' : ''}`}
               onClick={() => setShowRightPanel((v) => !v)}
-              title="Toggle properties (⌘])"
+              title={t('tooltip.toggleRightPanel') + ' (⌘])'}
             >
               <span className="tool-icon">
                 <PanelRight size={15} strokeWidth={2} />
@@ -877,7 +878,7 @@ export function AppLayout() {
             <div
               className="panel-resize-handle"
               onMouseDown={(e) => startResize('left', e)}
-              title="Drag to resize"
+              title={t('tooltip.dragToResize', { defaultValue: 'Drag to resize' })}
             />
           )}
         </aside>
@@ -908,7 +909,11 @@ export function AppLayout() {
               {/* Door/Window parameters live in DoorWindowPanel in the right
                   panel (Properties tab); the old floating PlacementPanel was
                   a redundant duplicate with a separate unsynced state. */}
-              {focusMode && <div className="focus-hint">Press <kbd>\</kbd> to exit focus mode</div>}
+              {focusMode && (
+                <div className="focus-hint">
+                  {t('focusHint.before', { defaultValue: 'Press' })} <kbd>\</kbd> {t('focusHint.after', { defaultValue: 'to exit focus mode' })}
+                </div>
+              )}
             </div>
           </PanelErrorBoundary>
         </main>
@@ -922,15 +927,21 @@ export function AppLayout() {
             <div
               className="panel-resize-handle"
               onMouseDown={(e) => startResize('right', e)}
-              title="Drag to resize"
+              title={t('tooltip.dragToResize', { defaultValue: 'Drag to resize' })}
             />
           )}
           <div className="right-panel-tab-bar">
-            {RIGHT_PANEL_TABS.filter((tab) => can(`panel:${tab.id}`)).map((tab) => (
-              <button key={tab.id} className={`right-panel-tab-btn${rightPanelTab === tab.id ? ' active' : ''}`} onClick={() => setRightPanelTab(tab.id)} title={tab.title} aria-label={tab.title}>
-                {tab.icon}
-              </button>
-            ))}
+            {RIGHT_PANEL_TABS.filter((tab) => can(`panel:${tab.id}`)).map((tab) => {
+              // Use the panels:tabs.<id> key when available, with tab.title
+              // as the English fallback — keeps the shelf translated without
+              // touching the static RIGHT_PANEL_TABS array.
+              const label = tPanels(`tabs.${tab.id}`, { defaultValue: tab.title });
+              return (
+                <button key={tab.id} className={`right-panel-tab-btn${rightPanelTab === tab.id ? ' active' : ''}`} onClick={() => setRightPanelTab(tab.id)} title={label} aria-label={label}>
+                  {tab.icon}
+                </button>
+              );
+            })}
           </div>
 
           <div className="right-panel-content">
@@ -1065,10 +1076,10 @@ export function AppLayout() {
             aria-haspopup="menu"
             aria-expanded={showPluginsMenu}
             onClick={() => setShowPluginsMenu((v) => !v)}
-            title="Plugin commands"
+            title={t('nav.plugins')}
           >
             <Zap size={14} />
-            Plugins
+            {t('nav.plugins')}
             <span className="plugin-menu-count">{pluginCommands.length}</span>
           </button>
           {showPluginsMenu && (
@@ -1122,10 +1133,10 @@ export function AppLayout() {
         <div className="settings-overlay" onClick={() => setShowSettings(false)}>
           <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="settings-modal-header">
-              <h2 className="settings-modal-title">Settings</h2>
+              <h2 className="settings-modal-title">{t('settings.title')}</h2>
               <div className="settings-header-actions">
-                <button className="settings-signout" aria-label="Sign out" onClick={() => { setShowSettings(false); void authSignOut(); }}>Sign out</button>
-                <button className="settings-close" aria-label="Close settings" onClick={() => setShowSettings(false)}>×</button>
+                <button className="settings-signout" aria-label={t('nav.signOut')} onClick={() => { setShowSettings(false); void authSignOut(); }}>{t('nav.signOut')}</button>
+                <button className="settings-close" aria-label={t('dashboard.closeSettings')} onClick={() => setShowSettings(false)}>×</button>
               </div>
             </div>
             <div className="settings-tabs">

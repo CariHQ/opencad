@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import { SyncStatusBar, type SyncStatus } from './SyncStatusBar';
 import { getStorageUsage, isStorageQuotaWarning } from '@opencad/document';
@@ -18,6 +19,7 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ viewType }: StatusBarProps = {}) {
+  const { t } = useTranslation('common');
   const { document: doc, isOnline, isSaving, lastSaved, selectedIds } = useDocumentStore();
   const [storageWarning, setStorageWarning] = useState(false);
   const { role, config } = useRole();
@@ -71,8 +73,11 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
           lastSynced={lastSaved}
         />
         {storageWarning && (
-          <span className="status-storage-warning" title="Storage usage is above 80% — consider exporting your projects">
-            ⚠ Storage almost full
+          <span
+            className="status-storage-warning"
+            title={t('status.storageWarningTooltip', { defaultValue: 'Storage usage is above 80% — consider exporting your projects' })}
+          >
+            {t('status.storageAlmostFull', { defaultValue: '⚠ Storage almost full' })}
           </span>
         )}
       </div>
@@ -80,16 +85,19 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
       <div className="status-right">
         {selectedIds.length > 0 && (
           <div className="status-item">
-            <span>{selectedIds.length} selected</span>
+            <span>{t('status.selected', { count: selectedIds.length, defaultValue: '{{count}} selected' })}</span>
           </div>
         )}
         {doc && (
           <div className="status-item">
-            <span>{Object.keys(doc.content.elements).length} elements</span>
+            <span>{t('status.elements', { count: Object.keys(doc.content.elements).length, defaultValue: '{{count}} elements' })}</span>
           </div>
         )}
         {fpsDisplay && (
-          <div className="status-item status-fps" title="Rolling average frame rate">
+          <div
+            className="status-item status-fps"
+            title={t('status.fpsTooltip', { defaultValue: 'Rolling average frame rate' })}
+          >
             <span style={{ color: fpsDisplay.color }}>
               {fpsDisplay.fps >= 55
                 ? `${fpsDisplay.fps} fps`
@@ -104,8 +112,8 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
             className="status-item status-backend"
             title={
               backend === 'webgpu'
-                ? 'Three.js WebGPURenderer — compute shaders enabled'
-                : 'WebGL 2.0 fallback — WebGPU unavailable or disabled'
+                ? t('status.webgpuTooltip', { defaultValue: 'Three.js WebGPURenderer — compute shaders enabled' })
+                : t('status.webglTooltip', { defaultValue: 'WebGL 2.0 fallback — WebGPU unavailable or disabled' })
             }
           >
             <span className={`backend-badge backend-badge--${backend}`}>
@@ -113,7 +121,10 @@ export function StatusBar({ viewType }: StatusBarProps = {}) {
             </span>
           </div>
         )}
-        <div className="status-item" title={`Current role: ${config.label}`}>
+        <div
+          className="status-item"
+          title={t('status.currentRole', { label: config.label, defaultValue: 'Current role: {{label}}' })}
+        >
           <span className={`role-badge role-badge--${role}`}>{config.label}</span>
         </div>
         {/* Language selector — persists to localStorage, lazy-loads the

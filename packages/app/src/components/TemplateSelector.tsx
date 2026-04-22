@@ -5,6 +5,7 @@
  * `loadDocumentSchema` from the document store when the user picks one.
  */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import { PROJECT_TEMPLATES } from '../config/projectTemplates';
 
@@ -13,6 +14,7 @@ interface TemplateSelectorProps {
 }
 
 export function TemplateSelector({ onClose }: TemplateSelectorProps) {
+  const { t } = useTranslation('common');
   const { loadDocumentSchema } = useDocumentStore();
 
   const handleSelect = (index: number) => {
@@ -25,7 +27,7 @@ export function TemplateSelector({ onClose }: TemplateSelectorProps) {
   return (
     <div className="template-selector">
       <div className="panel-header">
-        <span className="panel-title">Choose a Template</span>
+        <span className="panel-title">{t('home.chooseTemplate', { defaultValue: 'Choose a Template' })}</span>
       </div>
       <div className="templates-list">
         {PROJECT_TEMPLATES.map((template, idx) => (

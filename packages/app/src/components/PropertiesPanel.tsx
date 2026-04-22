@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import type { PropertyValue, PropertySet } from '@opencad/document';
 import { getSharedSelectedCoords } from '../hooks/useThreeViewport';
+import { translateFieldLabel } from '../utils/humanize';
 
 interface PendingProp {
   name: string;
@@ -100,7 +101,9 @@ export function PropertiesPanel() {
           <span className="panel-title">{t('properties.title')}</span>
         </div>
         <div className="properties-content empty">
-          <p className="properties-empty-hint">{selectedIds.length} elements selected</p>
+          <p className="properties-empty-hint">
+            {t('properties.multi', { count: selectedIds.length, defaultValue: '{{count}} elements selected' })}
+          </p>
         </div>
       </div>
     );
@@ -205,18 +208,18 @@ export function PropertiesPanel() {
   return (
     <div className="properties-panel">
       <div className="panel-header">
-        <span className="panel-title">Properties</span>
+        <span className="panel-title">{t('properties.title')}</span>
         <div className="panel-actions">
-          <button className="panel-action-btn" title="More">
+          <button className="panel-action-btn" title={t('properties.more', { defaultValue: 'More' })}>
             ⋮
           </button>
         </div>
       </div>
       <div className="properties-content">
         <div className="property-group">
-          <div className="property-group-title">General</div>
+          <div className="property-group-title">{t('properties.group.general', { defaultValue: 'General' })}</div>
           <div className="property-row">
-            <span className="property-label">Type</span>
+            <span className="property-label">{translateFieldLabel(t, 'Type')}</span>
             <div className="property-value">
               <input type="text" className="property-input" value={selectedElement.type} readOnly />
             </div>
@@ -224,7 +227,7 @@ export function PropertiesPanel() {
         </div>
 
         <div className="property-group">
-          <div className="property-group-title">Location (mm)</div>
+          <div className="property-group-title">{t('properties.group.location', { defaultValue: 'Location (mm)' })}</div>
           {(['x', 'y', 'z'] as const).map((axis) => {
             // Prefer the live 3D-viewport coords for the currently selected
             // element — these update in real time while TransformControls is
@@ -258,10 +261,10 @@ export function PropertiesPanel() {
 
         <div className="property-group">
           <div className="property-group-title">
-            Dimensions
+            {t('properties.group.dimensions', { defaultValue: 'Dimensions' })}
             <button
               className="panel-action-btn"
-              title="Add property"
+              title={t('properties.addProperty', { defaultValue: 'Add property' })}
               onClick={handleAddProperty}
               style={{ marginLeft: 'auto', fontSize: '12px' }}
             >
@@ -272,7 +275,7 @@ export function PropertiesPanel() {
             const summary = summarizeStructuredValue(key, prop);
             return (
               <div key={key} className="property-row">
-                <span className="property-label">{key}</span>
+                <span className="property-label">{translateFieldLabel(t, key)}</span>
                 <div className="property-value">
                   {summary !== null ? (
                     <span
@@ -299,14 +302,14 @@ export function PropertiesPanel() {
                 <input
                   type="text"
                   className="property-input"
-                  placeholder="Name"
+                  placeholder={translateFieldLabel(t, 'Name')}
                   value={pending.name}
                   onChange={(e) => handlePendingNameChange(idx, e.target.value)}
                 />
                 <input
                   type="text"
                   className="property-input"
-                  placeholder="Value"
+                  placeholder={t('properties.valuePlaceholder', { defaultValue: 'Value' })}
                   value={pending.value}
                   onChange={(e) => handlePendingValueChange(idx, e.target.value)}
                   onBlur={() => handlePendingBlur(idx)}
@@ -318,13 +321,13 @@ export function PropertiesPanel() {
 
         {selectedElement.propertySets && selectedElement.propertySets.length > 0 && (
           <div className="property-group">
-            <div className="property-group-title">IFC Property Sets</div>
+            <div className="property-group-title">{t('properties.group.ifcPsets', { defaultValue: 'IFC Property Sets' })}</div>
             {selectedElement.propertySets.map((pset) => (
               <div key={pset.id} className="pset-group">
                 <div className="pset-name">{pset.name}</div>
                 {Object.entries(pset.properties).map(([key, prop]) => (
                   <div key={key} className="property-row pset-row">
-                    <span className="property-label">{key}</span>
+                    <span className="property-label">{translateFieldLabel(t, key)}</span>
                     <div className="property-value">
                       <input
                         type="text"
@@ -346,13 +349,15 @@ export function PropertiesPanel() {
           return (
             <div className="property-group">
               <div className="property-group-title">
-                Psets
+                {t('properties.group.psets', { defaultValue: 'Psets' })}
                 <button
                   className="panel-action-btn"
-                  aria-label="Add Pset"
-                  title="Add Pset"
+                  aria-label={t('properties.addPset', { defaultValue: 'Add Pset' })}
+                  title={t('properties.addPset', { defaultValue: 'Add Pset' })}
                   onClick={() => {
-                    const name = window.prompt('Enter Pset name (e.g. Pset_WallCommon):');
+                    const name = window.prompt(
+                      t('properties.addPsetPrompt', { defaultValue: 'Enter Pset name (e.g. Pset_WallCommon):' }),
+                    );
                     if (!name?.trim()) return;
                     const psetName = name.trim().startsWith('Pset_') ? name.trim() : `Pset_${name.trim()}`;
                     const key = `${psetName}.NewProperty`;
@@ -366,7 +371,7 @@ export function PropertiesPanel() {
                   }}
                   style={{ marginLeft: 'auto', fontSize: '12px' }}
                 >
-                  Add Pset
+                  {t('properties.addPset', { defaultValue: 'Add Pset' })}
                 </button>
               </div>
               {inlinePsets.map(({ name, props }) => (
@@ -374,7 +379,7 @@ export function PropertiesPanel() {
                   <div className="pset-name">{name}</div>
                   {props.map(({ key, fullKey, prop }) => (
                     <div key={fullKey} className="property-row pset-row">
-                      <span className="property-label">{key}</span>
+                      <span className="property-label">{translateFieldLabel(t, key)}</span>
                       <div className="property-value">
                         <input
                           type="text"

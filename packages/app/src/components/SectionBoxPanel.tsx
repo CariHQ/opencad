@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   DEFAULT_SECTION_BOX,
   sectionBoxFromElements,
@@ -37,6 +38,7 @@ export function SectionBoxPanel({
   onBoxChange,
   elements = [],
 }: SectionBoxPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [enabled, setEnabled] = useState(false);
   const [position, setPosition] = useState(0);
   const [direction, setDirection] = useState<SectionDirection>('z');
@@ -97,23 +99,23 @@ export function SectionBoxPanel({
   return (
     <div className="section-box-panel panel">
       <div className="panel-header">
-        <span className="panel-title">Section View</span>
+        <span className="panel-title">{t('section.viewTitle', { defaultValue: 'Section View' })}</span>
       </div>
       <div className="panel-body">
         <div className="panel-row">
           <label htmlFor="section-enable" className="section-toggle-label">
-            Enable section cut
+            {t('section.enableCut', { defaultValue: 'Enable section cut' })}
           </label>
           <input
             id="section-enable"
             type="checkbox"
             checked={enabled}
             onChange={handleToggle}
-            aria-label="Enable section cut"
+            aria-label={t('section.enableCut', { defaultValue: 'Enable section cut' })}
           />
         </div>
         <div className="panel-row">
-          <span className="panel-label">Axis</span>
+          <span className="panel-label">{t('section.axis')}</span>
           <div className="axis-selector">
             {AXIS_BUTTONS.map((btn) => (
               <button
@@ -130,15 +132,15 @@ export function SectionBoxPanel({
         {enabled && (
           <>
             <div className="panel-row" data-testid="section-cut-readout">
-              <span className="panel-label">Elements cut by plane</span>
+              <span className="panel-label">{t('section.cutCountLabel', { defaultValue: 'Elements cut by plane' })}</span>
               <span className="panel-value">{cutCount}</span>
             </div>
             <div className="panel-row">
-              <label htmlFor="section-position">Position: {position}mm</label>
+              <label htmlFor="section-position">{t('section.positionLabel', { position, defaultValue: 'Position: {{position}}mm' })}</label>
               <input
                 id="section-position"
                 type="range"
-                aria-label="Position"
+                aria-label={t('section.position')}
                 min="0"
                 max="20000"
                 step="100"
@@ -151,20 +153,20 @@ export function SectionBoxPanel({
               <button
                 className="btn-secondary"
                 onClick={() => onSaveView?.()}
-                aria-label="Save section view"
+                aria-label={t('section.saveViewAria', { defaultValue: 'Save section view' })}
               >
-                Save View
+                {t('section.saveView', { defaultValue: 'Save View' })}
               </button>
             </div>
           </>
         )}
         <div className="section-box-enhanced">
           <div className="panel-row">
-            <label htmlFor="section-box-enabled-check">Activate Section Box</label>
+            <label htmlFor="section-box-enabled-check">{t('section.activateBox', { defaultValue: 'Activate Section Box' })}</label>
             <input
               id="section-box-enabled-check"
               data-testid="section-box-enabled"
-              aria-label="Activate Section Box"
+              aria-label={t('section.activateBox', { defaultValue: 'Activate Section Box' })}
               type="checkbox"
               checked={box.enabled}
               onChange={(e) => updateBox({ enabled: e.target.checked })}
@@ -254,14 +256,14 @@ export function SectionBoxPanel({
               className="btn-secondary"
               onClick={handleFitToModel}
             >
-              Fit to Model
+              {t('section.fitToModel', { defaultValue: 'Fit to Model' })}
             </button>
             <button
               data-testid="reset-section-btn"
               className="btn-secondary"
               onClick={handleReset}
             >
-              Reset
+              {t('section.reset', { defaultValue: 'Reset' })}
             </button>
           </div>
         </div>

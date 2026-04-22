@@ -4,6 +4,7 @@
  */
 
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { installUpdate } from '../hooks/useTauri';
 import type { TauriUpdateInfo } from '../hooks/useTauri';
 
@@ -17,6 +18,7 @@ interface UpdateBannerProps {
 const SESSION_KEY = 'opencad_update_dismissed';
 
 export function UpdateBanner({ info, onDismiss }: UpdateBannerProps): React.ReactElement | null {
+  const { t } = useTranslation('common');
   const alreadyDismissed = sessionStorage.getItem(SESSION_KEY) === 'true';
   const [dismissed, setDismissed] = useState(alreadyDismissed);
   const [installing, setInstalling] = useState(false);
@@ -52,7 +54,7 @@ export function UpdateBanner({ info, onDismiss }: UpdateBannerProps): React.Reac
       }}
     >
       <span data-testid="update-version">
-        Version {info.version} is available
+        {t('update.available', { version: info.version, defaultValue: 'Version {{version}} is available' })}
       </span>
       {info.body && (
         <span style={{ opacity: 0.8, fontSize: '0.875em' }}>{info.body}</span>
@@ -72,7 +74,9 @@ export function UpdateBanner({ info, onDismiss }: UpdateBannerProps): React.Reac
           fontSize: '0.875em',
         }}
       >
-        {installing ? 'Installing...' : 'Install Update'}
+        {installing
+          ? t('update.installing', { defaultValue: 'Installing...' })
+          : t('update.install', { defaultValue: 'Install Update' })}
       </button>
       <button
         data-testid="dismiss-update-btn"
@@ -84,9 +88,9 @@ export function UpdateBanner({ info, onDismiss }: UpdateBannerProps): React.Reac
           color: '#fff',
           cursor: 'pointer',
         }}
-        aria-label="Dismiss update notification"
+        aria-label={t('update.dismissAria', { defaultValue: 'Dismiss update notification' })}
       >
-        Dismiss
+        {t('update.dismiss', { defaultValue: 'Dismiss' })}
       </button>
     </div>
   );

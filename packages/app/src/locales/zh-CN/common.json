@@ -31,7 +31,7 @@
     "signOut": "退出",
     "help": "帮助",
     "feedback": "反馈",
-    "ai": "AI",
+    "ai": "AI 助手",
     "plugins": "插件"
   },
   "status": {
@@ -39,13 +39,25 @@
     "offline": "离线",
     "saving": "保存中…",
     "saved": "已保存",
-    "syncing": "同步中…"
+    "syncing": "同步中…",
+    "storageAlmostFull": "⚠ 存储空间将满",
+    "storageWarningTooltip": "存储使用率超过 80% — 建议导出你的项目",
+    "selected_one": "已选 {{count}} 项",
+    "selected_other": "已选 {{count}} 项",
+    "elements_one": "{{count}} 个元素",
+    "elements_other": "{{count}} 个元素",
+    "fpsTooltip": "滚动平均帧率",
+    "webgpuTooltip": "Three.js WebGPURenderer — 已启用计算着色器",
+    "webglTooltip": "WebGL 2.0 回退 — WebGPU 不可用或已禁用",
+    "currentRole": "当前角色:{{label}}"
   },
   "view": {
     "floorPlan": "平面图",
     "threeD": "三维视图",
     "section": "剖面",
-    "elevation": "立面"
+    "elevation": "立面",
+    "sectionAA": "Section A-A",
+    "layout1": "Layout 1"
   },
   "settings": {
     "title": "设置",
@@ -59,14 +71,143 @@
   },
   "tooltip": {
     "backToProjects": "主页 — 返回项目列表",
-    "toggleLeftPanel": "切换左侧面板",
-    "toggleRightPanel": "切换右侧面板",
+    "toggleLeftPanel": "切换导航器",
+    "toggleRightPanel": "切换属性",
     "renameProject": "点击以重命名项目",
     "newProject": "新建项目",
     "openProject": "打开项目",
     "saveProject": "保存",
-    "importFile": "导入文件",
-    "exportFile": "导出",
+    "importFile": "导入 IFC",
+    "exportFile": "导出 IFC",
     "toggleTheme": "切换明暗主题"
+  },
+  "update": {
+    "available": "{{version}} 版本已可用",
+    "install": "安装更新",
+    "installing": "安装中…",
+    "dismiss": "忽略",
+    "dismissAria": "忽略更新提示"
+  },
+  "focusHint": {
+    "before": "按",
+    "after": "退出聚焦模式"
+  },
+  "dashboard": {
+    "title": "项目",
+    "fromTemplate": "从模板创建",
+    "newProject": "新建项目",
+    "newBlankProject": "新建空白项目",
+    "filter": {
+      "all": "全部",
+      "starred": "已收藏",
+      "mine": "我的",
+      "shared": "共享"
+    },
+    "searchPlaceholder": "搜索项目…",
+    "sortBy": "排序方式",
+    "sort": {
+      "lastEdited": "最近编辑",
+      "created": "创建时间",
+      "name": "名称",
+      "size": "大小"
+    },
+    "gridView": "网格视图",
+    "listView": "列表视图",
+    "empty": {
+      "title": "尚无项目",
+      "subtitle": "从空白画布开始,或在下方选择模板。",
+      "orTemplate": "或者从模板开始"
+    },
+    "card": {
+      "clickToOpen": "单击打开 · 双击重命名",
+      "star": "收藏项目",
+      "unstar": "取消收藏",
+      "delete": "删除项目"
+    },
+    "closeTemplates": "关闭模板",
+    "closeSettings": "关闭设置",
+    "signOut": "退出登录",
+    "upgradeToPro": "升级到 Pro"
+  },
+  "coord": {
+    "inputAria": "Coordinate input"
+  },
+  "error": {
+    "somethingWentWrong": "Something went wrong",
+    "panelFailed": "Panel failed to load",
+    "tryAgain": "Try again"
+  },
+  "tour": {
+    "title": "Guided tour",
+    "close": "Close tour",
+    "skip": "Skip tour",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Finish"
+  },
+  "language": {
+    "aria": "Language",
+    "detected": "Detected from your system"
+  },
+  "resizer": {
+    "aria": "Drag to resize panel"
+  },
+  "contextMenu": {
+    "aria": "Context menu"
+  },
+  "viewport": {
+    "zoomIn": "Zoom In",
+    "zoomInShort": "Zoom in",
+    "zoomInWithShortcut": "Zoom In (+)",
+    "zoomOut": "Zoom Out",
+    "zoomOutShort": "Zoom out",
+    "zoomOutWithShortcut": "Zoom Out (-)",
+    "zoomToFit": "Zoom to Fit",
+    "zoomToFitWithShortcut": "Zoom to Fit (0)",
+    "fit": "Fit",
+    "resetCamera": "Reset camera",
+    "sectionBox": "Section Box",
+    "topView": "Top view",
+    "topViewWithShortcut": "Top view (1)",
+    "frontView": "Front view",
+    "frontViewWithShortcut": "Front view (2)",
+    "rightView": "Right view",
+    "rightViewWithShortcut": "Right view (3)",
+    "perspective": "Perspective",
+    "perspectiveWithShortcut": "Perspective (4)",
+    "presetView": "{{preset}} View",
+    "cutAlongAxis": "Cut along {{axis}} axis",
+    "cutAxis": "Cut axis",
+    "cutPlanePosition": "Cut plane position",
+    "position": "Position",
+    "sectionCutControls": "Section cut controls",
+    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
+    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
+    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
+    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
+    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
+    "splitView": "Split view: floor plan + 3D",
+    "viewCubeAria": "View orientation cube"
+  },
+  "home": {
+    "newProject": "New Project",
+    "newBlankProject": "New Blank Project",
+    "signIn": "Sign In",
+    "recentProjects": "Recent Projects",
+    "importIfcDwgPdf": "Import IFC / DWG / PDF",
+    "emptyText": "Start a new project or import a file",
+    "importFile": "Import a File",
+    "open": "Open",
+    "startFromTemplate": "Start from a Template",
+    "chooseTemplate": "Choose a Template",
+    "projectTemplates": "Project Templates"
+  },
+  "browser": {
+    "searchProjects": "Search projects…",
+    "recentFirst": "Recent first",
+    "oldestFirst": "Oldest first",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "noProjects": "No projects found"
   }
 }

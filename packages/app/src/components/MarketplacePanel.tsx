@@ -395,7 +395,7 @@ export function MarketplacePanel({
           type="button"
           className="btn-report"
           onClick={() => setShowPublisher((v) => !v)}
-          title="Submit a plugin"
+          title={t('marketplace.submitPlugin', { defaultValue: 'Submit a plugin' })}
         >
           {showPublisher ? 'Back to catalogue' : 'Publish'}
         </button>
@@ -404,16 +404,16 @@ export function MarketplacePanel({
 
       <input
         type="text"
-        placeholder="Search plugins…"
+        placeholder={t('marketplace.searchPlaceholder', { defaultValue: 'Search plugins…' })}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
         className="marketplace-search"
-        aria-label="Search plugins"
+        aria-label={t('marketplace.searchAria', { defaultValue: 'Search plugins' })}
       />
 
       {/* Loading skeleton */}
       {loading && (
-        <div className="marketplace-section" aria-label="Loading plugins">
+        <div className="marketplace-section" aria-label={t('marketplace.loading', { defaultValue: 'Loading plugins' })}>
           <PluginSkeleton />
           <PluginSkeleton />
           <PluginSkeleton />
@@ -532,7 +532,7 @@ export function MarketplacePanel({
       )}
 
       {showEmpty && (
-        <div className="marketplace-empty">No plugins found.</div>
+        <div className="marketplace-empty">{t('marketplace.empty', { defaultValue: 'No plugins found.' })}</div>
       )}
 
       {/* Legacy prop-based items (used in tests / embedded mode) */}

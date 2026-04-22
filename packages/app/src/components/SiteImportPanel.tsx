@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type SiteLayer = 'terrain' | 'buildings' | 'roads' | 'trees' | 'waterways' | 'boundaries';
 
@@ -24,6 +25,7 @@ const LAYERS: { id: SiteLayer; label: string }[] = [
 ];
 
 export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [query, setQuery] = useState('');
   const [source, setSource] = useState<'osm' | 'ordnance-survey'>('osm');
   const [selectedLayers, setSelectedLayers] = useState<SiteLayer[]>(['terrain', 'buildings', 'roads']);
@@ -46,29 +48,29 @@ export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps = {
   return (
     <div className="site-import-panel">
       <div className="panel-header">
-        <span className="panel-title">Site Import</span>
+        <span className="panel-title">{t('site.title')}</span>
       </div>
 
       <div className="site-search-row">
         <input
           type="text"
-          placeholder="Enter address, coordinates, or location…"
+          placeholder={t('site.searchPlaceholder', { defaultValue: 'Enter address, coordinates, or location…' })}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') handleSearch(); }}
           className="site-search-input"
         />
         <button
-          aria-label="Search location"
+          aria-label={t('site.searchAria', { defaultValue: 'Search location' })}
           className="btn-search"
           onClick={handleSearch}
         >
-          Search
+          {t('site.search', { defaultValue: 'Search' })}
         </button>
       </div>
 
       <div className="site-source-row">
-        <label>Source:</label>
+        <label>{t('site.source', { defaultValue: 'Source:' })}</label>
         <select value={source} onChange={(e) => setSource(e.target.value as 'osm' | 'ordnance-survey')}>
           <option value="osm">OpenStreetMap / OSM</option>
           <option value="ordnance-survey">Ordnance Survey</option>
@@ -76,7 +78,7 @@ export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps = {
       </div>
 
       <div className="site-layers">
-        <label>Data Layers:</label>
+        <label>{t('site.dataLayers', { defaultValue: 'Data Layers:' })}</label>
         {LAYERS.map((layer) => (
           <label key={layer.id} className="layer-checkbox-label">
             <input
@@ -90,7 +92,7 @@ export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps = {
       </div>
 
       <div className="site-radius-row">
-        <label htmlFor="site-radius">Radius (m):</label>
+        <label htmlFor="site-radius">{t('site.radius', { defaultValue: 'Radius (m):' })}</label>
         <input
           id="site-radius"
           type="number"
@@ -103,11 +105,11 @@ export function SiteImportPanel({ onImport, onSearch }: SiteImportPanelProps = {
       </div>
 
       <button
-        aria-label="Import site data"
+        aria-label={t('site.importAria', { defaultValue: 'Import site data' })}
         className="btn-import-site"
         onClick={handleImport}
       >
-        Import Site Data
+        {t('site.importBtn', { defaultValue: 'Import Site Data' })}
       </button>
     </div>
   );

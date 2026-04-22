@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import { Columns, ZoomIn, ZoomOut, Maximize, RotateCcw } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
 import { useDocumentStore } from '../stores/documentStore';
@@ -14,6 +15,7 @@ import {
 // Always mounted — CSS visibility controls show/hide so canvas state is never lost.
 
 function FloorPlanCanvas() {
+  const { t } = useTranslation('common');
   const {
     canvasRef,
     containerRef,
@@ -81,7 +83,7 @@ function FloorPlanCanvas() {
         onContextMenu={onContextMenu}
       />
       <div className="viewport-corner bottom-left">
-        <span className="viewport-info">Draw: drag · Pan: middle-drag · Zoom: scroll</span>
+        <span className="viewport-info">{t('viewport.info2DShort', { defaultValue: 'Draw: drag · Pan: middle-drag · Zoom: scroll' })}</span>
       </div>
       {menu && (
         <ContextMenu
@@ -110,6 +112,7 @@ interface ThreeDViewProps {
 }
 
 function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps) {
+  const { t } = useTranslation('common');
   const {
     containerRef, setViewPreset, zoomIn, zoomOut, zoomToFit, getCameraTarget,
     setSectionBox, sectionPosition, setSectionPosition, sectionDirection, setSectionDirection,
@@ -178,19 +181,19 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
       <div className="viewport-corner top-right" style={{ zIndex: 5, display: 'flex', gap: 4 }}>
         {viewType !== 'section' && (
           <>
-            <button className="viewport-control-btn" onClick={() => setViewPreset('top')}   title="Top view (1)">T</button>
-            <button className="viewport-control-btn" onClick={() => setViewPreset('front')} title="Front view (2)">F</button>
-            <button className="viewport-control-btn" onClick={() => setViewPreset('right')} title="Right view (3)">R</button>
-            <button className="viewport-control-btn" onClick={() => setViewPreset('3d')}    title="Perspective (4)">3D</button>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('top')}   title={t('viewport.topViewWithShortcut', { defaultValue: 'Top view (1)' })}>T</button>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('front')} title={t('viewport.frontViewWithShortcut', { defaultValue: 'Front view (2)' })}>F</button>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('right')} title={t('viewport.rightViewWithShortcut', { defaultValue: 'Right view (3)' })}>R</button>
+            <button className="viewport-control-btn" onClick={() => setViewPreset('3d')}    title={t('viewport.perspectiveWithShortcut', { defaultValue: 'Perspective (4)' })}>3D</button>
           </>
         )}
-        <button className="viewport-control-btn" onClick={zoomToFit}                       title="Zoom to fit (0)"><Maximize  size={12} /></button>
-        <button className="viewport-control-btn" onClick={zoomIn}                          title="Zoom in (+)"><ZoomIn    size={12} /></button>
-        <button className="viewport-control-btn" onClick={zoomOut}                         title="Zoom out (-)"><ZoomOut   size={12} /></button>
-        <button className="viewport-control-btn" onClick={() => zoomToFitRef.current()}    title="Reset camera"><RotateCcw size={12} /></button>
+        <button className="viewport-control-btn" onClick={zoomToFit}                       title={t('viewport.zoomToFitWithShortcut', { defaultValue: 'Zoom to Fit (0)' })}><Maximize  size={12} /></button>
+        <button className="viewport-control-btn" onClick={zoomIn}                          title={t('viewport.zoomInWithShortcut', { defaultValue: 'Zoom In (+)' })}><ZoomIn    size={12} /></button>
+        <button className="viewport-control-btn" onClick={zoomOut}                         title={t('viewport.zoomOutWithShortcut', { defaultValue: 'Zoom Out (-)' })}><ZoomOut   size={12} /></button>
+        <button className="viewport-control-btn" onClick={() => zoomToFitRef.current()}    title={t('viewport.resetCamera', { defaultValue: 'Reset camera' })}><RotateCcw size={12} /></button>
         <button
           className={`viewport-control-btn${isSplit ? ' active' : ''}`}
-          title="Split view: floor plan + 3D"
+          title={t('viewport.splitView', { defaultValue: 'Split view: floor plan + 3D' })}
           onClick={onToggleSplit}
         >
           <Columns size={12} />
@@ -199,9 +202,9 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
 
       {/* Section cut controls — visible only in section view */}
       {viewType === 'section' && (
-        <div className="section-cut-overlay" role="group" aria-label="Section cut controls">
+        <div className="section-cut-overlay" role="group" aria-label={t('viewport.sectionCutControls', { defaultValue: 'Section cut controls' })}>
           <div className="section-cut-row">
-            <div className="section-cut-axis" role="radiogroup" aria-label="Cut axis">
+            <div className="section-cut-axis" role="radiogroup" aria-label={t('viewport.cutAxis', { defaultValue: 'Cut axis' })}>
               {(['x', 'z', 'y'] as const).map((dir) => (
                 <button
                   key={dir}
@@ -222,14 +225,14 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
                       setSectionPosition(Math.round(mid));
                     }
                   }}
-                  title={`Cut along ${dir.toUpperCase()} axis`}
+                  title={t('viewport.cutAlongAxis', { axis: dir.toUpperCase(), defaultValue: 'Cut along {{axis}} axis' })}
                   aria-pressed={sectionDirection === dir}
                 >
                   {dir.toUpperCase()}
                 </button>
               ))}
             </div>
-            <div className="section-cut-label">Position</div>
+            <div className="section-cut-label">{t('viewport.position', { defaultValue: 'Position' })}</div>
             <div className="section-cut-value">{Math.round(sectionPosition)} mm</div>
           </div>
           <input
@@ -240,10 +243,10 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
             step={Math.max(10, Math.round((axisBounds.max - axisBounds.min) / 500))}
             value={sectionPosition}
             onChange={(e) => setSectionPosition(Number(e.target.value))}
-            aria-label="Cut plane position"
+            aria-label={t('viewport.cutPlanePosition', { defaultValue: 'Cut plane position' })}
           />
           <div className="section-cut-hint">
-            Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom
+            {t('viewport.sectionCutHint', { defaultValue: 'Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom' })}
           </div>
         </div>
       )}
@@ -251,7 +254,7 @@ function ThreeDView({ viewType, label, isSplit, onToggleSplit }: ThreeDViewProps
       {viewType !== 'section' && (
         <div className="viewport-corner bottom-left" style={{ zIndex: 5, pointerEvents: 'none' }}>
           <span className="viewport-info">
-            Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views
+            {t('viewport.info3DLong', { defaultValue: 'Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views' })}
           </span>
         </div>
       )}
@@ -278,6 +281,7 @@ interface SplitViewportProps {
 }
 
 export function SplitViewport({ viewType = '3d' }: SplitViewportProps) {
+  const { t } = useTranslation('common');
   const [isSplit, setIsSplit] = useState(false);
   const [splitRatio, setSplitRatio] = useState(0.5);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -307,10 +311,10 @@ export function SplitViewport({ viewType = '3d' }: SplitViewportProps) {
   const threeVisible = isSplit || viewType === '3d' || viewType === 'section';
 
   const threeLabel = isSplit
-    ? '3D View'
+    ? t('view.threeD', { defaultValue: '3D View' })
     : viewType === 'section'
-      ? 'Section'
-      : '3D View';
+      ? t('view.section', { defaultValue: 'Section' })
+      : t('view.threeD', { defaultValue: '3D View' });
 
   return (
     <div ref={containerRef} style={{ position: 'relative', width: '100%', height: '100%', overflow: 'hidden' }}>
@@ -330,7 +334,7 @@ export function SplitViewport({ viewType = '3d' }: SplitViewportProps) {
         }}
       >
         {isSplit && (
-          <div className="viewport-corner top-left" style={{ zIndex: 5, pointerEvents: 'none' }}>Floor Plan</div>
+          <div className="viewport-corner top-left" style={{ zIndex: 5, pointerEvents: 'none' }}>{t('view.floorPlan', { defaultValue: 'Floor Plan' })}</div>
         )}
         <FloorPlanCanvas />
       </div>

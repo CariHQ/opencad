@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface ProjectTemplate {
   id: string;
@@ -98,10 +99,11 @@ interface ProjectTemplatesProps {
 }
 
 export function ProjectTemplates({ onSelect }: ProjectTemplatesProps) {
+  const { t } = useTranslation('common');
   return (
     <div className="project-templates">
       <div className="panel-header">
-        <span className="panel-title">Project Templates</span>
+        <span className="panel-title">{t('home.projectTemplates', { defaultValue: 'Project Templates' })}</span>
       </div>
       <div className="templates-grid">
         {TEMPLATES.map((tmpl) => (

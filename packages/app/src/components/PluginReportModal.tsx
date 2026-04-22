@@ -10,6 +10,7 @@
  * spammy, or hostile.
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { reportPlugin, type PluginReportBody } from '../lib/marketplaceApi';
 
 interface PluginReportModalProps {
@@ -33,6 +34,14 @@ export function PluginReportModal({
   onClose,
   onSubmitted,
 }: PluginReportModalProps): React.ReactElement {
+  const { t } = useTranslation('panels');
+  const REASONS_LABELS: Record<PluginReportBody['reason'], string> = {
+    malware: t('pluginReport.reasons.malware'),
+    broken: t('pluginReport.reasons.broken'),
+    spam: t('pluginReport.reasons.spam'),
+    policy: t('pluginReport.reasons.policy'),
+    other: t('pluginReport.reasons.other'),
+  };
   const [reason, setReason] = useState<PluginReportBody['reason']>('broken');
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -65,15 +74,15 @@ export function PluginReportModal({
       <div className="plugin-consent-modal" onClick={(e) => e.stopPropagation()}>
         <div className="plugin-consent-header">
           <h3 id="plugin-report-title" className="plugin-consent-title">
-            Report {pluginName}
+            {t('pluginReport.title', { name: pluginName })}
           </h3>
           <div className="plugin-consent-meta">
-            Send this plugin to moderators for review.
+            {t('pluginReport.subtitle')}
           </div>
         </div>
 
         <label className="plugin-report-field">
-          <span className="plugin-report-label">Reason</span>
+          <span className="plugin-report-label">{t('pluginReport.reason')}</span>
           <select
             className="plugin-report-select"
             value={reason}
@@ -81,18 +90,18 @@ export function PluginReportModal({
             disabled={submitting}
           >
             {REASONS.map((r) => (
-              <option key={r.value} value={r.value}>{r.label}</option>
+              <option key={r.value} value={r.value}>{REASONS_LABELS[r.value]}</option>
             ))}
           </select>
         </label>
 
         <label className="plugin-report-field">
-          <span className="plugin-report-label">Details (optional)</span>
+          <span className="plugin-report-label">{t('pluginReport.details')}</span>
           <textarea
             className="plugin-report-textarea"
             value={details}
             onChange={(e) => setDetails(e.target.value)}
-            placeholder="What happened? Include repro steps if possible."
+            placeholder={t('pluginReport.detailsPlaceholder')}
             rows={4}
             maxLength={2000}
             disabled={submitting}
@@ -108,7 +117,7 @@ export function PluginReportModal({
             onClick={onClose}
             disabled={submitting}
           >
-            Cancel
+            {t('pluginConsent.cancel')}
           </button>
           <button
             type="button"
@@ -116,7 +125,7 @@ export function PluginReportModal({
             onClick={() => void handleSubmit()}
             disabled={submitting}
           >
-            {submitting ? 'Submitting…' : 'Submit report'}
+            {submitting ? t('pluginReport.submitting') : t('pluginReport.submit')}
           </button>
         </div>
       </div>

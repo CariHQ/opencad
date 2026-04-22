@@ -80,7 +80,7 @@ export function LanguageSettingsPanel(): React.ReactElement {
         </div>
       </div>
 
-      <ul className="language-settings-list" role="radiogroup" aria-label="Language">
+      <ul className="language-settings-list" role="radiogroup" aria-label={t('language.aria', { defaultValue: 'Language' })}>
         {SUPPORTED_LOCALES.map((l) => {
           const active = l.code === current;
           const isSystem = l.code === systemLocale;
@@ -99,7 +99,7 @@ export function LanguageSettingsPanel(): React.ReactElement {
                 <span className="language-settings-native">{l.native}</span>
                 <span className="language-settings-label">{l.label}</span>
                 {isSystem && (
-                  <span className="language-settings-system" title="Detected from your system">
+                  <span className="language-settings-system" title={t('language.detected', { defaultValue: 'Detected from your system' })}>
                     System
                   </span>
                 )}

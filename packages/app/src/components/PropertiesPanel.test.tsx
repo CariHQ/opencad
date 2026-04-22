@@ -198,8 +198,8 @@ describe('T-BIM-009: IFC Property Sets (Psets)', () => {
 
   it('displays Pset property names', () => {
     render(<PropertiesPanel />);
-    expect(screen.getByText('IsExternal')).toBeInTheDocument();
-    expect(screen.getByText('FireRating')).toBeInTheDocument();
+    expect(screen.getByText('Is External')).toBeInTheDocument();
+    expect(screen.getByText('Fire Rating')).toBeInTheDocument();
   });
 
   it('displays Pset property values', () => {

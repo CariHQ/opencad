@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type APIKeyScope = 'read' | 'write' | 'admin';
 
@@ -18,6 +19,7 @@ interface APIKeyPanelProps {
 }
 
 export function APIKeyPanel({ keys: propKeys = [], onCreate, onRevoke }: APIKeyPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [keys, setKeys] = useState<APIKey[]>(propKeys);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState('');
@@ -58,7 +60,7 @@ export function APIKeyPanel({ keys: propKeys = [], onCreate, onRevoke }: APIKeyP
       <div className="panel-header">
         <span className="panel-title">API Keys</span>
         <button
-          aria-label="Create new API key"
+          aria-label={t('settings.apiKeys.createNew', { defaultValue: 'Create new API key' })}
           className="btn-create-key"
           onClick={() => setCreating(!creating)}
         >
@@ -70,7 +72,7 @@ export function APIKeyPanel({ keys: propKeys = [], onCreate, onRevoke }: APIKeyP
         <div className="create-key-form">
           <input
             type="text"
-            placeholder="Key name (e.g. CI/CD Pipeline)"
+            placeholder={t('settings.apiKeys.keyNamePlaceholder', { defaultValue: 'Key name (e.g. CI/CD Pipeline)' })}
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             className="key-name-input"
@@ -89,7 +91,7 @@ export function APIKeyPanel({ keys: propKeys = [], onCreate, onRevoke }: APIKeyP
           </div>
           <div className="create-actions">
             <button
-              aria-label="Generate key"
+              aria-label={t('settings.apiKeys.generate', { defaultValue: 'Generate key' })}
               className="btn-generate"
               onClick={handleCreate}
             >
@@ -121,7 +123,7 @@ export function APIKeyPanel({ keys: propKeys = [], onCreate, onRevoke }: APIKeyP
             </button>
           </div>
         ))}
-        {keys.length === 0 && <div className="keys-empty">No API keys yet.</div>}
+        {keys.length === 0 && <div className="keys-empty">{t('settings.apiKeys.empty', { defaultValue: 'No API keys yet.' })}</div>}
       </div>
     </div>
   );

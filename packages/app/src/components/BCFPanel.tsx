@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { BCFTopic, BCFStatus, BCFPriority } from '@opencad/document';
 
 export type { BCFTopic, BCFStatus, BCFPriority };
@@ -25,6 +26,7 @@ const PRIORITY_LABELS: Record<BCFPriority, string> = {
 };
 
 export function BCFPanel({ initialTopics = [], onImport, onExport, onSelectTopic }: BCFPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [topics] = useState<BCFTopic[]>(initialTopics);
 
   const handleImportClick = () => {
@@ -41,27 +43,27 @@ export function BCFPanel({ initialTopics = [], onImport, onExport, onSelectTopic
   return (
     <div className="bcf-panel">
       <div className="panel-header">
-        <span className="panel-title">BCF Issues</span>
+        <span className="panel-title">{t('bcf.title')}</span>
       </div>
       <div className="bcf-actions">
         <button
-          aria-label="Import BCF"
+          aria-label={t('bcf.import', { defaultValue: 'Import BCF' })}
           className="btn-import-bcf"
           onClick={handleImportClick}
         >
-          Import BCF
+          {t('bcf.import', { defaultValue: 'Import BCF' })}
         </button>
         <button
-          aria-label="Export BCF"
+          aria-label={t('bcf.export', { defaultValue: 'Export BCF' })}
           className="btn-export-bcf"
           onClick={() => onExport?.(topics)}
         >
-          Export BCF
+          {t('bcf.export', { defaultValue: 'Export BCF' })}
         </button>
       </div>
 
       {topics.length === 0 ? (
-        <div className="bcf-empty">No BCF issues. Import a .bcf file or create issues from the model.</div>
+        <div className="bcf-empty">{t('bcf.emptyDetail', { defaultValue: 'No BCF issues. Import a .bcf file or create issues from the model.' })}</div>
       ) : (
         <div className="bcf-topics">
           {topics.map((topic) => (

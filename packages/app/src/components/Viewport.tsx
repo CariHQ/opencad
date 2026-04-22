@@ -1,5 +1,6 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
 import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
 import { useCursorBroadcast } from '../hooks/useCursorBroadcast';
@@ -15,6 +16,7 @@ interface ViewportProps {
 }
 
 export function Viewport({ viewType = '3d' }: ViewportProps) {
+  const { t } = useTranslation('common');
   const show3D = viewType === '3d';
   const toggleView = () => {}; // TODO: wire up to parent state
 
@@ -164,10 +166,10 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
         <div className="viewport-corner top-left">
           <span>
             {viewType === 'floor-plan'
-              ? 'Floor Plan'
+              ? t('view.floorPlan', { defaultValue: 'Floor Plan' })
               : viewType === 'section'
-                ? 'Section'
-                : '3D View'}
+                ? t('view.section', { defaultValue: 'Section' })
+                : t('view.threeD', { defaultValue: '3D View' })}
           </span>
           {activeTool !== 'select' && (
             <span className="active-tool-indicator"> | {activeTool}</span>
@@ -184,9 +186,9 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
         <div className="viewport-corner bottom-left">
           <div className="viewport-info">
             {show3D ? (
-              <span>Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0</span>
+              <span>{t('viewport.info3D', { defaultValue: 'Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0' })}</span>
             ) : (
-              <span>Zoom: scroll | Pan: middle-drag | Ctrl: snap off</span>
+              <span>{t('viewport.info2D', { defaultValue: 'Zoom: scroll | Pan: middle-drag | Ctrl: snap off' })}</span>
             )}
           </div>
         </div>
@@ -194,23 +196,23 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           <div className="viewport-controls">
             {show3D && (
               <>
-                <button className="viewport-control-btn" onClick={zoomIn} title="Zoom In (+)">
+                <button className="viewport-control-btn" onClick={zoomIn} title={t('viewport.zoomInWithShortcut', { defaultValue: 'Zoom In (+)' })}>
                   <ZoomIn size={14} />
                 </button>
-                <button className="viewport-control-btn" onClick={zoomOut} title="Zoom Out (-)">
+                <button className="viewport-control-btn" onClick={zoomOut} title={t('viewport.zoomOutWithShortcut', { defaultValue: 'Zoom Out (-)' })}>
                   <ZoomOut size={14} />
                 </button>
                 <button
                   className="viewport-control-btn"
                   onClick={zoomToFit}
-                  title="Zoom to Fit (0)"
+                  title={t('viewport.zoomToFitWithShortcut', { defaultValue: 'Zoom to Fit (0)' })}
                 >
                   <Maximize size={14} />
                 </button>
                 <button
                   className={`viewport-control-btn ${sectionBox ? 'active' : ''}`}
                   onClick={() => setSectionBox(!sectionBox)}
-                  title="Section Box"
+                  title={t('viewport.sectionBox', { defaultValue: 'Section Box' })}
                 >
                   <Box size={14} />
                 </button>

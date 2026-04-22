@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import type { TotpSecret } from 'firebase/auth';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 
 type EnrollStep = 'idle' | 'qr' | 'success';
 
 export function MFASettingsPanel() {
+  const { t } = useTranslation('panels');
   const { user, enrollTotp, verifyTotpEnrollment } = useAuthStore();
 
   const [step, setStep] = useState<EnrollStep>('idle');
@@ -98,7 +100,7 @@ export function MFASettingsPanel() {
 
           <form onSubmit={handleConfirm} className="mfa-confirm-form" noValidate>
             <div className="form-field">
-              <label htmlFor="mfa-otp-code">Enter code</label>
+              <label htmlFor="mfa-otp-code">{t('settings.mfa.enterCode', { defaultValue: 'Enter code' })}</label>
               <input
                 id="mfa-otp-code"
                 type="text"

@@ -1,0 +1,151 @@
+{
+  "signIn": {
+    "title": "Se connecter",
+    "email": "Email",
+    "password": "Mot de passe",
+    "submit": "Se connecter",
+    "submitting": "Connexion…",
+    "noAccount": "Pas de compte ?",
+    "createAccount": "Créer un compte gratuit",
+    "or": "ou",
+    "forgotPassword": "Mot de passe oublié ?",
+    "continueWithGoogle": "Continuer avec Google",
+    "continueWithMicrosoft": "Continuer avec Microsoft",
+    "invalidCredentials": "Email ou mot de passe incorrect.",
+    "mfaTitle": "Vérifiez votre identité",
+    "mfaHint": "Saisissez le code à 6 chiffres de votre application d'authentification.",
+    "mfaCode": "Code de vérification",
+    "mfaVerify": "Vérifier"
+  },
+  "signUp": {
+    "title": "Créez votre compte",
+    "name": "Nom complet",
+    "email": "Email",
+    "password": "Mot de passe",
+    "submit": "Créer un compte gratuit",
+    "submitting": "Création…",
+    "haveAccount": "Vous avez déjà un compte ?",
+    "signIn": "Se connecter",
+    "passwordHint": "Au moins 8 caractères.",
+    "termsAgree": "En créant un compte, vous acceptez nos <a>Conditions</a> et notre <a2>Politique de confidentialité</a2>."
+  },
+  "forgotPassword": {
+    "title": "Réinitialiser le mot de passe",
+    "hint": "Nous vous enverrons un lien de réinitialisation par email.",
+    "submit": "Envoyer le lien",
+    "sent": "Vérifiez votre boîte de réception pour le lien de réinitialisation.",
+    "backToSignIn": "Retour à la connexion"
+  },
+  "newProject": {
+    "title": "Nouveau projet",
+    "name": "Nom du projet",
+    "template": "Modèle",
+    "blank": "Vierge",
+    "create": "Créer le projet",
+    "creating": "Création…"
+  },
+  "openProject": {
+    "title": "Ouvrir un projet",
+    "placeholder": "Rechercher des projets…",
+    "empty": "Aucun projet."
+  },
+  "confirmDelete": {
+    "title": "Supprimer {{name}} ?",
+    "body": "Cette action est irréversible.",
+    "confirm": "Supprimer",
+    "cancel": "Annuler"
+  },
+  "importExport": {
+    "importTitle": "Importer un fichier",
+    "exportTitle": "Exporter le fichier",
+    "dropHint": "Déposez un fichier ici ou cliquez pour parcourir.",
+    "supportedFormats": "Pris en charge : IFC, DWG, DXF, SKP, RVT, PDF",
+    "exporting": "Export…",
+    "export": "Exporter",
+    "format": "Format",
+    "cancel": "Annuler"
+  },
+  "subscription": {
+    "title": "Choisissez votre forfait",
+    "subtitle": "Changez quand vous voulez — aucun engagement de longue durée.",
+    "currentPlan": "Forfait actuel",
+    "upgradeTo": "Passer à {{plan}}",
+    "manageBilling": "Gérer la facturation",
+    "perUserMonth": "par utilisateur / mois",
+    "mostPopular": "Le plus populaire",
+    "plans": {
+      "free": {
+        "label": "Gratuit",
+        "price": "0 $",
+        "priceDetail": "pour toujours",
+        "features": {
+          "f1": "1 projet",
+          "f2": "Outils de dessin 2D de base",
+          "f3": "Stockage local uniquement",
+          "f4": "Support communautaire"
+        }
+      },
+      "pro": {
+        "label": "Pro",
+        "price": "29 $",
+        "features": {
+          "f1": "Projets illimités",
+          "f2": "Collaboration en temps réel",
+          "f3": "Assistant de conception IA",
+          "f4": "Support email prioritaire"
+        }
+      },
+      "business": {
+        "label": "Business",
+        "price": "99 $",
+        "features": {
+          "f1": "Tout ce qu'il y a dans Pro",
+          "f2": "Rôles et permissions administrateur",
+          "f3": "SSO / SAML",
+          "f4": "Support téléphonique prioritaire"
+        }
+      }
+    },
+    "close": "Fermer"
+  },
+  "commandPalette": {
+    "placeholder": "Rechercher des commandes…",
+    "empty": "Aucune commande trouvée.",
+    "groups": {
+      "tools": "Outils",
+      "views": "Vues",
+      "panels": "Panneaux",
+      "file": "Fichier",
+      "edit": "Édition",
+      "help": "Aide"
+    }
+  },
+  "feedback": {
+    "title": "Envoyer un retour",
+    "categoryLabel": "Type",
+    "titleLabel": "Titre",
+    "descriptionLabel": "Description",
+    "submit": "Envoyer les commentaires",
+    "submitting": "Envoi…",
+    "sent": "Merci pour vos retours !",
+    "categories": {
+      "bug": "Bug",
+      "feature": "Demande de fonctionnalité",
+      "question": "Question"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "close": "Close help",
+    "tabs": {
+      "shortcuts": "Shortcuts",
+      "howTo": "How To",
+      "tips": "Tips"
+    },
+    "takeGuidedTour": "Take the guided tour",
+    "searchShortcuts": "Search shortcuts…",
+    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
+    "needMore": "Need more?",
+    "openIssue": "Open an issue"
+  }
+}

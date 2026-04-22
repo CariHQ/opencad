@@ -1,8 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import type { ElementSchema, ElementType } from '@opencad/document';
 import { computeTakeoff } from '../lib/quantityTakeoff';
 import { doorSchedule, windowSchedule, roomSchedule, scheduleToCSV } from '../lib/schedules';
+import { translateFieldLabel } from '../utils/humanize';
 
 const SCHEDULE_TYPES: { value: ElementType; label: string }[] = [
   { value: 'wall', label: 'Wall' },
@@ -37,6 +39,7 @@ function calcLength(el: ElementSchema): number | null {
 }
 
 export function SchedulePanel() {
+  const { t } = useTranslation('panels');
   const { document: doc } = useDocumentStore();
   const [selectedType, setSelectedType] = useState<ElementType>('wall');
 
@@ -90,16 +93,16 @@ export function SchedulePanel() {
   return (
     <div className="schedule-panel">
       <div className="panel-header">
-        <span className="panel-title">Schedule</span>
+        <span className="panel-title">{t('schedule.title')}</span>
       </div>
 
       <div className="schedule-controls">
         <label htmlFor="schedule-type" className="schedule-label">
-          Element Type
+          {t('schedule.elementType', { defaultValue: 'Element Type' })}
         </label>
         <select
           id="schedule-type"
-          aria-label="Element Type"
+          aria-label={t('schedule.elementType', { defaultValue: 'Element Type' })}
           value={selectedType}
           onChange={(e) => setSelectedType(e.target.value as ElementType)}
           className="schedule-type-select"
@@ -115,26 +118,26 @@ export function SchedulePanel() {
           className="btn-secondary"
           data-testid="export-csv-btn"
           onClick={handleExportCSV}
-          aria-label="Export CSV"
+          aria-label={t('schedule.exportCsv', { defaultValue: 'Export CSV' })}
         >
-          Export CSV
+          {t('schedule.exportCsv', { defaultValue: 'Export CSV' })}
         </button>
       </div>
 
       {/* T-BIM-002: Quantity takeoff summary — compact stat strip, no side-scroll */}
       <div className="schedule-qty-summary" data-testid="schedule-qty-summary">
         <div className="schedule-qty-stat">
-          <span className="schedule-qty-label">Count</span>
+          <span className="schedule-qty-label">{t('schedule.count', { defaultValue: 'Count' })}</span>
           <span className="schedule-qty-value">{qtySummary.count}</span>
         </div>
         <div className="schedule-qty-stat">
-          <span className="schedule-qty-label">Area</span>
+          <span className="schedule-qty-label">{t('schedule.area', { defaultValue: 'Area' })}</span>
           <span className="schedule-qty-value">
             {qtySummary.totalArea !== null ? `${qtySummary.totalArea.toFixed(2)} m²` : '—'}
           </span>
         </div>
         <div className="schedule-qty-stat">
-          <span className="schedule-qty-label">Length</span>
+          <span className="schedule-qty-label">{t('schedule.length', { defaultValue: 'Length' })}</span>
           <span className="schedule-qty-value">
             {qtySummary.totalLength !== null ? `${qtySummary.totalLength.toFixed(2)} m` : '—'}
           </span>
@@ -142,10 +145,10 @@ export function SchedulePanel() {
       </div>
 
       {elements.length === 0 ? (
-        <div className="schedule-empty">No {selectedType} elements in model</div>
+        <div className="schedule-empty">{t('schedule.noElements', { type: selectedType, defaultValue: 'No {{type}} elements in model' })}</div>
       ) : (
         <div className="schedule-table-wrapper">
-          {renderStructuredOrFallback(selectedType, elements, columns, doc)}
+          <StructuredOrFallback type={selectedType} elements={elements} columns={columns} doc={doc} />
         </div>
       )}
     </div>
@@ -158,12 +161,18 @@ export function SchedulePanel() {
  * cost). Everything else falls back to the generic union-of-property-
  * keys table.
  */
-function renderStructuredOrFallback(
-  type: ElementType,
-  elements: ElementSchema[],
-  columns: string[],
-  doc: ReturnType<typeof useDocumentStore.getState>['document'],
-) {
+function StructuredOrFallback({
+  type,
+  elements,
+  columns,
+  doc,
+}: {
+  type: ElementType;
+  elements: ElementSchema[];
+  columns: string[];
+  doc: ReturnType<typeof useDocumentStore.getState>['document'];
+}) {
+  const { t } = useTranslation('panels');
   if (doc && type === 'door') {
     const rows = doorSchedule(doc);
     return (
@@ -173,12 +182,12 @@ function renderStructuredOrFallback(
             key={r.elementId}
             tag={r.tag}
             fields={[
-              ['Width',  `${r.width} mm`],
-              ['Height', `${r.height} mm`],
-              ['Material', r.material || '—'],
-              ['Host wall', r.hostWall ? r.hostWall.slice(0, 8) : '—'],
-              ['Level', r.level || '—'],
-              ['Cost',  r.cost ? String(r.cost) : '—'],
+              [translateFieldLabel(t, 'Width'),  `${r.width} mm`],
+              [translateFieldLabel(t, 'Height'), `${r.height} mm`],
+              [translateFieldLabel(t, 'Material'), r.material || '—'],
+              [translateFieldLabel(t, 'HostWall'), r.hostWall ? r.hostWall.slice(0, 8) : '—'],
+              [translateFieldLabel(t, 'Level'), r.level || '—'],
+              [translateFieldLabel(t, 'Cost'),  r.cost ? String(r.cost) : '—'],
             ]}
           />
         ))}
@@ -194,12 +203,12 @@ function renderStructuredOrFallback(
             key={r.elementId}
             tag={r.tag}
             fields={[
-              ['Width',  `${r.width} mm`],
-              ['Height', `${r.height} mm`],
-              ['Sill',   `${r.sill} mm`],
-              ['Material', r.material || '—'],
-              ['Host wall', r.hostWall ? r.hostWall.slice(0, 8) : '—'],
-              ['Level', r.level || '—'],
+              [translateFieldLabel(t, 'Width'),  `${r.width} mm`],
+              [translateFieldLabel(t, 'Height'), `${r.height} mm`],
+              [translateFieldLabel(t, 'Sill'),   `${r.sill} mm`],
+              [translateFieldLabel(t, 'Material'), r.material || '—'],
+              [translateFieldLabel(t, 'HostWall'), r.hostWall ? r.hostWall.slice(0, 8) : '—'],
+              [translateFieldLabel(t, 'Level'), r.level || '—'],
             ]}
           />
         ))}
@@ -216,11 +225,11 @@ function renderStructuredOrFallback(
             tag={r.tag}
             title={r.name}
             fields={[
-              ['Area', typeof r.area === 'number' ? `${r.area.toFixed(1)} m²` : '—'],
-              ['Occupancy', r.occupancy || '—'],
-              ['Floor', r.finishFloor || '—'],
-              ['Walls', r.finishWalls || '—'],
-              ['Ceiling', r.finishCeiling || '—'],
+              [translateFieldLabel(t, 'Area'), typeof r.area === 'number' ? `${r.area.toFixed(1)} m²` : '—'],
+              [translateFieldLabel(t, 'Occupancy'), r.occupancy || '—'],
+              [translateFieldLabel(t, 'Floor'), r.finishFloor || '—'],
+              [translateFieldLabel(t, 'Walls'), r.finishWalls || '—'],
+              [translateFieldLabel(t, 'Ceiling'), r.finishCeiling || '—'],
             ]}
           />
         ))}
@@ -237,13 +246,17 @@ function renderStructuredOrFallback(
             title={el.id.length > 12 ? el.id.slice(0, 12) + '…' : el.id}
             fields={columns.map((col) => {
               const prop = el.properties[col];
-              return [col, prop ? `${prop.value}${prop.unit ? ' ' + prop.unit : ''}` : '—'] as [string, string];
+              return [translateFieldLabel(t, col), prop ? `${prop.value}${prop.unit ? ' ' + prop.unit : ''}` : '—'] as [string, string];
             })}
           />
         ))}
       </div>
       <div className="schedule-total-footer">
-        Total: {elements.length} {type}{elements.length !== 1 ? 's' : ''}
+        {t('schedule.total', {
+          count: elements.length,
+          type,
+          defaultValue: `Total: ${elements.length} ${type}${elements.length !== 1 ? 's' : ''}`,
+        })}
       </div>
     </>
   );
@@ -287,6 +300,7 @@ const _keepSchedulesCSVExportAvailable: () => string = () => scheduleToCSV([]);
  * Auto-refreshes whenever the document reference changes (Zustand reactivity).
  */
 export function QuantityTab() {
+  const { t } = useTranslation('panels');
   const doc = useDocumentStore((s) => s.document);
 
   const rows = useMemo(() => {
@@ -318,19 +332,19 @@ export function QuantityTab() {
   return (
     <div className="quantity-tab">
       <div className="panel-header">
-        <span className="panel-title">Quantity Takeoff</span>
+        <span className="panel-title">{t('schedule.quantityTitle', { defaultValue: 'Quantity Takeoff' })}</span>
         <button
           className="btn-secondary"
           data-testid="export-csv-btn"
           onClick={handleExportCSV}
-          aria-label="Export CSV"
+          aria-label={t('schedule.exportCsv', { defaultValue: 'Export CSV' })}
         >
-          Export CSV
+          {t('schedule.exportCsv', { defaultValue: 'Export CSV' })}
         </button>
       </div>
 
       {rows.length === 0 ? (
-        <div className="quantity-empty">No elements in model</div>
+        <div className="quantity-empty">{t('schedule.noElementsModel', { defaultValue: 'No elements in model' })}</div>
       ) : (
         <table className="quantity-table">
           <thead>

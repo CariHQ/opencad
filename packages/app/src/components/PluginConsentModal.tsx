@@ -8,6 +8,7 @@
  * plugin cannot use a permission the user didn't consent to.
  */
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import type { PluginPermission } from '../plugins/pluginManifest';
 
 interface PluginConsentModalProps {
@@ -51,6 +52,7 @@ export function PluginConsentModal({
   onAccept,
   onCancel,
 }: PluginConsentModalProps): React.ReactElement {
+  const { t } = useTranslation('panels');
   return (
     <div
       className="plugin-consent-overlay"
@@ -62,22 +64,22 @@ export function PluginConsentModal({
       <div className="plugin-consent-modal" onClick={(e) => e.stopPropagation()}>
         <div className="plugin-consent-header">
           <h3 id="plugin-consent-title" className="plugin-consent-title">
-            Install {pluginName}?
+            {t('pluginConsent.installPrompt', { name: pluginName })}
           </h3>
           <div className="plugin-consent-meta">
             v{pluginVersion}
-            {pluginAuthor ? ` · by ${pluginAuthor}` : ''}
+            {pluginAuthor ? ` · ${t('pluginConsent.byAuthor', { author: pluginAuthor })}` : ''}
           </div>
         </div>
 
         {permissions.length === 0 ? (
           <p className="plugin-consent-noperm">
-            This plugin is not requesting any permissions. It runs in a sandbox and can only log diagnostic messages.
+            {t('pluginConsent.noPermissions')}
           </p>
         ) : (
           <>
             <p className="plugin-consent-intro">
-              This plugin is asking for the following permissions.
+              {t('pluginConsent.permissionsIntro')}
             </p>
             <ul className="plugin-consent-perms">
               {permissions.map((perm) => (
@@ -100,7 +102,7 @@ export function PluginConsentModal({
             className="plugin-consent-cancel"
             onClick={onCancel}
           >
-            Cancel
+            {t('pluginConsent.cancel')}
           </button>
           <button
             type="button"
@@ -108,7 +110,7 @@ export function PluginConsentModal({
             onClick={onAccept}
             autoFocus
           >
-            Install
+            {t('pluginConsent.accept')}
           </button>
         </div>
       </div>

@@ -13,6 +13,7 @@
  */
 import { useState, useMemo } from 'react';
 import { X, Search, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface HelpPanelProps {
   open: boolean;
@@ -150,6 +151,7 @@ const TIPS: Tip[] = [
 type Tab = 'shortcuts' | 'howto' | 'tips';
 
 export function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
+  const { t } = useTranslation('dialogs');
   const [tab, setTab] = useState<Tab>('shortcuts');
   const [query, setQuery] = useState('');
 
@@ -167,20 +169,20 @@ export function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
 
   if (!open) return null;
   return (
-    <div className="help-overlay" role="dialog" aria-label="Help" onClick={onClose}>
+    <div className="help-overlay" role="dialog" aria-label={t('help.title', { defaultValue: 'Help' })} onClick={onClose}>
       <div className="help-panel" onClick={(e) => e.stopPropagation()}>
         <header className="help-header">
-          <h2>Help</h2>
-          <button className="help-close" onClick={onClose} aria-label="Close help"><X size={16} /></button>
+          <h2>{t('help.title', { defaultValue: 'Help' })}</h2>
+          <button className="help-close" onClick={onClose} aria-label={t('help.close', { defaultValue: 'Close help' })}><X size={16} /></button>
         </header>
         <nav className="help-tabs">
-          <button className={`help-tab ${tab === 'shortcuts' ? 'active' : ''}`} onClick={() => setTab('shortcuts')}>Shortcuts</button>
-          <button className={`help-tab ${tab === 'howto' ? 'active' : ''}`} onClick={() => setTab('howto')}>How To</button>
-          <button className={`help-tab ${tab === 'tips' ? 'active' : ''}`} onClick={() => setTab('tips')}>Tips</button>
+          <button className={`help-tab ${tab === 'shortcuts' ? 'active' : ''}`} onClick={() => setTab('shortcuts')}>{t('help.tabs.shortcuts', { defaultValue: 'Shortcuts' })}</button>
+          <button className={`help-tab ${tab === 'howto' ? 'active' : ''}`} onClick={() => setTab('howto')}>{t('help.tabs.howTo', { defaultValue: 'How To' })}</button>
+          <button className={`help-tab ${tab === 'tips' ? 'active' : ''}`} onClick={() => setTab('tips')}>{t('help.tabs.tips', { defaultValue: 'Tips' })}</button>
         </nav>
         <div className="help-tour-cta">
           <button className="help-tour-btn" onClick={onStartTour}>
-            <Sparkles size={14} /> Take the guided tour
+            <Sparkles size={14} /> {t('help.takeGuidedTour', { defaultValue: 'Take the guided tour' })}
           </button>
         </div>
         <div className="help-body">
@@ -190,10 +192,10 @@ export function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
                 <Search size={14} />
                 <input
                   type="text"
-                  placeholder="Search shortcuts…"
+                  placeholder={t('help.searchShortcuts', { defaultValue: 'Search shortcuts…' })}
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
-                  aria-label="Search shortcuts"
+                  aria-label={t('help.searchShortcuts', { defaultValue: 'Search shortcuts' })}
                 />
               </div>
               {Object.entries(grouped).map(([cat, list]) => (
@@ -210,7 +212,7 @@ export function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
                 </section>
               ))}
               {filteredShortcuts.length === 0 && (
-                <p className="help-empty">No shortcuts match “{query}”.</p>
+                <p className="help-empty">{t('help.noShortcutsMatch', { query, defaultValue: 'No shortcuts match “{{query}}”.' })}</p>
               )}
             </>
           )}
@@ -228,17 +230,17 @@ export function HelpPanel({ open, onClose, onStartTour }: HelpPanelProps) {
           )}
           {tab === 'tips' && (
             <ul className="help-tips">
-              {TIPS.map((t) => (
-                <li key={t.title}>
-                  <strong>{t.title}</strong>
-                  <p>{t.body}</p>
+              {TIPS.map((tip) => (
+                <li key={tip.title}>
+                  <strong>{tip.title}</strong>
+                  <p>{tip.body}</p>
                 </li>
               ))}
             </ul>
           )}
         </div>
         <footer className="help-footer">
-          Need more? <a href="https://github.com/CariHQ/opencad/issues/new" target="_blank" rel="noreferrer">Open an issue</a>
+          {t('help.needMore', { defaultValue: 'Need more?' })} <a href="https://github.com/CariHQ/opencad/issues/new" target="_blank" rel="noreferrer">{t('help.openIssue', { defaultValue: 'Open an issue' })}</a>
         </footer>
       </div>
     </div>

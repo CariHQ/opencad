@@ -1,4 +1,5 @@
 import { type ReactElement } from 'react';
+import { useTranslation } from 'react-i18next';
 import { type ViewPreset } from '../hooks/useThreeViewport';
 
 interface ViewCubeProps {
@@ -18,8 +19,9 @@ const FACES: FaceConfig[] = [
 ];
 
 export function ViewCube({ setViewPreset }: ViewCubeProps): ReactElement {
+  const { t } = useTranslation('common');
   return (
-    <div className="view-cube" aria-label="View orientation cube">
+    <div className="view-cube" aria-label={t('viewport.viewCubeAria', { defaultValue: 'View orientation cube' })}>
       {FACES.map(({ preset, label }) => (
         <button
           key={preset}

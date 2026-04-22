@@ -29,6 +29,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Camera, X, Download } from 'lucide-react';
 import * as THREE from 'three';
+import { useTranslation } from 'react-i18next';
 import { getLiveScene } from '../hooks/useThreeViewport';
 
 // three-gpu-pathtracer + three-mesh-bvh can't be resolved in jsdom
@@ -72,6 +73,8 @@ interface RenderingPanelProps {
 }
 
 export function RenderingPanel({ onClose }: RenderingPanelProps): React.ReactElement {
+  const { t } = useTranslation('panels');
+  const { t: tc } = useTranslation('common');
   const [preset, setPreset] = useState<Preset>('preview');
   const [running, setRunning] = useState(false);
   const [sampleCount, setSampleCount] = useState(0);
@@ -177,12 +180,12 @@ export function RenderingPanel({ onClose }: RenderingPanelProps): React.ReactEle
   return (
     <div className="rendering-panel">
       <div className="panel-header">
-        <span className="panel-title"><Camera size={14} /> Photoreal render</span>
+        <span className="panel-title"><Camera size={14} /> {t('rendering.photorealTitle', { defaultValue: 'Photoreal render' })}</span>
         <button
           type="button"
           className="panel-close"
           onClick={onClose}
-          aria-label="Close"
+          aria-label={tc('action.close', { defaultValue: 'Close' })}
         ><X size={14} /></button>
       </div>
 

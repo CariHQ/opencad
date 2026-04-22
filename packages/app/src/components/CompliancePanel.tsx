@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import { checkCompliance, applyFix } from '@opencad/ai';
 import type { Violation } from '@opencad/ai';
 
 export function CompliancePanel(): React.ReactElement {
+  const { t } = useTranslation('panels');
   const { document: doc, loadDocumentSchema } = useDocumentStore();
   const [violations, setViolations] = useState<Violation[] | null>(null);
 
@@ -38,7 +40,7 @@ export function CompliancePanel(): React.ReactElement {
   return (
     <div className="compliance-panel panel">
       <div className="panel-header">
-        <span className="panel-title">Code Compliance</span>
+        <span className="panel-title">{t('compliance.title')}</span>
       </div>
 
       <div className="panel-body">
@@ -47,26 +49,29 @@ export function CompliancePanel(): React.ReactElement {
           onClick={runCheck}
         >
           <ShieldCheck size={14} />
-          Run Compliance Check
+          {t('compliance.runFull', { defaultValue: 'Run Compliance Check' })}
         </button>
 
         {violations === null ? (
           <div className="compliance-empty">
-            <p>Run check to verify the model against IBC rules.</p>
+            <p>{t('compliance.runHint', { defaultValue: 'Run check to verify the model against IBC rules.' })}</p>
           </div>
         ) : violations.length === 0 ? (
           <div className="compliance-empty">
-            <p>No violations — model is compliant.</p>
+            <p>{t('compliance.noViolations')}</p>
           </div>
         ) : (
           <div className="compliance-results">
             <div className="compliance-summary">
-              {violations.length} violation{violations.length !== 1 ? 's' : ''} found
+              {t('compliance.violationsFound', {
+                count: violations.length,
+                defaultValue: '{{count}} violation(s) found',
+              })}
             </div>
 
             {errors.length > 0 && (
               <div className="compliance-group">
-                <h4 className="compliance-group-title">Errors ({errors.length})</h4>
+                <h4 className="compliance-group-title">{t('compliance.errorsHeading', { count: errors.length, defaultValue: 'Errors ({{count}})' })}</h4>
                 <ul className="compliance-list">
                   {errors.map((v) => (
                     <ViolationRow
@@ -81,7 +86,7 @@ export function CompliancePanel(): React.ReactElement {
 
             {warnings.length > 0 && (
               <div className="compliance-group">
-                <h4 className="compliance-group-title">Warnings ({warnings.length})</h4>
+                <h4 className="compliance-group-title">{t('compliance.warningsHeading', { count: warnings.length, defaultValue: 'Warnings ({{count}})' })}</h4>
                 <ul className="compliance-list">
                   {warnings.map((v) => (
                     <ViolationRow
@@ -106,6 +111,7 @@ interface ViolationRowProps {
 }
 
 function ViolationRow({ violation, onApplyFix }: ViolationRowProps): React.ReactElement {
+  const { t } = useTranslation('panels');
   return (
     <li
       className={`compliance-item compliance-${violation.severity}`}
@@ -124,7 +130,7 @@ function ViolationRow({ violation, onApplyFix }: ViolationRowProps): React.React
           className="btn-secondary compliance-apply-fix-btn"
           onClick={() => onApplyFix(violation)}
         >
-          Apply Fix
+          {t('compliance.applyFix', { defaultValue: 'Apply Fix' })}
         </button>
       </div>
     </li>

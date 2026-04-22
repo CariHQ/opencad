@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import type { MultiFactorResolver } from 'firebase/auth';
+import { useTranslation } from 'react-i18next';
 import { useAuthStore } from '../stores/authStore';
 
 interface AuthModalProps {
@@ -35,6 +36,8 @@ function friendlyError(err: unknown): string {
 }
 
 export function AuthModal({ onClose, required = false }: AuthModalProps) {
+  const { t } = useTranslation('dialogs');
+  const { t: tc } = useTranslation('common');
   const [mode, setMode] = useState<'login' | 'register' | 'mfa-challenge'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -154,7 +157,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
     >
       <div className="auth-modal">
         {canClose && (
-          <button aria-label="Close" className="modal-close" onClick={onClose}>×</button>
+          <button aria-label={tc('action.close', { defaultValue: 'Close' })} className="modal-close" onClick={onClose}>×</button>
         )}
 
         {/* ── MFA TOTP challenge step ────────────────────────────────── */}
@@ -170,7 +173,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
 
             <form className="auth-form" onSubmit={handleMfaSubmit} noValidate>
               <div className="form-field">
-                <label htmlFor="auth-totp-code">Authenticator code</label>
+                <label htmlFor="auth-totp-code">{t('signIn.mfaCode', { defaultValue: 'Authenticator code' })}</label>
                 <input
                   id="auth-totp-code"
                   type="text"
@@ -187,7 +190,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
               </div>
               <button type="submit" className="btn-auth-submit" disabled={loading}>
                 {loading ? (
-                  <span className="auth-spinner" aria-label="Loading" />
+                  <span className="auth-spinner" aria-label={tc('action.loading', { defaultValue: 'Loading' })} />
                 ) : (
                   'Verify'
                 )}
@@ -198,10 +201,10 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
           /* ── Login / Register step ──────────────────────────────────── */
           <>
             <h2 className="auth-title">
-              {isLogin ? 'Sign in to OpenCAD' : 'Create your account'}
+              {isLogin ? t('signIn.title') : t('signUp.title')}
             </h2>
             {!isLogin && (
-              <p className="auth-subtitle">14-day free trial — no credit card required</p>
+              <p className="auth-subtitle">{t('signUp.passwordHint', { defaultValue: '14-day free trial — no credit card required' })}</p>
             )}
 
             {error && (
@@ -225,7 +228,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
             <form className="auth-form" onSubmit={handleSubmit} noValidate>
               {!isLogin && (
                 <div className="form-field">
-                  <label htmlFor="auth-name">Full name</label>
+                  <label htmlFor="auth-name">{t('signUp.name')}</label>
                   <input
                     id="auth-name"
                     type="text"
@@ -239,7 +242,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
               )}
 
               <div className="form-field">
-                <label htmlFor="auth-email">Email address</label>
+                <label htmlFor="auth-email">{t('signIn.email')}</label>
                 <input
                   id="auth-email"
                   type="email"
@@ -253,7 +256,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
               </div>
 
               <div className="form-field">
-                <label htmlFor="auth-password">Password</label>
+                <label htmlFor="auth-password">{t('signIn.password')}</label>
                 <input
                   id="auth-password"
                   type="password"
@@ -269,15 +272,15 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
 
               <button type="submit" className="btn-auth-submit" disabled={loading}>
                 {loading ? (
-                  <span className="auth-spinner" aria-label="Loading" />
+                  <span className="auth-spinner" aria-label={tc('action.loading', { defaultValue: 'Loading' })} />
                 ) : (
-                  isLogin ? 'Sign in' : 'Create free account'
+                  isLogin ? t('signIn.submit') : t('signUp.submit')
                 )}
               </button>
             </form>
 
             <div className="auth-divider">
-              <span>or</span>
+              <span>{t('signIn.or')}</span>
             </div>
 
             <div className="auth-oauth">
@@ -287,7 +290,7 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
                 onClick={() => handleOAuthSignIn('google')}
                 disabled={loading}
               >
-                Continue with Google
+                {t('signIn.continueWithGoogle')}
               </button>
               <button
                 type="button"
@@ -295,23 +298,23 @@ export function AuthModal({ onClose, required = false }: AuthModalProps) {
                 onClick={() => handleOAuthSignIn('microsoft')}
                 disabled={loading}
               >
-                Continue with Microsoft
+                {t('signIn.continueWithMicrosoft')}
               </button>
             </div>
 
             <div className="auth-switch">
               {isLogin ? (
                 <>
-                  No account?{' '}
+                  {t('signIn.noAccount')}{' '}
                   <button className="btn-switch" onClick={() => { setMode('register'); setError(null); setErrorCode(null); }}>
-                    Create one free
+                    {t('signIn.createAccount')}
                   </button>
                 </>
               ) : (
                 <>
-                  Already have an account?{' '}
+                  {t('signUp.haveAccount')}{' '}
                   <button className="btn-switch" onClick={() => { setMode('login'); setError(null); setErrorCode(null); }}>
-                    Sign in
+                    {t('signUp.signIn')}
                   </button>
                 </>
               )}

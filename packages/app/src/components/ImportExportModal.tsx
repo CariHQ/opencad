@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Upload, X, FileText } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import {
   parseIFC,
@@ -16,6 +17,7 @@ interface ImportExportModalProps {
 }
 
 export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
+  const { t } = useTranslation('dialogs');
   const { document: doc, loadDocumentSchema, initProject } = useDocumentStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
@@ -41,7 +43,7 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
         const content = await file.text();
         const pc = parsePointCloud(file.name, content);
         if (pc.renderedCount === 0) {
-          setError('No points found in file (binary PLY not yet supported).');
+          setError(t('importExport.noPointsError', { defaultValue: 'No points found in file (binary PLY not yet supported).' }));
           setImporting(false);
           return;
         }
@@ -60,12 +62,12 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
           },
         });
       } else {
-        setError('Unsupported file format. Please use .ifc, .ply, or .xyz files.');
+        setError(t('importExport.unsupportedFormat', { defaultValue: 'Unsupported file format. Please use .ifc, .ply, or .xyz files.' }));
         setImporting(false);
         return;
       }
     } catch (err) {
-      setError('Failed to import file: ' + (err instanceof Error ? err.message : 'Unknown error'));
+      setError(t('importExport.importFailed', { message: err instanceof Error ? err.message : 'Unknown error', defaultValue: 'Failed to import file: {{message}}' }));
       setImporting(false);
       return;
     }
@@ -125,10 +127,10 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
   };
 
   const templates = [
-    { id: 'residential', name: 'Residential', description: 'Single-family house template' },
-    { id: 'commercial', name: 'Commercial', description: 'Office building template' },
-    { id: 'interior', name: 'Interior', description: 'Interior design template' },
-    { id: 'blank', name: 'Blank', description: 'Start from scratch' },
+    { id: 'residential', name: t('importExport.templates.residential.name', { defaultValue: 'Residential' }), description: t('importExport.templates.residential.desc', { defaultValue: 'Single-family house template' }) },
+    { id: 'commercial', name: t('importExport.templates.commercial.name', { defaultValue: 'Commercial' }), description: t('importExport.templates.commercial.desc', { defaultValue: 'Office building template' }) },
+    { id: 'interior', name: t('importExport.templates.interior.name', { defaultValue: 'Interior' }), description: t('importExport.templates.interior.desc', { defaultValue: 'Interior design template' }) },
+    { id: 'blank', name: t('importExport.templates.blank.name', { defaultValue: 'Blank' }), description: t('importExport.templates.blank.desc', { defaultValue: 'Start from scratch' }) },
   ];
 
   const handleCreateProject = (templateId: string) => {
@@ -141,7 +143,11 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
       <div className="modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <span className="modal-title">
-            {mode === 'import' ? 'Import File' : mode === 'export' ? 'Export File' : 'New Project'}
+            {mode === 'import'
+              ? t('importExport.importTitle', { defaultValue: 'Import File' })
+              : mode === 'export'
+                ? t('importExport.exportTitle', { defaultValue: 'Export File' })
+                : t('importExport.newProject', { defaultValue: 'New Project' })}
           </span>
           <button className="modal-close" onClick={onClose}>
             <X size={18} />
@@ -159,9 +165,9 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
                 style={{ display: 'none' }}
               />
               <Upload size={48} className="import-icon" />
-              <p className="import-text">Click to select a file</p>
-              <p className="import-formats">Supported: IFC, DXF, DWG, RVT (Revit)</p>
-              {importing && <p className="import-status">Importing...</p>}
+              <p className="import-text">{t('importExport.clickToSelect', { defaultValue: 'Click to select a file' })}</p>
+              <p className="import-formats">{t('importExport.supportedFormatsFull', { defaultValue: 'Supported: IFC, DXF, DWG, RVT (Revit)' })}</p>
+              {importing && <p className="import-status">{t('importExport.importing', { defaultValue: 'Importing...' })}</p>}
               {error && <p className="import-error">{error}</p>}
             </div>
           )}
@@ -171,29 +177,29 @@ export function ImportExportModal({ mode, onClose }: ImportExportModalProps) {
               <button className="export-btn" onClick={() => handleExport('ifc')}>
                 <FileText size={24} />
                 <span>IFC (.ifc)</span>
-                <span className="export-desc">Industry Foundation Classes</span>
+                <span className="export-desc">{t('importExport.formats.ifc', { defaultValue: 'Industry Foundation Classes' })}</span>
               </button>
               <button className="export-btn" onClick={() => handleExport('dxf')}>
                 <FileText size={24} />
                 <span>DXF (.dxf)</span>
-                <span className="export-desc">Drawing Exchange Format</span>
+                <span className="export-desc">{t('importExport.formats.dxf', { defaultValue: 'Drawing Exchange Format' })}</span>
               </button>
-              <button className="export-btn" onClick={() => handleExport('dxf')} title="DWG exports as DXF (compatible format)">
+              <button className="export-btn" onClick={() => handleExport('dxf')} title={t('importExport.dwgTitle', { defaultValue: 'DWG exports as DXF (compatible format)' })}>
                 <FileText size={24} />
                 <span>DWG (.dwg)</span>
-                <span className="export-desc">AutoCAD Drawing (DXF-compatible)</span>
+                <span className="export-desc">{t('importExport.formats.dwg', { defaultValue: 'AutoCAD Drawing (DXF-compatible)' })}</span>
               </button>
               <button className="export-btn" onClick={() => handleExport('pdf')}>
                 <FileText size={24} />
                 <span>PDF (.pdf)</span>
-                <span className="export-desc">Portable Document Format</span>
+                <span className="export-desc">{t('importExport.formats.pdf', { defaultValue: 'Portable Document Format' })}</span>
               </button>
             </div>
           )}
 
           {mode === 'projects' && (
             <div className="project-templates">
-              <p className="templates-title">Choose a template to start:</p>
+              <p className="templates-title">{t('importExport.chooseTemplate', { defaultValue: 'Choose a template to start:' })}</p>
               <div className="templates-grid">
                 {templates.map((template) => (
                   <button

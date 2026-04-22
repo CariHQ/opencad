@@ -12,6 +12,7 @@
  */
 import React, { useEffect, useState, useRef } from 'react';
 import { FolderOpen, User, Plus } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import { useNavigate } from 'react-router-dom';
 
@@ -60,6 +61,7 @@ export interface ProjectHomeScreenProps {
 }
 
 export function ProjectHomeScreen({ onImport }: ProjectHomeScreenProps): React.JSX.Element {
+  const { t } = useTranslation('common');
   const { initProject } = useDocumentStore();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -119,9 +121,9 @@ export function ProjectHomeScreen({ onImport }: ProjectHomeScreenProps): React.J
             onClick={() => handleNewProject('blank')}
           >
             <Plus size={14} strokeWidth={2.5} />
-            New Project
+            {t('home.newProject', { defaultValue: 'New Project' })}
           </button>
-          <button className="toolbar-btn" title="Sign In" aria-label="Sign In">
+          <button className="toolbar-btn" title={t('home.signIn', { defaultValue: 'Sign In' })} aria-label={t('home.signIn', { defaultValue: 'Sign In' })}>
             <User size={15} />
           </button>
         </div>
@@ -133,23 +135,23 @@ export function ProjectHomeScreen({ onImport }: ProjectHomeScreenProps): React.J
         {/* Recent Projects */}
         <section className="project-home-section" aria-labelledby="recent-heading">
           <div className="project-home-section-header">
-            <h2 id="recent-heading" className="project-home-section-title">Recent Projects</h2>
+            <h2 id="recent-heading" className="project-home-section-title">{t('home.recentProjects', { defaultValue: 'Recent Projects' })}</h2>
             <button
               className="project-home-import-btn"
-              title="Import IFC / DWG / PDF"
+              title={t('home.importIfcDwgPdf', { defaultValue: 'Import IFC / DWG / PDF' })}
               onClick={handleImportClick}
             >
               <FolderOpen size={15} />
-              <span>Import IFC / DWG / PDF</span>
+              <span>{t('home.importIfcDwgPdf', { defaultValue: 'Import IFC / DWG / PDF' })}</span>
             </button>
           </div>
 
           {recentProjects.length === 0 ? (
             <div className="project-home-empty" data-testid="recent-empty-state">
-              <p className="project-home-empty-text">Start a new project or import a file</p>
+              <p className="project-home-empty-text">{t('home.emptyText', { defaultValue: 'Start a new project or import a file' })}</p>
               <div className="project-home-empty-actions">
-                <button className="btn-primary" onClick={() => handleNewProject('blank')}>New Blank Project</button>
-                <button className="btn-secondary" onClick={handleImportClick}>Import a File</button>
+                <button className="btn-primary" onClick={() => handleNewProject('blank')}>{t('home.newBlankProject', { defaultValue: 'New Blank Project' })}</button>
+                <button className="btn-secondary" onClick={handleImportClick}>{t('home.importFile', { defaultValue: 'Import a File' })}</button>
               </div>
             </div>
           ) : (
@@ -176,7 +178,7 @@ export function ProjectHomeScreen({ onImport }: ProjectHomeScreenProps): React.J
                       className="btn-primary project-card-open-btn"
                       onClick={(e) => { e.stopPropagation(); handleOpenRecent(project); }}
                     >
-                      Open
+                      {t('home.open', { defaultValue: 'Open' })}
                     </button>
                   </div>
                 </div>
@@ -187,7 +189,7 @@ export function ProjectHomeScreen({ onImport }: ProjectHomeScreenProps): React.J
 
         {/* Templates */}
         <section className="project-home-section" aria-labelledby="templates-heading">
-          <h2 id="templates-heading" className="project-home-section-title">Start from a Template</h2>
+          <h2 id="templates-heading" className="project-home-section-title">{t('home.startFromTemplate', { defaultValue: 'Start from a Template' })}</h2>
           <div className="project-home-templates" data-testid="templates-row">
             {TEMPLATES.map((tmpl) => (
               <button

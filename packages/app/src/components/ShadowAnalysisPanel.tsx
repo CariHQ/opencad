@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import { calculateSolarPosition, estimateDaylightHours } from '../lib/solarAnalysis';
 import { useSceneStore } from '../stores/sceneStore';
 
@@ -39,6 +40,7 @@ function parseMonth(date: string): number {
 }
 
 export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [settings, setSettings] = useState<ShadowAnalysisSettings>(DEFAULT_SETTINGS);
   const setSun = useSceneStore((s) => s.setSun);
   const setShadowsEnabled = useSceneStore((s) => s.setShadowsEnabled);
@@ -79,13 +81,13 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
   return (
     <div className="shadow-analysis-panel">
       <div className="panel-header">
-        <span className="panel-title">Shadow &amp; Daylight Analysis</span>
+        <span className="panel-title">{t('shadow.fullTitle', { defaultValue: 'Shadow & Daylight Analysis' })}</span>
       </div>
 
       <div className="analysis-section">
-        <h4>Location</h4>
+        <h4>{t('shadow.location', { defaultValue: 'Location' })}</h4>
         <div className="field-row">
-          <label htmlFor="shadow-lat">Latitude</label>
+          <label htmlFor="shadow-lat">{t('shadow.latitude', { defaultValue: 'Latitude' })}</label>
           <input
             id="shadow-lat"
             type="number"
@@ -95,7 +97,7 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
           />
         </div>
         <div className="field-row">
-          <label htmlFor="shadow-lng">Longitude</label>
+          <label htmlFor="shadow-lng">{t('shadow.longitude', { defaultValue: 'Longitude' })}</label>
           <input
             id="shadow-lng"
             type="number"
@@ -107,9 +109,9 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
       </div>
 
       <div className="analysis-section">
-        <h4>Sun Position</h4>
+        <h4>{t('shadow.sunPosition', { defaultValue: 'Sun Position' })}</h4>
         <div className="field-row">
-          <label htmlFor="shadow-date">Date</label>
+          <label htmlFor="shadow-date">{t('shadow.date')}</label>
           <input
             id="shadow-date"
             type="date"
@@ -118,7 +120,7 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
           />
         </div>
         <div className="field-row">
-          <label htmlFor="shadow-time">Time</label>
+          <label htmlFor="shadow-time">{t('shadow.time')}</label>
           <input
             id="shadow-time"
             type="time"
@@ -129,7 +131,7 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
 
         {/* Month slider (1–12) */}
         <div className="field-row">
-          <label htmlFor="shadow-month">Month</label>
+          <label htmlFor="shadow-month">{t('shadow.month', { defaultValue: 'Month' })}</label>
           <input
             id="shadow-month"
             type="range"
@@ -149,7 +151,7 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
 
         {/* Hour slider (6–18) */}
         <div className="field-row">
-          <label htmlFor="shadow-hour">Hour</label>
+          <label htmlFor="shadow-hour">{t('shadow.hour', { defaultValue: 'Hour' })}</label>
           <input
             id="shadow-hour"
             type="range"
@@ -169,25 +171,25 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
 
       {/* Solar Analysis Results */}
       <div className="analysis-section">
-        <h4>Solar Analysis</h4>
+        <h4>{t('shadow.solarAnalysis', { defaultValue: 'Solar Analysis' })}</h4>
         <div className="field-row">
-          <span className="field-label">Elevation</span>
+          <span className="field-label">{t('shadow.elevation', { defaultValue: 'Elevation' })}</span>
           <span className="field-value">{solarData.position.elevation.toFixed(1)}°</span>
         </div>
         <div className="field-row">
-          <span className="field-label">Azimuth</span>
+          <span className="field-label">{t('shadow.azimuth', { defaultValue: 'Azimuth' })}</span>
           <span className="field-value">{solarData.position.azimuth.toFixed(1)}°</span>
         </div>
         <div className="field-row">
-          <span className="field-label">Daylight Hours</span>
+          <span className="field-label">{t('shadow.daylightHours', { defaultValue: 'Daylight Hours' })}</span>
           <span className="field-value">{solarData.daylightHours.toFixed(1)} h</span>
         </div>
       </div>
 
       <div className="analysis-section">
-        <h4>Visualisation</h4>
+        <h4>{t('shadow.visualisation', { defaultValue: 'Visualisation' })}</h4>
         <div className="field-row">
-          <label htmlFor="sun-path-toggle">Show Sun Path</label>
+          <label htmlFor="sun-path-toggle">{t('shadow.showSunPath', { defaultValue: 'Show Sun Path' })}</label>
           <input
             id="sun-path-toggle"
             type="checkbox"
@@ -196,7 +198,7 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
           />
         </div>
         <div className="field-row">
-          <label htmlFor="shadow-map-toggle">Show Shadow Map</label>
+          <label htmlFor="shadow-map-toggle">{t('shadow.showShadowMap', { defaultValue: 'Show Shadow Map' })}</label>
           <input
             id="shadow-map-toggle"
             type="checkbox"
@@ -207,11 +209,11 @@ export function ShadowAnalysisPanel({ onRun, onChange }: ShadowAnalysisPanelProp
       </div>
 
       <button
-        aria-label="Run analysis"
+        aria-label={t('shadow.runAnalysis', { defaultValue: 'Run analysis' })}
         className="btn-run-analysis"
         onClick={() => onRun?.(settings)}
       >
-        Run Analysis
+        {t('shadow.runAnalysis', { defaultValue: 'Run Analysis' })}
       </button>
     </div>
   );

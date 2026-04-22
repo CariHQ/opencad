@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ConfirmModal } from './ConfirmModal';
 import { useDocumentStore } from '../stores/documentStore';
 import {
@@ -34,6 +35,7 @@ function makeSheet(): Sheet {
 }
 
 export function SheetManager(): React.ReactElement {
+  const { t } = useTranslation('panels');
   const [sheets, setSheets] = useState<Sheet[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
@@ -64,25 +66,25 @@ export function SheetManager(): React.ReactElement {
     <>
     {pendingDeleteId && (
       <ConfirmModal
-        message="Delete this sheet? This cannot be undone."
-        confirmLabel="Delete"
+        message={t('sheets.deleteConfirm', { defaultValue: 'Delete this sheet? This cannot be undone.' })}
+        confirmLabel={t('sheets.delete', { defaultValue: 'Delete' })}
         onConfirm={confirmDelete}
         onCancel={() => setPendingDeleteId(null)}
       />
     )}
     <div className="sheet-manager">
       <div className="sheet-manager-header">
-        <span className="panel-title">Sheets</span>
+        <span className="panel-title">{t('sheets.title')}</span>
         <button
           className="btn-primary"
-          aria-label="Add Sheet"
+          aria-label={t('sheets.addSheet', { defaultValue: 'Add Sheet' })}
           onClick={addSheet}
         >
-          Add Sheet
+          {t('sheets.addSheet', { defaultValue: 'Add Sheet' })}
         </button>
       </div>
 
-      <ul className="sheet-list" aria-label="Sheet list">
+      <ul className="sheet-list" aria-label={t('settings.sheets.sheetListAria', { defaultValue: 'Sheet list' })}>
         {sheets.map((sheet) => (
           <li
             key={sheet.id}
@@ -97,23 +99,23 @@ export function SheetManager(): React.ReactElement {
       </ul>
 
       {selectedSheet && (
-        <div className="sheet-properties" aria-label="Sheet Properties">
+        <div className="sheet-properties" aria-label={t('sheets.propertiesAria', { defaultValue: 'Sheet Properties' })}>
           <div className="sheet-prop-row">
-            <label htmlFor="sheet-mgr-title">Title</label>
+            <label htmlFor="sheet-mgr-title">{t('sheets.titleLabel', { defaultValue: 'Title' })}</label>
             <input
               id="sheet-mgr-title"
               type="text"
               value={selectedSheet.title}
               onChange={(e) => updateSheet(selectedSheet.id, { title: e.target.value })}
-              aria-label="Title"
+              aria-label={t('sheets.titleLabel', { defaultValue: 'Title' })}
             />
           </div>
 
           <div className="sheet-prop-row">
-            <label htmlFor="sheet-mgr-size">Size</label>
+            <label htmlFor="sheet-mgr-size">{t('sheets.size', { defaultValue: 'Size' })}</label>
             <select
               id="sheet-mgr-size"
-              aria-label="Size"
+              aria-label={t('sheets.size', { defaultValue: 'Size' })}
               value={selectedSheet.size}
               onChange={(e) =>
                 updateSheet(selectedSheet.id, { size: e.target.value as Sheet['size'] })
@@ -126,10 +128,10 @@ export function SheetManager(): React.ReactElement {
           </div>
 
           <div className="sheet-prop-row">
-            <label htmlFor="sheet-mgr-scale">Scale</label>
+            <label htmlFor="sheet-mgr-scale">{t('sheets.scale', { defaultValue: 'Scale' })}</label>
             <select
               id="sheet-mgr-scale"
-              aria-label="Scale"
+              aria-label={t('sheets.scale', { defaultValue: 'Scale' })}
               value={selectedSheet.scale}
               onChange={(e) => updateSheet(selectedSheet.id, { scale: e.target.value })}
             >
@@ -141,10 +143,10 @@ export function SheetManager(): React.ReactElement {
 
           <button
             className="btn-danger"
-            aria-label="Delete Sheet"
+            aria-label={t('sheets.deleteSheet', { defaultValue: 'Delete Sheet' })}
             onClick={() => deleteSheet(selectedSheet.id)}
           >
-            Delete Sheet
+            {t('sheets.deleteSheet', { defaultValue: 'Delete Sheet' })}
           </button>
         </div>
       )}
@@ -173,6 +175,7 @@ interface SheetPanelProps {
 }
 
 export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const { document: doc } = useDocumentStore();
   const [size, setSize] = useState('A1');
   const [orientation, setOrientation] = useState('Landscape');
@@ -257,15 +260,15 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
   return (
     <div className="sheet-panel">
       <div className="panel-header">
-        <span className="panel-title">Sheet Layout</span>
+        <span className="panel-title">{t('sheets.layoutTitle', { defaultValue: 'Sheet Layout' })}</span>
       </div>
 
       <div className="sheet-controls">
         <div className="sheet-row">
-          <label htmlFor="sheet-size">Sheet Size</label>
+          <label htmlFor="sheet-size">{t('sheets.sheetSize', { defaultValue: 'Sheet Size' })}</label>
           <select
             id="sheet-size"
-            aria-label="Sheet Size"
+            aria-label={t('sheets.sheetSize', { defaultValue: 'Sheet Size' })}
             value={size}
             onChange={(e) => setSize(e.target.value)}
             className="sheet-select"
@@ -277,10 +280,10 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
         </div>
 
         <div className="sheet-row">
-          <label htmlFor="sheet-orientation">Orientation</label>
+          <label htmlFor="sheet-orientation">{t('sheets.orientation', { defaultValue: 'Orientation' })}</label>
           <select
             id="sheet-orientation"
-            aria-label="Orientation"
+            aria-label={t('sheets.orientation', { defaultValue: 'Orientation' })}
             value={orientation}
             onChange={(e) => setOrientation(e.target.value)}
             className="sheet-select"
@@ -292,10 +295,10 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
         </div>
 
         <div className="sheet-row">
-          <label htmlFor="sheet-scale">Scale</label>
+          <label htmlFor="sheet-scale">{t('sheets.scale', { defaultValue: 'Scale' })}</label>
           <select
             id="sheet-scale"
-            aria-label="Scale"
+            aria-label={t('sheets.scale', { defaultValue: 'Scale' })}
             value={scale}
             onChange={(e) => setScale(e.target.value)}
             className="sheet-select"
@@ -309,40 +312,40 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
 
       <div className="sheet-title-block">
         <div className="sheet-row">
-          <label htmlFor="sheet-project-name">Project Name</label>
+          <label htmlFor="sheet-project-name">{t('sheets.projectName', { defaultValue: 'Project Name' })}</label>
           <input
             id="sheet-project-name"
             type="text"
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             className="sheet-input"
-            placeholder="Project name"
+            placeholder={t('sheets.projectNamePlaceholder', { defaultValue: 'Project name' })}
           />
         </div>
         <div className="sheet-row">
-          <label htmlFor="sheet-title">Sheet Title</label>
+          <label htmlFor="sheet-title">{t('sheets.sheetTitle', { defaultValue: 'Sheet Title' })}</label>
           <input
             id="sheet-title"
             type="text"
             value={sheetTitle}
             onChange={(e) => setSheetTitle(e.target.value)}
             className="sheet-input"
-            placeholder="Level 1 Plan"
+            placeholder={t('sheets.sheetTitlePlaceholder', { defaultValue: 'Level 1 Plan' })}
           />
         </div>
         <div className="sheet-row">
-          <label htmlFor="sheet-drawn-by">Drawn By</label>
+          <label htmlFor="sheet-drawn-by">{t('sheets.drawnBy', { defaultValue: 'Drawn By' })}</label>
           <input
             id="sheet-drawn-by"
             type="text"
             value={drawnBy}
             onChange={(e) => setDrawnBy(e.target.value)}
             className="sheet-input"
-            placeholder="Initials"
+            placeholder={t('sheets.drawnByPlaceholder', { defaultValue: 'Initials' })}
           />
         </div>
         <div className="sheet-row">
-          <label htmlFor="sheet-number">Sheet Number</label>
+          <label htmlFor="sheet-number">{t('sheets.sheetNumber', { defaultValue: 'Sheet Number' })}</label>
           <input
             id="sheet-number"
             type="text"
@@ -354,9 +357,9 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
       </div>
 
       <div className="sheet-views-picker">
-        <div className="sheet-views-picker-title">Views on sheet (max 4)</div>
+        <div className="sheet-views-picker-title">{t('sheets.viewsOnSheet', { defaultValue: 'Views on sheet (max 4)' })}</div>
         {availableViews.length === 0 ? (
-          <div className="sheet-views-empty">No saved views. Create views first.</div>
+          <div className="sheet-views-empty">{t('sheets.noSavedViews', { defaultValue: 'No saved views. Create views first.' })}</div>
         ) : (
           <ul className="sheet-views-list">
             {availableViews.map((v) => (
@@ -382,7 +385,7 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
       <div className="sheet-preview-wrapper">
         <svg
           role="img"
-          aria-label="Sheet preview"
+          aria-label={t('sheets.previewAria', { defaultValue: 'Sheet preview' })}
           className="sheet-preview"
           width={previewW}
           height={previewH}
@@ -444,9 +447,9 @@ export function SheetPanel({ onExportPDF }: SheetPanelProps = {}) {
         <button
           className="btn-primary"
           onClick={handleExport}
-          aria-label="Export PDF"
+          aria-label={t('sheets.exportPdf', { defaultValue: 'Export PDF' })}
         >
-          Export PDF
+          {t('sheets.exportPdf', { defaultValue: 'Export PDF' })}
         </button>
       </div>
     </div>

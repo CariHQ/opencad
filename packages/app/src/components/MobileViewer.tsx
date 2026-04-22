@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Level {
   id: string;
@@ -16,6 +17,7 @@ interface MobileViewerProps {
 type ViewMode = 'floor-plan' | '3d';
 
 export function MobileViewer({ projectName, levels = [], elementCount, onZoomIn, onZoomOut }: MobileViewerProps) {
+  const { t } = useTranslation('common');
   const [activeView, setActiveView] = useState<ViewMode>('3d');
   const [selectedLevel, setSelectedLevel] = useState(levels[0]?.id ?? null);
 
@@ -33,15 +35,15 @@ export function MobileViewer({ projectName, levels = [], elementCount, onZoomIn,
 
       <div className="mobile-view-tabs" style={{ display: 'flex', borderBottom: '1px solid #eee' }}>
         <button
-          aria-label="Floor Plan view"
+          aria-label={t('view.floorPlan', { defaultValue: 'Floor Plan view' })}
           className={`tab-btn ${activeView === 'floor-plan' ? 'active' : ''}`}
           onClick={() => setActiveView('floor-plan')}
           style={{ flex: 1, padding: '8px', background: activeView === 'floor-plan' ? '#e3eaff' : 'transparent' }}
         >
-          Floor Plan
+          {t('view.floorPlan', { defaultValue: 'Floor Plan' })}
         </button>
         <button
-          aria-label="3D view"
+          aria-label={t('view.threeD', { defaultValue: '3D view' })}
           className={`tab-btn ${activeView === '3d' ? 'active' : ''}`}
           onClick={() => setActiveView('3d')}
           style={{ flex: 1, padding: '8px', background: activeView === '3d' ? '#e3eaff' : 'transparent' }}
@@ -68,7 +70,7 @@ export function MobileViewer({ projectName, levels = [], elementCount, onZoomIn,
       <div className="mobile-viewport" style={{ flex: 1, position: 'relative', background: '#f5f5f5' }}>
         <div className="mobile-zoom-controls" style={{ position: 'absolute', bottom: 16, right: 16, display: 'flex', flexDirection: 'column', gap: 4 }}>
           <button
-            aria-label="Zoom in"
+            aria-label={t('viewport.zoomInShort', { defaultValue: 'Zoom in' })}
             className="btn-zoom-in"
             onClick={onZoomIn}
             style={{ width: 40, height: 40, fontSize: 20, borderRadius: 6 }}
@@ -76,7 +78,7 @@ export function MobileViewer({ projectName, levels = [], elementCount, onZoomIn,
             +
           </button>
           <button
-            aria-label="Zoom out"
+            aria-label={t('viewport.zoomOutShort', { defaultValue: 'Zoom out' })}
             className="btn-zoom-out"
             onClick={onZoomOut}
             style={{ width: 40, height: 40, fontSize: 20, borderRadius: 6 }}

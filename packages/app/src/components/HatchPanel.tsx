@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 
 export interface HatchConfig { pattern: string; scale: number; angle: number; spacing: number; }
@@ -24,6 +25,7 @@ const HATCH_PATTERNS = [
 interface HatchPanelProps { onApply?: (config: HatchConfig) => void; }
 
 export function HatchPanel({ onApply }: HatchPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [selected, setSelected] = useState('concrete');
   const [scale, setScale] = useState(1.0);
   const [angle, setAngle] = useState(0);
@@ -51,10 +53,10 @@ export function HatchPanel({ onApply }: HatchPanelProps = {}) {
 
   return (
     <div className="hatch-panel">
-      <div className="panel-header"><span className="panel-title">Hatch Patterns</span></div>
+      <div className="panel-header"><span className="panel-title">{t('hatch.title')}</span></div>
 
       {selectedIds.length === 0 && (
-        <div className="hatch-notice">Select elements to apply a hatch pattern.</div>
+        <div className="hatch-notice">{t('hatch.selectHint', { defaultValue: 'Select elements to apply a hatch pattern.' })}</div>
       )}
 
       <div className="hatch-pattern-grid">
@@ -81,17 +83,17 @@ export function HatchPanel({ onApply }: HatchPanelProps = {}) {
 
       <div className="hatch-controls">
         <div className="hatch-row">
-          <label htmlFor="hatch-scale">Scale</label>
+          <label htmlFor="hatch-scale">{t('hatch.scale', { defaultValue: 'Scale' })}</label>
           <input id="hatch-scale" type="number" min={0.1} max={100} step={0.1} value={scale}
             onChange={(e) => setScale(parseFloat(e.target.value) || 1)} />
         </div>
         <div className="hatch-row">
-          <label htmlFor="hatch-angle">Angle (°)</label>
+          <label htmlFor="hatch-angle">{t('hatch.angle', { defaultValue: 'Angle (°)' })}</label>
           <input id="hatch-angle" type="number" min={0} max={360} step={15} value={angle}
             onChange={(e) => setAngle(parseFloat(e.target.value) || 0)} />
         </div>
         <div className="hatch-row">
-          <label htmlFor="hatch-spacing">Spacing (mm)</label>
+          <label htmlFor="hatch-spacing">{t('hatch.spacing', { defaultValue: 'Spacing (mm)' })}</label>
           <input id="hatch-spacing" type="number" min={1} max={500} step={1} value={spacing}
             onChange={(e) => setSpacing(parseFloat(e.target.value) || 5)} />
         </div>
@@ -100,9 +102,11 @@ export function HatchPanel({ onApply }: HatchPanelProps = {}) {
       <button
         className="btn-primary hatch-apply-btn"
         onClick={handleApply}
-        aria-label="Apply hatch"
+        aria-label={t('hatch.apply', { defaultValue: 'Apply hatch' })}
       >
-        {selectedIds.length > 0 ? `Apply to ${selectedIds.length} element${selectedIds.length > 1 ? 's' : ''}` : 'Apply'}
+        {selectedIds.length > 0
+          ? t('hatch.applyToCount', { count: selectedIds.length, defaultValue: 'Apply to {{count}} element(s)' })
+          : t('hatch.apply', { defaultValue: 'Apply' })}
       </button>
     </div>
   );

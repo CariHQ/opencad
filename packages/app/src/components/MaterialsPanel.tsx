@@ -4,6 +4,7 @@
  * Browse and assign BIM materials (MATERIAL_LIBRARY) to selected elements.
  */
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { MATERIAL_LIBRARY, type BIMMaterial } from '../lib/materials';
 import { useDocumentStore } from '../stores/documentStore';
 import { getBIMMaterialTextureStyle } from '../utils/materialTextures';
@@ -11,6 +12,7 @@ import { getBIMMaterialTextureStyle } from '../utils/materialTextures';
 const ALL_CATEGORIES = ['structural', 'envelope', 'finish', 'mep'] as const;
 
 export function MaterialsPanel() {
+  const { t } = useTranslation('panels');
   const selectedIds = useDocumentStore((s) => s.selectedIds);
   const [search, setSearch] = useState('');
   const [selected, setSelected] = useState<BIMMaterial | null>(null);
@@ -40,7 +42,7 @@ export function MaterialsPanel() {
   return (
     <div className="materials-panel">
       <div className="panel-header">
-        <span className="panel-title">Materials</span>
+        <span className="panel-title">{t('materials.title')}</span>
       </div>
 
       {/* Search */}
@@ -48,7 +50,7 @@ export function MaterialsPanel() {
         data-testid="materials-search"
         type="text"
         className="materials-search"
-        placeholder="Search materials…"
+        placeholder={t('materials.searchPlaceholder', { defaultValue: 'Search materials…' })}
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
@@ -87,13 +89,13 @@ export function MaterialsPanel() {
         <div data-testid="material-detail" className="material-detail">
           <strong>{selected.name}</strong>
           <dl>
-            <dt>Category</dt>
+            <dt>{t('materials.category', { defaultValue: 'Category' })}</dt>
             <dd>{selected.category}</dd>
-            <dt>Density</dt>
+            <dt>{t('materials.density', { defaultValue: 'Density' })}</dt>
             <dd>{selected.density} kg/m³</dd>
-            <dt>Thermal Conductivity</dt>
+            <dt>{t('materials.thermalConductivity', { defaultValue: 'Thermal Conductivity' })}</dt>
             <dd>{selected.thermalConductivity} W/(m·K)</dd>
-            <dt>Embodied Carbon</dt>
+            <dt>{t('materials.embodiedCarbon', { defaultValue: 'Embodied Carbon' })}</dt>
             <dd>{selected.embodiedCarbon} kgCO₂e/kg</dd>
           </dl>
         </div>
@@ -105,9 +107,9 @@ export function MaterialsPanel() {
         className="btn-primary"
         onClick={handleAssign}
         disabled={!canAssign}
-        aria-label="Assign to Selection"
+        aria-label={t('materials.assignToSelection', { defaultValue: 'Assign to Selection' })}
       >
-        Assign to Selection
+        {t('materials.assignToSelection', { defaultValue: 'Assign to Selection' })}
       </button>
     </div>
   );

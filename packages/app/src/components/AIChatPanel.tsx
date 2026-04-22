@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Bot, User, X, Settings, Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import {
   AIStreamClient,
   createOpenAICompatibleProvider,
@@ -77,6 +78,7 @@ const suggestedPrompts = [
 ];
 
 export function AIChatPanel({ onClose }: AIChatPanelProps) {
+  const { t } = useTranslation('panels');
   const { document: doc } = useDocumentStore();
   const loadDocumentSchema = useDocumentStore((s) => s.loadDocumentSchema);
   const updateElement = useDocumentStore((s) => s.updateElement);
@@ -354,7 +356,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       <div className="ai-chat-panel">
         <div className="chat-header">
           <span className="chat-title">AI Provider Setup</span>
-          <button className="chat-close" onClick={() => setShowConfig(false)} aria-label="Close settings">
+          <button className="chat-close" onClick={() => setShowConfig(false)} aria-label={t('ai.closeSettingsAria', { defaultValue: 'Close settings' })}>
             <X size={18} />
           </button>
         </div>
@@ -375,7 +377,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
           {configDraft.provider === 'server' && (
             <>
               <div className="config-field">
-                <label htmlFor="ai-server-upstream">Upstream via server</label>
+                <label htmlFor="ai-server-upstream">{t('ai.upstream', { defaultValue: 'Upstream via server' })}</label>
                 <select
                   id="ai-server-upstream"
                   value={configDraft.serverUpstream ?? 'openai'}
@@ -409,7 +411,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
           {configDraft.provider === 'ollama' ? (
             <>
               <div className="config-field">
-                <label htmlFor="ai-ollama-url">Ollama base URL</label>
+                <label htmlFor="ai-ollama-url">{t('ai.ollamaBaseUrl', { defaultValue: 'Ollama base URL' })}</label>
                 <input
                   id="ai-ollama-url"
                   type="text"
@@ -433,7 +435,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
           ) : (
             <>
               <div className="config-field">
-                <label htmlFor="ai-base-url">Base URL</label>
+                <label htmlFor="ai-base-url">{t('ai.baseUrl', { defaultValue: 'Base URL' })}</label>
                 <input
                   id="ai-base-url"
                   type="text"
@@ -466,7 +468,7 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
             </>
           )}
 
-          <button className="btn-save-config" onClick={handleSaveConfig} aria-label="Save AI configuration">
+          <button className="btn-save-config" onClick={handleSaveConfig} aria-label={t('ai.saveConfigAria', { defaultValue: 'Save AI configuration' })}>
             Save Configuration
           </button>
         </div>
@@ -485,10 +487,10 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
               {config.provider === 'ollama' ? 'Local AI' : config.model}
             </span>
           )}
-          <button className="chat-icon-btn" onClick={() => setShowConfig(true)} title="Configure AI provider" aria-label="Configure AI">
+          <button className="chat-icon-btn" onClick={() => setShowConfig(true)} title={t('ai.configureAria', { defaultValue: 'Configure AI provider' })} aria-label={t('ai.configureAria', { defaultValue: 'Configure AI' })}>
             <Settings size={15} />
           </button>
-          <button className="chat-close" onClick={onClose} aria-label="Close AI chat">
+          <button className="chat-close" onClick={onClose} aria-label={t('ai.closeChat', { defaultValue: 'Close AI chat' })}>
             <X size={18} />
           </button>
         </div>
@@ -497,8 +499,10 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
       {!isConfigured && (
         <div className="ai-setup-banner">
           <Zap size={16} />
-          <span>Configure an AI provider to enable chat.</span>
-          <button onClick={() => setShowConfig(true)} className="btn-setup-ai" aria-label="Set up AI provider">Set up</button>
+          <span>{t('ai.configureToChat', { defaultValue: 'Configure an AI provider to enable chat.' })}</span>
+          <button onClick={() => setShowConfig(true)} className="btn-setup-ai" aria-label={t('ai.setupAria', { defaultValue: 'Set up AI provider' })}>
+            {t('ai.setUp', { defaultValue: 'Set up' })}
+          </button>
         </div>
       )}
 
@@ -543,19 +547,23 @@ export function AIChatPanel({ onClose }: AIChatPanelProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={isConfigured ? 'Ask me anything…' : 'Configure AI provider to chat'}
+          placeholder={isConfigured
+            ? t('ai.askPlaceholder', { defaultValue: 'Ask me anything…' })
+            : t('ai.configurePlaceholder', { defaultValue: 'Configure AI provider to chat' })}
           rows={2}
         />
         {isLoading ? (
-          <button className="chat-stop" onClick={handleStop} aria-label="Stop generation">Stop</button>
+          <button className="chat-stop" onClick={handleStop} aria-label={t('ai.stopGeneration', { defaultValue: 'Stop generation' })}>
+            {t('ai.stop', { defaultValue: 'Stop' })}
+          </button>
         ) : (
           <button
             className="chat-send"
             onClick={() => void handleSend()}
             disabled={!input.trim()}
-            aria-label="Send message"
+            aria-label={t('ai.sendMessage', { defaultValue: 'Send message' })}
           >
-            Send
+            {t('ai.send', { defaultValue: 'Send' })}
           </button>
         )}
       </div>

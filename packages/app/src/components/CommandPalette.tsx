@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface Command {
   id: string;
@@ -60,6 +61,7 @@ function fuzzyMatch(query: string, label: string): boolean {
 }
 
 export function CommandPalette({ onClose, onExecute }: CommandPaletteProps) {
+  const { t } = useTranslation('dialogs');
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
 
@@ -100,14 +102,14 @@ export function CommandPalette({ onClose, onExecute }: CommandPaletteProps) {
   );
 
   return (
-    <div className="command-palette" role="dialog" aria-label="Command Palette">
+    <div className="command-palette" role="dialog" aria-label={t('commandPalette.ariaLabel', { defaultValue: 'Command Palette' })}>
       <input
         role="combobox"
         aria-autocomplete="list"
         aria-controls="command-palette-listbox"
         aria-expanded={results.length > 0}
         className="command-palette-input"
-        placeholder="Search commands, tools, views…"
+        placeholder={t('commandPalette.placeholder', { defaultValue: 'Search commands, tools, views…' })}
         value={query}
         autoFocus
         onChange={(e) => {
@@ -122,7 +124,7 @@ export function CommandPalette({ onClose, onExecute }: CommandPaletteProps) {
         className="command-palette-results"
       >
         {results.length === 0 && !isAiMode && (
-          <li className="command-palette-empty">No commands found</li>
+          <li className="command-palette-empty">{t('commandPalette.empty', { defaultValue: 'No commands found' })}</li>
         )}
         {results.map((item, idx) => (
           <li

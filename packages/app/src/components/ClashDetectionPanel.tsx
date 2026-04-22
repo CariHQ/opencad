@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Zap } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import { detectClashes, ClashResult, ClashSeverity } from '../utils/clashDetection';
 
 export function ClashDetectionPanel() {
+  const { t } = useTranslation('panels');
   const { document: doc, selectedIds: _selectedIds, setSelectedIds } = useDocumentStore();
   const [clashes, setClashes] = useState<ClashResult[] | null>(null);
 
@@ -23,7 +25,7 @@ export function ClashDetectionPanel() {
   return (
     <div className="clash-detection-panel panel">
       <div className="panel-header">
-        <span className="panel-title">Clash Detection</span>
+        <span className="panel-title">{t('clash.title')}</span>
       </div>
 
       <div className="panel-body">
@@ -32,20 +34,20 @@ export function ClashDetectionPanel() {
           onClick={runDetection}
         >
           <Zap size={14} />
-          Run Clash Detection
+          {t('clash.runFull', { defaultValue: 'Run Clash Detection' })}
         </button>
 
         {clashes === null ? (
           <div className="clash-empty">
-            <p>Run detection to check for clashes between elements.</p>
+            <p>{t('clash.runHint', { defaultValue: 'Run detection to check for clashes between elements.' })}</p>
           </div>
         ) : clashes.length === 0 ? (
           <div className="clash-empty">
-            <p>0 clashes detected — model is clear.</p>
+            <p>{t('clash.noClashes')}</p>
           </div>
         ) : (
           <div className="clash-results">
-            <div className="clash-summary">{clashes.length} clash{clashes.length !== 1 ? 'es' : ''} found</div>
+            <div className="clash-summary">{t('clash.clashes', { count: clashes.length, defaultValue: '{{count}} clash(es) found' })}</div>
             <ul className="clash-list">
               {clashes.map((clash) => (
                 <li
@@ -58,7 +60,9 @@ export function ClashDetectionPanel() {
                   onKeyDown={(e) => e.key === 'Enter' && handleClashClick(clash)}
                 >
                   <span className={`clash-badge ${clash.severity === ClashSeverity.Hard ? 'badge-hard' : 'badge-soft'}`}>
-                    {clash.severity === ClashSeverity.Hard ? 'Hard' : 'Soft'}
+                    {clash.severity === ClashSeverity.Hard
+                      ? t('clash.hard', { defaultValue: 'Hard' })
+                      : t('clash.soft', { defaultValue: 'Soft' })}
                   </span>
                   <span className="clash-description">{clash.description}</span>
                   <span className="clash-location">

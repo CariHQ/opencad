@@ -13,6 +13,7 @@
  * "15'-3"". Angle is in degrees.
  */
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { parseLength } from '@opencad/shared';
 
 export type CoordField = 'length' | 'angle' | 'width' | 'height';
@@ -59,6 +60,7 @@ function formatPreview(field: CoordField, v: number | undefined): string {
 }
 
 export function CoordBox({ x, y, preview, fields, onCommit, onCancel }: CoordBoxProps) {
+  const { t } = useTranslation('common');
   const [values, setValues] = useState<Record<CoordField, string>>(() => ({
     length: '', angle: '', width: '', height: '',
   }));
@@ -137,7 +139,7 @@ export function CoordBox({ x, y, preview, fields, onCommit, onCancel }: CoordBox
   };
 
   return (
-    <div className="coord-box" style={style} role="group" aria-label="Coordinate input">
+    <div className="coord-box" style={style} role="group" aria-label={t('coord.inputAria', { defaultValue: 'Coordinate input' })}>
       {fields.map((f, i) => (
         <label key={f} className="coord-box-field" style={{
           display: 'flex', alignItems: 'center', gap: 3,

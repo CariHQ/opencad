@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export type ProjectRole = 'owner' | 'editor' | 'viewer';
 
@@ -19,6 +20,7 @@ interface PermissionsPanelProps {
 const ROLES: ProjectRole[] = ['owner', 'editor', 'viewer'];
 
 export function PermissionsPanel({ members: propMembers = [], onUpdateRole, onInvite, onRemove }: PermissionsPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [members, setMembers] = useState<ProjectMember[]>(propMembers);
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState<ProjectRole>('viewer');
@@ -92,13 +94,13 @@ export function PermissionsPanel({ members: propMembers = [], onUpdateRole, onIn
       <div className="invite-row">
         <input
           type="email"
-          placeholder="Invite by email…"
+          placeholder={t('settings.permissions.invitePlaceholder', { defaultValue: 'Invite by email…' })}
           value={inviteEmail}
           onChange={(e) => setInviteEmail(e.target.value)}
           className="invite-email-input"
         />
         <select
-          aria-label="Role for invite"
+          aria-label={t('settings.permissions.roleForInvite', { defaultValue: 'Role for invite' })}
           value={inviteRole}
           onChange={(e) => setInviteRole(e.target.value as ProjectRole)}
           className="invite-role-select"
@@ -107,7 +109,7 @@ export function PermissionsPanel({ members: propMembers = [], onUpdateRole, onIn
           <option value="viewer">Viewer</option>
         </select>
         <button
-          aria-label="Invite member"
+          aria-label={t('settings.permissions.inviteMember', { defaultValue: 'Invite member' })}
           className="btn-invite"
           onClick={handleInvite}
         >

@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useTranslation } from 'react-i18next';
 
 type PhotoToModelStatus = 'idle' | 'ready' | 'processing' | 'done' | 'error';
 
@@ -16,6 +17,7 @@ interface PhotoToModelPanelProps {
 }
 
 export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoUrl, extractedGeometry }: PhotoToModelPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -32,11 +34,11 @@ export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoU
   return (
     <div className="photo-to-model-panel">
       <div className="panel-header">
-        <span className="panel-title">Photo-to-Model</span>
+        <span className="panel-title">{t('photo.fullTitle', { defaultValue: 'Photo-to-Model' })}</span>
       </div>
 
       <p className="photo-instructions">
-        Upload a site photo to extract massing geometry and generate a 3D model. AI analyzes the photo to identify walls, floors, and openings.
+        {t('photo.instructions', { defaultValue: 'Upload a site photo to extract massing geometry and generate a 3D model. AI analyzes the photo to identify walls, floors, and openings.' })}
       </p>
 
       <div
@@ -44,12 +46,12 @@ export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoU
         onDrop={handleDrop}
         onDragOver={(e) => e.preventDefault()}
         role="region"
-        aria-label="Photo upload zone"
+        aria-label={t('photo.uploadZone', { defaultValue: 'Photo upload zone' })}
       >
         {photoUrl ? (
-          <img src={photoUrl} alt="Uploaded site photo" className="photo-preview" style={{ maxWidth: '100%', maxHeight: 200 }} />
+          <img src={photoUrl} alt={t('photo.uploadedAlt', { defaultValue: 'Uploaded site photo' })} className="photo-preview" style={{ maxWidth: '100%', maxHeight: 200 }} />
         ) : (
-          <span className="drop-hint">Drop a photo here or click Upload to browse</span>
+          <span className="drop-hint">{t('photo.dropHint', { defaultValue: 'Drop a photo here or click Upload to browse' })}</span>
         )}
       </div>
 
@@ -63,20 +65,20 @@ export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoU
 
       <div className="photo-actions">
         <button
-          aria-label="Upload photo"
+          aria-label={t('photo.uploadAria', { defaultValue: 'Upload photo' })}
           className="btn-upload"
           onClick={() => inputRef.current?.click()}
         >
-          Upload Photo
+          {t('photo.upload', { defaultValue: 'Upload Photo' })}
         </button>
 
         {status === 'ready' && photoUrl && (
           <button
-            aria-label="Extract massing geometry"
+            aria-label={t('photo.extractAria', { defaultValue: 'Extract massing geometry' })}
             className="btn-extract"
             onClick={() => onExtract?.()}
           >
-            Extract Massing
+            {t('photo.extract', { defaultValue: 'Extract Massing' })}
           </button>
         )}
       </div>
@@ -84,19 +86,19 @@ export function PhotoToModelPanel({ onUpload, onExtract, status = 'idle', photoU
       {status === 'processing' && (
         <div className="photo-processing" role="status">
           <span className="spinner" />
-          Analyzing photo…
+          {t('photo.analyzing', { defaultValue: 'Analyzing photo…' })}
         </div>
       )}
 
       {status === 'done' && extractedGeometry && (
         <div className="photo-results">
-          <h4>Extracted Geometry</h4>
+          <h4>{t('photo.extractedHeading', { defaultValue: 'Extracted Geometry' })}</h4>
           <div className="result-row">
-            <span>Walls detected:</span>
-            <span>{extractedGeometry.wallCount} walls</span>
+            <span>{t('photo.wallsDetected', { defaultValue: 'Walls detected:' })}</span>
+            <span>{t('photo.wallsCount', { count: extractedGeometry.wallCount, defaultValue: '{{count}} walls' })}</span>
           </div>
           <div className="result-row">
-            <span>Estimated area:</span>
+            <span>{t('photo.estimatedArea', { defaultValue: 'Estimated area:' })}</span>
             <span>{extractedGeometry.estimatedArea} m²</span>
           </div>
         </div>

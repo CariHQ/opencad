@@ -11,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { SUPPORTED_LOCALES, setLocale } from '../i18n';
 
 export function LanguageSelector(): React.ReactElement {
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation('common');
   const [current, setCurrent] = useState<string>(() => i18n.language || 'en');
 
   useEffect(() => {
@@ -27,7 +27,7 @@ export function LanguageSelector(): React.ReactElement {
   return (
     <select
       className="language-selector"
-      aria-label="Language"
+      aria-label={t('language.aria', { defaultValue: 'Language' })}
       value={current}
       onChange={(e) => { void handle(e); }}
     >

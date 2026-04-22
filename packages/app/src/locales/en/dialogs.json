@@ -4,29 +4,147 @@
     "email": "Email",
     "password": "Password",
     "submit": "Sign in",
+    "submitting": "Signing in…",
     "noAccount": "No account?",
-    "createAccount": "Create one",
-    "or": "or"
+    "createAccount": "Create one free",
+    "or": "or",
+    "forgotPassword": "Forgot password?",
+    "continueWithGoogle": "Continue with Google",
+    "continueWithMicrosoft": "Continue with Microsoft",
+    "invalidCredentials": "Email or password incorrect.",
+    "mfaTitle": "Verify your identity",
+    "mfaHint": "Enter the 6-digit code from your authenticator app.",
+    "mfaCode": "Authenticator code",
+    "mfaVerify": "Verify"
   },
   "signUp": {
-    "title": "Create account",
-    "name": "Name",
+    "title": "Create your account",
+    "name": "Full name",
     "email": "Email",
     "password": "Password",
-    "submit": "Create account",
+    "submit": "Create free account",
+    "submitting": "Creating…",
     "haveAccount": "Already have an account?",
-    "signIn": "Sign in"
+    "signIn": "Sign in",
+    "passwordHint": "At least 8 characters.",
+    "termsAgree": "By creating an account you agree to our <a>Terms</a> and <a2>Privacy Policy</a2>."
+  },
+  "forgotPassword": {
+    "title": "Reset password",
+    "hint": "We'll send a password-reset link to your email.",
+    "submit": "Send reset link",
+    "sent": "Check your inbox for a reset link.",
+    "backToSignIn": "Back to sign in"
   },
   "newProject": {
     "title": "New project",
     "name": "Project name",
     "template": "Template",
-    "create": "Create project"
+    "blank": "Blank",
+    "create": "Create project",
+    "creating": "Creating…"
+  },
+  "openProject": {
+    "title": "Open project",
+    "placeholder": "Search projects…",
+    "empty": "No projects yet."
   },
   "confirmDelete": {
     "title": "Delete {{name}}?",
     "body": "This cannot be undone.",
     "confirm": "Delete",
     "cancel": "Cancel"
+  },
+  "importExport": {
+    "importTitle": "Import file",
+    "exportTitle": "Export File",
+    "dropHint": "Drop a file here or click to browse.",
+    "supportedFormats": "Supported: IFC, DWG, DXF, SKP, RVT, PDF",
+    "exporting": "Exporting…",
+    "export": "Export",
+    "format": "Format",
+    "cancel": "Cancel"
+  },
+  "subscription": {
+    "title": "Choose your plan",
+    "subtitle": "Upgrade anytime — no long-term commitment required.",
+    "currentPlan": "Current plan",
+    "upgradeTo": "Upgrade to {{plan}}",
+    "manageBilling": "Manage billing",
+    "perUserMonth": "per user / month",
+    "mostPopular": "Most popular",
+    "plans": {
+      "free": {
+        "label": "Free",
+        "price": "$0",
+        "priceDetail": "forever",
+        "features": {
+          "f1": "1 project",
+          "f2": "Basic 2D drafting tools",
+          "f3": "Local storage only",
+          "f4": "Community support"
+        }
+      },
+      "pro": {
+        "label": "Pro",
+        "price": "$29",
+        "features": {
+          "f1": "Unlimited projects",
+          "f2": "Real-time collaboration",
+          "f3": "AI design assistant",
+          "f4": "Priority email support"
+        }
+      },
+      "business": {
+        "label": "Business",
+        "price": "$99",
+        "features": {
+          "f1": "Everything in Pro",
+          "f2": "Admin roles & permissions",
+          "f3": "SSO / SAML",
+          "f4": "Priority phone support"
+        }
+      }
+    }
+  },
+  "commandPalette": {
+    "placeholder": "Search commands…",
+    "empty": "No commands found.",
+    "groups": {
+      "tools": "Tools",
+      "views": "Views",
+      "panels": "Panels",
+      "file": "File",
+      "edit": "Edit",
+      "help": "Help"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "close": "Close help",
+    "tabs": {
+      "shortcuts": "Shortcuts",
+      "howTo": "How To",
+      "tips": "Tips"
+    },
+    "takeGuidedTour": "Take the guided tour",
+    "searchShortcuts": "Search shortcuts…",
+    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
+    "needMore": "Need more?",
+    "openIssue": "Open an issue"
+  },
+  "feedback": {
+    "title": "Send feedback",
+    "categoryLabel": "Type",
+    "titleLabel": "Title",
+    "descriptionLabel": "Description",
+    "submit": "Submit feedback",
+    "submitting": "Sending…",
+    "sent": "Thanks for your feedback!",
+    "categories": {
+      "bug": "Bug",
+      "feature": "Feature request",
+      "question": "Question"
+    }
   }
 }

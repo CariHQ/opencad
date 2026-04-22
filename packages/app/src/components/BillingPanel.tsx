@@ -236,7 +236,7 @@ export function BillingPanel({ onUpgrade }: BillingPanelProps = {}): React.React
           data-testid="cancel-confirm-dialog"
           role="dialog"
           aria-modal="true"
-          aria-label="Cancel subscription confirmation"
+          aria-label={t('settings.billing.cancelConfirmAria', { defaultValue: 'Cancel subscription confirmation' })}
         >
           <div className="billing-cancel-dialog">
             <h4 className="billing-cancel-dialog-title">{t('billing.cancelConfirmTitle')}</h4>

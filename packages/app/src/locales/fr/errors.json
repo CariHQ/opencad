@@ -1,0 +1,8 @@
+{
+  "network": "Erreur réseau — vérifiez votre connexion.",
+  "server": "Erreur serveur — veuillez réessayer.",
+  "unauthorized": "Vous devez vous connecter pour cela.",
+  "forbidden": "Vous n'avez pas la permission de faire cela.",
+  "notFound": "Nous n'avons pas trouvé ce que vous cherchiez.",
+  "unknown": "Quelque chose s'est mal passé."
+}

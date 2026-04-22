@@ -1,10 +1,12 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 
 const COLUMN_SECTIONS = ['Circular', 'Rectangular', 'H-Section', 'I-Section', 'RHS'];
 const BEAM_PROFILES = ['IPE', 'HEA', 'HEB', 'UB', 'RHS', 'CHS', 'Rectangular', 'Circular'];
 
 export function ColumnBeamPanel() {
+  const { t } = useTranslation('panels');
   const { activeTool, toolParams, setToolParam } = useDocumentStore();
 
   if (activeTool === 'column') {
@@ -18,11 +20,11 @@ export function ColumnBeamPanel() {
 
     return (
       <div className="tool-panel">
-        <div className="tool-panel-header">Column</div>
+        <div className="tool-panel-header">{t('tool.column.title', { defaultValue: 'Column' })}</div>
 
         <div className="tool-panel-group">
           <div className="tool-panel-row">
-            <label htmlFor="col-height">Height (mm)</label>
+            <label htmlFor="col-height">{t('tool.column.height', { defaultValue: 'Height (mm)' })}</label>
             <input
               id="col-height"
               type="number"
@@ -33,7 +35,7 @@ export function ColumnBeamPanel() {
           </div>
 
           <div className="tool-panel-row">
-            <label htmlFor="col-section-type">Section Type</label>
+            <label htmlFor="col-section-type">{t('tool.column.sectionType', { defaultValue: 'Section Type' })}</label>
             <select
               id="col-section-type"
               className="tool-panel-select"
@@ -50,7 +52,7 @@ export function ColumnBeamPanel() {
 
           {sectionType === 'Circular' && (
             <div className="tool-panel-row">
-              <label htmlFor="col-diameter">Diameter (mm)</label>
+              <label htmlFor="col-diameter">{t('tool.column.diameter', { defaultValue: 'Diameter (mm)' })}</label>
               <input
                 id="col-diameter"
                 type="number"
@@ -64,7 +66,7 @@ export function ColumnBeamPanel() {
           {(sectionType === 'Rectangular' || sectionType === 'RHS') && (
             <>
               <div className="tool-panel-row">
-                <label htmlFor="col-width">Width (mm)</label>
+                <label htmlFor="col-width">{t('tool.column.width', { defaultValue: 'Width (mm)' })}</label>
                 <input
                   id="col-width"
                   type="number"
@@ -74,7 +76,7 @@ export function ColumnBeamPanel() {
                 />
               </div>
               <div className="tool-panel-row">
-                <label htmlFor="col-depth">Depth (mm)</label>
+                <label htmlFor="col-depth">{t('tool.column.depth', { defaultValue: 'Depth (mm)' })}</label>
                 <input
                   id="col-depth"
                   type="number"
@@ -87,7 +89,7 @@ export function ColumnBeamPanel() {
           )}
 
           <div className="tool-panel-row">
-            <label htmlFor="col-material">Material</label>
+            <label htmlFor="col-material">{t('tool.column.material', { defaultValue: 'Material' })}</label>
             <input
               id="col-material"
               type="text"
@@ -98,7 +100,7 @@ export function ColumnBeamPanel() {
           </div>
         </div>
 
-        <div className="placement-hint">Click to place column</div>
+        <div className="placement-hint">{t('tool.column.placeHint', { defaultValue: 'Click to place column' })}</div>
       </div>
     );
   }
@@ -112,11 +114,11 @@ export function ColumnBeamPanel() {
 
   return (
     <div className="tool-panel">
-      <div className="tool-panel-header">Beam</div>
+      <div className="tool-panel-header">{t('tool.beam.title', { defaultValue: 'Beam' })}</div>
 
       <div className="tool-panel-group">
         <div className="tool-panel-row">
-          <label htmlFor="beam-span">Span (mm)</label>
+          <label htmlFor="beam-span">{t('tool.beam.span', { defaultValue: 'Span (mm)' })}</label>
           <input
             id="beam-span"
             type="number"
@@ -127,7 +129,7 @@ export function ColumnBeamPanel() {
         </div>
 
         <div className="tool-panel-row">
-          <label htmlFor="beam-section-profile">Section Profile</label>
+          <label htmlFor="beam-section-profile">{t('tool.beam.sectionProfile', { defaultValue: 'Section Profile' })}</label>
           <select
             id="beam-section-profile"
             className="tool-panel-select"
@@ -143,7 +145,7 @@ export function ColumnBeamPanel() {
         </div>
 
         <div className="tool-panel-row">
-          <label htmlFor="beam-section-size">Section Size</label>
+          <label htmlFor="beam-section-size">{t('tool.beam.sectionSize', { defaultValue: 'Section Size' })}</label>
           <input
             id="beam-section-size"
             type="text"
@@ -154,7 +156,7 @@ export function ColumnBeamPanel() {
         </div>
 
         <div className="tool-panel-row">
-          <label htmlFor="beam-material">Material</label>
+          <label htmlFor="beam-material">{t('tool.beam.material', { defaultValue: 'Material' })}</label>
           <input
             id="beam-material"
             type="text"
@@ -165,7 +167,7 @@ export function ColumnBeamPanel() {
         </div>
       </div>
 
-      <div className="placement-hint">Click start and end points to place beam</div>
+      <div className="placement-hint">{t('tool.beam.placeHint', { defaultValue: 'Click start and end points to place beam' })}</div>
     </div>
   );
 }

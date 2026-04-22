@@ -1,4 +1,5 @@
 import React, { useCallback, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 interface PanelResizerProps {
   /** The panel element to resize — passed as a ref */
@@ -14,6 +15,7 @@ interface PanelResizerProps {
  * Drop it immediately after (side='right') or before (side='left') the panel element.
  */
 export function PanelResizer({ panelRef, side, minWidth = 160, maxWidth = 600 }: PanelResizerProps) {
+  const { t } = useTranslation('common');
   const [dragging, setDragging] = useState(false);
   const startX = useRef(0);
   const startWidth = useRef(0);
@@ -51,7 +53,7 @@ export function PanelResizer({ panelRef, side, minWidth = 160, maxWidth = 600 }:
     <div
       className={`panel-resizer${dragging ? ' dragging' : ''}${side === 'right' ? ' panel-resizer--right' : ''}`}
       onMouseDown={onMouseDown}
-      title="Drag to resize panel"
+      title={t('resizer.aria', { defaultValue: 'Drag to resize panel' })}
     />
   );
 }

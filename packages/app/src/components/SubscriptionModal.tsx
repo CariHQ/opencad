@@ -11,56 +11,19 @@
  *   manage-billing
  *   current-plan-badge
  */
+import { useTranslation } from 'react-i18next';
 import { useSubscription } from '../hooks/useSubscription';
-import type { SubscriptionTier } from '../lib/serverApi';
 
-interface PlanConfig {
-  tier: SubscriptionTier;
-  label: string;
-  price: string;
-  priceDetail: string;
-  features: string[];
-  badge?: string;
-}
+type PlanKey = 'free' | 'pro' | 'business';
 
-const PLANS: PlanConfig[] = [
-  {
-    tier: 'free',
-    label: 'Free',
-    price: '$0',
-    priceDetail: 'forever',
-    features: [
-      '1 project',
-      'Basic 2D drafting tools',
-      'Local storage only',
-      'Community support',
-    ],
-  },
-  {
-    tier: 'pro',
-    label: 'Pro',
-    price: '$29',
-    priceDetail: 'per user / month',
-    features: [
-      'Unlimited projects',
-      'Real-time collaboration',
-      'AI design assistant',
-      'Priority email support',
-    ],
-  },
-  {
-    tier: 'business',
-    label: 'Business',
-    price: '$99',
-    priceDetail: 'per user / month',
-    features: [
-      'Everything in Pro',
-      'Admin roles & permissions',
-      'SSO / SAML',
-      'Priority phone support',
-    ],
-    badge: 'Most popular',
-  },
+/** Static plan metadata — only the tier and whether it has a badge
+ *  stay in code. Everything user-visible (label, price, features) comes
+ *  from the `dialogs:subscription.plans.<tier>.*` translation keys so a
+ *  translator can localise the price format if they need to. */
+const PLAN_TIERS: { tier: PlanKey; badge?: boolean }[] = [
+  { tier: 'free' },
+  { tier: 'pro' },
+  { tier: 'business', badge: true },
 ];
 
 interface SubscriptionModalProps {
@@ -68,6 +31,7 @@ interface SubscriptionModalProps {
 }
 
 export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
+  const { t } = useTranslation('dialogs');
   const { tier: currentTier, upgrade, openPortal } = useSubscription();
 
   return (
@@ -75,48 +39,56 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
       className="subscription-modal-overlay"
       role="dialog"
       aria-modal="true"
-      aria-label="Choose your plan"
+      aria-label={t('subscription.title')}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <div className="subscription-modal">
-        <button aria-label="Close" className="modal-close" onClick={onClose}>
+        <button aria-label={t('subscription.close', { defaultValue: 'Close' })} className="modal-close" onClick={onClose}>
           ×
         </button>
 
-        <h2 className="subscription-title">Choose your plan</h2>
-        <p className="subscription-subtitle">
-          Upgrade anytime — no long-term commitment required.
-        </p>
+        <h2 className="subscription-title">{t('subscription.title')}</h2>
+        <p className="subscription-subtitle">{t('subscription.subtitle')}</p>
 
         <div className="subscription-plans">
-          {PLANS.map((plan) => {
-            const isCurrent = plan.tier === currentTier;
-            // Business is the top tier — no upgrades beyond it
+          {PLAN_TIERS.map(({ tier, badge }) => {
+            const isCurrent = tier === (currentTier as PlanKey);
             const showUpgrade =
-              !isCurrent && plan.tier !== 'free' && currentTier !== 'business';
+              !isCurrent && tier !== 'free' && currentTier !== 'business';
+            const planLabel = t(`subscription.plans.${tier}.label`);
+            const price = t(`subscription.plans.${tier}.price`);
+            const priceDetail = tier === 'free'
+              ? t(`subscription.plans.free.priceDetail`)
+              : t('subscription.perUserMonth');
+            const features = [
+              t(`subscription.plans.${tier}.features.f1`),
+              t(`subscription.plans.${tier}.features.f2`),
+              t(`subscription.plans.${tier}.features.f3`),
+              t(`subscription.plans.${tier}.features.f4`),
+            ];
 
             return (
               <div
-                key={plan.tier}
+                key={tier}
                 className={`subscription-plan-card${isCurrent ? ' subscription-plan-card--current' : ''}`}
-                data-testid={`tier-${plan.tier}`}
-                data-tier={plan.tier}
+                data-testid={`tier-${tier}`}
+                data-tier={tier}
               >
-                {plan.badge && (
-                  <span className="subscription-plan-badge">{plan.badge}</span>
+                {badge && (
+                  <span className="subscription-plan-badge">{t('subscription.mostPopular')}</span>
                 )}
 
-                <h3 className="subscription-plan-name">{plan.label}</h3>
+                <h3 className="subscription-plan-name">{planLabel}</h3>
                 <div className="subscription-plan-price">
-                  <span className="subscription-plan-amount">{plan.price}</span>
-                  <span className="subscription-plan-period">{plan.priceDetail}</span>
+                  <span className="subscription-plan-amount">{price}</span>
+                  <span className="subscription-plan-period">{priceDetail}</span>
                 </div>
 
                 <ul className="subscription-plan-features">
-                  {plan.features.map((feature) => (
-                    <li key={feature}>{feature}</li>
+                  {features.map((feature, i) => (
+                    <li key={i}>{feature}</li>
                   ))}
                 </ul>
 
@@ -126,19 +98,19 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
                     data-testid="current-plan-badge"
                     disabled
                   >
-                    Current plan
+                    {t('subscription.currentPlan')}
                   </button>
                 )}
 
                 {showUpgrade && (
                   <button
                     className="subscription-plan-cta subscription-plan-cta--upgrade"
-                    data-testid={`upgrade-${plan.tier}`}
+                    data-testid={`upgrade-${tier}`}
                     onClick={() => {
-                      void upgrade(plan.tier as 'pro' | 'business');
+                      void upgrade(tier as 'pro' | 'business');
                     }}
                   >
-                    Upgrade to {plan.label}
+                    {t('subscription.upgradeTo', { plan: planLabel })}
                   </button>
                 )}
               </div>
@@ -154,7 +126,7 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
               void openPortal();
             }}
           >
-            Manage billing
+            {t('subscription.manageBilling')}
           </button>
         </div>
       </div>

@@ -24,6 +24,7 @@ import { useDocumentStore } from '../stores/documentStore';
 
 export function Navigator() {
   const { t } = useTranslation('panels');
+  const { t: tc } = useTranslation('common');
   const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer } = useDocumentStore();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     views: true,
@@ -78,7 +79,7 @@ export function Navigator() {
       <div className="navigator-search">
         <input
           className="navigator-search-input"
-          placeholder="Search elements…"
+          placeholder={t('navigator.searchPlaceholder')}
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -94,7 +95,7 @@ export function Navigator() {
             <span className="item-icon">
               <Layers size={14} />
             </span>
-            <span className="item-name">Views</span>
+            <span className="item-name">{t('navigator.views')}</span>
           </div>
           {expanded.views && (
             <div className="nav-children">
@@ -102,25 +103,25 @@ export function Navigator() {
                 <span className="item-icon">
                   <Home size={14} />
                 </span>
-                <span className="item-name">Floor Plan</span>
+                <span className="item-name">{tc('view.floorPlan', { defaultValue: 'Floor Plan' })}</span>
               </div>
               <div className="nav-item view">
                 <span className="item-icon">
                   <Box size={14} />
                 </span>
-                <span className="item-name">3D View</span>
+                <span className="item-name">{tc('view.threeD', { defaultValue: '3D View' })}</span>
               </div>
               <div className="nav-item view">
                 <span className="item-icon">
                   <Scissors size={14} />
                 </span>
-                <span className="item-name">Section A-A</span>
+                <span className="item-name">{tc('view.sectionAA', { defaultValue: 'Section A-A' })}</span>
               </div>
               <div className="nav-item view">
                 <span className="item-icon">
                   <Building2 size={14} />
                 </span>
-                <span className="item-name">Layout 1</span>
+                <span className="item-name">{tc('view.layout1', { defaultValue: 'Layout 1' })}</span>
               </div>
             </div>
           )}
@@ -135,7 +136,7 @@ export function Navigator() {
             <span className="item-icon">
               <ArrowUpDown size={14} />
             </span>
-            <span className="item-name">Levels</span>
+            <span className="item-name">{t('navigator.levels')}</span>
             <span className="item-count">{levels.length}</span>
           </div>
           {expanded.levels && (
@@ -168,10 +169,10 @@ export function Navigator() {
             <span className="item-icon">
               <Layers size={14} />
             </span>
-            <span className="item-name">Layers</span>
+            <span className="item-name">{t('navigator.layers')}</span>
             <button
               className="nav-icon-btn"
-              title="Add layer"
+              title={t('layers.newLayer', { defaultValue: 'New layer' })}
               onClick={(e) => {
                 e.stopPropagation();
                 const colors = ['#808080', '#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
@@ -205,7 +206,7 @@ export function Navigator() {
                         <span className="item-name">{layer.name}</span>
                         <button
                           className="nav-icon-btn"
-                          title={layer.visible ? 'Hide layer (toggle visibility)' : 'Show layer (toggle visibility)'}
+                          title={layer.visible ? t('layers.hideLayer', { defaultValue: 'Hide layer (toggle visibility)' }) : t('layers.showLayer', { defaultValue: 'Show layer (toggle visibility)' })}
                           onClick={(e) => {
                             e.stopPropagation();
                             updateLayer(layer.id, { visible: !layer.visible });
@@ -215,7 +216,7 @@ export function Navigator() {
                         </button>
                         <button
                           className="nav-icon-btn"
-                          title={layer.locked ? 'Unlock layer' : 'Lock layer'}
+                          title={layer.locked ? t('layers.unlockLayer', { defaultValue: 'Unlock layer' }) : t('layers.lockLayer', { defaultValue: 'Lock layer' })}
                           onClick={(e) => {
                             e.stopPropagation();
                             updateLayer(layer.id, { locked: !layer.locked });
@@ -254,7 +255,7 @@ export function Navigator() {
             <span className="item-icon">
               <BrickWall size={14} />
             </span>
-            <span className="item-name">Elements</span>
+            <span className="item-name">{t('navigator.elements')}</span>
             <span className="item-count">{filteredElements.length}</span>
           </div>
           {expanded.elements && (

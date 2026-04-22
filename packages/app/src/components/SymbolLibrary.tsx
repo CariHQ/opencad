@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface Symbol2D { id: string; name: string; category: string; description: string; }
 
@@ -26,6 +27,7 @@ const SYMBOLS: Symbol2D[] = [
 interface SymbolLibraryProps { onInsert?: (symbol: Symbol2D) => void; }
 
 export function SymbolLibrary({ onInsert }: SymbolLibraryProps = {}) {
+  const { t } = useTranslation('panels');
   const [search, setSearch] = useState('');
   const filtered = useMemo(() =>
     SYMBOLS.filter((s) => !search || s.name.toLowerCase().includes(search.toLowerCase())),
@@ -33,8 +35,8 @@ export function SymbolLibrary({ onInsert }: SymbolLibraryProps = {}) {
   );
   return (
     <div className="symbol-library">
-      <div className="panel-header"><span className="panel-title">Symbol Library</span></div>
-      <input type="text" placeholder="Search symbols…" value={search}
+      <div className="panel-header"><span className="panel-title">{t('symbols.title')}</span></div>
+      <input type="text" placeholder={t('symbols.searchPlaceholder', { defaultValue: 'Search symbols…' })} value={search}
         onChange={(e) => setSearch(e.target.value)} className="symbol-search" />
       <div className="symbol-list">
         {filtered.map((sym) => (
@@ -43,8 +45,8 @@ export function SymbolLibrary({ onInsert }: SymbolLibraryProps = {}) {
               <span className="symbol-name">{sym.name}</span>
               <span className="symbol-desc">{sym.description}</span>
             </div>
-            <button aria-label={`Insert ${sym.name}`} onClick={() => onInsert?.(sym)} className="btn-insert">
-              Insert
+            <button aria-label={t('symbols.insertName', { name: sym.name, defaultValue: 'Insert {{name}}' })} onClick={() => onInsert?.(sym)} className="btn-insert">
+              {t('symbols.insert', { defaultValue: 'Insert' })}
             </button>
           </div>
         ))}

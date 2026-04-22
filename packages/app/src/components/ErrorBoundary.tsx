@@ -1,4 +1,5 @@
 import React from 'react';
+import i18n from '../i18n';
 
 interface Props {
   children: React.ReactNode;
@@ -33,7 +34,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
       return (
         <div className="error-boundary-fallback">
           <div className="error-boundary-icon">⚠</div>
-          <div className="error-boundary-title">Something went wrong</div>
+          <div className="error-boundary-title">{i18n.t('error.somethingWentWrong', { ns: 'common', defaultValue: 'Something went wrong' })}</div>
           <div className="error-boundary-message">
             {this.state.error?.message ?? 'An unexpected error occurred.'}
           </div>
@@ -41,7 +42,7 @@ export class ErrorBoundary extends React.Component<Props, State> {
             className="error-boundary-retry"
             onClick={() => this.setState({ hasError: false, error: null })}
           >
-            Retry
+            {i18n.t('action.retry', { ns: 'common', defaultValue: 'Retry' })}
           </button>
         </div>
       );
@@ -56,7 +57,7 @@ export function PanelErrorBoundary({ children }: { children: React.ReactNode }) 
     <ErrorBoundary
       fallback={
         <div className="panel-error">
-          <span>Panel failed to load.</span>
+          <span>{i18n.t('error.panelFailed', { ns: 'common', defaultValue: 'Panel failed to load.' })}</span>
         </div>
       }
     >

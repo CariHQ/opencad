@@ -1,0 +1,151 @@
+{
+  "signIn": {
+    "title": "Entrar",
+    "email": "E-mail",
+    "password": "Senha",
+    "submit": "Entrar",
+    "submitting": "Entrando…",
+    "noAccount": "Não tem conta?",
+    "createAccount": "Criar conta gratuita",
+    "or": "ou",
+    "forgotPassword": "Esqueceu a senha?",
+    "continueWithGoogle": "Continuar com Google",
+    "continueWithMicrosoft": "Continuar com Microsoft",
+    "invalidCredentials": "E-mail ou senha incorretos.",
+    "mfaTitle": "Verifique sua identidade",
+    "mfaHint": "Digite o código de 6 dígitos do seu aplicativo autenticador.",
+    "mfaCode": "Código de verificação",
+    "mfaVerify": "Verificar"
+  },
+  "signUp": {
+    "title": "Crie sua conta",
+    "name": "Nome completo",
+    "email": "E-mail",
+    "password": "Senha",
+    "submit": "Criar conta gratuita",
+    "submitting": "Criando…",
+    "haveAccount": "Já tem uma conta?",
+    "signIn": "Entrar",
+    "passwordHint": "Pelo menos 8 caracteres.",
+    "termsAgree": "Ao criar uma conta você concorda com nossos <a>Termos</a> e <a2>Política de Privacidade</a2>."
+  },
+  "forgotPassword": {
+    "title": "Redefinir senha",
+    "hint": "Enviaremos um link de redefinição para seu e-mail.",
+    "submit": "Enviar link",
+    "sent": "Verifique sua caixa de entrada.",
+    "backToSignIn": "Voltar para o login"
+  },
+  "newProject": {
+    "title": "Novo projeto",
+    "name": "Nome do projeto",
+    "template": "Modelo",
+    "blank": "Em branco",
+    "create": "Criar projeto",
+    "creating": "Criando…"
+  },
+  "openProject": {
+    "title": "Abrir projeto",
+    "placeholder": "Buscar projetos…",
+    "empty": "Nenhum projeto ainda."
+  },
+  "confirmDelete": {
+    "title": "Excluir {{name}}?",
+    "body": "Esta ação não pode ser desfeita.",
+    "confirm": "Excluir",
+    "cancel": "Cancelar"
+  },
+  "importExport": {
+    "importTitle": "Importar arquivo",
+    "exportTitle": "Exportar arquivo",
+    "dropHint": "Solte um arquivo aqui ou clique para procurar.",
+    "supportedFormats": "Compatíveis: IFC, DWG, DXF, SKP, RVT, PDF",
+    "exporting": "Exportando…",
+    "export": "Exportar",
+    "format": "Formato",
+    "cancel": "Cancelar"
+  },
+  "subscription": {
+    "title": "Escolha seu plano",
+    "subtitle": "Mude quando quiser — sem compromisso de longo prazo.",
+    "currentPlan": "Plano atual",
+    "upgradeTo": "Mudar para {{plan}}",
+    "manageBilling": "Gerenciar cobrança",
+    "perUserMonth": "por usuário / mês",
+    "mostPopular": "Mais popular",
+    "plans": {
+      "free": {
+        "label": "Gratuito",
+        "price": "US$ 0",
+        "priceDetail": "para sempre",
+        "features": {
+          "f1": "1 projeto",
+          "f2": "Ferramentas básicas de desenho 2D",
+          "f3": "Apenas armazenamento local",
+          "f4": "Suporte da comunidade"
+        }
+      },
+      "pro": {
+        "label": "Pro",
+        "price": "US$ 29",
+        "features": {
+          "f1": "Projetos ilimitados",
+          "f2": "Colaboração em tempo real",
+          "f3": "Assistente de design com IA",
+          "f4": "Suporte prioritário por e-mail"
+        }
+      },
+      "business": {
+        "label": "Business",
+        "price": "US$ 99",
+        "features": {
+          "f1": "Tudo do Pro",
+          "f2": "Papéis e permissões de admin",
+          "f3": "SSO / SAML",
+          "f4": "Suporte prioritário por telefone"
+        }
+      }
+    },
+    "close": "Fechar"
+  },
+  "commandPalette": {
+    "placeholder": "Buscar comandos…",
+    "empty": "Nenhum comando encontrado.",
+    "groups": {
+      "tools": "Ferramentas",
+      "views": "Visualizações",
+      "panels": "Painéis",
+      "file": "Arquivo",
+      "edit": "Editar",
+      "help": "Ajuda"
+    }
+  },
+  "feedback": {
+    "title": "Enviar feedback",
+    "categoryLabel": "Tipo",
+    "titleLabel": "Título",
+    "descriptionLabel": "Descrição",
+    "submit": "Enviar comentário",
+    "submitting": "Enviando…",
+    "sent": "Obrigado pelo seu feedback!",
+    "categories": {
+      "bug": "Bug",
+      "feature": "Solicitação de funcionalidade",
+      "question": "Pergunta"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "close": "Close help",
+    "tabs": {
+      "shortcuts": "Shortcuts",
+      "howTo": "How To",
+      "tips": "Tips"
+    },
+    "takeGuidedTour": "Take the guided tour",
+    "searchShortcuts": "Search shortcuts…",
+    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
+    "needMore": "Need more?",
+    "openIssue": "Open an issue"
+  }
+}

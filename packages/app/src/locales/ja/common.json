@@ -31,7 +31,7 @@
     "signOut": "サインアウト",
     "help": "ヘルプ",
     "feedback": "フィードバック",
-    "ai": "AI",
+    "ai": "AI アシスタント",
     "plugins": "プラグイン"
   },
   "status": {
@@ -39,13 +39,25 @@
     "offline": "オフライン",
     "saving": "保存中…",
     "saved": "保存済み",
-    "syncing": "同期中…"
+    "syncing": "同期中…",
+    "storageAlmostFull": "⚠ ストレージがほぼいっぱいです",
+    "storageWarningTooltip": "ストレージ使用量が 80% を超えています — プロジェクトのエクスポートをご検討ください",
+    "selected_one": "{{count}} 件選択中",
+    "selected_other": "{{count}} 件選択中",
+    "elements_one": "{{count}} 個の要素",
+    "elements_other": "{{count}} 個の要素",
+    "fpsTooltip": "フレームレートの移動平均",
+    "webgpuTooltip": "Three.js WebGPURenderer — コンピュートシェーダー有効",
+    "webglTooltip": "WebGL 2.0 フォールバック — WebGPU 利用不可または無効",
+    "currentRole": "現在のロール: {{label}}"
   },
   "view": {
     "floorPlan": "平面図",
     "threeD": "3Dビュー",
     "section": "断面",
-    "elevation": "立面"
+    "elevation": "立面",
+    "sectionAA": "Section A-A",
+    "layout1": "Layout 1"
   },
   "settings": {
     "title": "設定",
@@ -59,14 +71,143 @@
   },
   "tooltip": {
     "backToProjects": "ホーム — プロジェクト一覧に戻る",
-    "toggleLeftPanel": "左パネルを切り替え",
-    "toggleRightPanel": "右パネルを切り替え",
+    "toggleLeftPanel": "ナビゲーターを切替",
+    "toggleRightPanel": "プロパティを切替",
     "renameProject": "クリックしてプロジェクト名を変更",
     "newProject": "新規プロジェクト",
     "openProject": "プロジェクトを開く",
     "saveProject": "保存",
-    "importFile": "ファイルをインポート",
-    "exportFile": "エクスポート",
+    "importFile": "IFC をインポート",
+    "exportFile": "IFC をエクスポート",
     "toggleTheme": "ライト/ダークを切り替え"
+  },
+  "update": {
+    "available": "バージョン {{version}} が利用可能です",
+    "install": "更新をインストール",
+    "installing": "インストール中…",
+    "dismiss": "閉じる",
+    "dismissAria": "更新通知を閉じる"
+  },
+  "focusHint": {
+    "before": "押してください",
+    "after": "でフォーカスモードを終了"
+  },
+  "dashboard": {
+    "title": "プロジェクト",
+    "fromTemplate": "テンプレートから",
+    "newProject": "新規プロジェクト",
+    "newBlankProject": "新規の空白プロジェクト",
+    "filter": {
+      "all": "すべて",
+      "starred": "お気に入り",
+      "mine": "自分",
+      "shared": "共有"
+    },
+    "searchPlaceholder": "プロジェクトを検索…",
+    "sortBy": "並べ替え",
+    "sort": {
+      "lastEdited": "最終編集",
+      "created": "作成日",
+      "name": "名前",
+      "size": "サイズ"
+    },
+    "gridView": "グリッド表示",
+    "listView": "リスト表示",
+    "empty": {
+      "title": "プロジェクトはまだありません",
+      "subtitle": "空白のキャンバスから始めるか、下からテンプレートを選んでください。",
+      "orTemplate": "またはテンプレートから開始"
+    },
+    "card": {
+      "clickToOpen": "クリックで開く · ダブルクリックで名前変更",
+      "star": "プロジェクトをお気に入り",
+      "unstar": "お気に入りを解除",
+      "delete": "プロジェクトを削除"
+    },
+    "closeTemplates": "テンプレートを閉じる",
+    "closeSettings": "設定を閉じる",
+    "signOut": "サインアウト",
+    "upgradeToPro": "Pro にアップグレード"
+  },
+  "coord": {
+    "inputAria": "Coordinate input"
+  },
+  "error": {
+    "somethingWentWrong": "Something went wrong",
+    "panelFailed": "Panel failed to load",
+    "tryAgain": "Try again"
+  },
+  "tour": {
+    "title": "Guided tour",
+    "close": "Close tour",
+    "skip": "Skip tour",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Finish"
+  },
+  "language": {
+    "aria": "Language",
+    "detected": "Detected from your system"
+  },
+  "resizer": {
+    "aria": "Drag to resize panel"
+  },
+  "contextMenu": {
+    "aria": "Context menu"
+  },
+  "viewport": {
+    "zoomIn": "Zoom In",
+    "zoomInShort": "Zoom in",
+    "zoomInWithShortcut": "Zoom In (+)",
+    "zoomOut": "Zoom Out",
+    "zoomOutShort": "Zoom out",
+    "zoomOutWithShortcut": "Zoom Out (-)",
+    "zoomToFit": "Zoom to Fit",
+    "zoomToFitWithShortcut": "Zoom to Fit (0)",
+    "fit": "Fit",
+    "resetCamera": "Reset camera",
+    "sectionBox": "Section Box",
+    "topView": "Top view",
+    "topViewWithShortcut": "Top view (1)",
+    "frontView": "Front view",
+    "frontViewWithShortcut": "Front view (2)",
+    "rightView": "Right view",
+    "rightViewWithShortcut": "Right view (3)",
+    "perspective": "Perspective",
+    "perspectiveWithShortcut": "Perspective (4)",
+    "presetView": "{{preset}} View",
+    "cutAlongAxis": "Cut along {{axis}} axis",
+    "cutAxis": "Cut axis",
+    "cutPlanePosition": "Cut plane position",
+    "position": "Position",
+    "sectionCutControls": "Section cut controls",
+    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
+    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
+    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
+    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
+    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
+    "splitView": "Split view: floor plan + 3D",
+    "viewCubeAria": "View orientation cube"
+  },
+  "home": {
+    "newProject": "New Project",
+    "newBlankProject": "New Blank Project",
+    "signIn": "Sign In",
+    "recentProjects": "Recent Projects",
+    "importIfcDwgPdf": "Import IFC / DWG / PDF",
+    "emptyText": "Start a new project or import a file",
+    "importFile": "Import a File",
+    "open": "Open",
+    "startFromTemplate": "Start from a Template",
+    "chooseTemplate": "Choose a Template",
+    "projectTemplates": "Project Templates"
+  },
+  "browser": {
+    "searchProjects": "Search projects…",
+    "recentFirst": "Recent first",
+    "oldestFirst": "Oldest first",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "noProjects": "No projects found"
   }
 }

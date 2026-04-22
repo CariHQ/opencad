@@ -18,6 +18,7 @@
  * actions and a Revoke button per plugin.
  */
 import React, { useEffect, useState } from 'react';
+import { useTranslation, Trans } from 'react-i18next';
 import {
   registerPublisher,
   getPublisher,
@@ -40,6 +41,7 @@ interface PublisherRegisterProps {
 }
 
 function PublisherRegister({ initialEmail, onRegistered }: PublisherRegisterProps): React.ReactElement {
+  const { t } = useTranslation('panels');
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState(initialEmail ?? '');
   const [submitting, setSubmitting] = useState(false);
@@ -61,23 +63,23 @@ function PublisherRegister({ initialEmail, onRegistered }: PublisherRegisterProp
 
   return (
     <form className="publisher-form" onSubmit={(e) => void handleSubmit(e)}>
-      <h4 className="section-title">Become a plugin publisher</h4>
+      <h4 className="section-title">{t('publisher.registerTitle')}</h4>
       <p className="publisher-intro">
-        Publish plugins to the OpenCAD marketplace. Free to publish. 70/30 revenue split on paid plugins.
+        {t('publisher.registerIntro')}
       </p>
       <label className="publisher-field">
-        <span>Display name</span>
+        <span>{t('publisher.displayName')}</span>
         <input
           type="text"
           value={displayName}
           onChange={(e) => setDisplayName(e.target.value)}
-          placeholder="e.g. Acme Architects"
+          placeholder={t('publisher.displayNamePlaceholder', { defaultValue: 'e.g. Acme Architects' })}
           required
           disabled={submitting}
         />
       </label>
       <label className="publisher-field">
-        <span>Contact email</span>
+        <span>{t('publisher.contactEmail')}</span>
         <input
           type="email"
           value={email}
@@ -89,7 +91,7 @@ function PublisherRegister({ initialEmail, onRegistered }: PublisherRegisterProp
       </label>
       {error && <div className="publisher-error">{error}</div>}
       <button type="submit" className="btn-install" disabled={submitting}>
-        {submitting ? 'Registering…' : 'Register as publisher'}
+        {submitting ? t('publisher.registering') : t('publisher.register')}
       </button>
     </form>
   );
@@ -105,6 +107,7 @@ interface SubmitPluginFormProps {
 }
 
 function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElement {
+  const { t } = useTranslation('panels');
   const [id, setId] = useState('');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -142,7 +145,7 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
       if (bundleFile) {
         await uploadBundle(plugin.id, bundleFile);
       }
-      setSuccess(`Submitted "${plugin.name}" v${plugin.version}. It will appear in the catalogue once OpenCAD approves it.`);
+      setSuccess(t('publisher.submittedMsg', { name: plugin.name, version: plugin.version }));
       setId('');
       setName('');
       setDescription('');
@@ -160,12 +163,17 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
 
   return (
     <form className="publisher-form" onSubmit={(e) => void handleSubmit(e)}>
-      <h4 className="section-title">Submit a plugin</h4>
+      <h4 className="section-title">{t('publisher.submitTitle')}</h4>
       <p className="publisher-intro">
-        Signed in as <strong>{publisher.displayName || publisher.contactEmail}</strong>.
+        <Trans
+          i18nKey="publisher.signedInAs"
+          ns="panels"
+          values={{ who: publisher.displayName || publisher.contactEmail }}
+          components={{ strong: <strong /> }}
+        />
       </p>
       <label className="publisher-field">
-        <span>ID (URL-safe slug, e.g. &ldquo;my-plugin&rdquo;)</span>
+        <span>{t('publisher.idLabel')}</span>
         <input
           type="text"
           value={id}
@@ -175,11 +183,11 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
         />
       </label>
       <label className="publisher-field">
-        <span>Name</span>
+        <span>{t('publisher.name')}</span>
         <input type="text" value={name} onChange={(e) => setName(e.target.value)} required disabled={submitting} />
       </label>
       <label className="publisher-field">
-        <span>Description</span>
+        <span>{t('publisher.description')}</span>
         <textarea
           value={description}
           onChange={(e) => setDescription(e.target.value)}
@@ -189,7 +197,7 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
       </label>
       <div className="publisher-field-row">
         <label className="publisher-field">
-          <span>Version</span>
+          <span>{t('publisher.version')}</span>
           <input
             type="text"
             value={version}
@@ -200,13 +208,13 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
           />
         </label>
         <label className="publisher-field">
-          <span>Category</span>
+          <span>{t('publisher.category')}</span>
           <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={submitting}>
             {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
         <label className="publisher-field">
-          <span>Price (cents)</span>
+          <span>{t('publisher.priceCents')}</span>
           <input
             type="number"
             min={0}
@@ -218,7 +226,7 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
         </label>
       </div>
       <fieldset className="publisher-perms">
-        <legend>Permissions</legend>
+        <legend>{t('publisher.permissions')}</legend>
         {ALL_PERMISSIONS.map((p) => (
           <label key={p} className="publisher-perm-check">
             <input
@@ -232,7 +240,7 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
         ))}
       </fieldset>
       <label className="publisher-field">
-        <span>Bundle (.js)</span>
+        <span>{t('publisher.bundle')}</span>
         <input
           type="file"
           accept="text/javascript,application/javascript,.js"
@@ -244,7 +252,7 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
       {error && <div className="publisher-error">{error}</div>}
       {success && <div className="publisher-success">{success}</div>}
       <button type="submit" className="btn-install" disabled={submitting}>
-        {submitting ? 'Submitting…' : 'Submit for review'}
+        {submitting ? t('publisher.submitting') : t('publisher.submitReview')}
       </button>
     </form>
   );
@@ -253,6 +261,7 @@ function SubmitPluginForm({ publisher }: SubmitPluginFormProps): React.ReactElem
 // ── Admin moderation queue ───────────────────────────────────────────────────
 
 function ModerationQueue(): React.ReactElement {
+  const { t } = useTranslation('panels');
   const [queue, setQueue] = useState<Plugin[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -277,7 +286,7 @@ function ModerationQueue(): React.ReactElement {
     } finally { setBusy(null); }
   };
   const reject = async (id: string): Promise<void> => {
-    const notes = window.prompt('Rejection notes (sent to publisher, optional):') ?? undefined;
+    const notes = window.prompt(t('publisher.rejectPrompt')) ?? undefined;
     setBusy(id);
     try {
       await adminSetModeration(id, 'rejected', notes);
@@ -285,7 +294,7 @@ function ModerationQueue(): React.ReactElement {
     } finally { setBusy(null); }
   };
   const revoke = async (id: string): Promise<void> => {
-    const reason = window.prompt('Kill-switch reason (shown to users on next load):') ?? undefined;
+    const reason = window.prompt(t('publisher.revokePrompt')) ?? undefined;
     setBusy(id);
     try {
       await adminRevoke(id, true, reason);
@@ -301,8 +310,8 @@ function ModerationQueue(): React.ReactElement {
 
   return (
     <div className="publisher-queue">
-      <h4 className="section-title">Moderation queue</h4>
-      <p className="publisher-intro">Plugins awaiting review.</p>
+      <h4 className="section-title">{t('publisher.queueTitle')}</h4>
+      <p className="publisher-intro">{t('publisher.queueIntro')}</p>
       {queue.map((p) => (
         <div key={p.id} className="marketplace-item">
           <div className="item-info">
@@ -318,22 +327,22 @@ function ModerationQueue(): React.ReactElement {
               disabled={busy === p.id}
               onClick={() => void approve(p.id)}
             >
-              Approve
+              {t('publisher.approve')}
             </button>
             <button
               className="btn-uninstall"
               disabled={busy === p.id}
               onClick={() => void reject(p.id)}
             >
-              Reject
+              {t('publisher.reject')}
             </button>
             <button
               className="btn-uninstall"
               disabled={busy === p.id}
               onClick={() => void revoke(p.id)}
-              title="Kill-switch: installed clients auto-uninstall"
+              title={t('publisher.revokeTitle')}
             >
-              Revoke
+              {t('publisher.revoke')}
             </button>
           </div>
         </div>
@@ -350,6 +359,7 @@ interface PluginPublisherPanelProps {
 }
 
 export function PluginPublisherPanel({ userEmail }: PluginPublisherPanelProps): React.ReactElement {
+  const { t } = useTranslation('panels');
   const [publisher, setPublisher] = useState<Publisher | null>(null);
   const [loading, setLoading] = useState(true);
   const [onboardingUrl, setOnboardingUrl] = useState<string | null>(null);
@@ -378,7 +388,7 @@ export function PluginPublisherPanel({ userEmail }: PluginPublisherPanelProps): 
     })();
   }, [publisher]);
 
-  if (loading) return <div className="publisher-loading">Loading publisher status…</div>;
+  if (loading) return <div className="publisher-loading">{t('publisher.loading')}</div>;
 
   return (
     <div className="publisher-panel">
@@ -389,10 +399,10 @@ export function PluginPublisherPanel({ userEmail }: PluginPublisherPanelProps): 
           {!publisher.stripeOnboarded && onboardingUrl && !onboardingUrl.startsWith('about:blank') && (
             <div className="publisher-stripe-notice">
               <span>
-                To receive payouts for paid plugins, complete Stripe onboarding.
+                {t('publisher.stripeNotice')}
               </span>
               <a className="btn-install" href={onboardingUrl} target="_blank" rel="noreferrer">
-                Complete Stripe onboarding
+                {t('publisher.completeStripe')}
               </a>
             </div>
           )}

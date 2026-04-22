@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface CommentReply {
   id: string;
@@ -32,6 +33,7 @@ export function CommentsPanel({
   onReply,
   currentUser = 'You',
 }: CommentsPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [newText, setNewText] = useState('');
   const [replyText, setReplyText] = useState<Record<string, string>>({});
@@ -80,12 +82,12 @@ export function CommentsPanel({
   return (
     <div className="comments-panel">
       <div className="panel-header">
-        <span className="panel-title">Comments</span>
+        <span className="panel-title">{t('comments.title')}</span>
         <span className="comment-count">{comments.length}</span>
       </div>
 
       {comments.length === 0 ? (
-        <div className="comments-empty">No comments yet. Add one below.</div>
+        <div className="comments-empty">{t('comments.emptyDetail', { defaultValue: 'No comments yet. Add one below.' })}</div>
       ) : (
         <div className="comments-list">
           {comments.map((c) => (
@@ -93,17 +95,17 @@ export function CommentsPanel({
               <div className="comment-header">
                 <span className="comment-author">{c.author}</span>
                 <span className="comment-date">{new Date(c.createdAt).toLocaleDateString()}</span>
-                {c.resolved && <span className="comment-badge resolved">Resolved</span>}
+                {c.resolved && <span className="comment-badge resolved">{t('comments.resolved', { defaultValue: 'Resolved' })}</span>}
               </div>
               <p className="comment-text">{c.text}</p>
               <div className="comment-actions">
                 {!c.resolved && (
                   <button
-                    aria-label={`Resolve comment ${c.id}`}
+                    aria-label={t('comments.resolveAria', { id: c.id, defaultValue: 'Resolve comment {{id}}' })}
                     className="btn-resolve"
                     onClick={() => handleResolve(c.id)}
                   >
-                    Resolve
+                    {t('comments.resolve', { defaultValue: 'Resolve' })}
                   </button>
                 )}
               </div>
@@ -120,12 +122,12 @@ export function CommentsPanel({
               <div className="reply-input-row">
                 <input
                   type="text"
-                  placeholder="Reply…"
+                  placeholder={t('comments.replyPlaceholder', { defaultValue: 'Reply…' })}
                   value={replyText[c.id] ?? ''}
                   onChange={(e) => setReplyText((prev) => ({ ...prev, [c.id]: e.target.value }))}
                   className="reply-input"
                 />
-                <button onClick={() => handleReply(c.id)} className="btn-reply">Reply</button>
+                <button onClick={() => handleReply(c.id)} className="btn-reply">{t('comments.reply', { defaultValue: 'Reply' })}</button>
               </div>
             </div>
           ))}
@@ -135,18 +137,18 @@ export function CommentsPanel({
       <div className="new-comment-row">
         <input
           type="text"
-          placeholder="Add a comment…"
+          placeholder={t('comments.placeholder')}
           value={newText}
           onChange={(e) => setNewText(e.target.value)}
           className="new-comment-input"
           onKeyDown={(e) => { if (e.key === 'Enter') handleAddComment(); }}
         />
         <button
-          aria-label="Add comment"
+          aria-label={t('comments.addComment', { defaultValue: 'Add comment' })}
           className="btn-add-comment"
           onClick={handleAddComment}
         >
-          Post
+          {t('comments.post')}
         </button>
       </div>
     </div>

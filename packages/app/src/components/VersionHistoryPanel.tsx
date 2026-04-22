@@ -17,6 +17,7 @@
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { Tag, RotateCcw, CloudOff, Cloud } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { DocumentSchema } from '@opencad/document';
 import { useDocumentStore } from '../stores/documentStore';
 import type { ChangeRecord } from '../stores/documentStore';
@@ -36,6 +37,7 @@ interface MergedVersion {
 }
 
 export function VersionHistoryPanel(): React.ReactElement {
+  const { t } = useTranslation('panels');
   const {
     document: doc,
     createVersion,
@@ -149,10 +151,10 @@ export function VersionHistoryPanel(): React.ReactElement {
   return (
     <div className="version-history-panel">
       <div className="panel-header">
-        <span className="panel-title">Version History</span>
+        <span className="panel-title">{t('version.title')}</span>
         <span
           className={`version-sync-badge${online ? ' online' : ' offline'}`}
-          title={online ? 'Synced to server' : 'Offline — versions saved locally only'}
+          title={online ? t('version.syncedTitle') : t('version.offlineTitle')}
         >
           {online ? <Cloud size={12} /> : <CloudOff size={12} />}
         </span>
@@ -161,7 +163,7 @@ export function VersionHistoryPanel(): React.ReactElement {
       <div className="version-create">
         <input
           className="version-message-input"
-          placeholder="Version description (optional)"
+          placeholder={t('version.messagePlaceholder')}
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={(e) => {
@@ -175,12 +177,12 @@ export function VersionHistoryPanel(): React.ReactElement {
           disabled={saving || !doc}
         >
           <Tag size={13} />
-          {saving ? 'Saving…' : 'Save Version'}
+          {saving ? t('version.saving') : t('version.save')}
         </button>
       </div>
 
       {merged.length === 0 ? (
-        <p className="version-empty">No saved versions yet. Click &quot;Save Version&quot; to create a snapshot.</p>
+        <p className="version-empty">{t('version.empty')}</p>
       ) : (
         <ul className="version-list">
           {merged.map((v) => (
@@ -197,7 +199,7 @@ export function VersionHistoryPanel(): React.ReactElement {
                 </span>
                 <span
                   className={`version-source version-source--${v.source}`}
-                  title={v.source === 'server' ? 'Stored on server' : 'Local only — will upload when you reconnect'}
+                  title={v.source === 'server' ? t('version.onServer') : t('version.localOnly')}
                 >
                   {v.source === 'server' ? <Cloud size={10} /> : <CloudOff size={10} />}
                 </span>
@@ -207,10 +209,10 @@ export function VersionHistoryPanel(): React.ReactElement {
                 className="btn-restore-version"
                 onClick={() => void handleRestore(v)}
                 disabled={restoring === v.key}
-                title={`Restore to v${v.version}`}
+                title={t('version.restoreTo', { version: v.version })}
               >
                 <RotateCcw size={12} />
-                {restoring === v.key ? 'Restoring…' : 'Restore'}
+                {restoring === v.key ? t('version.restoring') : t('version.restore')}
               </button>
             </li>
           ))}
@@ -219,11 +221,11 @@ export function VersionHistoryPanel(): React.ReactElement {
 
       {/* T-HIST-001: Change tracking history */}
       <div className="panel-header" style={{ marginTop: '16px' }}>
-        <span className="panel-title">Change History</span>
+        <span className="panel-title">{t('version.changeHistory')}</span>
       </div>
 
       {recentChanges.length === 0 ? (
-        <p className="version-empty">No changes recorded yet.</p>
+        <p className="version-empty">{t('version.noChanges')}</p>
       ) : (
         <ul
           className="change-history-list"

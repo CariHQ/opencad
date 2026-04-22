@@ -126,21 +126,21 @@ export function ProjectDashboard() {
     <>
     {pendingDeleteId && (
       <ConfirmModal
-        message={`Delete "${pendingDeleteName}"? This cannot be undone.`}
-        confirmLabel="Delete"
+        message={t('dashboard.confirmDelete', { name: pendingDeleteName, defaultValue: 'Delete "{{name}}"? This cannot be undone.' })}
+        confirmLabel={t('action.delete')}
         onConfirm={() => { deleteProject(pendingDeleteId); setPendingDeleteId(null); }}
         onCancel={() => setPendingDeleteId(null)}
       />
     )}
     <div className="project-dashboard">
       <header className="dashboard-header" data-tauri-drag-region onMouseDown={handleHeaderMouseDown}>
-        <h1 className="dashboard-title">Projects</h1>
+        <h1 className="dashboard-title">{t('dashboard.title')}</h1>
         <div className="dashboard-header-spacer" />
         <button className="btn-secondary" onClick={() => setShowTemplates(true)}>
-          From Template
+          {t('dashboard.fromTemplate')}
         </button>
         <button className="btn-primary" onClick={handleNewProject}>
-          New Project
+          {t('dashboard.newProject')}
         </button>
         <DashboardUserMenu
           onOpenSettings={() => setShowSettings(true)}
@@ -157,7 +157,7 @@ export function ProjectDashboard() {
               className={`filter-tab${filterBy === f ? ' active' : ''}`}
               onClick={() => setFilterBy(f)}
             >
-              {f === 'all' ? 'All' : f === 'starred' ? 'Starred' : f === 'mine' ? 'Mine' : 'Shared'}
+              {t(`dashboard.filter.${f}`)}
             </button>
           ))}
         </div>
@@ -165,37 +165,37 @@ export function ProjectDashboard() {
         <div className="dashboard-controls">
           <input
             className="search-input"
-            placeholder="Search projects…"
+            placeholder={t('dashboard.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
 
           <label htmlFor="sort-select" className="sr-only">
-            Sort by
+            {t('dashboard.sortBy')}
           </label>
           <select
             id="sort-select"
-            aria-label="Sort by"
+            aria-label={t('dashboard.sortBy')}
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="sort-select"
           >
-            <option value="lastEdited">Last edited</option>
-            <option value="created">Created</option>
-            <option value="name">Name</option>
-            <option value="size">Size</option>
+            <option value="lastEdited">{t('dashboard.sort.lastEdited')}</option>
+            <option value="created">{t('dashboard.sort.created')}</option>
+            <option value="name">{t('dashboard.sort.name')}</option>
+            <option value="size">{t('dashboard.sort.size')}</option>
           </select>
 
           <button
             className={`view-toggle-btn${viewMode === 'grid' ? ' active' : ''}`}
-            title="Grid view"
+            title={t('dashboard.gridView')}
             onClick={() => setViewMode('grid')}
           >
             <LayoutGrid size={16} />
           </button>
           <button
             className={`view-toggle-btn${viewMode === 'list' ? ' active' : ''}`}
-            title="List view"
+            title={t('dashboard.listView')}
             onClick={() => setViewMode('list')}
           >
             <List size={16} />
@@ -206,14 +206,14 @@ export function ProjectDashboard() {
       {projects.length === 0 ? (
         <div className="dashboard-empty">
           <div className="empty-hero">
-            <h2 className="empty-title">No projects yet</h2>
-            <p className="empty-subtitle">Start with a blank canvas or choose a template below.</p>
+            <h2 className="empty-title">{t('dashboard.empty.title')}</h2>
+            <p className="empty-subtitle">{t('dashboard.empty.subtitle')}</p>
             <button className="btn-primary" onClick={handleNewProject}>
-              New Blank Project
+              {t('dashboard.newBlankProject')}
             </button>
           </div>
           <div className="empty-templates-section">
-            <p className="empty-templates-label">Or start from a template</p>
+            <p className="empty-templates-label">{t('dashboard.empty.orTemplate')}</p>
             <ProjectTemplates
               onSelect={(tmpl) => {
                 const id = createProject(tmpl.name);
@@ -263,7 +263,7 @@ export function ProjectDashboard() {
                       e.stopPropagation();
                       startRename(project.id, project.name);
                     }}
-                    title="Click to open · Double-click to rename"
+                    title={t('dashboard.card.clickToOpen')}
                     role="button"
                     tabIndex={0}
                     onKeyDown={(e) => {
@@ -277,7 +277,7 @@ export function ProjectDashboard() {
                 <div className="project-card-actions">
                   <button
                     className={`star-btn${project.starred ? ' starred' : ''}`}
-                    title={project.starred ? 'Unstar project' : 'Star project'}
+                    title={project.starred ? t('dashboard.card.unstar') : t('dashboard.card.star')}
                     onClick={(e) => {
                       e.stopPropagation();
                       starProject(project.id);
@@ -287,7 +287,7 @@ export function ProjectDashboard() {
                   </button>
                   <button
                     className="delete-btn"
-                    title="Delete project"
+                    title={t('dashboard.card.delete')}
                     onClick={(e) => {
                       e.stopPropagation();
                       setPendingDeleteId(project.id);
@@ -311,7 +311,7 @@ export function ProjectDashboard() {
           <div className="templates-modal" onClick={(e) => e.stopPropagation()}>
             <button
               className="templates-close"
-              aria-label="Close templates"
+              aria-label={t('dashboard.closeTemplates')}
               onClick={() => setShowTemplates(false)}
             >
               ×
@@ -332,18 +332,18 @@ export function ProjectDashboard() {
         <div className="settings-overlay" onClick={() => setShowSettings(false)}>
           <div className="settings-modal" onClick={(e) => e.stopPropagation()}>
             <div className="settings-modal-header">
-              <h2 className="settings-modal-title">Settings</h2>
+              <h2 className="settings-modal-title">{t('settings.title')}</h2>
               <div className="settings-header-actions">
                 <button
                   className="settings-signout"
-                  aria-label="Sign out"
+                  aria-label={t('dashboard.signOut')}
                   onClick={() => { setShowSettings(false); void authSignOut(); }}
                 >
-                  Sign out
+                  {t('dashboard.signOut')}
                 </button>
                 <button
                   className="settings-close"
-                  aria-label="Close settings"
+                  aria-label={t('dashboard.closeSettings')}
                   onClick={() => setShowSettings(false)}
                 >
                   ×
@@ -392,6 +392,7 @@ interface DashboardUserMenuProps {
 }
 
 function DashboardUserMenu({ onOpenSettings, onOpenBilling, onOpenUpgrade }: DashboardUserMenuProps): React.JSX.Element | null {
+  const { t } = useTranslation('common');
   const { status, profile, signOut } = useAuthStore();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -436,22 +437,22 @@ function DashboardUserMenu({ onOpenSettings, onOpenBilling, onOpenUpgrade }: Das
           </div>
           <button className="dashboard-user-dropdown-item" onClick={() => { setOpen(false); onOpenSettings(); }}>
             <SettingsIcon size={14} />
-            <span>Settings</span>
+            <span>{t('nav.settings')}</span>
           </button>
           <button className="dashboard-user-dropdown-item" onClick={() => { setOpen(false); onOpenBilling(); }}>
             <CreditCard size={14} />
-            <span>Billing</span>
+            <span>{t('nav.billing')}</span>
           </button>
           {profile.plan === 'free' && (
             <button className="dashboard-user-dropdown-item dashboard-user-dropdown-upgrade" onClick={() => { setOpen(false); onOpenUpgrade(); }}>
-              <span>Upgrade to Pro</span>
+              <span>{t('dashboard.upgradeToPro')}</span>
               <span className="dashboard-user-dropdown-arrow">→</span>
             </button>
           )}
           <div className="dashboard-user-dropdown-divider" />
           <button className="dashboard-user-dropdown-item" onClick={() => { setOpen(false); void signOut(); }}>
             <LogOut size={14} />
-            <span>Sign out</span>
+            <span>{t('dashboard.signOut')}</span>
           </button>
         </div>
       )}

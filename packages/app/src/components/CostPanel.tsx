@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface CostItem {
   id: string;
@@ -21,35 +22,36 @@ function formatCurrency(value: number, currency = '$'): string {
 }
 
 export function CostPanel({ items = [], onExport, currency = '$' }: CostPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const grandTotal = items.reduce((sum, item) => sum + item.total, 0);
 
   return (
     <div className="cost-panel">
       <div className="panel-header">
-        <span className="panel-title">Cost Estimate</span>
+        <span className="panel-title">{t('cost.estimateTitle', { defaultValue: 'Cost Estimate' })}</span>
         <button
-          aria-label="Export cost estimate"
+          aria-label={t('cost.exportEstimate', { defaultValue: 'Export cost estimate' })}
           className="btn-export"
           onClick={() => onExport?.(items)}
           disabled={items.length === 0}
         >
-          Export
+          {t('cost.export', { defaultValue: 'Export' })}
         </button>
       </div>
 
       {items.length === 0 ? (
-        <div className="cost-empty">No cost items. Add elements to generate an estimate.</div>
+        <div className="cost-empty">{t('cost.emptyDetail', { defaultValue: 'No cost items. Add elements to generate an estimate.' })}</div>
       ) : (
         <>
           <table className="cost-table">
             <thead>
               <tr>
-                <th>Description</th>
-                <th>Type</th>
-                <th>Qty</th>
-                <th>Unit</th>
-                <th>Rate</th>
-                <th>Total</th>
+                <th>{t('cost.description', { defaultValue: 'Description' })}</th>
+                <th>{t('cost.type', { defaultValue: 'Type' })}</th>
+                <th>{t('cost.qty', { defaultValue: 'Qty' })}</th>
+                <th>{t('cost.unit', { defaultValue: 'Unit' })}</th>
+                <th>{t('cost.rate')}</th>
+                <th>{t('cost.total')}</th>
               </tr>
             </thead>
             <tbody>
@@ -66,7 +68,7 @@ export function CostPanel({ items = [], onExport, currency = '$' }: CostPanelPro
             </tbody>
             <tfoot>
               <tr className="cost-grand-total">
-                <td colSpan={5}><strong>Total</strong></td>
+                <td colSpan={5}><strong>{t('cost.total')}</strong></td>
                 <td><strong>{formatCurrency(grandTotal, currency)}</strong></td>
               </tr>
             </tfoot>

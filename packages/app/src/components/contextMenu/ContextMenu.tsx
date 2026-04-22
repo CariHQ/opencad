@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useCallback } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   Trash2, Copy, CopyPlus, SlidersHorizontal, Layers, Layers2, Clipboard,
   Minus, SquareStack, SquareDashed, Maximize2, Grid2x2, MousePointer,
@@ -48,6 +49,7 @@ export interface ContextMenuProps {
 export function ContextMenu({
   x, y, viewportW, viewportH, items, onAction, onClose,
 }: ContextMenuProps): React.ReactElement {
+  const { t } = useTranslation('common');
   const panelRef = useRef<HTMLDivElement>(null);
   const pos = computeMenuPosition(x, y, viewportW, viewportH);
   const { radial, list } = items;
@@ -91,7 +93,7 @@ export function ContextMenu({
   };
 
   return (
-    <div className="ctx-menu-root" role="menu" aria-label="Context menu">
+    <div className="ctx-menu-root" role="menu" aria-label={t('contextMenu.aria', { defaultValue: 'Context menu' })}>
       {/* ── SVG layer: origin crosshair + connector lines ── */}
       <svg
         className="ctx-menu-svg"

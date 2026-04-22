@@ -1,7 +1,9 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 
 export function LevelManager() {
+  const { t } = useTranslation('panels');
   const { document: doc, addLevel, updateLevel, deleteLevel, pushHistory } = useDocumentStore();
 
   if (!doc) return null;
@@ -37,8 +39,8 @@ export function LevelManager() {
   return (
     <div className="level-manager">
       <div className="panel-header">
-        <span className="panel-title">Levels</span>
-        <button className="panel-action-btn" title="Add level" onClick={handleAdd}>
+        <span className="panel-title">{t('levels.title', { defaultValue: 'Levels' })}</span>
+        <button className="panel-action-btn" title={t('levels.addLevel', { defaultValue: 'Add level' })} onClick={handleAdd}>
           +
         </button>
       </div>
@@ -50,7 +52,7 @@ export function LevelManager() {
               className="level-name-input"
               defaultValue={level.name}
               onBlur={(e) => handleNameBlur(level.id, e.target.value)}
-              placeholder="Level name"
+              placeholder={t('levels.levelName', { defaultValue: 'Level name' })}
             />
             <input
               type="number"
@@ -58,11 +60,11 @@ export function LevelManager() {
               defaultValue={level.elevation}
               onBlur={(e) => handleElevBlur(level.id, e.target.value)}
               placeholder="0"
-              title="Elevation (mm)"
+              title={t('levels.elevation', { defaultValue: 'Elevation (mm)' })}
             />
             <button
               className="level-delete-btn"
-              title="Delete level"
+              title={t('levels.deleteLevel', { defaultValue: 'Delete level' })}
               onClick={() => handleDelete(level.id)}
             >
               ×

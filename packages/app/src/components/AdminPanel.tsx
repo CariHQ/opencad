@@ -12,6 +12,7 @@
  *   save-role-{userId}        — save button per member
  */
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { RoleName } from '../config/roles';
 import { ROLE_CONFIGS } from '../config/roles';
 
@@ -56,6 +57,7 @@ export function AdminPanel({
   setMemberRole,
   currentUserId,
 }: AdminPanelProps) {
+  const { t } = useTranslation('panels');
   const [members, setMembers] = useState<AdminMember[]>(propMembers ?? DEMO_MEMBERS);
   const [pendingRoles, setPendingRoles] = useState<Record<string, RoleName>>({});
 
@@ -87,9 +89,9 @@ export function AdminPanel({
     return (
       <div className="admin-panel" data-testid="admin-panel">
         <div className="panel-header">
-          <span className="panel-title">Admin — Project Members</span>
+          <span className="panel-title">{t('admin.title')}</span>
         </div>
-        <p className="admin-empty-state">No members to manage.</p>
+        <p className="admin-empty-state">{t('admin.empty')}</p>
       </div>
     );
   }
@@ -97,15 +99,15 @@ export function AdminPanel({
   return (
     <div className="admin-panel" data-testid="admin-panel">
       <div className="panel-header">
-        <span className="panel-title">Admin — Project Members</span>
+        <span className="panel-title">{t('admin.title')}</span>
       </div>
 
-      <table className="members-table" aria-label="Project members">
+      <table className="members-table" aria-label={t('settings.admin.projectMembers', { defaultValue: 'Project members' })}>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Current Role</th>
-            <th>New Role</th>
+            <th>{t('admin.headerName')}</th>
+            <th>{t('admin.headerRole')}</th>
+            <th>{t('admin.headerNewRole')}</th>
             <th></th>
           </tr>
         </thead>
@@ -140,7 +142,7 @@ export function AdminPanel({
                   className="save-role-btn"
                   disabled={!pendingRoles[m.id] || pendingRoles[m.id] === m.role}
                 >
-                  Save
+                  {t('admin.save')}
                 </button>
               </td>
             </tr>

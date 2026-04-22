@@ -31,7 +31,7 @@
     "signOut": "Se déconnecter",
     "help": "Aide",
     "feedback": "Retour",
-    "ai": "IA",
+    "ai": "Assistant IA",
     "plugins": "Extensions"
   },
   "status": {
@@ -39,13 +39,25 @@
     "offline": "Hors ligne",
     "saving": "Enregistrement…",
     "saved": "Enregistré",
-    "syncing": "Synchronisation…"
+    "syncing": "Synchronisation…",
+    "storageAlmostFull": "⚠ Stockage presque plein",
+    "storageWarningTooltip": "L'utilisation du stockage dépasse 80 % — pensez à exporter vos projets",
+    "selected_one": "{{count}} sélectionné",
+    "selected_other": "{{count}} sélectionnés",
+    "elements_one": "{{count}} élément",
+    "elements_other": "{{count}} éléments",
+    "fpsTooltip": "Taux de rafraîchissement moyen glissant",
+    "webgpuTooltip": "Three.js WebGPURenderer — compute shaders activés",
+    "webglTooltip": "Repli WebGL 2.0 — WebGPU indisponible ou désactivé",
+    "currentRole": "Rôle actuel : {{label}}"
   },
   "view": {
     "floorPlan": "Plan d'étage",
     "threeD": "Vue 3D",
     "section": "Coupe",
-    "elevation": "Élévation"
+    "elevation": "Élévation",
+    "sectionAA": "Section A-A",
+    "layout1": "Layout 1"
   },
   "settings": {
     "title": "Paramètres",
@@ -59,14 +71,143 @@
   },
   "tooltip": {
     "backToProjects": "Accueil — retour aux projets",
-    "toggleLeftPanel": "Afficher/masquer le panneau gauche",
-    "toggleRightPanel": "Afficher/masquer le panneau droit",
+    "toggleLeftPanel": "Basculer le navigateur",
+    "toggleRightPanel": "Basculer les propriétés",
     "renameProject": "Cliquer pour renommer le projet",
     "newProject": "Nouveau projet",
     "openProject": "Ouvrir un projet",
     "saveProject": "Enregistrer",
-    "importFile": "Importer un fichier",
-    "exportFile": "Exporter",
+    "importFile": "Importer IFC",
+    "exportFile": "Exporter IFC",
     "toggleTheme": "Basculer thème clair/sombre"
+  },
+  "update": {
+    "available": "La version {{version}} est disponible",
+    "install": "Installer la mise à jour",
+    "installing": "Installation…",
+    "dismiss": "Ignorer",
+    "dismissAria": "Ignorer la notification de mise à jour"
+  },
+  "focusHint": {
+    "before": "Appuyez sur",
+    "after": "pour quitter le mode focus"
+  },
+  "dashboard": {
+    "title": "Projets",
+    "fromTemplate": "Depuis un modèle",
+    "newProject": "Nouveau projet",
+    "newBlankProject": "Nouveau projet vierge",
+    "filter": {
+      "all": "Tous",
+      "starred": "Favoris",
+      "mine": "Les miens",
+      "shared": "Partagés"
+    },
+    "searchPlaceholder": "Rechercher des projets…",
+    "sortBy": "Trier par",
+    "sort": {
+      "lastEdited": "Dernière modification",
+      "created": "Création",
+      "name": "Nom",
+      "size": "Taille"
+    },
+    "gridView": "Vue en grille",
+    "listView": "Vue en liste",
+    "empty": {
+      "title": "Aucun projet pour le moment",
+      "subtitle": "Commencez par un canevas vierge ou choisissez un modèle ci-dessous.",
+      "orTemplate": "Ou partez d'un modèle"
+    },
+    "card": {
+      "clickToOpen": "Cliquer pour ouvrir · double-clic pour renommer",
+      "star": "Mettre en favori",
+      "unstar": "Retirer des favoris",
+      "delete": "Supprimer le projet"
+    },
+    "closeTemplates": "Fermer les modèles",
+    "closeSettings": "Fermer les paramètres",
+    "signOut": "Se déconnecter",
+    "upgradeToPro": "Passer à Pro"
+  },
+  "coord": {
+    "inputAria": "Coordinate input"
+  },
+  "error": {
+    "somethingWentWrong": "Something went wrong",
+    "panelFailed": "Panel failed to load",
+    "tryAgain": "Try again"
+  },
+  "tour": {
+    "title": "Guided tour",
+    "close": "Close tour",
+    "skip": "Skip tour",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Finish"
+  },
+  "language": {
+    "aria": "Language",
+    "detected": "Detected from your system"
+  },
+  "resizer": {
+    "aria": "Drag to resize panel"
+  },
+  "contextMenu": {
+    "aria": "Context menu"
+  },
+  "viewport": {
+    "zoomIn": "Zoom In",
+    "zoomInShort": "Zoom in",
+    "zoomInWithShortcut": "Zoom In (+)",
+    "zoomOut": "Zoom Out",
+    "zoomOutShort": "Zoom out",
+    "zoomOutWithShortcut": "Zoom Out (-)",
+    "zoomToFit": "Zoom to Fit",
+    "zoomToFitWithShortcut": "Zoom to Fit (0)",
+    "fit": "Fit",
+    "resetCamera": "Reset camera",
+    "sectionBox": "Section Box",
+    "topView": "Top view",
+    "topViewWithShortcut": "Top view (1)",
+    "frontView": "Front view",
+    "frontViewWithShortcut": "Front view (2)",
+    "rightView": "Right view",
+    "rightViewWithShortcut": "Right view (3)",
+    "perspective": "Perspective",
+    "perspectiveWithShortcut": "Perspective (4)",
+    "presetView": "{{preset}} View",
+    "cutAlongAxis": "Cut along {{axis}} axis",
+    "cutAxis": "Cut axis",
+    "cutPlanePosition": "Cut plane position",
+    "position": "Position",
+    "sectionCutControls": "Section cut controls",
+    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
+    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
+    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
+    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
+    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
+    "splitView": "Split view: floor plan + 3D",
+    "viewCubeAria": "View orientation cube"
+  },
+  "home": {
+    "newProject": "New Project",
+    "newBlankProject": "New Blank Project",
+    "signIn": "Sign In",
+    "recentProjects": "Recent Projects",
+    "importIfcDwgPdf": "Import IFC / DWG / PDF",
+    "emptyText": "Start a new project or import a file",
+    "importFile": "Import a File",
+    "open": "Open",
+    "startFromTemplate": "Start from a Template",
+    "chooseTemplate": "Choose a Template",
+    "projectTemplates": "Project Templates"
+  },
+  "browser": {
+    "searchProjects": "Search projects…",
+    "recentFirst": "Recent first",
+    "oldestFirst": "Oldest first",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "noProjects": "No projects found"
   }
 }

@@ -5,6 +5,7 @@
  */
 
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useThreeViewport, type ViewPreset } from '../hooks/useThreeViewport';
 import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
 import { SectionBoxPanel } from './SectionBoxPanel';
@@ -14,6 +15,7 @@ interface ThreeViewportInnerProps {
 }
 
 export function ThreeViewportInner({ onViewChange }: ThreeViewportInnerProps) {
+  const { t } = useTranslation('common');
   const {
     containerRef,
     setViewPreset,
@@ -47,24 +49,24 @@ export function ThreeViewportInner({ onViewChange }: ThreeViewportInnerProps) {
             key={p}
             className="viewport-control-btn"
             onClick={() => handleViewChange(p)}
-            title={`${p} View`}
+            title={t('viewport.presetView', { preset: p, defaultValue: '{{preset}} View' })}
           >
             {p === '3d' ? '3D' : p[0]!.toUpperCase()}
           </button>
         ))}
-        <button className="viewport-control-btn" onClick={zoomIn} title="Zoom In">
+        <button className="viewport-control-btn" onClick={zoomIn} title={t('viewport.zoomIn', { defaultValue: 'Zoom In' })}>
           <ZoomIn size={14} />
         </button>
-        <button className="viewport-control-btn" onClick={zoomOut} title="Zoom Out">
+        <button className="viewport-control-btn" onClick={zoomOut} title={t('viewport.zoomOut', { defaultValue: 'Zoom Out' })}>
           <ZoomOut size={14} />
         </button>
-        <button className="viewport-control-btn" onClick={zoomToFit} title="Fit">
+        <button className="viewport-control-btn" onClick={zoomToFit} title={t('viewport.fit', { defaultValue: 'Fit' })}>
           <Maximize size={14} />
         </button>
         <button
           className={`viewport-control-btn ${sectionBox ? 'active' : ''}`}
           onClick={() => setSectionBox(!sectionBox)}
-          title="Section Box"
+          title={t('viewport.sectionBox', { defaultValue: 'Section Box' })}
         >
           <Box size={14} />
         </button>

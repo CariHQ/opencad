@@ -1,9 +1,11 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 
 const FRAME_TYPES = ['standard', 'aluminum', 'timber', 'steel'] as const;
 
 export function DoorWindowPanel() {
+  const { t } = useTranslation('panels');
   const { activeTool, toolParams, setToolParam } = useDocumentStore();
   const isDoor = activeTool === 'door';
   const toolKey = isDoor ? 'door' : 'window';
@@ -14,11 +16,11 @@ export function DoorWindowPanel() {
     return (
       <div className="placement-panel">
         <div className="placement-header">
-          <span className="placement-title">Door</span>
+          <span className="placement-title">{t('tool.door.title', { defaultValue: 'Door' })}</span>
         </div>
         <div className="placement-params">
           <div className="placement-param">
-            <label htmlFor="door-width">Width (mm)</label>
+            <label htmlFor="door-width">{t('tool.door.width', { defaultValue: 'Width (mm)' })}</label>
             <input
               id="door-width"
               type="number"
@@ -28,7 +30,7 @@ export function DoorWindowPanel() {
             />
           </div>
           <div className="placement-param">
-            <label htmlFor="door-height">Height (mm)</label>
+            <label htmlFor="door-height">{t('tool.door.height', { defaultValue: 'Height (mm)' })}</label>
             <input
               id="door-height"
               type="number"
@@ -38,7 +40,7 @@ export function DoorWindowPanel() {
             />
           </div>
           <div className="placement-param">
-            <label htmlFor="door-swing">Swing (°)</label>
+            <label htmlFor="door-swing">{t('tool.door.swing', { defaultValue: 'Swing (°)' })}</label>
             <input
               id="door-swing"
               type="number"
@@ -48,7 +50,7 @@ export function DoorWindowPanel() {
             />
           </div>
           <div className="placement-param">
-            <label htmlFor="door-frame">Frame Type</label>
+            <label htmlFor="door-frame">{t('tool.door.frameType', { defaultValue: 'Frame Type' })}</label>
             <select
               id="door-frame"
               value={(params['frameType'] as string) ?? 'standard'}
@@ -60,7 +62,7 @@ export function DoorWindowPanel() {
             </select>
           </div>
         </div>
-        <div className="placement-hint">Click on a wall to place door</div>
+        <div className="placement-hint">{t('tool.door.placeHint', { defaultValue: 'Click on a wall to place door' })}</div>
       </div>
     );
   }
@@ -68,11 +70,11 @@ export function DoorWindowPanel() {
   return (
     <div className="placement-panel">
       <div className="placement-header">
-        <span className="placement-title">Window</span>
+        <span className="placement-title">{t('tool.window.title', { defaultValue: 'Window' })}</span>
       </div>
       <div className="placement-params">
         <div className="placement-param">
-          <label htmlFor="win-width">Width (mm)</label>
+          <label htmlFor="win-width">{t('tool.window.width', { defaultValue: 'Width (mm)' })}</label>
           <input
             id="win-width"
             type="number"
@@ -82,7 +84,7 @@ export function DoorWindowPanel() {
           />
         </div>
         <div className="placement-param">
-          <label htmlFor="win-height">Height (mm)</label>
+          <label htmlFor="win-height">{t('tool.window.height', { defaultValue: 'Height (mm)' })}</label>
           <input
             id="win-height"
             type="number"
@@ -92,7 +94,7 @@ export function DoorWindowPanel() {
           />
         </div>
         <div className="placement-param">
-          <label htmlFor="win-sill">Sill Height (mm)</label>
+          <label htmlFor="win-sill">{t('tool.window.sillHeight', { defaultValue: 'Sill Height (mm)' })}</label>
           <input
             id="win-sill"
             type="number"
@@ -102,7 +104,7 @@ export function DoorWindowPanel() {
           />
         </div>
         <div className="placement-param">
-          <label htmlFor="win-frame">Frame Type</label>
+          <label htmlFor="win-frame">{t('tool.window.frameType', { defaultValue: 'Frame Type' })}</label>
           <select
             id="win-frame"
             value={(params['frameType'] as string) ?? 'standard'}
@@ -114,7 +116,7 @@ export function DoorWindowPanel() {
           </select>
         </div>
       </div>
-      <div className="placement-hint">Click on a wall to place window</div>
+      <div className="placement-hint">{t('tool.window.placeHint', { defaultValue: 'Click on a wall to place window' })}</div>
     </div>
   );
 }

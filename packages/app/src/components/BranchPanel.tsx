@@ -7,6 +7,7 @@
  */
 import React, { useEffect, useState, useCallback } from 'react';
 import { GitBranch, GitMerge, Trash2 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import type { DocumentSchema } from '@opencad/document';
 import { useDocumentStore } from '../stores/documentStore';
 import {
@@ -24,6 +25,7 @@ import {
 } from '../lib/branches';
 
 export function BranchPanel(): React.ReactElement {
+  const { t } = useTranslation('panels');
   const doc = useDocumentStore((s) => s.document);
   const loadDocumentSchema = useDocumentStore((s) => s.loadDocumentSchema);
   const [store, setStore] = useState<BranchStore | null>(null);
@@ -42,8 +44,8 @@ export function BranchPanel(): React.ReactElement {
   if (!doc || !store) {
     return (
       <div className="branch-panel">
-        <div className="panel-header"><span className="panel-title">Design Branches</span></div>
-        <p className="empty-hint">Open a project to work with branches.</p>
+        <div className="panel-header"><span className="panel-title">{t('branches.title')}</span></div>
+        <p className="empty-hint">{t('branches.openProjectHint')}</p>
       </div>
     );
   }
@@ -102,19 +104,19 @@ export function BranchPanel(): React.ReactElement {
   return (
     <div className="branch-panel">
       <div className="panel-header">
-        <span className="panel-title">Design Branches</span>
+        <span className="panel-title">{t('branches.title')}</span>
       </div>
 
       <div className="branch-create-row">
         <input
           className="branch-name-input"
-          placeholder="New branch name"
+          placeholder={t('branches.newBranchPlaceholder')}
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
         />
         <button className="btn-create-branch" onClick={handleCreate} disabled={!newName.trim()}>
-          <GitBranch size={13} /> Create
+          <GitBranch size={13} /> {t('branches.create')}
         </button>
       </div>
 
@@ -128,7 +130,7 @@ export function BranchPanel(): React.ReactElement {
               <div className="branch-meta">
                 <GitBranch size={12} />
                 <span className="branch-name">{b.name}</span>
-                {isActive && <span className="branch-active-tag">active</span>}
+                {isActive && <span className="branch-active-tag">{t('branches.active')}</span>}
               </div>
               {diff && (
                 <div className="branch-diff">
@@ -140,7 +142,7 @@ export function BranchPanel(): React.ReactElement {
               <div className="branch-actions">
                 {!isActive && (
                   <button className="btn-branch-switch" onClick={() => handleSwitch(b.id)}>
-                    Switch
+                    {t('branches.switch')}
                   </button>
                 )}
                 {b.id !== 'main' && (
@@ -148,14 +150,14 @@ export function BranchPanel(): React.ReactElement {
                     <button
                       className="btn-branch-merge"
                       onClick={() => handleMergeIn(b.id, 'prefer-theirs')}
-                      title="Merge this branch into the active one — prefer theirs"
+                      title={t('branches.mergeTitle')}
                     >
-                      <GitMerge size={12} /> Merge
+                      <GitMerge size={12} /> {t('branches.merge')}
                     </button>
                     <button
                       className="btn-branch-delete"
                       onClick={() => handleDelete(b.id)}
-                      title="Delete branch"
+                      title={t('branches.deleteTitle')}
                     >
                       <Trash2 size={12} />
                     </button>

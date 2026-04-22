@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 
 const USAGE_TYPES = [
@@ -18,6 +19,7 @@ function isAreaDeficit(actual: number, required: number): boolean {
 }
 
 export function SpacePanel() {
+  const { t } = useTranslation('panels');
   const { document: doc, toolParams, setToolParam } = useDocumentStore();
 
   const spaceParams = (toolParams as Record<string, Record<string, unknown>>)?.space ?? {
@@ -40,11 +42,11 @@ export function SpacePanel() {
 
   return (
     <div className="tool-panel">
-      <div className="tool-panel-header">Space Tool</div>
+      <div className="tool-panel-header">{t('spaces.tool', { defaultValue: 'Space Tool' })}</div>
 
       <div className="tool-panel-group">
         <div className="tool-panel-row">
-          <label htmlFor="space-name">Room Name</label>
+          <label htmlFor="space-name">{t('spaces.roomName', { defaultValue: 'Room Name' })}</label>
           <input
             id="space-name"
             type="text"
@@ -55,10 +57,10 @@ export function SpacePanel() {
         </div>
 
         <div className="tool-panel-row">
-          <label htmlFor="space-usage">Usage Type</label>
+          <label htmlFor="space-usage">{t('spaces.usageType', { defaultValue: 'Usage Type' })}</label>
           <select
             id="space-usage"
-            aria-label="Usage Type"
+            aria-label={t('spaces.usageType', { defaultValue: 'Usage Type' })}
             className="tool-panel-select"
             value={usageType}
             onChange={(e) => setToolParam('space', 'usageType', e.target.value)}
@@ -72,7 +74,7 @@ export function SpacePanel() {
         </div>
 
         <div className="tool-panel-row">
-          <label htmlFor="space-required-area">Required Area (m²)</label>
+          <label htmlFor="space-required-area">{t('spaces.requiredArea', { defaultValue: 'Required Area (m²)' })}</label>
           <input
             id="space-required-area"
             type="number"
@@ -84,12 +86,12 @@ export function SpacePanel() {
           />
         </div>
 
-        <div className="tool-panel-hint">Click inside walls to place space</div>
+        <div className="tool-panel-hint">{t('spaces.placeHint', { defaultValue: 'Click inside walls to place space' })}</div>
       </div>
 
       {spaces.length > 0 && (
         <div className="tool-panel-group">
-          <div className="tool-panel-group-title">Spaces ({spaces.length})</div>
+          <div className="tool-panel-group-title">{t('spaces.heading', { count: spaces.length, defaultValue: 'Spaces ({{count}})' })}</div>
           {spaces.map((sp) => {
             const spName = String(sp.properties['name']?.value ?? sp.id);
             const actual = Number(sp.properties['actualArea']?.value ?? 0);
@@ -103,13 +105,13 @@ export function SpacePanel() {
                 </div>
                 {deficit && (
                   <div role="alert" className="compliance-warning">
-                    Area deficit: {actual} m² &lt; required {required} m²
+                    {t('spaces.areaDeficit', { actual, required, defaultValue: 'Area deficit: {{actual}} m² < required {{required}} m²' })}
                   </div>
                 )}
               </div>
             );
           })}
-          <div className="space-total">Total floor area: {totalArea} m²</div>
+          <div className="space-total">{t('spaces.totalFloor', { area: totalArea, defaultValue: 'Total floor area: {{area}} m²' })}</div>
         </div>
       )}
     </div>

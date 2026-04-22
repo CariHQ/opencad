@@ -9,11 +9,13 @@
 
 import React, { useState, useCallback, useRef } from 'react';
 import { FileText, Trash2, Eye, EyeOff } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useUnderlayStore } from '../stores/underlayStore';
 import { createUnderlay, calibrateScale } from '../lib/pdfUnderlay';
 import { rasterisePDFPage } from '../lib/pdfRasterise';
 
 export function UnderlayPanel(): React.ReactElement {
+  const { t } = useTranslation('panels');
   const entries = useUnderlayStore((s) => Object.values(s.entries));
   const setUnderlay = useUnderlayStore((s) => s.setUnderlay);
   const updateUnderlay = useUnderlayStore((s) => s.updateUnderlay);
@@ -30,7 +32,7 @@ export function UnderlayPanel(): React.ReactElement {
       const u = createUnderlay(file.name, 0);
       setUnderlay(u, { dataUrl: raster.dataUrl, width: raster.width, height: raster.height });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to rasterise PDF.');
+      setError(err instanceof Error ? err.message : t('underlay.rasteriseFailed', { defaultValue: 'Failed to rasterise PDF.' }));
     } finally {
       setBusy(false);
     }
@@ -38,7 +40,7 @@ export function UnderlayPanel(): React.ReactElement {
 
   return (
     <div className="underlay-panel">
-      <div className="panel-header"><span className="panel-title">PDF Underlay</span></div>
+      <div className="panel-header"><span className="panel-title">{t('underlay.title')}</span></div>
 
       <button
         className="btn-primary"
@@ -46,7 +48,7 @@ export function UnderlayPanel(): React.ReactElement {
         onClick={() => inputRef.current?.click()}
       >
         <FileText size={13} />
-        {busy ? 'Rendering…' : 'Load PDF'}
+        {busy ? t('underlay.rendering', { defaultValue: 'Rendering…' }) : t('underlay.loadPdf', { defaultValue: 'Load PDF' })}
       </button>
       <input
         ref={inputRef}
@@ -63,7 +65,7 @@ export function UnderlayPanel(): React.ReactElement {
       {error && <div className="underlay-error" role="alert">{error}</div>}
 
       {entries.length === 0 ? (
-        <p className="underlay-empty">No underlays. Load a PDF to trace over it.</p>
+        <p className="underlay-empty">{t('underlay.emptyDetail', { defaultValue: 'No underlays. Load a PDF to trace over it.' })}</p>
       ) : (
         <ul className="underlay-list">
           {entries.map(({ underlay: u, pixelWidth, pixelHeight }) => (
@@ -72,18 +74,18 @@ export function UnderlayPanel(): React.ReactElement {
                 <span className="underlay-source">{u.source}</span>
                 <button
                   className="btn-icon"
-                  title={u.opacity > 0 ? 'Hide underlay' : 'Show underlay'}
+                  title={u.opacity > 0 ? t('underlay.hide', { defaultValue: 'Hide underlay' }) : t('underlay.show', { defaultValue: 'Show underlay' })}
                   onClick={() => updateUnderlay(u.id, { opacity: u.opacity > 0 ? 0 : 0.5 })}
                 >
                   {u.opacity > 0 ? <Eye size={12} /> : <EyeOff size={12} />}
                 </button>
-                <button className="btn-icon" title="Delete" onClick={() => removeUnderlay(u.id)}>
+                <button className="btn-icon" title={t('underlay.delete', { defaultValue: 'Delete' })} onClick={() => removeUnderlay(u.id)}>
                   <Trash2 size={12} />
                 </button>
               </div>
 
               <label className="underlay-row">
-                <span>Opacity</span>
+                <span>{t('underlay.opacity')}</span>
                 <input
                   type="range" min="0" max="1" step="0.05" value={u.opacity}
                   onChange={(e) => updateUnderlay(u.id, { opacity: parseFloat(e.target.value) })}
@@ -92,7 +94,7 @@ export function UnderlayPanel(): React.ReactElement {
               </label>
 
               <label className="underlay-row">
-                <span>Scale</span>
+                <span>{t('underlay.scale')}</span>
                 <input
                   type="number" step="0.01" value={u.scale}
                   onChange={(e) => updateUnderlay(u.id, { scale: parseFloat(e.target.value) || 1 })}
@@ -101,7 +103,7 @@ export function UnderlayPanel(): React.ReactElement {
               </label>
 
               <label className="underlay-row">
-                <span>Rotation</span>
+                <span>{t('underlay.rotation', { defaultValue: 'Rotation' })}</span>
                 <input
                   type="number" step="1" value={u.rotation}
                   onChange={(e) => updateUnderlay(u.id, { rotation: parseFloat(e.target.value) || 0 })}
@@ -110,7 +112,7 @@ export function UnderlayPanel(): React.ReactElement {
               </label>
 
               <div className="underlay-row underlay-origin">
-                <span>Origin</span>
+                <span>{t('underlay.origin', { defaultValue: 'Origin' })}</span>
                 <input
                   type="number" step="1" value={u.origin.x}
                   onChange={(e) => updateUnderlay(u.id, { origin: { ...u.origin, x: parseFloat(e.target.value) || 0 } })}
@@ -129,7 +131,7 @@ export function UnderlayPanel(): React.ReactElement {
               />
 
               <div className="underlay-size">
-                {pixelWidth}×{pixelHeight} px raster
+                {t('underlay.rasterSize', { w: pixelWidth, h: pixelHeight, defaultValue: '{{w}}×{{h}} px raster' })}
               </div>
             </li>
           ))}
@@ -140,11 +142,12 @@ export function UnderlayPanel(): React.ReactElement {
 }
 
 function CalibrateRow({ onCalibrate }: { onCalibrate: (pxDistance: number, realMm: number) => void }) {
+  const { t } = useTranslation('panels');
   const [pxDistance, setPxDistance] = useState('');
   const [realMm, setRealMm] = useState('');
   return (
     <div className="underlay-row underlay-calibrate">
-      <span>Calibrate</span>
+      <span>{t('underlay.calibrate', { defaultValue: 'Calibrate' })}</span>
       <input
         type="number" placeholder="px" value={pxDistance}
         onChange={(e) => setPxDistance(e.target.value)}
@@ -162,7 +165,7 @@ function CalibrateRow({ onCalibrate }: { onCalibrate: (pxDistance: number, realM
           if (!isNaN(a) && !isNaN(b) && a > 0) onCalibrate(a, b);
         }}
       >
-        Apply
+        {t('underlay.apply', { defaultValue: 'Apply' })}
       </button>
     </div>
   );

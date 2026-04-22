@@ -3,6 +3,7 @@
  */
 import React, { useEffect, useState, useMemo, useCallback } from 'react';
 import { LayoutGrid, List } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { projectsApi, type ProjectSummary } from '../lib/projectsApi';
 import { ConfirmModal } from './ConfirmModal';
 
@@ -14,6 +15,7 @@ export interface ProjectBrowserProps {
 }
 
 export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
+  const { t } = useTranslation('common');
   const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchRaw, setSearchRaw] = useState('');
@@ -112,13 +114,13 @@ export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
         <input
           data-testid="project-search"
           className="project-search-input"
-          placeholder="Search projects…"
+          placeholder={t('browser.searchProjects', { defaultValue: 'Search projects…' })}
           value={searchRaw}
           onChange={(e) => setSearchRaw(e.target.value)}
         />
 
         <label htmlFor="project-sort-select" className="sr-only">
-          Sort by
+          {t('dashboard.sortBy', { defaultValue: 'Sort by' })}
         </label>
         <select
           id="project-sort-select"
@@ -129,21 +131,21 @@ export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
         >
           <option value="name-asc">Name A–Z</option>
           <option value="name-desc">Name Z–A</option>
-          <option value="recent">Recent first</option>
-          <option value="oldest">Oldest first</option>
+          <option value="recent">{t('browser.recentFirst', { defaultValue: 'Recent first' })}</option>
+          <option value="oldest">{t('browser.oldestFirst', { defaultValue: 'Oldest first' })}</option>
         </select>
 
         <button
           data-testid="view-toggle"
           className={`view-toggle-btn${viewMode === 'grid' ? ' active' : ''}`}
-          title="Grid view"
+          title={t('browser.gridView', { defaultValue: 'Grid view' })}
           onClick={() => setViewMode('grid')}
         >
           <LayoutGrid size={16} />
         </button>
         <button
           className={`view-toggle-btn${viewMode === 'list' ? ' active' : ''}`}
-          title="List view"
+          title={t('browser.listView', { defaultValue: 'List view' })}
           onClick={() => setViewMode('list')}
         >
           <List size={16} />
@@ -154,14 +156,14 @@ export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
           className="btn-primary"
           onClick={handleNewProject}
         >
-          New Project
+          {t('dashboard.newProject', { defaultValue: 'New Project' })}
         </button>
       </div>
 
       {/* Empty state */}
       {sorted.length === 0 ? (
         <div className="project-browser-empty">
-          <p>No projects found.</p>
+          <p>{t('browser.noProjects', { defaultValue: 'No projects found.' })}</p>
           <button className="btn-primary" onClick={handleNewProject}>
             Create your first project
           </button>
@@ -193,7 +195,7 @@ export function ProjectBrowser({ onSelect }: ProjectBrowserProps) {
                 <div className="project-card-actions">
                   <button
                     aria-label={`Delete ${project.name}`}
-                    title="Delete project"
+                    title={t('dashboard.card.delete')}
                     className="delete-btn"
                     onClick={(e) => {
                       e.stopPropagation();

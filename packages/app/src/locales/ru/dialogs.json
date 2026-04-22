@@ -1,0 +1,151 @@
+{
+  "signIn": {
+    "title": "Вход",
+    "email": "Email",
+    "password": "Пароль",
+    "submit": "Войти",
+    "submitting": "Вход…",
+    "noAccount": "Нет аккаунта?",
+    "createAccount": "Создать бесплатный аккаунт",
+    "or": "или",
+    "forgotPassword": "Забыли пароль?",
+    "continueWithGoogle": "Продолжить с Google",
+    "continueWithMicrosoft": "Продолжить с Microsoft",
+    "invalidCredentials": "Неверный email или пароль.",
+    "mfaTitle": "Подтвердите личность",
+    "mfaHint": "Введите 6-значный код из приложения-аутентификатора.",
+    "mfaCode": "Код подтверждения",
+    "mfaVerify": "Подтвердить"
+  },
+  "signUp": {
+    "title": "Создайте свой аккаунт",
+    "name": "Полное имя",
+    "email": "Email",
+    "password": "Пароль",
+    "submit": "Создать бесплатный аккаунт",
+    "submitting": "Создание…",
+    "haveAccount": "Уже есть аккаунт?",
+    "signIn": "Войти",
+    "passwordHint": "Минимум 8 символов.",
+    "termsAgree": "Создавая аккаунт, вы соглашаетесь с нашими <a>Условиями</a> и <a2>Политикой конфиденциальности</a2>."
+  },
+  "forgotPassword": {
+    "title": "Сброс пароля",
+    "hint": "Мы отправим ссылку для сброса пароля на ваш email.",
+    "submit": "Отправить ссылку",
+    "sent": "Проверьте почту, мы отправили ссылку для сброса.",
+    "backToSignIn": "Назад ко входу"
+  },
+  "newProject": {
+    "title": "Новый проект",
+    "name": "Название проекта",
+    "template": "Шаблон",
+    "blank": "Пустой",
+    "create": "Создать проект",
+    "creating": "Создание…"
+  },
+  "openProject": {
+    "title": "Открыть проект",
+    "placeholder": "Поиск проектов…",
+    "empty": "Проектов пока нет."
+  },
+  "confirmDelete": {
+    "title": "Удалить {{name}}?",
+    "body": "Действие необратимо.",
+    "confirm": "Удалить",
+    "cancel": "Отмена"
+  },
+  "importExport": {
+    "importTitle": "Импорт файла",
+    "exportTitle": "Экспорт файла",
+    "dropHint": "Перетащите файл сюда или нажмите для выбора.",
+    "supportedFormats": "Поддерживаются: IFC, DWG, DXF, SKP, RVT, PDF",
+    "exporting": "Экспорт…",
+    "export": "Экспорт",
+    "format": "Формат",
+    "cancel": "Отмена"
+  },
+  "subscription": {
+    "title": "Выберите тариф",
+    "subtitle": "Меняйте в любое время — без долгосрочных обязательств.",
+    "currentPlan": "Текущий тариф",
+    "upgradeTo": "Перейти на {{plan}}",
+    "manageBilling": "Управление оплатой",
+    "perUserMonth": "за пользователя / месяц",
+    "mostPopular": "Самый популярный",
+    "plans": {
+      "free": {
+        "label": "Free",
+        "price": "$0",
+        "priceDetail": "навсегда",
+        "features": {
+          "f1": "1 проект",
+          "f2": "Базовые инструменты 2D-черчения",
+          "f3": "Только локальное хранилище",
+          "f4": "Поддержка сообщества"
+        }
+      },
+      "pro": {
+        "label": "Pro",
+        "price": "$29",
+        "features": {
+          "f1": "Неограниченные проекты",
+          "f2": "Совместная работа в реальном времени",
+          "f3": "ИИ-помощник проектирования",
+          "f4": "Приоритетная поддержка по email"
+        }
+      },
+      "business": {
+        "label": "Business",
+        "price": "$99",
+        "features": {
+          "f1": "Всё из Pro",
+          "f2": "Роли и права администратора",
+          "f3": "SSO / SAML",
+          "f4": "Приоритетная поддержка по телефону"
+        }
+      }
+    },
+    "close": "Закрыть"
+  },
+  "commandPalette": {
+    "placeholder": "Поиск команд…",
+    "empty": "Команды не найдены.",
+    "groups": {
+      "tools": "Инструменты",
+      "views": "Виды",
+      "panels": "Панели",
+      "file": "Файл",
+      "edit": "Правка",
+      "help": "Справка"
+    }
+  },
+  "feedback": {
+    "title": "Отправить отзыв",
+    "categoryLabel": "Тип",
+    "titleLabel": "Заголовок",
+    "descriptionLabel": "Описание",
+    "submit": "Отправить отзыв",
+    "submitting": "Отправка…",
+    "sent": "Спасибо за ваш отзыв!",
+    "categories": {
+      "bug": "Ошибка",
+      "feature": "Запрос функции",
+      "question": "Вопрос"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "close": "Close help",
+    "tabs": {
+      "shortcuts": "Shortcuts",
+      "howTo": "How To",
+      "tips": "Tips"
+    },
+    "takeGuidedTour": "Take the guided tour",
+    "searchShortcuts": "Search shortcuts…",
+    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
+    "needMore": "Need more?",
+    "openIssue": "Open an issue"
+  }
+}

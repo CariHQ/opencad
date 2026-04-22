@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Clash } from '../lib/clashDetection';
 
 interface ClashPanelProps {
@@ -6,6 +7,7 @@ interface ClashPanelProps {
 }
 
 export function ClashPanel({ onRunDetection }: ClashPanelProps) {
+  const { t } = useTranslation('panels');
   const [clashes, setClashes] = useState<Clash[] | null>(null);
 
   const handleRun = () => {
@@ -32,7 +34,7 @@ export function ClashPanel({ onRunDetection }: ClashPanelProps) {
   return (
     <div className="clash-panel panel">
       <div className="panel-header">
-        <span className="panel-title">Clash Detection</span>
+        <span className="panel-title">{t('clash.title')}</span>
       </div>
       <div className="panel-body">
         <button
@@ -40,22 +42,22 @@ export function ClashPanel({ onRunDetection }: ClashPanelProps) {
           className="btn-primary"
           onClick={handleRun}
         >
-          Run Clash Detection
+          {t('clash.runFull', { defaultValue: 'Run Clash Detection' })}
         </button>
 
         {clashes !== null && (
           <>
             <div data-testid="clash-count" className="clash-count">
-              {clashes.length} clash{clashes.length !== 1 ? 'es' : ''} found
+              {t('clash.clashes', { count: clashes.length, defaultValue: '{{count}} clash(es) found' })}
             </div>
 
             <table data-testid="clash-table" className="clash-table">
               <thead>
                 <tr>
-                  <th>Element A</th>
-                  <th>Element B</th>
-                  <th>Severity</th>
-                  <th>Overlap (m³)</th>
+                  <th>{t('clash.elementA', { defaultValue: 'Element A' })}</th>
+                  <th>{t('clash.elementB', { defaultValue: 'Element B' })}</th>
+                  <th>{t('clash.severity', { defaultValue: 'Severity' })}</th>
+                  <th>{t('clash.overlap', { defaultValue: 'Overlap (m³)' })}</th>
                 </tr>
               </thead>
               <tbody>
@@ -80,7 +82,7 @@ export function ClashPanel({ onRunDetection }: ClashPanelProps) {
               className="btn-secondary"
               onClick={handleExportCsv}
             >
-              Export CSV
+              {t('clash.exportCsv', { defaultValue: 'Export CSV' })}
             </button>
           </>
         )}

@@ -1,0 +1,151 @@
+{
+  "signIn": {
+    "title": "تسجيل الدخول",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "تسجيل الدخول",
+    "submitting": "جارٍ تسجيل الدخول…",
+    "noAccount": "ليس لديك حساب؟",
+    "createAccount": "إنشاء حساب مجاني",
+    "or": "أو",
+    "forgotPassword": "نسيت كلمة المرور؟",
+    "continueWithGoogle": "المتابعة باستخدام Google",
+    "continueWithMicrosoft": "المتابعة باستخدام Microsoft",
+    "invalidCredentials": "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    "mfaTitle": "تحقق من هويتك",
+    "mfaHint": "أدخل الرمز المكون من 6 أرقام من تطبيق المصادقة.",
+    "mfaCode": "رمز التحقق",
+    "mfaVerify": "تحقق"
+  },
+  "signUp": {
+    "title": "أنشئ حسابك",
+    "name": "الاسم الكامل",
+    "email": "البريد الإلكتروني",
+    "password": "كلمة المرور",
+    "submit": "إنشاء حساب مجاني",
+    "submitting": "جارٍ الإنشاء…",
+    "haveAccount": "لديك حساب بالفعل؟",
+    "signIn": "تسجيل الدخول",
+    "passwordHint": "8 أحرف على الأقل.",
+    "termsAgree": "بإنشاء حساب فأنت توافق على <a>الشروط</a> و<a2>سياسة الخصوصية</a2>."
+  },
+  "forgotPassword": {
+    "title": "إعادة تعيين كلمة المرور",
+    "hint": "سنرسل رابط إعادة التعيين إلى بريدك الإلكتروني.",
+    "submit": "إرسال الرابط",
+    "sent": "تحقق من بريدك الوارد للحصول على رابط إعادة التعيين.",
+    "backToSignIn": "العودة إلى تسجيل الدخول"
+  },
+  "newProject": {
+    "title": "مشروع جديد",
+    "name": "اسم المشروع",
+    "template": "القالب",
+    "blank": "فارغ",
+    "create": "إنشاء المشروع",
+    "creating": "جارٍ الإنشاء…"
+  },
+  "openProject": {
+    "title": "فتح مشروع",
+    "placeholder": "ابحث عن المشاريع…",
+    "empty": "لا توجد مشاريع بعد."
+  },
+  "confirmDelete": {
+    "title": "حذف {{name}}؟",
+    "body": "لا يمكن التراجع عن هذا الإجراء.",
+    "confirm": "حذف",
+    "cancel": "إلغاء"
+  },
+  "importExport": {
+    "importTitle": "استيراد ملف",
+    "exportTitle": "تصدير ملف",
+    "dropHint": "أفلت ملفًا هنا أو انقر للتصفح.",
+    "supportedFormats": "المدعوم: IFC، DWG، DXF، SKP، RVT، PDF",
+    "exporting": "جارٍ التصدير…",
+    "export": "تصدير",
+    "format": "التنسيق",
+    "cancel": "إلغاء"
+  },
+  "subscription": {
+    "title": "اختر خطتك",
+    "subtitle": "ارفع المستوى متى شئت — دون التزام طويل الأمد.",
+    "currentPlan": "الخطة الحالية",
+    "upgradeTo": "الترقية إلى {{plan}}",
+    "manageBilling": "إدارة الفوترة",
+    "perUserMonth": "لكل مستخدم / شهر",
+    "mostPopular": "الأكثر شيوعًا",
+    "plans": {
+      "free": {
+        "label": "مجاني",
+        "price": "0 $",
+        "priceDetail": "إلى الأبد",
+        "features": {
+          "f1": "مشروع واحد",
+          "f2": "أدوات رسم ثنائي الأبعاد أساسية",
+          "f3": "تخزين محلي فقط",
+          "f4": "دعم مجتمعي"
+        }
+      },
+      "pro": {
+        "label": "Pro",
+        "price": "29 $",
+        "features": {
+          "f1": "مشاريع غير محدودة",
+          "f2": "تعاون في الوقت الحقيقي",
+          "f3": "مساعد تصميم بالذكاء الاصطناعي",
+          "f4": "دعم بريد إلكتروني ذو أولوية"
+        }
+      },
+      "business": {
+        "label": "Business",
+        "price": "99 $",
+        "features": {
+          "f1": "كل ما في Pro",
+          "f2": "أدوار وصلاحيات للمسؤولين",
+          "f3": "SSO / SAML",
+          "f4": "دعم هاتفي ذو أولوية"
+        }
+      }
+    },
+    "close": "إغلاق"
+  },
+  "commandPalette": {
+    "placeholder": "بحث عن الأوامر…",
+    "empty": "لم يتم العثور على أوامر.",
+    "groups": {
+      "tools": "الأدوات",
+      "views": "المشاهد",
+      "panels": "اللوحات",
+      "file": "ملف",
+      "edit": "تحرير",
+      "help": "المساعدة"
+    }
+  },
+  "feedback": {
+    "title": "إرسال ملاحظات",
+    "categoryLabel": "النوع",
+    "titleLabel": "العنوان",
+    "descriptionLabel": "الوصف",
+    "submit": "إرسال الملاحظات",
+    "submitting": "جارٍ الإرسال…",
+    "sent": "شكرًا على ملاحظاتك!",
+    "categories": {
+      "bug": "خطأ",
+      "feature": "طلب ميزة",
+      "question": "سؤال"
+    }
+  },
+  "help": {
+    "title": "Help",
+    "close": "Close help",
+    "tabs": {
+      "shortcuts": "Shortcuts",
+      "howTo": "How To",
+      "tips": "Tips"
+    },
+    "takeGuidedTour": "Take the guided tour",
+    "searchShortcuts": "Search shortcuts…",
+    "noShortcutsMatch": "No shortcuts match “{{query}}”.",
+    "needMore": "Need more?",
+    "openIssue": "Open an issue"
+  }
+}

@@ -11,6 +11,7 @@
  */
 import { useEffect, useState, useLayoutEffect, useCallback, useRef } from 'react';
 import { ArrowRight, X, Check } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface TourStep {
   /** CSS selector for the target element. */
@@ -81,6 +82,7 @@ export interface GuidedTourProps {
 interface Rect { top: number; left: number; width: number; height: number }
 
 export function GuidedTour({ open, steps = DEFAULT_TOUR_STEPS, onClose }: GuidedTourProps) {
+  const { t } = useTranslation('common');
   const [stepIdx, setStepIdx] = useState(0);
   const [targetRect, setTargetRect] = useState<Rect | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
@@ -166,7 +168,7 @@ export function GuidedTour({ open, steps = DEFAULT_TOUR_STEPS, onClose }: Guided
   const isLast = stepIdx === steps.length - 1;
 
   return (
-    <div className="tour-root" role="dialog" aria-label="Guided tour">
+    <div className="tour-root" role="dialog" aria-label={t('tour.title', { defaultValue: 'Guided tour' })}>
       {/* Soft dimming + spotlight cutout */}
       <svg className="tour-mask" width="100%" height="100%" preserveAspectRatio="none">
         <defs>
@@ -204,19 +206,19 @@ export function GuidedTour({ open, steps = DEFAULT_TOUR_STEPS, onClose }: Guided
       <div ref={tooltipRef} className="tour-tooltip" style={tooltipStyle()}>
         <div className="tour-tooltip-header">
           <span className="tour-step-counter">{stepIdx + 1} / {steps.length}</span>
-          <button className="tour-close" onClick={onClose} aria-label="Close tour"><X size={14} /></button>
+          <button className="tour-close" onClick={onClose} aria-label={t('tour.close', { defaultValue: 'Close tour' })}><X size={14} /></button>
         </div>
         <h3 className="tour-title">{step.title}</h3>
         <p className="tour-body">{step.body}</p>
         <div className="tour-actions">
-          <button className="tour-skip" onClick={onClose}>Skip tour</button>
+          <button className="tour-skip" onClick={onClose}>{t('tour.skip', { defaultValue: 'Skip tour' })}</button>
           <div className="tour-progress">
             {steps.map((_, i) => (
               <span key={i} className={`tour-dot ${i === stepIdx ? 'active' : ''} ${i < stepIdx ? 'done' : ''}`} />
             ))}
           </div>
           <button className="tour-next" onClick={next}>
-            {isLast ? <>Done <Check size={14} /></> : <>Next <ArrowRight size={14} /></>}
+            {isLast ? <>{t('action.done', { defaultValue: 'Done' })} <Check size={14} /></> : <>{t('action.next', { defaultValue: 'Next' })} <ArrowRight size={14} /></>}
           </button>
         </div>
       </div>

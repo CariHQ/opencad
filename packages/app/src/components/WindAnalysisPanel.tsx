@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface WindAnalysisSettings {
   latitude: number;
@@ -29,6 +30,7 @@ function directionLabel(deg: number): string {
 }
 
 export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = {}) {
+  const { t } = useTranslation('panels');
   const [settings, setSettings] = useState<WindAnalysisSettings>(DEFAULT_SETTINGS);
 
   const update = (patch: Partial<WindAnalysisSettings>) => {
@@ -40,13 +42,13 @@ export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = 
   return (
     <div className="wind-analysis-panel">
       <div className="panel-header">
-        <span className="panel-title">Wind &amp; Microclimate Analysis</span>
+        <span className="panel-title">{t('wind.fullTitle', { defaultValue: 'Wind & Microclimate Analysis' })}</span>
       </div>
 
       <div className="analysis-section">
-        <h4>Location</h4>
+        <h4>{t('wind.location', { defaultValue: 'Location' })}</h4>
         <div className="field-row">
-          <label htmlFor="wind-lat">Latitude</label>
+          <label htmlFor="wind-lat">{t('wind.latitude', { defaultValue: 'Latitude' })}</label>
           <input
             id="wind-lat"
             type="number"
@@ -56,7 +58,7 @@ export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = 
           />
         </div>
         <div className="field-row">
-          <label htmlFor="wind-lng">Longitude</label>
+          <label htmlFor="wind-lng">{t('wind.longitude', { defaultValue: 'Longitude' })}</label>
           <input
             id="wind-lng"
             type="number"
@@ -68,9 +70,9 @@ export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = 
       </div>
 
       <div className="analysis-section">
-        <h4>Wind Data</h4>
+        <h4>{t('wind.windData', { defaultValue: 'Wind Data' })}</h4>
         <div className="field-row">
-          <label htmlFor="wind-direction">Prevailing Wind Direction (°)</label>
+          <label htmlFor="wind-direction">{t('wind.prevailingDirection', { defaultValue: 'Prevailing Wind Direction (°)' })}</label>
           <input
             id="wind-direction"
             type="number"
@@ -84,7 +86,7 @@ export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = 
         </div>
 
         <div className="field-row">
-          <label htmlFor="wind-speed">Average Speed (m/s)</label>
+          <label htmlFor="wind-speed">{t('wind.averageSpeed', { defaultValue: 'Average Speed (m/s)' })}</label>
           <input
             id="wind-speed"
             type="number"
@@ -96,15 +98,15 @@ export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = 
           />
         </div>
 
-        <div className="compass-reference" aria-label="Compass reference">
-          <span>North: 0° | South: 180° | East: 90° | West: 270°</span>
+        <div className="compass-reference" aria-label={t('wind.compassReference', { defaultValue: 'Compass reference' })}>
+          <span>{t('wind.compassLegend', { defaultValue: 'North: 0° | South: 180° | East: 90° | West: 270°' })}</span>
         </div>
       </div>
 
       <div className="analysis-section">
-        <h4>Visualisation</h4>
+        <h4>{t('wind.visualisation', { defaultValue: 'Visualisation' })}</h4>
         <div className="field-row">
-          <label htmlFor="wind-rose-toggle">Show Wind Rose</label>
+          <label htmlFor="wind-rose-toggle">{t('wind.showWindRose', { defaultValue: 'Show Wind Rose' })}</label>
           <input
             id="wind-rose-toggle"
             type="checkbox"
@@ -113,7 +115,7 @@ export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = 
           />
         </div>
         <div className="field-row">
-          <label htmlFor="ventilation-toggle">Show Ventilation Potential</label>
+          <label htmlFor="ventilation-toggle">{t('wind.showVentilation', { defaultValue: 'Show Ventilation Potential' })}</label>
           <input
             id="ventilation-toggle"
             type="checkbox"
@@ -124,11 +126,11 @@ export function WindAnalysisPanel({ onRun, onChange }: WindAnalysisPanelProps = 
       </div>
 
       <button
-        aria-label="Run analysis"
+        aria-label={t('wind.runAnalysis', { defaultValue: 'Run analysis' })}
         className="btn-run-analysis"
         onClick={() => onRun?.(settings)}
       >
-        Run Analysis
+        {t('wind.runAnalysis', { defaultValue: 'Run Analysis' })}
       </button>
     </div>
   );

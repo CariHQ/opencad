@@ -31,7 +31,7 @@
     "signOut": "Sign out",
     "help": "Help",
     "feedback": "Feedback",
-    "ai": "AI",
+    "ai": "AI Assistant",
     "plugins": "Plugins"
   },
   "status": {
@@ -39,13 +39,85 @@
     "offline": "Offline",
     "saving": "Saving…",
     "saved": "Saved",
-    "syncing": "Syncing…"
+    "syncing": "Syncing…",
+    "storageAlmostFull": "⚠ Storage almost full",
+    "storageWarningTooltip": "Storage usage is above 80% — consider exporting your projects",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "elements_one": "{{count}} element",
+    "elements_other": "{{count}} elements",
+    "fpsTooltip": "Rolling average frame rate",
+    "webgpuTooltip": "Three.js WebGPURenderer — compute shaders enabled",
+    "webglTooltip": "WebGL 2.0 fallback — WebGPU unavailable or disabled",
+    "currentRole": "Current role: {{label}}"
   },
   "view": {
     "floorPlan": "Floor Plan",
     "threeD": "3D View",
     "section": "Section",
-    "elevation": "Elevation"
+    "sectionAA": "Section A-A",
+    "elevation": "Elevation",
+    "layout1": "Layout 1"
+  },
+  "coord": {
+    "inputAria": "Coordinate input"
+  },
+  "error": {
+    "somethingWentWrong": "Something went wrong",
+    "panelFailed": "Panel failed to load",
+    "tryAgain": "Try again"
+  },
+  "tour": {
+    "title": "Guided tour",
+    "close": "Close tour",
+    "skip": "Skip tour",
+    "next": "Next",
+    "back": "Back",
+    "finish": "Finish"
+  },
+  "language": {
+    "aria": "Language",
+    "detected": "Detected from your system"
+  },
+  "resizer": {
+    "aria": "Drag to resize panel"
+  },
+  "contextMenu": {
+    "aria": "Context menu"
+  },
+  "viewport": {
+    "zoomIn": "Zoom In",
+    "zoomInShort": "Zoom in",
+    "zoomInWithShortcut": "Zoom In (+)",
+    "zoomOut": "Zoom Out",
+    "zoomOutShort": "Zoom out",
+    "zoomOutWithShortcut": "Zoom Out (-)",
+    "zoomToFit": "Zoom to Fit",
+    "zoomToFitWithShortcut": "Zoom to Fit (0)",
+    "fit": "Fit",
+    "resetCamera": "Reset camera",
+    "sectionBox": "Section Box",
+    "topView": "Top view",
+    "topViewWithShortcut": "Top view (1)",
+    "frontView": "Front view",
+    "frontViewWithShortcut": "Front view (2)",
+    "rightView": "Right view",
+    "rightViewWithShortcut": "Right view (3)",
+    "perspective": "Perspective",
+    "perspectiveWithShortcut": "Perspective (4)",
+    "presetView": "{{preset}} View",
+    "cutAlongAxis": "Cut along {{axis}} axis",
+    "cutAxis": "Cut axis",
+    "cutPlanePosition": "Cut plane position",
+    "position": "Position",
+    "sectionCutControls": "Section cut controls",
+    "sectionCutHint": "Slider moves the cut plane · Drag to orbit · Shift+drag to pan · Scroll to zoom",
+    "info2D": "Zoom: scroll | Pan: middle-drag | Ctrl: snap off",
+    "info3D": "Orbit: drag | Pan: Shift+drag | Zoom: scroll | Fit: 0",
+    "info3DLong": "Orbit drag · Two-finger pan · Pinch/Ctrl-scroll zoom · Arrows orbit · Shift+Arrows pan · Alt fine · 0 fit · 1/2/3/4 views",
+    "info2DShort": "Draw: drag · Pan: middle-drag · Zoom: scroll",
+    "splitView": "Split view: floor plan + 3D",
+    "viewCubeAria": "View orientation cube"
   },
   "settings": {
     "title": "Settings",
@@ -59,14 +131,83 @@
   },
   "tooltip": {
     "backToProjects": "Home — back to projects",
-    "toggleLeftPanel": "Toggle left panel",
-    "toggleRightPanel": "Toggle right panel",
+    "toggleLeftPanel": "Toggle navigator",
+    "toggleRightPanel": "Toggle properties",
     "renameProject": "Click to rename project",
     "newProject": "New project",
     "openProject": "Open a project",
     "saveProject": "Save",
-    "importFile": "Import file",
-    "exportFile": "Export",
+    "importFile": "Import IFC",
+    "exportFile": "Export IFC",
     "toggleTheme": "Toggle light/dark theme"
+  },
+  "update": {
+    "available": "Version {{version}} is available",
+    "install": "Install Update",
+    "installing": "Installing...",
+    "dismiss": "Dismiss",
+    "dismissAria": "Dismiss update notification"
+  },
+  "focusHint": {
+    "before": "Press",
+    "after": "to exit focus mode"
+  },
+  "home": {
+    "newProject": "New Project",
+    "newBlankProject": "New Blank Project",
+    "signIn": "Sign In",
+    "recentProjects": "Recent Projects",
+    "importIfcDwgPdf": "Import IFC / DWG / PDF",
+    "emptyText": "Start a new project or import a file",
+    "importFile": "Import a File",
+    "open": "Open",
+    "startFromTemplate": "Start from a Template",
+    "chooseTemplate": "Choose a Template",
+    "projectTemplates": "Project Templates"
+  },
+  "browser": {
+    "searchProjects": "Search projects…",
+    "recentFirst": "Recent first",
+    "oldestFirst": "Oldest first",
+    "gridView": "Grid view",
+    "listView": "List view",
+    "noProjects": "No projects found"
+  },
+  "dashboard": {
+    "title": "Projects",
+    "fromTemplate": "From Template",
+    "newProject": "New Project",
+    "newBlankProject": "New Blank Project",
+    "filter": {
+      "all": "All",
+      "starred": "Starred",
+      "mine": "Mine",
+      "shared": "Shared"
+    },
+    "searchPlaceholder": "Search projects…",
+    "sortBy": "Sort by",
+    "sort": {
+      "lastEdited": "Last edited",
+      "created": "Created",
+      "name": "Name",
+      "size": "Size"
+    },
+    "gridView": "Grid view",
+    "listView": "List view",
+    "empty": {
+      "title": "No projects yet",
+      "subtitle": "Start with a blank canvas or choose a template below.",
+      "orTemplate": "Or start from a template"
+    },
+    "card": {
+      "clickToOpen": "Click to open · Double-click to rename",
+      "star": "Star project",
+      "unstar": "Unstar project",
+      "delete": "Delete project"
+    },
+    "closeTemplates": "Close templates",
+    "closeSettings": "Close settings",
+    "signOut": "Sign out",
+    "upgradeToPro": "Upgrade to Pro"
   }
 }
