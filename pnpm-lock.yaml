@@ -158,6 +158,9 @@ importers:
       three-bvh-csg:
         specifier: ^0.0.18
         version: 0.0.18(three-mesh-bvh@0.9.9(three@0.183.2))(three@0.183.2)
+      three-gpu-pathtracer:
+        specifier: ^0.0.22
+        version: 0.0.22(three-mesh-bvh@0.9.9(three@0.183.2))(three@0.183.2)(xatlas-web@0.1.0)
       three-mesh-bvh:
         specifier: ^0.9.9
         version: 0.9.9(three@0.183.2)
@@ -4963,6 +4966,13 @@ packages:
       three: '>=0.179.0'
       three-mesh-bvh: '>=0.9.7'
 
+  three-gpu-pathtracer@0.0.22:
+    resolution: {integrity: sha512-blKolyzKGmhcIYPVv+I6IRndXLBri7i6U0/ZRIApwFoyPWaRVHuEIECH0UPYOO5CYGdnKL49EUScScUOQ/XagQ==}
+    peerDependencies:
+      three: '>=0.151.0'
+      three-mesh-bvh: '>=0.7.4'
+      xatlas-web: ^0.1.0
+
   three-mesh-bvh@0.9.9:
     resolution: {integrity: sha512-FJKitcjvbALmeQRK+Sc+nLGorCpkrZBrbgJZFzhdyWboak37DZikn46hvQkNqSbJPm227ahYmS6k3N/GXaAyXw==}
     peerDependencies:
@@ -5503,6 +5513,9 @@ packages:
 
   wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
+
+  xatlas-web@0.1.0:
+    resolution: {integrity: sha512-PprVfuXbaIskxLTLBUQRaWfgSy9xUQqAMIRooOw0P6NYqwgh6T0voeer6+Z5M7AFt5SGXUybuww/uDGs1yw8vQ==}
 
   xml-name-validator@5.0.0:
     resolution: {integrity: sha512-EvGK8EJ3DhaHfbRlETOWAS5pO9MZITeauHKJyb8wyajUfQUenkIg2MvLDTZ4T/TgIcm3HU0TFBgWWboAZ30UHg==}
@@ -10544,6 +10557,12 @@ snapshots:
       three: 0.183.2
       three-mesh-bvh: 0.9.9(three@0.183.2)
 
+  three-gpu-pathtracer@0.0.22(three-mesh-bvh@0.9.9(three@0.183.2))(three@0.183.2)(xatlas-web@0.1.0):
+    dependencies:
+      three: 0.183.2
+      three-mesh-bvh: 0.9.9(three@0.183.2)
+      xatlas-web: 0.1.0
+
   three-mesh-bvh@0.9.9(three@0.183.2):
     dependencies:
       three: 0.183.2
@@ -11133,6 +11152,8 @@ snapshots:
       strip-ansi: 6.0.1
 
   wrappy@1.0.2: {}
+
+  xatlas-web@0.1.0: {}
 
   xml-name-validator@5.0.0: {}
 

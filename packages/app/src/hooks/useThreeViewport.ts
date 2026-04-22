@@ -83,6 +83,25 @@ export function _setThumbnailCapturer(fn: ThumbnailCapturer | null): void {
   _thumbnailCapturer = fn;
 }
 
+/** Access to the live three.js refs (scene / camera / renderer) for
+ *  external rendering pipelines like the path tracer. Populated by the
+ *  hook on mount, cleared on unmount. Module-level so RenderingPanel
+ *  doesn't have to thread a ref through half the app. */
+export interface LiveSceneRefs {
+  scene: THREE.Scene;
+  camera: THREE.PerspectiveCamera;
+  renderer: GenericRenderer;
+}
+type LiveSceneProvider = () => LiveSceneRefs | null;
+let _liveSceneProvider: LiveSceneProvider | null = null;
+
+export function _setLiveSceneProvider(fn: LiveSceneProvider | null): void {
+  _liveSceneProvider = fn;
+}
+export function getLiveScene(): LiveSceneRefs | null {
+  return _liveSceneProvider ? _liveSceneProvider() : null;
+}
+
 export function captureProjectThumbnail(
   width = 800,
   height = 600,
@@ -1781,6 +1800,19 @@ export function useThreeViewport() {
       needsRenderRef.current = true;
       hasAutoZoomedRef.current = false;
 
+      // Expose the live scene/camera/renderer to external rendering
+      // pipelines (photoreal path tracer). Guarded by the stateRef
+      // check so a post-unmount call returns null rather than a stale
+      // tuple.
+      _setLiveSceneProvider(() => {
+        const st = stateRef.current;
+        if (!st.scene || !st.camera || !st.renderer) return null;
+        // The live renderer may be WebGPU. The path tracer currently
+        // only supports WebGLRenderer; callers must check renderer's
+        // constructor and bail cleanly when the user is in WebGPU mode.
+        return { scene: st.scene, camera: st.camera, renderer: st.renderer };
+      });
+
       // Register thumbnail capturer against the live renderer/scene/camera.
       // The capture temporarily reframes the camera to fit the model, renders
       // into the backbuffer, encodes the JPEG, then restores the user's view
@@ -2046,6 +2078,7 @@ export function useThreeViewport() {
       cancelled = true;
       rendererReadyRef.current = false;
       _setThumbnailCapturer(null);
+      _setLiveSceneProvider(null);
       if (animationFrameRef.current) cancelAnimationFrame(animationFrameRef.current);
       ro?.disconnect();
       if (onMouseDown)   container.removeEventListener('mousedown',   onMouseDown);

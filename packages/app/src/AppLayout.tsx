@@ -159,6 +159,7 @@ import { SectionBoxPanel } from './components/SectionBoxPanel';
 import { SiteImportPanel } from './components/SiteImportPanel';
 import { SpecWritingPanel } from './components/SpecWritingPanel';
 import { PhotoToModelPanel } from './components/PhotoToModelPanel';
+import { RenderingPanel } from './components/RenderingPanel';
 import { MarketplacePanel } from './components/MarketplacePanel';
 import { WindAnalysisPanel } from './components/WindAnalysisPanel';
 import { SplitViewport } from './components/SplitViewport';
@@ -1008,6 +1009,9 @@ export function AppLayout() {
               {rightPanelTab === 'site' && <SiteImportPanel />}
               {rightPanelTab === 'specs' && <SpecWritingPanel />}
               {rightPanelTab === 'photo' && <PhotoToModelPanel />}
+              {rightPanelTab === 'render' && (
+                <RenderingPanel onClose={() => setRightPanelTab('properties')} />
+              )}
               {rightPanelTab === 'marketplace' && <MarketplacePanel />}
               {rightPanelTab === 'wind' && <WindAnalysisPanel />}
               {rightPanelTab === 'admin' && (
