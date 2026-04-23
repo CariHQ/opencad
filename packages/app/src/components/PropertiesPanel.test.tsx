@@ -4,12 +4,16 @@
  */
 import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { PropertiesPanel } from './PropertiesPanel';
 import { useDocumentStore } from '../stores/documentStore';
+import * as threeViewport from '../hooks/useThreeViewport';
 expect.extend(jestDomMatchers);
 
 vi.mock('../stores/documentStore');
+vi.mock('../hooks/useThreeViewport', () => ({
+  getSharedSelectedCoords: vi.fn(() => null),
+}));
 
 const mockUseDocumentStore = vi.mocked(useDocumentStore);
 
@@ -102,6 +106,45 @@ describe('T-UI-003: PropertiesPanel', () => {
       'el-1',
       expect.objectContaining({ transform: expect.objectContaining({}) })
     );
+  });
+
+  it('saves correct translation offset when liveCoords shows absolute position', async () => {
+    // Element with translation.x = 10 placed at base posX = 490 → absolute = 500.
+    // User sees "500" in the X field (from liveCoords). Types "600" (wants absolute 600).
+    // Expected: translation.x = 600 - 490 = 110 (not 600!).
+    vi.useFakeTimers();
+    vi.mocked(threeViewport.getSharedSelectedCoords).mockReturnValue({
+      elementId: 'el-1',
+      x: 500,  // absolute = posX(490) + translation.x(10)
+      y: 0,
+      z: 0,
+    });
+    const elementWithOffset = {
+      ...mockElement,
+      transform: { ...mockElement.transform, translation: { x: 10, y: 0, z: 0 } },
+    };
+    const docWithOffset = {
+      ...mockDoc,
+      content: { ...mockDoc.content, elements: { 'el-1': elementWithOffset } },
+    };
+    const store = makeStore({ document: docWithOffset });
+    mockUseDocumentStore.mockReturnValue(store as ReturnType<typeof useDocumentStore>);
+    render(<PropertiesPanel />);
+    // Advance time so the 100ms interval fires and sets liveCoords
+    act(() => { vi.advanceTimersByTime(200); });
+    const xInput = screen.getByDisplayValue('500');
+    fireEvent.focus(xInput);
+    fireEvent.change(xInput, { target: { value: '600' } });
+    fireEvent.blur(xInput);
+    expect(store.updateElement).toHaveBeenCalledWith(
+      'el-1',
+      expect.objectContaining({
+        transform: expect.objectContaining({
+          translation: expect.objectContaining({ x: 110 }),
+        }),
+      })
+    );
+    vi.useRealTimers();
   });
 
   it('calls updateElement and pushHistory when a property value is changed', () => {

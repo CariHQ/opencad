@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import type { PropertyValue, PropertySet } from '@opencad/document';
@@ -72,9 +72,14 @@ export function PropertiesPanel() {
   // update while the user drags the TransformControls gizmo — otherwise we'd
   // only see the value after the drag commits.
   const [liveCoords, setLiveCoords] = useState<{ x: number; y: number; z: number; elementId: string } | null>(null);
+  // Pause live-coord polling while a coord input has focus — prevents the
+  // key from changing (which would unmount the input) while the user types.
+  const coordFocusedRef = useRef(false);
   useEffect(() => {
     const id = setInterval(() => {
-      setLiveCoords(getSharedSelectedCoords());
+      if (!coordFocusedRef.current) {
+        setLiveCoords(getSharedSelectedCoords());
+      }
     }, 100);
     return () => clearInterval(id);
   }, []);
@@ -113,15 +118,23 @@ export function PropertiesPanel() {
   if (!selectedElement) return null;
 
   const handleTranslationBlur = (axis: 'x' | 'y' | 'z', rawValue: string) => {
+    coordFocusedRef.current = false;
     const num = parseFloat(rawValue);
     if (isNaN(num)) return;
     pushHistory(`Move element`);
+    // liveCoords exposes absolute position (base_pos + translation). The user
+    // types an absolute target value, so we must back-compute the translation
+    // offset: new_translation = typed_absolute - base_pos
+    // base_pos = liveCoords[axis] - current_translation[axis]
+    const currentTrans = selectedElement.transform.translation[axis];
+    const liveVal = liveCoords?.elementId === selectedIds[0] ? liveCoords[axis] : null;
+    const newTranslation = liveVal !== null ? num - (liveVal - currentTrans) : num;
     updateElement(selectedIds[0], {
       transform: {
         ...selectedElement.transform,
         translation: {
           ...selectedElement.transform.translation,
-          [axis]: num,
+          [axis]: newTranslation,
         },
       },
     });
@@ -247,10 +260,9 @@ export function PropertiesPanel() {
                   <input
                     type="number"
                     className="property-input"
-                    // key forces re-render when the backing value changes,
-                    // letting the user still type and commit on blur
                     key={`${selectedIds[0]}-${axis}-${live ?? selectedElement.transform.translation[axis]}`}
                     defaultValue={value}
+                    onFocus={() => { coordFocusedRef.current = true; }}
                     onBlur={(e) => handleTranslationBlur(axis, e.target.value)}
                   />
                 </div>
