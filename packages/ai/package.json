@@ -14,7 +14,7 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.54.0",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@opencad/document": "workspace:*",
     "@opencad/shared": "workspace:*"
   },
