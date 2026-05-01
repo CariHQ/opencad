@@ -36,6 +36,7 @@ import {
   Zap,
   GitBranch,
   Share2,
+  Sprout,
 } from 'lucide-react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -171,6 +172,7 @@ import { BranchPanel } from './components/BranchPanel';
 import { UnderlayPanel } from './components/UnderlayPanel';
 import { ReviewPanel } from './components/ReviewPanel';
 import { GraphPanelWrapper } from './components/graph/GraphPanelWrapper';
+import { LandscapeToolPanel } from './components/LandscapeToolPanel';
 import { UpdateBanner } from './components/UpdateBanner';
 import { useAuthStore } from './stores/authStore';
 import { APIKeyPanel } from './components/APIKeyPanel';
@@ -197,6 +199,7 @@ import './styles/app.css';
 
 type RightPanelTab =
   | 'graph'
+  | 'landscape'
   | 'properties'
   | 'schedule'
   | 'spaces'
@@ -227,6 +230,7 @@ type RightPanelTab =
 
 const RIGHT_PANEL_TABS: { id: RightPanelTab; title: string; icon: React.ReactNode }[] = [
   { id: 'graph', title: 'Graph', icon: <Share2 size={16} strokeWidth={2} /> },
+  { id: 'landscape', title: 'Landscape', icon: <Sprout size={16} strokeWidth={2} /> },
   { id: 'properties', title: 'Properties', icon: <Settings2 size={16} strokeWidth={2} /> },
   { id: 'schedule', title: 'Schedule', icon: <Table2 size={16} strokeWidth={2} /> },
   { id: 'spaces', title: 'Spaces', icon: <LayoutDashboard size={16} strokeWidth={2} /> },
@@ -991,6 +995,7 @@ export function AppLayout() {
                 </>
               )}
               {rightPanelTab === 'graph' && <GraphPanelWrapper />}
+              {rightPanelTab === 'landscape' && <LandscapeToolPanel />}
               {rightPanelTab === 'schedule' && <SchedulePanel />}
               {rightPanelTab === 'spaces' && <SpacePanel />}
               {rightPanelTab === 'clash' && <ClashDetectionPanel />}

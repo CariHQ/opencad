@@ -26,7 +26,8 @@
     "underlay": "PDF 下絵",
     "admin": "管理",
     "review": "レビュー",
-    "layers": "レイヤー"
+    "layers": "レイヤー",
+    "landscape": "Landscape"
   },
   "navigator": {
     "title": "ナビゲーター",
@@ -699,5 +700,36 @@
     "rejectPrompt": "却下メモ(公開者に送信、任意):",
     "revokePrompt": "取り消し理由(次回ロード時にユーザーに表示):",
     "loading": "公開者ステータスを読み込み中…"
+  },
+  "landscape": {
+    "title": "Landscape",
+    "tabs": {
+      "trees": "Trees",
+      "shrubs": "Shrubs",
+      "rocks": "Rocks",
+      "furniture": "Furniture",
+      "people": "People"
+    },
+    "placePrompt": "Click to place {{name}}",
+    "noAssets": "No landscape assets available.",
+    "loadingManifest": "Loading…",
+    "readOnly": "Document is read-only.",
+    "alignToSlope": "Align to slope",
+    "noTerrainFallback": "No terrain — placing on z=0 plane",
+    "species": {
+      "oakTree": "Oak Tree",
+      "pineTree": "Pine Tree",
+      "birchTree": "Birch Tree",
+      "mapleTree": "Maple Tree",
+      "palmTree": "Palm Tree",
+      "graniteRock": "Granite Rock",
+      "sandstoneRock": "Sandstone Rock",
+      "basaltRock": "Basalt Rock",
+      "boxwoodShrub": "Boxwood Shrub",
+      "lavenderShrub": "Lavender Shrub",
+      "woodBench": "Wood Bench",
+      "steelBollard": "Steel Bollard",
+      "adultPerson": "Adult (Entourage)"
+    }
   }
 }

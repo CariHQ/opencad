@@ -17,6 +17,7 @@
     "shadow": "Shadow",
     "section": "Section",
     "site": "Site Import",
+    "landscape": "Landscape",
     "specs": "Specs",
     "photo": "Photo to Model",
     "marketplace": "Marketplace",
@@ -457,6 +458,37 @@
     "empty": "No site imported.",
     "importFrom": "Import from",
     "loading": "Loading site data…"
+  },
+  "landscape": {
+    "title": "Landscape",
+    "tabs": {
+      "trees": "Trees",
+      "shrubs": "Shrubs",
+      "rocks": "Rocks",
+      "furniture": "Furniture",
+      "people": "People"
+    },
+    "placePrompt": "Click to place {{name}}",
+    "noAssets": "No landscape assets available.",
+    "loadingManifest": "Loading…",
+    "readOnly": "Document is read-only.",
+    "alignToSlope": "Align to slope",
+    "noTerrainFallback": "No terrain — placing on z=0 plane",
+    "species": {
+      "oakTree": "Oak Tree",
+      "pineTree": "Pine Tree",
+      "birchTree": "Birch Tree",
+      "mapleTree": "Maple Tree",
+      "palmTree": "Palm Tree",
+      "graniteRock": "Granite Rock",
+      "sandstoneRock": "Sandstone Rock",
+      "basaltRock": "Basalt Rock",
+      "boxwoodShrub": "Boxwood Shrub",
+      "lavenderShrub": "Lavender Shrub",
+      "woodBench": "Wood Bench",
+      "steelBollard": "Steel Bollard",
+      "adultPerson": "Adult (Entourage)"
+    }
   },
   "specs": {
     "title": "Spec Writing",

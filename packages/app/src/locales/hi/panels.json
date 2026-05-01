@@ -26,7 +26,8 @@
     "underlay": "PDF अंडरले",
     "admin": "व्यवस्थापक",
     "review": "समीक्षा",
-    "layers": "परतें"
+    "layers": "परतें",
+    "landscape": "Landscape"
   },
   "navigator": {
     "title": "नेविगेटर",
@@ -699,5 +700,36 @@
     "rejectPrompt": "अस्वीकृति नोट्स (प्रकाशक को भेजे जाते हैं, वैकल्पिक):",
     "revokePrompt": "रद्द करने का कारण (अगले लोड पर उपयोगकर्ताओं को दिखाया जाता है):",
     "loading": "प्रकाशक स्थिति लोड हो रही है…"
+  },
+  "landscape": {
+    "title": "Landscape",
+    "tabs": {
+      "trees": "Trees",
+      "shrubs": "Shrubs",
+      "rocks": "Rocks",
+      "furniture": "Furniture",
+      "people": "People"
+    },
+    "placePrompt": "Click to place {{name}}",
+    "noAssets": "No landscape assets available.",
+    "loadingManifest": "Loading…",
+    "readOnly": "Document is read-only.",
+    "alignToSlope": "Align to slope",
+    "noTerrainFallback": "No terrain — placing on z=0 plane",
+    "species": {
+      "oakTree": "Oak Tree",
+      "pineTree": "Pine Tree",
+      "birchTree": "Birch Tree",
+      "mapleTree": "Maple Tree",
+      "palmTree": "Palm Tree",
+      "graniteRock": "Granite Rock",
+      "sandstoneRock": "Sandstone Rock",
+      "basaltRock": "Basalt Rock",
+      "boxwoodShrub": "Boxwood Shrub",
+      "lavenderShrub": "Lavender Shrub",
+      "woodBench": "Wood Bench",
+      "steelBollard": "Steel Bollard",
+      "adultPerson": "Adult (Entourage)"
+    }
   }
 }

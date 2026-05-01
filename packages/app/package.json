@@ -15,7 +15,8 @@
     "test:coverage": "vitest run --coverage",
     "lint": "eslint src --ext .ts,.tsx",
     "lint:fix": "eslint src --ext .ts,.tsx --fix",
-    "clean": "rm -rf dist coverage"
+    "clean": "rm -rf dist coverage",
+    "bake:landscape": "tsx scripts/bake-landscape.ts"
   },
   "dependencies": {
     "@opencad/ai": "workspace:*",

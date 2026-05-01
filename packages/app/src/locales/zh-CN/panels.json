@@ -26,7 +26,8 @@
     "underlay": "PDF 底图",
     "admin": "管理",
     "review": "审阅",
-    "layers": "图层"
+    "layers": "图层",
+    "landscape": "Landscape"
   },
   "navigator": {
     "title": "导航器",
@@ -699,5 +700,36 @@
     "rejectPrompt": "拒绝说明(发送给发布者,可选):",
     "revokePrompt": "撤销原因(用户下次加载时显示):",
     "loading": "加载发布者状态中…"
+  },
+  "landscape": {
+    "title": "Landscape",
+    "tabs": {
+      "trees": "Trees",
+      "shrubs": "Shrubs",
+      "rocks": "Rocks",
+      "furniture": "Furniture",
+      "people": "People"
+    },
+    "placePrompt": "Click to place {{name}}",
+    "noAssets": "No landscape assets available.",
+    "loadingManifest": "Loading…",
+    "readOnly": "Document is read-only.",
+    "alignToSlope": "Align to slope",
+    "noTerrainFallback": "No terrain — placing on z=0 plane",
+    "species": {
+      "oakTree": "Oak Tree",
+      "pineTree": "Pine Tree",
+      "birchTree": "Birch Tree",
+      "mapleTree": "Maple Tree",
+      "palmTree": "Palm Tree",
+      "graniteRock": "Granite Rock",
+      "sandstoneRock": "Sandstone Rock",
+      "basaltRock": "Basalt Rock",
+      "boxwoodShrub": "Boxwood Shrub",
+      "lavenderShrub": "Lavender Shrub",
+      "woodBench": "Wood Bench",
+      "steelBollard": "Steel Bollard",
+      "adultPerson": "Adult (Entourage)"
+    }
   }
 }

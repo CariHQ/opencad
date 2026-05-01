@@ -1,0 +1,261 @@
+{
+  "version": "1.0.0",
+  "generatedAt": "2026-05-01T00:00:00.000Z",
+  "totalBudgetBytes": 0,
+  "assets": [
+    {
+      "id": "tree_oak",
+      "displayNameKey": "landscape.species.oakTree",
+      "tab": "trees",
+      "path": "assets/landscape/starter/tree_oak",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 12000, "mid": 6000, "lo": 1800 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "tree_pine",
+      "displayNameKey": "landscape.species.pineTree",
+      "tab": "trees",
+      "path": "assets/landscape/starter/tree_pine",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 10000, "mid": 5000, "lo": 1500 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "tree_birch",
+      "displayNameKey": "landscape.species.birchTree",
+      "tab": "trees",
+      "path": "assets/landscape/starter/tree_birch",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 9000, "mid": 4500, "lo": 1400 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "tree_maple",
+      "displayNameKey": "landscape.species.mapleTree",
+      "tab": "trees",
+      "path": "assets/landscape/starter/tree_maple",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 11000, "mid": 5500, "lo": 1600 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "tree_palm",
+      "displayNameKey": "landscape.species.palmTree",
+      "tab": "trees",
+      "path": "assets/landscape/starter/tree_palm",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 7000, "mid": 3500, "lo": 1000 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "rock_granite",
+      "displayNameKey": "landscape.species.graniteRock",
+      "tab": "rocks",
+      "path": "assets/landscape/starter/rock_granite",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 4000, "mid": 2000, "lo": 600 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "rock_sandstone",
+      "displayNameKey": "landscape.species.sandstoneRock",
+      "tab": "rocks",
+      "path": "assets/landscape/starter/rock_sandstone",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 3500, "mid": 1800, "lo": 550 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "rock_basalt",
+      "displayNameKey": "landscape.species.basaltRock",
+      "tab": "rocks",
+      "path": "assets/landscape/starter/rock_basalt",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 3000, "mid": 1500, "lo": 450 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "shrub_boxwood",
+      "displayNameKey": "landscape.species.boxwoodShrub",
+      "tab": "shrubs",
+      "path": "assets/landscape/starter/shrub_boxwood",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 5000, "mid": 2500, "lo": 750 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "shrub_lavender",
+      "displayNameKey": "landscape.species.lavenderShrub",
+      "tab": "shrubs",
+      "path": "assets/landscape/starter/shrub_lavender",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 4000, "mid": 2000, "lo": 600 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "bench_wood",
+      "displayNameKey": "landscape.species.woodBench",
+      "tab": "furniture",
+      "path": "assets/landscape/starter/bench_wood",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": null,
+      "triangleBudget": { "hi": 2000, "mid": 1000, "lo": 300 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "bollard_steel",
+      "displayNameKey": "landscape.species.steelBollard",
+      "tab": "furniture",
+      "path": "assets/landscape/starter/bollard_steel",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": null,
+      "triangleBudget": { "hi": 800, "mid": 400, "lo": 120 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    },
+    {
+      "id": "person_adult",
+      "displayNameKey": "landscape.species.adultPerson",
+      "tab": "people",
+      "path": "assets/landscape/starter/person_adult",
+      "lods": {
+        "hi": "hi.glb",
+        "mid": "mid.glb",
+        "lo": "lo.glb"
+      },
+      "impostor": {
+        "image": "impostor.png",
+        "meta": "impostor.json"
+      },
+      "triangleBudget": { "hi": 3000, "mid": 1500, "lo": 450 },
+      "license": "CC0",
+      "source": "Poly Haven",
+      "author": "Poly Haven Contributors",
+      "thumbnail": null
+    }
+  ]
+}
