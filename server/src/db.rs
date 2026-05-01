@@ -59,15 +59,44 @@ pub async fn create_project(
     .await
 }
 
-pub async fn list_projects(pool: &PgPool) -> Result<Vec<Project>, sqlx::Error> {
+/// Returns only projects the user is a member of (owned or shared).
+/// Pass `None` for firebase_uid only in unauthenticated dev mode.
+pub async fn list_projects_for_user(
+    pool: &PgPool,
+    firebase_uid: &str,
+) -> Result<Vec<Project>, sqlx::Error> {
     sqlx::query_as::<_, Project>(
-        "SELECT id, name, created_at, updated_at
-         FROM projects ORDER BY updated_at DESC",
+        "SELECT p.id, p.name, p.created_at, p.updated_at
+         FROM projects p
+         JOIN project_members pm ON pm.project_id = p.id
+         WHERE pm.firebase_uid = $1
+         ORDER BY p.updated_at DESC",
     )
+    .bind(firebase_uid)
     .fetch_all(pool)
     .await
 }
 
+/// Returns the project only if the given user is a member — 404 otherwise.
+pub async fn get_project_for_user(
+    pool: &PgPool,
+    id: Uuid,
+    firebase_uid: &str,
+) -> Result<Option<Project>, sqlx::Error> {
+    sqlx::query_as::<_, Project>(
+        "SELECT p.id, p.name, p.created_at, p.updated_at
+         FROM projects p
+         JOIN project_members pm ON pm.project_id = p.id
+         WHERE p.id = $1 AND pm.firebase_uid = $2",
+    )
+    .bind(id)
+    .bind(firebase_uid)
+    .fetch_optional(pool)
+    .await
+}
+
+/// Returns the project regardless of membership (used internally — never
+/// expose this directly to an unauthenticated caller).
 pub async fn get_project(pool: &PgPool, id: Uuid) -> Result<Option<Project>, sqlx::Error> {
     sqlx::query_as::<_, Project>(
         "SELECT id, name, created_at, updated_at FROM projects WHERE id = $1",
@@ -75,6 +104,78 @@ pub async fn get_project(pool: &PgPool, id: Uuid) -> Result<Option<Project>, sql
     .bind(id)
     .fetch_optional(pool)
     .await
+}
+
+/// Updates a project, scoped to members only.
+pub async fn update_project_for_user(
+    pool: &PgPool,
+    id: Uuid,
+    name: &str,
+    firebase_uid: &str,
+) -> Result<Option<Project>, sqlx::Error> {
+    sqlx::query_as::<_, Project>(
+        "UPDATE projects SET name = $1, updated_at = now()
+         WHERE id = $2
+           AND EXISTS (
+             SELECT 1 FROM project_members
+             WHERE project_id = $2 AND firebase_uid = $3
+           )
+         RETURNING id, name, created_at, updated_at",
+    )
+    .bind(name)
+    .bind(id)
+    .bind(firebase_uid)
+    .fetch_optional(pool)
+    .await
+}
+
+/// Deletes a project, scoped to owners only.
+pub async fn delete_project_for_user(
+    pool: &PgPool,
+    id: Uuid,
+    firebase_uid: &str,
+) -> Result<bool, sqlx::Error> {
+    let r = sqlx::query(
+        "DELETE FROM projects WHERE id = $1
+         AND EXISTS (
+           SELECT 1 FROM project_members
+           WHERE project_id = $1 AND firebase_uid = $2 AND role = 'owner'
+         )",
+    )
+    .bind(id)
+    .bind(firebase_uid)
+    .execute(pool)
+    .await?;
+    Ok(r.rows_affected() > 0)
+}
+
+/// How many projects the user owns (for plan limit enforcement).
+pub async fn count_owned_projects(
+    pool: &PgPool,
+    firebase_uid: &str,
+) -> Result<i64, sqlx::Error> {
+    let row: (i64,) = sqlx::query_as(
+        "SELECT COUNT(*) FROM project_members WHERE firebase_uid = $1 AND role = 'owner'",
+    )
+    .bind(firebase_uid)
+    .fetch_one(pool)
+    .await?;
+    Ok(row.0)
+}
+
+/// Returns the user's current plan ('free' | 'trial' | 'pro' | 'business').
+/// Returns None if the user row doesn't exist yet.
+pub async fn get_user_plan(
+    pool: &PgPool,
+    firebase_uid: &str,
+) -> Result<Option<String>, sqlx::Error> {
+    let row: Option<(String,)> = sqlx::query_as(
+        "SELECT plan FROM users WHERE firebase_uid = $1",
+    )
+    .bind(firebase_uid)
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|(plan,)| plan))
 }
 
 pub async fn update_project(
