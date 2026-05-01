@@ -124,7 +124,7 @@ export const SERVER_WS_URL = (import.meta.env.VITE_SERVER_WS_URL as string | und
  */
 export async function isServerAvailable(): Promise<boolean> {
   try {
-    const res = await fetch('/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
+    const res = await fetch('/api/v1/health', { method: 'GET', signal: AbortSignal.timeout(3000) });
     return res.status < 500;
   } catch {
     return false;

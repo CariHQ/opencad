@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 import { acceleratedRaycast, computeBoundsTree, disposeBoundsTree } from 'three-mesh-bvh';
 import { useDocumentStore } from '../stores/documentStore';
-import { useSceneStore, sunDirectionToVector } from '../stores/sceneStore';
+import { useSceneStore, sunDirectionToVector, isElementVisible } from '../stores/sceneStore';
 import { type ElementSchema } from '@opencad/document';
 import { BUILT_IN_MATERIALS, type Material } from '../lib/materials';
 import { getPBRMaps } from '../lib/proceduralTextures';
@@ -626,6 +626,27 @@ export function useThreeViewport() {
     apply();
     return useSceneStore.subscribe(apply);
   }, []);
+
+  // T-VIS-01/02/04: Update mesh visibility whenever scene-store visibility flags change
+  const applyMeshVisibility = useCallback(() => {
+    if (!doc) return;
+    const { temporaryHide, hiddenCategories } = useSceneStore.getState();
+    const layers = doc.organization.layers;
+    for (const [id, obj] of elementMeshesRef.current) {
+      const el = doc.content.elements[id];
+      if (!el) continue;
+      const layerVisible = layers[el.layerId]?.visible !== false;
+      obj.visible = isElementVisible(id, el.visible !== false, el.type, layerVisible, temporaryHide, hiddenCategories);
+    }
+    needsRenderRef.current = true;
+  }, [doc]);
+
+  useEffect(() => {
+    applyMeshVisibility();
+    return useSceneStore.subscribe(() => {
+      applyMeshVisibility();
+    });
+  }, [applyMeshVisibility]);
 
   // TransformControls — 3D gizmo for move/rotate/scale of selected elements
   const transformControlsRef = useRef<TransformControls | null>(null);
@@ -1298,6 +1319,9 @@ export function useThreeViewport() {
         tcElementIdRef.current = selNow[0]!;
       }
     }
+
+    // ── Apply visibility to all meshes (T-VIS-01 / T-VIS-02 / T-VIS-04) ──────
+    applyMeshVisibility();
 
     needsRenderRef.current = true;
     }

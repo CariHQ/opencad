@@ -87,6 +87,7 @@ import {
 import { pluginRegistry } from './plugins/pluginRegistry';
 import { listInstalled as listInstalledPlugins } from './lib/marketplaceApi';
 import { projectMembersApi } from './lib/serverApi';
+import { useSceneStore } from './stores/sceneStore';
 import { ReadOnlyBanner } from './components/ReadOnlyBanner';
 import type { AdminMember } from './components/AdminPanel';
 import type { SSOConfig } from './components/SSOSettingsPanel';
@@ -635,21 +636,36 @@ export function AppLayout() {
     const handler = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement).tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
-      if (e.metaKey || e.ctrlKey || e.altKey) {
-        if ((e.metaKey || e.ctrlKey) && e.key === '[') {
-          e.preventDefault();
-          setShowLeftPanel((v) => !v);
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key === ']') {
-          e.preventDefault();
-          setShowRightPanel((v) => !v);
-        }
-        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-          e.preventDefault();
-          setShowCommandPalette((v) => !v);
-        }
+      if ((e.target as HTMLElement).isContentEditable) return;
+      if (e.metaKey || e.ctrlKey) {
+        if (e.key === '[') { e.preventDefault(); setShowLeftPanel((v) => !v); }
+        if (e.key === ']') { e.preventDefault(); setShowRightPanel((v) => !v); }
+        if (e.key === 'k') { e.preventDefault(); setShowCommandPalette((v) => !v); }
         return;
       }
+
+      // T-VIS-02: Temporary hide / isolate shortcuts
+      if (e.altKey && e.key.toLowerCase() === 'h') {
+        e.preventDefault();
+        useSceneStore.getState().resetTemporaryHide();
+        return;
+      }
+      if (!e.altKey) {
+        if (e.shiftKey && e.key.toLowerCase() === 'h') {
+          e.preventDefault();
+          const ids = useDocumentStore.getState().selectedIds;
+          if (ids.length > 0) useSceneStore.getState().setIsolated(ids);
+          return;
+        }
+        if (!e.shiftKey && e.key.toLowerCase() === 'h') {
+          e.preventDefault();
+          const ids = useDocumentStore.getState().selectedIds;
+          if (ids.length > 0) useSceneStore.getState().addTemporaryHidden(ids);
+          return;
+        }
+      }
+
+      if (e.altKey) return;
 
       if (e.key === '\\') {
         setFocusMode((f) => !f);

@@ -616,6 +616,73 @@ input[type='range']::-moz-range-track {
   margin-right: 4px;
 }
 
+/* T-VIS-01/03: Hidden element rows — dimmed label */
+.nav-item--hidden .item-name,
+.nav-item--hidden .item-icon {
+  opacity: 0.4;
+}
+
+/* T-VIS-02: Temporary-hide banner in Navigator */
+.nav-temp-hide-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  font-size: 10px;
+  color: var(--accent);
+}
+
+.nav-temp-hide-reset {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  padding: 1px;
+}
+
+/* T-VIS-04: Category filter rows */
+.nav-filter-row {
+  cursor: pointer;
+  user-select: none;
+}
+
+.nav-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 9px;
+  background: color-mix(in srgb, var(--accent) 20%, transparent);
+  color: var(--accent);
+  border-radius: 8px;
+  padding: 1px 5px;
+  margin-left: auto;
+  margin-right: 4px;
+}
+
+/* T-VIS-02: Temporary-hide chip in viewport overlay */
+.viewport-temp-hide-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: color-mix(in srgb, var(--accent) 90%, transparent);
+  color: #fff;
+  border: none;
+  border-radius: 12px;
+  font-size: 11px;
+  cursor: pointer;
+  margin-bottom: 4px;
+  white-space: nowrap;
+}
+
+.viewport-temp-hide-chip:hover {
+  background: var(--accent);
+}
+
 /* Tool Shelf */
 .app-toolshelf-container {
   width: 40px;

@@ -158,6 +158,12 @@ interface DocumentState {
   deleteElement: (elementId: string) => void;
   setElementMaterial: (elementId: string, materialId: string) => void;
 
+  // T-VIS-01: Persistent element visibility — stored in the document, synced via CRDT
+  hideElement: (id: string) => void;
+  unhideElement: (id: string) => void;
+  hideElements: (ids: string[]) => void;
+  unhideAllElements: () => void;
+
   setToolParam: (tool: string, key: string, value: unknown) => void;
 
   addPset: (elementId: string, pset: { name: string; properties: Record<string, string | number | boolean> }) => void;
@@ -527,6 +533,67 @@ export const useDocumentStore = create<DocumentState>()(
         // textured materials. Mutating in place silently skipped rebuild.
         const nextElement = { ...element, properties: nextProperties };
         model.documentData.content.elements[elementId] = nextElement;
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
+      },
+
+      // T-VIS-01: Persistent element visibility ──────────────────────────────
+
+      hideElement: (id) => {
+        if (!assertWritable()) return;
+        const { model } = get();
+        if (!model) return;
+        const el = model.documentData.content.elements[id];
+        if (!el || el.visible === false) return;
+        model.documentData.content.elements[id] = { ...el, visible: false };
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now(), selectedIds: get().selectedIds.filter((s) => s !== id) });
+        persistDocument(doc);
+      },
+
+      unhideElement: (id) => {
+        if (!assertWritable()) return;
+        const { model } = get();
+        if (!model) return;
+        const el = model.documentData.content.elements[id];
+        if (!el || el.visible !== false) return;
+        model.documentData.content.elements[id] = { ...el, visible: true };
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
+      },
+
+      hideElements: (ids) => {
+        if (!assertWritable()) return;
+        const { model } = get();
+        if (!model) return;
+        if (ids.length === 0) return;
+        for (const id of ids) {
+          const el = model.documentData.content.elements[id];
+          if (el && el.visible !== false) {
+            model.documentData.content.elements[id] = { ...el, visible: false };
+          }
+        }
+        const hiddenSet = new Set(ids);
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now(), selectedIds: get().selectedIds.filter((s) => !hiddenSet.has(s)) });
+        persistDocument(doc);
+      },
+
+      unhideAllElements: () => {
+        if (!assertWritable()) return;
+        const { model } = get();
+        if (!model) return;
+        const elements = model.documentData.content.elements;
+        let changed = false;
+        for (const [id, el] of Object.entries(elements)) {
+          if (el.visible === false) {
+            elements[id] = { ...el, visible: true };
+            changed = true;
+          }
+        }
+        if (!changed) return;
         const doc = { ...model.documentData };
         set({ document: doc, lastSaved: Date.now() });
         persistDocument(doc);

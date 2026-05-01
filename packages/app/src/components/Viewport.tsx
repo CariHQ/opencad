@@ -1,10 +1,11 @@
 import { useRef, useState, useEffect, useCallback } from 'react';
-import { ZoomIn, ZoomOut, Maximize, Box } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize, Box, EyeOff } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useViewport } from '../hooks/useViewport';
 import { useThreeViewport } from '../hooks/useThreeViewport';
 import { useCursorBroadcast } from '../hooks/useCursorBroadcast';
 import { useDocumentStore } from '../stores/documentStore';
+import { useSceneStore } from '../stores/sceneStore';
 import { ViewCube } from './ViewCube';
 import { CoordBox, type CoordField, type CoordBoxValues } from './CoordBox';
 import { RemoteCursors } from './RemoteCursors';
@@ -18,6 +19,8 @@ interface ViewportProps {
 export function Viewport({ viewType = '3d' }: ViewportProps) {
   const { t } = useTranslation('common');
   const show3D = viewType === '3d';
+  const { temporaryHide, resetTemporaryHide } = useSceneStore();
+  const tempHideActive = temporaryHide.hidden.size > 0 || temporaryHide.isolated !== null;
   const toggleView = () => {}; // TODO: wire up to parent state
 
   const {
@@ -176,6 +179,17 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
           )}
         </div>
         <div className="viewport-corner top-right">
+          {tempHideActive && (
+            <button
+              className="viewport-temp-hide-chip"
+              onClick={resetTemporaryHide}
+              title={t('viewport.resetTempHide', { defaultValue: 'Reset temporary hide (Alt+H)' })}
+            >
+              <EyeOff size={12} />
+              {t('viewport.tempHideActive', { defaultValue: 'Temporary Hide' })}
+              &nbsp;×
+            </button>
+          )}
           <div className="viewport-controls">
             {show3D && <ViewCube setViewPreset={setViewPreset} />}
             <button className="view-toggle" onClick={toggleView}>

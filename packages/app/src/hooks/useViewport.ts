@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react';
 import { useDocumentStore } from '../stores/documentStore';
 import { useUnderlayStore } from '../stores/underlayStore';
+import { useSceneStore, isElementVisible } from '../stores/sceneStore';
 import { ElementSchema } from '@opencad/document';
 import { SpatialGrid } from '../utils/spatialIndex';
 import { buildWallGraph, wallEndOffsets } from './wallGraph';
@@ -131,6 +132,7 @@ export function useViewport() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { document: doc, selectedIds, setSelectedIds, activeTool, addElement, setActiveTool, toolParams, updateElement, pushHistory, deleteElement } = useDocumentStore();
+  const { temporaryHide, hiddenCategories } = useSceneStore();
 
   // Spatial index for O(1) average-case snap candidate lookup.
   // Cell size matches GRID_SIZE (500 world units) so each cell covers roughly
@@ -174,6 +176,9 @@ export function useViewport() {
   useEffect(() => {
     elementsRef.current = doc ? Object.values(doc.content.elements) : [];
   }, [doc]);
+
+  // Visibility changes (temp hide / category filter) require a redraw even if doc didn't change
+  useEffect(() => { dirtyRef.current = true; }, [temporaryHide, hiddenCategories]);
 
   // Rebuild snap spatial index on document change — O(n) once, then O(1) queries
   useEffect(() => {
@@ -1019,6 +1024,9 @@ export function useViewport() {
       // Viewport culling — skip elements entirely outside visible area
       const ebb = element.boundingBox;
       if (ebb.max.x < worldMinX || ebb.min.x > worldMaxX || ebb.max.y < worldMinY || ebb.min.y > worldMaxY) continue;
+      // Visibility — skip hidden elements (per-element, layer, temp hide, isolate, category filter)
+      const layer2d = doc!.organization.layers[element.layerId];
+      if (!isElementVisible(element.id, element.visible !== false, element.type, layer2d?.visible !== false, temporaryHide, hiddenCategories)) continue;
       // Collect visible elements for the text label pass (avoids a second full iteration)
       visibleLabelTargets.push({ element });
 
@@ -1476,7 +1484,11 @@ export function useViewport() {
       if (!doc) return;
       const HIT  = 8  * v.scale;  // hit tolerance in world units
       const HNDL = HANDLE_SIZE_PX * v.scale; // handle half-size in world units
-      const elements = Object.values(doc.content.elements) as ElementSchema[];
+      const { temporaryHide: th, hiddenCategories: hc } = useSceneStore.getState();
+      const elements = (Object.values(doc.content.elements) as ElementSchema[]).filter((el) => {
+        const layer = doc.organization.layers[el.layerId];
+        return isElementVisible(el.id, el.visible !== false, el.type, layer?.visible !== false, th, hc);
+      });
       const currentSelected = getStoreActions().selectedIds;
 
       // 1. Check if clicking a resize handle on a currently-selected element

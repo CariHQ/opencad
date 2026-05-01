@@ -19,19 +19,56 @@ import {
   ArrowUpDown,
   Minus,
   Camera,
+  Filter,
+  X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
+import { useSceneStore } from '../stores/sceneStore';
+import type { ElementType } from '@opencad/document';
+
+// Display labels for category filter — subset of ElementType values used in the model
+const CATEGORY_LABELS: Partial<Record<ElementType, string>> = {
+  wall: 'Walls',
+  door: 'Doors',
+  window: 'Windows',
+  slab: 'Slabs',
+  roof: 'Roofs',
+  column: 'Columns',
+  beam: 'Beams',
+  stair: 'Stairs',
+  ramp: 'Ramps',
+  railing: 'Railings',
+  space: 'Spaces',
+  mass: 'Mass',
+  annotation: 'Annotations',
+  dimension: 'Dimensions',
+  text: 'Text',
+  ceiling: 'Ceilings',
+  foundation: 'Foundation',
+};
 
 export function Navigator() {
   const { t } = useTranslation('panels');
   const { t: tc } = useTranslation('common');
-  const { document: doc, selectedIds, setSelectedIds, updateLayer, addLayer, deleteRendering } = useDocumentStore();
+  const {
+    document: doc,
+    selectedIds,
+    setSelectedIds,
+    updateLayer,
+    addLayer,
+    deleteRendering,
+    hideElement,
+    unhideElement,
+  } = useDocumentStore();
+  const { temporaryHide, hiddenCategories, toggleCategory, resetCategoryFilter, resetTemporaryHide } = useSceneStore();
+
   const [expanded, setExpanded] = useState<Record<string, boolean>>({
     views: true,
     levels: true,
     layers: true,
     elements: true,
+    filter: false,
   });
   const [expandedLayers, setExpandedLayers] = useState<Record<string, boolean>>({});
   const [search, setSearch] = useState('');
@@ -59,18 +96,22 @@ export function Navigator() {
       })
     : elements;
 
+  // Count elements per category (for filter badges)
+  const categoryCounts = new Map<ElementType, number>();
+  for (const el of elements) {
+    categoryCounts.set(el.type as ElementType, (categoryCounts.get(el.type as ElementType) ?? 0) + 1);
+  }
+  const activeCategories = [...categoryCounts.keys()];
+
+  const tempHideActive = temporaryHide.hidden.size > 0 || temporaryHide.isolated !== null;
+
   const getElementIcon = (type: string) => {
     switch (type) {
-      case 'wall':
-        return <BrickWall size={14} />;
-      case 'door':
-        return <DoorOpen size={14} />;
-      case 'window':
-        return <AppWindow size={14} />;
-      case 'slab':
-        return <Square size={14} />;
-      default:
-        return <Hash size={14} />;
+      case 'wall':    return <BrickWall size={14} />;
+      case 'door':    return <DoorOpen size={14} />;
+      case 'window':  return <AppWindow size={14} />;
+      case 'slab':    return <Square size={14} />;
+      default:        return <Hash size={14} />;
     }
   };
 
@@ -78,7 +119,27 @@ export function Navigator() {
     <div className="navigator">
       <div className="navigator-header">
         <span className="navigator-title">{t('navigator.title')}</span>
+        {hiddenCategories.size > 0 && (
+          <span className="nav-filter-badge" title={t('navigator.filterActive', { defaultValue: 'Category filter active' })}>
+            <Filter size={10} />
+            {hiddenCategories.size}
+          </span>
+        )}
       </div>
+
+      {/* Temporary-hide active banner */}
+      {tempHideActive && (
+        <div className="nav-temp-hide-banner">
+          <span>{t('navigator.tempHideActive', { defaultValue: 'Temporary hide active' })}</span>
+          <button
+            className="nav-temp-hide-reset"
+            onClick={resetTemporaryHide}
+            title={t('navigator.resetTempHide', { defaultValue: 'Reset temporary hide' })}
+          >
+            <X size={11} />
+          </button>
+        </div>
+      )}
 
       <div className="navigator-search">
         <input
@@ -104,30 +165,21 @@ export function Navigator() {
           {expanded.views && (
             <div className="nav-children">
               <div className="nav-item view">
-                <span className="item-icon">
-                  <Home size={14} />
-                </span>
+                <span className="item-icon"><Home size={14} /></span>
                 <span className="item-name">{tc('view.floorPlan', { defaultValue: 'Floor Plan' })}</span>
               </div>
               <div className="nav-item view">
-                <span className="item-icon">
-                  <Box size={14} />
-                </span>
+                <span className="item-icon"><Box size={14} /></span>
                 <span className="item-name">{tc('view.threeD', { defaultValue: '3D View' })}</span>
               </div>
               <div className="nav-item view">
-                <span className="item-icon">
-                  <Scissors size={14} />
-                </span>
+                <span className="item-icon"><Scissors size={14} /></span>
                 <span className="item-name">{tc('view.sectionAA', { defaultValue: 'Section A-A' })}</span>
               </div>
               <div className="nav-item view">
-                <span className="item-icon">
-                  <Building2 size={14} />
-                </span>
+                <span className="item-icon"><Building2 size={14} /></span>
                 <span className="item-name">{tc('view.layout1', { defaultValue: 'Layout 1' })}</span>
               </div>
-              {/* Renderings — saved photoreal outputs. Draggable onto sheets. */}
               {renderings.map((view) => (
                 <div
                   key={view.id}
@@ -149,10 +201,7 @@ export function Navigator() {
                     className="nav-render-delete"
                     aria-label={t('navigator.deleteRendering', { defaultValue: 'Delete rendering' })}
                     title={t('navigator.deleteRendering', { defaultValue: 'Delete rendering' })}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      deleteRendering(view.id);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); deleteRendering(view.id); }}
                   >×</button>
                 </div>
               ))}
@@ -166,9 +215,7 @@ export function Navigator() {
             <span className={`expand-icon ${expanded.levels ? 'expanded' : ''}`}>
               <ChevronRight size={12} />
             </span>
-            <span className="item-icon">
-              <ArrowUpDown size={14} />
-            </span>
+            <span className="item-icon"><ArrowUpDown size={14} /></span>
             <span className="item-name">{t('navigator.levels')}</span>
             <span className="item-count">{levels.length}</span>
           </div>
@@ -182,9 +229,7 @@ export function Navigator() {
                     className={`nav-item level ${selectedIds.includes(level.id) ? 'selected' : ''}`}
                     onClick={() => setSelectedIds([level.id])}
                   >
-                    <span className="item-icon">
-                      <Minus size={14} />
-                    </span>
+                    <span className="item-icon"><Minus size={14} /></span>
                     <span className="item-name">{level.name}</span>
                     <span className="item-meta">{level.elevation.toFixed(0)}m</span>
                   </div>
@@ -199,9 +244,7 @@ export function Navigator() {
             <span className={`expand-icon ${expanded.layers ? 'expanded' : ''}`}>
               <ChevronRight size={12} />
             </span>
-            <span className="item-icon">
-              <Layers size={14} />
-            </span>
+            <span className="item-icon"><Layers size={14} /></span>
             <span className="item-name">{t('navigator.layers')}</span>
             <button
               className="nav-icon-btn"
@@ -232,46 +275,61 @@ export function Navigator() {
                         <span className={`expand-icon ${layerExpanded ? 'expanded' : ''}`}>
                           <ChevronRight size={12} />
                         </span>
-                        <span
-                          className="layer-color-dot"
-                          style={{ background: layer.color }}
-                        />
+                        <span className="layer-color-dot" style={{ background: layer.color }} />
                         <span className="item-name">{layer.name}</span>
                         <button
                           className="nav-icon-btn"
-                          title={layer.visible ? t('layers.hideLayer', { defaultValue: 'Hide layer (toggle visibility)' }) : t('layers.showLayer', { defaultValue: 'Show layer (toggle visibility)' })}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateLayer(layer.id, { visible: !layer.visible });
-                          }}
+                          title={layer.visible
+                            ? t('layers.hideLayer', { defaultValue: 'Hide layer' })
+                            : t('layers.showLayer', { defaultValue: 'Show layer' })}
+                          onClick={(e) => { e.stopPropagation(); updateLayer(layer.id, { visible: !layer.visible }); }}
                         >
                           {layer.visible ? <Eye size={12} /> : <EyeOff size={12} />}
                         </button>
                         <button
                           className="nav-icon-btn"
-                          title={layer.locked ? t('layers.unlockLayer', { defaultValue: 'Unlock layer' }) : t('layers.lockLayer', { defaultValue: 'Lock layer' })}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            updateLayer(layer.id, { locked: !layer.locked });
-                          }}
+                          title={layer.locked
+                            ? t('layers.unlockLayer', { defaultValue: 'Unlock layer' })
+                            : t('layers.lockLayer', { defaultValue: 'Lock layer' })}
+                          onClick={(e) => { e.stopPropagation(); updateLayer(layer.id, { locked: !layer.locked }); }}
                         >
                           {layer.locked ? <Lock size={12} /> : <Unlock size={12} />}
                         </button>
                         <span className="item-count">{layerElements.length}</span>
                       </div>
-                      {layerExpanded && layerElements.slice(0, 50).map((element) => (
-                        <div
-                          key={element.id}
-                          className={`nav-item element nav-child-indent ${selectedIds.includes(element.id) ? 'selected' : ''}`}
-                          onClick={() => setSelectedIds([element.id])}
-                        >
-                          <span className="item-icon">{getElementIcon(element.type)}</span>
-                          <span className="item-name">
-                            {(element.properties?.Name?.value as string | undefined) ||
-                              `${element.type} ${element.id.slice(0, 6)}`}
-                          </span>
-                        </div>
-                      ))}
+                      {layerExpanded && layerElements.slice(0, 50).map((element) => {
+                        const isHidden = element.visible === false;
+                        const layerOff = !layer.visible;
+                        return (
+                          <div
+                            key={element.id}
+                            className={`nav-item element nav-child-indent ${selectedIds.includes(element.id) ? 'selected' : ''} ${isHidden ? 'nav-item--hidden' : ''}`}
+                            onClick={() => setSelectedIds([element.id])}
+                          >
+                            <span className="item-icon">{getElementIcon(element.type)}</span>
+                            <span className="item-name">
+                              {(element.properties?.Name?.value as string | undefined) ||
+                                `${element.type} ${element.id.slice(0, 6)}`}
+                            </span>
+                            <button
+                              className="nav-icon-btn"
+                              title={layerOff
+                                ? t('navigator.layerHidden', { defaultValue: 'Layer is hidden' })
+                                : isHidden
+                                  ? t('navigator.showElement', { defaultValue: 'Show element' })
+                                  : t('navigator.hideElement', { defaultValue: 'Hide element' })}
+                              disabled={layerOff}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (isHidden) unhideElement(element.id);
+                                else hideElement(element.id);
+                              }}
+                            >
+                              {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                            </button>
+                          </div>
+                        );
+                      })}
                     </React.Fragment>
                   );
                 })}
@@ -285,27 +343,46 @@ export function Navigator() {
             <span className={`expand-icon ${expanded.elements ? 'expanded' : ''}`}>
               <ChevronRight size={12} />
             </span>
-            <span className="item-icon">
-              <BrickWall size={14} />
-            </span>
+            <span className="item-icon"><BrickWall size={14} /></span>
             <span className="item-name">{t('navigator.elements')}</span>
             <span className="item-count">{filteredElements.length}</span>
           </div>
           {expanded.elements && (
             <div className="nav-children">
-              {filteredElements.slice(0, 50).map((element) => (
-                <div
-                  key={element.id}
-                  className={`nav-item element ${selectedIds.includes(element.id) ? 'selected' : ''}`}
-                  onClick={() => setSelectedIds([element.id])}
-                >
-                  <span className="item-icon">{getElementIcon(element.type)}</span>
-                  <span className="item-name">
-                    {(element.properties?.Name?.value as string | undefined) ||
-                      `${element.type} ${element.id.slice(0, 6)}`}
-                  </span>
-                </div>
-              ))}
+              {filteredElements.slice(0, 50).map((element) => {
+                const isHidden = element.visible === false;
+                const layer = doc?.organization.layers[element.layerId];
+                const layerOff = !layer?.visible;
+                return (
+                  <div
+                    key={element.id}
+                    className={`nav-item element ${selectedIds.includes(element.id) ? 'selected' : ''} ${isHidden ? 'nav-item--hidden' : ''}`}
+                    onClick={() => setSelectedIds([element.id])}
+                  >
+                    <span className="item-icon">{getElementIcon(element.type)}</span>
+                    <span className="item-name">
+                      {(element.properties?.Name?.value as string | undefined) ||
+                        `${element.type} ${element.id.slice(0, 6)}`}
+                    </span>
+                    <button
+                      className="nav-icon-btn"
+                      title={layerOff
+                        ? t('navigator.layerHidden', { defaultValue: 'Layer is hidden' })
+                        : isHidden
+                          ? t('navigator.showElement', { defaultValue: 'Show element' })
+                          : t('navigator.hideElement', { defaultValue: 'Hide element' })}
+                      disabled={layerOff}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (isHidden) unhideElement(element.id);
+                        else hideElement(element.id);
+                      }}
+                    >
+                      {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                    </button>
+                  </div>
+                );
+              })}
               {filteredElements.length > 50 && (
                 <div className="nav-item more">
                   <span className="item-name">+{filteredElements.length - 50} more…</span>
@@ -314,6 +391,57 @@ export function Navigator() {
             </div>
           )}
         </div>
+
+        {/* T-VIS-04: Category filter */}
+        {activeCategories.length > 0 && (
+          <div className="nav-section">
+            <div className="nav-item folder" onClick={() => toggleExpanded('filter')}>
+              <span className={`expand-icon ${expanded.filter ? 'expanded' : ''}`}>
+                <ChevronRight size={12} />
+              </span>
+              <span className="item-icon"><Filter size={14} /></span>
+              <span className="item-name">{t('navigator.filter', { defaultValue: 'Filter' })}</span>
+              {hiddenCategories.size > 0 && (
+                <>
+                  <span className="item-count">{hiddenCategories.size} hidden</span>
+                  <button
+                    className="nav-icon-btn"
+                    title={t('navigator.resetFilter', { defaultValue: 'Reset filter' })}
+                    onClick={(e) => { e.stopPropagation(); resetCategoryFilter(); }}
+                  >
+                    <X size={11} />
+                  </button>
+                </>
+              )}
+            </div>
+            {expanded.filter && (
+              <div className="nav-children">
+                {activeCategories.sort().map((cat) => {
+                  const isHidden = hiddenCategories.has(cat);
+                  const label = CATEGORY_LABELS[cat] ?? cat;
+                  const count = categoryCounts.get(cat) ?? 0;
+                  return (
+                    <div
+                      key={cat}
+                      className={`nav-item nav-filter-row ${isHidden ? 'nav-item--hidden' : ''}`}
+                      onClick={() => toggleCategory(cat)}
+                      role="checkbox"
+                      aria-checked={!isHidden}
+                      tabIndex={0}
+                      onKeyDown={(e) => e.key === 'Enter' || e.key === ' ' ? toggleCategory(cat) : undefined}
+                    >
+                      <span className="item-icon">
+                        {isHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                      </span>
+                      <span className="item-name">{label}</span>
+                      <span className="item-count">{count}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

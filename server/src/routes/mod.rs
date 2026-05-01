@@ -154,7 +154,11 @@ pub fn build(state: AppState) -> Router {
 
     Router::new()
         // ── Liveness (no auth) ────────────────────────────────────────────
+        // /health serves Cloud Run liveness probes; /api/v1/health is the
+        // same handler routed under the API prefix so the browser client
+        // can reach it through the CDN path that proxies /api/v1/* to Cloud Run.
         .route("/health", get(health::health))
+        .route("/api/v1/health", get(health::health))
         // ── Stripe webhook (no auth — HMAC-verified in the handler) ───────
         .route("/api/v1/stripe/webhook", post(subscriptions::stripe_webhook))
         .merge(protected)
