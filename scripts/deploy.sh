@@ -58,15 +58,22 @@ if [ "$SKIP_FRONTEND" = false ]; then
   pnpm --filter=@opencad/app build
 
   echo "==> Deploying frontend to GCS..."
-  gsutil -m rsync -r -d packages/app/dist/ gs://opencad-app/
+  gcloud storage rsync -R --delete-unmatched-destination-objects \
+    packages/app/dist/ gs://opencad-app/ --project="$GCP_PROJECT"
 
   # Cache headers
-  gsutil -m setmeta -h "Cache-Control:public, max-age=31536000, immutable" \
-    "gs://opencad-app/assets/**" 2>/dev/null || true
-  gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
-    gs://opencad-app/index.html \
-    gs://opencad-app/sw.js \
-    gs://opencad-app/manifest.webmanifest 2>/dev/null || true
+  gcloud storage objects update "gs://opencad-app/assets/**" \
+    --cache-control="public, max-age=31536000, immutable" \
+    --project="$GCP_PROJECT" 2>/dev/null || true
+  gcloud storage objects update gs://opencad-app/index.html \
+    --cache-control="no-cache, no-store, must-revalidate" \
+    --project="$GCP_PROJECT" --quiet
+  gcloud storage objects update gs://opencad-app/sw.js \
+    --cache-control="no-cache, no-store, must-revalidate" \
+    --project="$GCP_PROJECT" --quiet
+  gcloud storage objects update gs://opencad-app/manifest.webmanifest \
+    --cache-control="no-cache, no-store, must-revalidate" \
+    --project="$GCP_PROJECT" --quiet 2>/dev/null || true
 
   echo "  Frontend live at: https://app.opencad.archi"
 
@@ -98,24 +105,29 @@ p.write_text(s.replace('<!-- FIREBASE_CONFIG_INJECT -->', sys.argv[2]))
   done < <(find "$LANDING_TMP" -name '*.html' -print0)
 
   echo "==> Deploying landing to GCS..."
-  gsutil cp "$LANDING_TMP/index.html" gs://opencad-landing/index.html
-  gsutil cp "$LANDING_TMP/pricing.html" gs://opencad-landing/pricing.html 2>/dev/null || true
-  gsutil cp "$LANDING_TMP/privacy.html" gs://opencad-landing/privacy.html 2>/dev/null || true
-  gsutil cp "$LANDING_TMP/terms.html" gs://opencad-landing/terms.html 2>/dev/null || true
-  gsutil cp "$LANDING_TMP/download.html" gs://opencad-landing/download.html 2>/dev/null || true
+  for f in index.html pricing.html privacy.html terms.html download.html; do
+    [ -f "$LANDING_TMP/$f" ] && \
+      gcloud storage cp "$LANDING_TMP/$f" "gs://opencad-landing/$f" \
+        --project="$GCP_PROJECT" --quiet 2>/dev/null || true
+  done
   if [ -d "$LANDING_TMP/for" ]; then
-    gsutil -m rsync -r "$LANDING_TMP/for" gs://opencad-landing/for
+    gcloud storage rsync -R "$LANDING_TMP/for" gs://opencad-landing/for \
+      --project="$GCP_PROJECT"
   fi
-  gsutil -m cp "$LANDING_TMP"/og*.png gs://opencad-landing/ 2>/dev/null || true
+  gcloud storage cp "$LANDING_TMP"/og*.png gs://opencad-landing/ \
+    --project="$GCP_PROJECT" --quiet 2>/dev/null || true
   if [ -d "$LANDING_TMP/screenshots" ]; then
-    gsutil -m rsync -r "$LANDING_TMP/screenshots" gs://opencad-landing/screenshots
+    gcloud storage rsync -R "$LANDING_TMP/screenshots" gs://opencad-landing/screenshots \
+      --project="$GCP_PROJECT"
   fi
 
   # Cache headers — landing HTML is no-cache so deploys reflect instantly.
-  gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
-    "gs://opencad-landing/*.html" 2>/dev/null || true
-  gsutil -m setmeta -h "Cache-Control:no-cache, no-store, must-revalidate" \
-    "gs://opencad-landing/for/**/*.html" 2>/dev/null || true
+  gcloud storage objects update "gs://opencad-landing/*.html" \
+    --cache-control="no-cache, no-store, must-revalidate" \
+    --project="$GCP_PROJECT" --quiet 2>/dev/null || true
+  gcloud storage objects update "gs://opencad-landing/for/**/*.html" \
+    --cache-control="no-cache, no-store, must-revalidate" \
+    --project="$GCP_PROJECT" --quiet 2>/dev/null || true
 
   rm -rf "$LANDING_TMP"
   echo "  Landing live at: https://opencad.archi"
