@@ -526,6 +526,13 @@ export class IFCSerializer {
       // ── Site ─────────────────────────────────────────────────────────────
       topography: 'IFCGEOGRAPHICELEMENT',
       property_line: 'IFCANNOTATION',
+      // ── Landscape / entourage ─────────────────────────────────────────────
+      planting: 'IFCGEOGRAPHICELEMENT',
+      rock: 'IFCGEOGRAPHICELEMENT',
+      terrain_contour: 'IFCGEOGRAPHICELEMENT',
+      site_furniture: 'IFCFURNISHINGELEMENT',
+      person: 'IFCBUILDINGELEMENTPROXY',
+      vehicle: 'IFCBUILDINGELEMENTPROXY',
       // ── Documentation / annotation ───────────────────────────────────────
       annotation: 'IFCANNOTATION',
       dimension: 'IFCANNOTATION',
@@ -1144,4 +1151,83 @@ export function exportToIFC(doc: DocumentSchema): string {
   lines.push('END-ISO-10303-21;');
 
   return lines.join('\n');
+}
+
+/**
+ * T-SITE-01: Thin adapter exposing the IFC entity type lookup for testing
+ * and for use by downstream features (T-SITE-04, T-IO-01).
+ */
+export class IFCAdapter {
+  /** Returns the IFC entity type string for a given ElementType. */
+  getIFCEntityType(elementType: ElementType): string {
+    return _getIFCTypeStatic(elementType);
+  }
+}
+
+/** Standalone version of IFCSerializer._getIFCType for use without a full document. */
+function _getIFCTypeStatic(elementType: ElementType): string {
+  const map: Record<ElementType, string> = {
+    wall: 'IFCWALL',
+    door: 'IFCDOOR',
+    window: 'IFCWINDOW',
+    skylight: 'IFCWINDOW',
+    slab: 'IFCSLAB',
+    roof: 'IFCROOF',
+    ceiling: 'IFCCOVERING',
+    foundation: 'IFCFOOTING',
+    column: 'IFCCOLUMN',
+    beam: 'IFCBEAM',
+    truss: 'IFCBUILDINGELEMENTPROXY',
+    brace: 'IFCMEMBER',
+    stair: 'IFCSTAIR',
+    ramp: 'IFCRAMP',
+    railing: 'IFCRAILING',
+    mass: 'IFCBUILDINGELEMENTPROXY',
+    space: 'IFCSPACE',
+    curtain_wall: 'IFCCURTAINWALL',
+    duct: 'IFCDUCTFITTINGTYPE',
+    pipe: 'IFCPIPEFITTINGTYPE',
+    cable_tray: 'IFCCABLECARRIERSEGMENT',
+    conduit: 'IFCCABLESEGMENT',
+    plumbing_fixture: 'IFCFLOWTERMINAL',
+    electrical_equipment: 'IFCELECTRICAPPLIANCE',
+    mechanical_equipment: 'IFCMECHANICALFASTENER',
+    sprinkler: 'IFCFIRESUPPRESSIONTERMINAL',
+    lamp: 'IFCLIGHTFIXTURE',
+    air_terminal: 'IFCAIRTERMINAL',
+    topography: 'IFCGEOGRAPHICELEMENT',
+    property_line: 'IFCANNOTATION',
+    planting: 'IFCGEOGRAPHICELEMENT',
+    rock: 'IFCGEOGRAPHICELEMENT',
+    terrain_contour: 'IFCGEOGRAPHICELEMENT',
+    site_furniture: 'IFCFURNISHINGELEMENT',
+    person: 'IFCBUILDINGELEMENTPROXY',
+    vehicle: 'IFCBUILDINGELEMENTPROXY',
+    annotation: 'IFCANNOTATION',
+    dimension: 'IFCANNOTATION',
+    grid: 'IFCGRID',
+    label: 'IFCANNOTATION',
+    section_mark: 'IFCANNOTATION',
+    elevation_mark: 'IFCANNOTATION',
+    detail_mark: 'IFCANNOTATION',
+    revision_cloud: 'IFCANNOTATION',
+    room_separator: 'IFCVIRTUALELEMENT',
+    model_text: 'IFCTEXTLITERAL',
+    line: 'IFCANNOTATION',
+    circle: 'IFCANNOTATION',
+    arc: 'IFCANNOTATION',
+    polyline: 'IFCANNOTATION',
+    surface: 'IFCANNOTATION',
+    solid: 'IFCSOLID',
+    point: 'IFCANNOTATION',
+    hotspot: 'IFCANNOTATION',
+    text: 'IFCTEXT',
+    block_ref: 'IFCBLOCK',
+    ellipse: 'IFCANNOTATION',
+    rectangle: 'IFCANNOTATION',
+    polygon: 'IFCANNOTATION',
+    component: 'IFCGROUP',
+    group: 'IFCGROUP',
+  };
+  return map[elementType] ?? 'IFCBUILDINGELEMENTPROXY';
 }

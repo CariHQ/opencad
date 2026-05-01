@@ -448,6 +448,30 @@ export function computeBoundingBox(
       }
       break;
     }
+    case 'planting':
+    case 'rock':
+    case 'site_furniture':
+    case 'person':
+    case 'vehicle': {
+      // Landscape / entourage: centred on placement point, scale from Scale property.
+      const x = num('X'), y = num('Y'), z = num('Z');
+      const halfSize = num('Scale', 1.0) * 500; // default ~1 m radius
+      const height = num('Height', 1000);
+      minX = x - halfSize; maxX = x + halfSize;
+      minY = y - halfSize; maxY = y + halfSize;
+      minZ = z; maxZ = z + height;
+      break;
+    }
+    case 'terrain_contour': {
+      // Contour line: linear annotation at a given elevation.
+      const sx = num('StartX'), sy = num('StartY');
+      const ex = num('EndX', sx + 1000), ey = num('EndY', sy);
+      minX = Math.min(sx, ex); maxX = Math.max(sx, ex);
+      minY = Math.min(sy, ey); maxY = Math.max(sy, ey);
+      const elev = num('Elevation');
+      minZ = elev; maxZ = elev;
+      break;
+    }
     case 'property_line':
     case 'room_separator': {
       // Zero-thickness linear annotation.

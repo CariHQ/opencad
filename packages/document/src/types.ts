@@ -110,6 +110,13 @@ export type ElementType =
   // ── Site ─────────────────────────────────────────────────────────────────
   | 'topography'         // terrain surface
   | 'property_line'      // site boundary
+  // ── Landscape / entourage ────────────────────────────────────────────────
+  | 'planting'           // vegetation (tree, shrub, grass patch)
+  | 'rock'               // stone / boulder
+  | 'site_furniture'     // bench, bollard, lamp-post, sign
+  | 'person'             // entourage figure
+  | 'vehicle'            // entourage vehicle
+  | 'terrain_contour'    // elevation contour line on site plan
   // ── Documentation / annotation ──────────────────────────────────────────
   | 'annotation'
   | 'dimension'
@@ -137,6 +144,39 @@ export type ElementType =
   | 'polygon'
   | 'component'
   | 'group';
+
+// ── Landscape / entourage helpers (T-SITE-01) ────────────────────────────────
+
+/** Properties shared by all landscape / entourage elements. */
+export interface LandscapeProperties {
+  /** Identifier for a species/model in the landscape asset library. */
+  speciesId: string;
+  /** Asset library this species belongs to (e.g. 'starter', 'urban'). */
+  libraryId: string;
+  /** Index into the asset's variation set (0 = default). */
+  variation: number;
+  /** Uniform scale factor (1.0 = library default size). */
+  scale: number;
+  /** Yaw rotation in degrees (0–360). */
+  rotation: number;
+  /** Growth stage: 0 = young, 1 = mid, 2 = mature. Optional. */
+  maturityStage?: 0 | 1 | 2;
+}
+
+/** The set of ElementType values that are landscape / entourage elements. */
+export const LANDSCAPE_ELEMENT_TYPES: ReadonlySet<ElementType> = new Set<ElementType>([
+  'planting',
+  'rock',
+  'site_furniture',
+  'person',
+  'vehicle',
+  'terrain_contour',
+]);
+
+/** Type guard: true when an element belongs to the landscape / entourage family. */
+export function isLandscapeElement(el: { type: ElementType }): boolean {
+  return LANDSCAPE_ELEMENT_TYPES.has(el.type);
+}
 
 export interface LayerSchema {
   id: string;
