@@ -21,6 +21,7 @@ import { SSOSettingsPanel, type SSOConfig } from './SSOSettingsPanel';
 import { LanguageSettingsPanel } from './LanguageSettingsPanel';
 import { BillingPanel } from './BillingPanel';
 import { SubscriptionModal } from './SubscriptionModal';
+import { PlanLimitError } from '../lib/serverApi';
 
 const SSO_STORAGE_KEY = 'opencad-sso-config';
 function loadSSOConfig(): SSOConfig | undefined {
@@ -116,10 +117,16 @@ export function ProjectDashboard() {
     setRenameDraft('');
   }
 
-  function handleNewProject() {
-    const id = createProject('Untitled Project');
-    openProject(id);
-    navigate(`/project/${id}`);
+  async function handleNewProject() {
+    try {
+      const id = await createProject('Untitled Project');
+      openProject(id);
+      navigate(`/project/${id}`);
+    } catch (err) {
+      if (err instanceof PlanLimitError) {
+        setShowUpgrade(true);
+      }
+    }
   }
 
   return (
@@ -215,10 +222,14 @@ export function ProjectDashboard() {
           <div className="empty-templates-section">
             <p className="empty-templates-label">{t('dashboard.empty.orTemplate')}</p>
             <ProjectTemplates
-              onSelect={(tmpl) => {
-                const id = createProject(tmpl.name);
-                openProject(id);
-                navigate(`/project/${id}`);
+              onSelect={async (tmpl) => {
+                try {
+                  const id = await createProject(tmpl.name);
+                  openProject(id);
+                  navigate(`/project/${id}`);
+                } catch (err) {
+                  if (err instanceof PlanLimitError) setShowUpgrade(true);
+                }
               }}
             />
           </div>
@@ -317,11 +328,15 @@ export function ProjectDashboard() {
               ×
             </button>
             <ProjectTemplates
-              onSelect={(tmpl) => {
-                const id = createProject(tmpl.name);
-                openProject(id);
-                navigate(`/project/${id}`);
-                setShowTemplates(false);
+              onSelect={async (tmpl) => {
+                try {
+                  const id = await createProject(tmpl.name);
+                  openProject(id);
+                  navigate(`/project/${id}`);
+                  setShowTemplates(false);
+                } catch (err) {
+                  if (err instanceof PlanLimitError) { setShowTemplates(false); setShowUpgrade(true); }
+                }
               }}
             />
           </div>

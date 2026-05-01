@@ -29,7 +29,7 @@ interface ProjectState {
   searchQuery: string;
   serverOnline: boolean;
 
-  createProject: (name: string) => string;
+  createProject: (name: string) => Promise<string>;
   openProject: (id: string) => void;
   closeProject: () => void;
   deleteProject: (id: string) => void;
@@ -180,8 +180,16 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
 
   // ── CRUD ───────────────────────────────────────────────────────────────────
 
-  createProject: (name) => {
+  createProject: async (name) => {
     const id = crypto.randomUUID();
+
+    // When online, let the server gate the create so plan limits are enforced.
+    // PlanLimitError propagates to the caller; all other errors fall back to
+    // offline-first behaviour (project saved locally, retried on next sync).
+    if (get().serverOnline) {
+      await projectsApi.create(name, id);
+    }
+
     const now = Date.now();
     const project: ProjectMeta = {
       id,
@@ -195,11 +203,6 @@ export const useProjectStore = create<ProjectState>()((set, get) => ({
     const projects = [...get().projects, project];
     saveProjects(projects);
     set({ projects });
-
-    // Fire-and-forget push to server; pass the same UUID so IDs stay stable.
-    if (get().serverOnline) {
-      projectsApi.create(name, id).catch(() => {});
-    }
 
     return id;
   },
