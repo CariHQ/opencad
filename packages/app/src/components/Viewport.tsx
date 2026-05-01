@@ -124,12 +124,16 @@ export function Viewport({ viewType = '3d' }: ViewportProps) {
         <div
           ref={threeContainerRef}
           className="viewport-canvas"
+          role="application"
+          aria-label="3D model canvas"
           style={{ width: '100%', height: '100%' }}
         />
       ) : (
         <canvas
           ref={canvasRef}
           className="viewport-canvas"
+          role="application"
+          aria-label="2D floor plan canvas"
           onMouseDown={handleCanvasMouseDown}
           onMouseMove={(e) => {
             const rect = (e.currentTarget as HTMLCanvasElement).getBoundingClientRect();

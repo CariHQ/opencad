@@ -6,10 +6,32 @@
   box-sizing: border-box;
 }
 
-/* Kill browser focus rings globally — color-only feedback on all buttons */
-button:focus,
-button:focus-visible {
+/* T-A11Y-03: Suppress mouse-click focus rings; keep keyboard focus visible */
+button:focus:not(:focus-visible) {
   outline: none;
+}
+button:focus-visible {
+  outline: 2px solid var(--accent-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+/* T-A11Y-01: Skip link — visually hidden until focused */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 8px;
+  z-index: 9999;
+  padding: 6px 12px;
+  background: var(--bg-primary, #1e2130);
+  color: var(--text-primary, #e0e0e0);
+  border: 2px solid var(--accent-primary, #3b82f6);
+  border-radius: 4px;
+  font-size: 13px;
+  text-decoration: none;
+  transition: top 0.1s;
+}
+.skip-link:focus {
+  top: 8px;
 }
 
 /* Light tokens */
@@ -9638,3 +9660,11 @@ input[type='range']::-moz-range-track {
   padding: 4px;
 }
 .subscription-manage-billing:hover { color: var(--text-primary); }
+
+/* T-A11Y-03: Global keyboard focus ring — overrides the many component-level
+ * `outline: none` rules so keyboard navigation always has a visible indicator.
+ * Mouse/touch focus is still outline-free (`:focus:not(:focus-visible)`). */
+:focus-visible {
+  outline: 2px solid var(--accent-primary, #3b82f6) !important;
+  outline-offset: 2px !important;
+}

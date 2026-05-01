@@ -45,6 +45,7 @@ export const SUPPORTED_LOCALES: { code: string; label: string; native: string }[
   { code: 'es',    label: 'Spanish',              native: 'Español' },
   { code: 'fr',    label: 'French',               native: 'Français' },
   { code: 'ar',    label: 'Arabic',               native: 'العربية' },
+  { code: 'he',    label: 'Hebrew',               native: 'עברית' },
   { code: 'pt-BR', label: 'Portuguese (Brazil)',  native: 'Português (BR)' },
   { code: 'ru',    label: 'Russian',              native: 'Русский' },
   { code: 'de',    label: 'German',               native: 'Deutsch' },
@@ -86,11 +87,19 @@ async function loadBundle(lc: string): Promise<void> {
   );
 }
 
+/** RTL locales — layout direction flips for these language codes. */
+const RTL_LOCALES = new Set(['ar', 'he']);
+
+function applyDir(lc: string): void {
+  document.documentElement.dir = RTL_LOCALES.has(lc.split('-')[0]) ? 'rtl' : 'ltr';
+}
+
 /** Switch the active UI language. Lazy-loads the bundle if needed and
  *  persists the choice to localStorage so the next visit is instant. */
 export async function setLocale(lc: string): Promise<void> {
   await loadBundle(lc);
   await i18n.changeLanguage(lc);
+  applyDir(lc);
   try { localStorage.setItem('opencad-locale', lc); } catch { /* quota */ }
 }
 
@@ -158,5 +167,8 @@ const detected = i18n.language;
 if (detected && detected !== 'en') {
   void loadBundle(detected).then(() => i18n.reloadResources(detected));
 }
+// Apply RTL direction for the detected locale immediately so the initial
+// paint doesn't flash ltr→rtl for Arabic/Hebrew users.
+if (detected) applyDir(detected);
 
 export default i18n;

@@ -190,6 +190,7 @@ import {
 } from './hooks/useTauri';
 import type { TauriUpdateInfo } from './hooks/useTauri';
 import { usePresence } from './hooks/usePresence';
+import { useSrAnnouncer } from './hooks/useSrAnnouncer';
 import './styles/app.css';
 
 type RightPanelTab =
@@ -380,6 +381,15 @@ export function AppLayout() {
 
   useUndoRedo({ undo, redo, canUndo, canRedo });
   useAutoSave();
+
+  // T-A11Y-01: Screen reader announcements for tool changes + selection changes.
+  const announce = useSrAnnouncer();
+  React.useEffect(() => { announce(`Tool: ${activeTool}`); }, [activeTool, announce]);
+  React.useEffect(() => {
+    if (selectedIds.length === 0) announce('Selection cleared');
+    else if (selectedIds.length === 1) announce('1 element selected');
+    else announce(`${selectedIds.length} elements selected`);
+  }, [selectedIds, announce]);
 
   // Mirror the subscription-derived read-only flag into the document
   // store so element-mutating actions become no-ops when the user's
@@ -748,6 +758,10 @@ export function AppLayout() {
 
   return (
     <div className={`app-container${focusMode ? ' focus-mode' : ''}`}>
+      {/* T-A11Y-01: Skip navigation link — first focusable element */}
+      <a href="#viewport" className="skip-link">Skip to canvas</a>
+      {/* T-A11Y-01: Screen reader live region — populated by useSrAnnouncer */}
+      <div id="sr-announcer" aria-live="polite" aria-atomic="true" className="sr-only" />
       <ReadOnlyBanner />
       {chromeVisible && (
         <header
@@ -906,7 +920,7 @@ export function AppLayout() {
           <ToolShelf />
         </div>
 
-        <main className="app-main" data-tour="canvas">
+        <main id="viewport" className="app-main" data-tour="canvas">
           <PanelErrorBoundary>
             <div className="viewport-wrapper">
               <SplitViewport viewType={activeView} />

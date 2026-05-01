@@ -1,0 +1,213 @@
+{
+  "app": {
+    "name": "OpenCAD",
+    "tagline": "BIM מקורי בדפדפן"
+  },
+  "action": {
+    "save": "שמור",
+    "cancel": "ביטול",
+    "delete": "מחק",
+    "rename": "שנה שם",
+    "close": "סגור",
+    "open": "פתח",
+    "back": "חזרה",
+    "next": "הבא",
+    "create": "צור",
+    "upgrade": "שדרג",
+    "resubscribe": "חדש מנוי",
+    "loading": "טוען…",
+    "retry": "נסה שוב",
+    "done": "סיום",
+    "import": "ייבוא",
+    "export": "ייצוא",
+    "undo": "בטל",
+    "redo": "חזור"
+  },
+  "nav": {
+    "home": "בית",
+    "projects": "פרויקטים",
+    "settings": "הגדרות",
+    "billing": "חיוב",
+    "signOut": "התנתק",
+    "help": "עזרה",
+    "feedback": "משוב",
+    "ai": "עוזר AI",
+    "plugins": "תוספים"
+  },
+  "status": {
+    "online": "מחובר",
+    "offline": "לא מחובר",
+    "saving": "שומר…",
+    "saved": "נשמר",
+    "syncing": "מסנכרן…",
+    "storageAlmostFull": "⚠ האחסון כמעט מלא",
+    "storageWarningTooltip": "שימוש באחסון עבר 80% — מומלץ לייצא פרויקטים",
+    "selected_one": "{{count}} נבחר",
+    "selected_other": "{{count}} נבחרו",
+    "elements_one": "{{count}} אלמנט",
+    "elements_other": "{{count}} אלמנטים",
+    "fpsTooltip": "קצב מסגרות ממוצע",
+    "webgpuTooltip": "Three.js WebGPURenderer — שידרים חישוביים מופעלים",
+    "webglTooltip": "WebGL 2.0 גיבוי — WebGPU לא זמין",
+    "currentRole": "תפקיד נוכחי: {{label}}"
+  },
+  "view": {
+    "floorPlan": "תוכנית קומה",
+    "threeD": "תצוגה תלת-ממדית",
+    "section": "חתך",
+    "sectionAA": "חתך A-A",
+    "elevation": "חזית",
+    "layout1": "פריסה 1"
+  },
+  "coord": {
+    "inputAria": "קלט קואורדינטות"
+  },
+  "error": {
+    "somethingWentWrong": "משהו השתבש",
+    "panelFailed": "לא ניתן לטעון את הפאנל",
+    "tryAgain": "נסה שוב"
+  },
+  "tour": {
+    "title": "סיור הדרכה",
+    "close": "סגור סיור",
+    "skip": "דלג על סיור",
+    "next": "הבא",
+    "back": "הקודם",
+    "finish": "סיים"
+  },
+  "language": {
+    "aria": "שפה",
+    "detected": "זוהה מהמערכת שלך"
+  },
+  "resizer": {
+    "aria": "גרור לשינוי גודל הפאנל"
+  },
+  "contextMenu": {
+    "aria": "תפריט הקשר"
+  },
+  "viewport": {
+    "zoomIn": "הגדל",
+    "zoomInShort": "הגדל",
+    "zoomInWithShortcut": "הגדל (+)",
+    "zoomOut": "הקטן",
+    "zoomOutShort": "הקטן",
+    "zoomOutWithShortcut": "הקטן (-)",
+    "zoomToFit": "התאם לתצוגה",
+    "zoomToFitWithShortcut": "התאם לתצוגה (0)",
+    "fit": "התאם",
+    "resetCamera": "אפס מצלמה",
+    "sectionBox": "תיבת חתך",
+    "topView": "תצוגה עליונה",
+    "topViewWithShortcut": "תצוגה עליונה (1)",
+    "frontView": "תצוגה קדמית",
+    "frontViewWithShortcut": "תצוגה קדמית (2)",
+    "rightView": "תצוגה ימנית",
+    "rightViewWithShortcut": "תצוגה ימנית (3)",
+    "perspective": "פרספקטיבה",
+    "perspectiveWithShortcut": "פרספקטיבה (4)",
+    "presetView": "תצוגה {{preset}}",
+    "cutAlongAxis": "חתך לאורך ציר {{axis}}",
+    "cutAxis": "ציר חתך",
+    "cutPlanePosition": "מיקום מישור חתך",
+    "position": "מיקום",
+    "sectionCutControls": "פקדי חתך",
+    "sectionCutHint": "הסרגל מזיז את מישור החתך · גרור לסיבוב · Shift+גרור להזזה · גלגל להגדלה",
+    "info2D": "הגדל: גלגל | הזז: גרירה אמצעית | Ctrl: בטל הצמדה",
+    "info3D": "סובב: גרור | הזז: Shift+גרור | הגדל: גלגל | התאם: 0",
+    "info3DLong": "סיבוב בגרירה · הזזה בשתי אצבעות · Pinch/Ctrl+גלגל להגדלה · חצים לסיבוב · Shift+חצים להזזה · Alt לכיוונון עדין · 0 להתאמה · 1/2/3/4 לתצוגות",
+    "info2DShort": "ציור: גרור · הזזה: אמצעי · הגדל: גלגל",
+    "splitView": "תצוגה מפוצלת: תוכנית קומה + תלת-ממד",
+    "viewCubeAria": "קובית ניווט תצוגה"
+  },
+  "settings": {
+    "title": "הגדרות",
+    "tabs": {
+      "language": "שפה",
+      "apiKeys": "מפתחות API",
+      "permissions": "הרשאות",
+      "sso": "SSO",
+      "billing": "חיוב"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "בית — חזרה לפרויקטים",
+    "toggleLeftPanel": "הצג/הסתר פאנל שמאל",
+    "toggleRightPanel": "הצג/הסתר מאפיינים",
+    "renameProject": "לחץ לשינוי שם הפרויקט",
+    "newProject": "פרויקט חדש",
+    "openProject": "פתח פרויקט",
+    "saveProject": "שמור",
+    "importFile": "ייבוא IFC",
+    "exportFile": "ייצוא IFC",
+    "toggleTheme": "החלף ערכת נושא בהיר/כהה"
+  },
+  "update": {
+    "available": "גרסה {{version}} זמינה",
+    "install": "התקן עדכון",
+    "installing": "מתקין...",
+    "dismiss": "בטל",
+    "dismissAria": "בטל הודעת עדכון"
+  },
+  "focusHint": {
+    "before": "לחץ",
+    "after": "ליציאה ממצב פוקוס"
+  },
+  "home": {
+    "newProject": "פרויקט חדש",
+    "newBlankProject": "פרויקט ריק חדש",
+    "signIn": "התחבר",
+    "recentProjects": "פרויקטים אחרונים",
+    "importIfcDwgPdf": "ייבוא IFC / DWG / PDF",
+    "emptyText": "התחל פרויקט חדש או ייבא קובץ",
+    "importFile": "ייבוא קובץ",
+    "open": "פתח",
+    "startFromTemplate": "התחל מתבנית",
+    "chooseTemplate": "בחר תבנית",
+    "projectTemplates": "תבניות פרויקט"
+  },
+  "browser": {
+    "searchProjects": "חפש פרויקטים…",
+    "recentFirst": "החדש ביותר",
+    "oldestFirst": "הישן ביותר",
+    "gridView": "תצוגת רשת",
+    "listView": "תצוגת רשימה",
+    "noProjects": "לא נמצאו פרויקטים"
+  },
+  "dashboard": {
+    "title": "פרויקטים",
+    "fromTemplate": "מתבנית",
+    "newProject": "פרויקט חדש",
+    "newBlankProject": "פרויקט ריק חדש",
+    "filter": {
+      "all": "הכל",
+      "starred": "מועדפים",
+      "mine": "שלי",
+      "shared": "משותף"
+    },
+    "searchPlaceholder": "חפש פרויקטים…",
+    "sortBy": "מיין לפי",
+    "sort": {
+      "lastEdited": "עדכון אחרון",
+      "created": "תאריך יצירה",
+      "name": "שם",
+      "size": "גודל"
+    },
+    "gridView": "תצוגת רשת",
+    "listView": "תצוגת רשימה",
+    "empty": {
+      "title": "אין פרויקטים עדיין",
+      "subtitle": "התחל עם לוח ריק או בחר תבנית למטה.",
+      "orTemplate": "או התחל מתבנית"
+    },
+    "card": {
+      "clickToOpen": "לחץ לפתיחה · לחץ פעמיים לשינוי שם",
+      "star": "הוסף למועדפים",
+      "unstar": "הסר ממועדפים",
+      "delete": "מחק פרויקט"
+    },
+    "closeTemplates": "סגור תבניות",
+    "closeSettings": "סגור הגדרות",
+    "signOut": "התנתק",
+    "upgradeToPro": "שדרג ל-Pro"
+  }
+}
