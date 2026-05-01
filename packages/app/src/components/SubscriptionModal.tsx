@@ -11,6 +11,7 @@
  *   manage-billing
  *   current-plan-badge
  */
+import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSubscription } from '../hooks/useSubscription';
 
@@ -33,6 +34,8 @@ interface SubscriptionModalProps {
 export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
   const { t } = useTranslation('dialogs');
   const { tier: currentTier, upgrade, openPortal } = useSubscription();
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
+  const [loadingTier, setLoadingTier] = useState<string | null>(null);
 
   return (
     <div
@@ -106,17 +109,29 @@ export function SubscriptionModal({ onClose }: SubscriptionModalProps) {
                   <button
                     className="subscription-plan-cta subscription-plan-cta--upgrade"
                     data-testid={`upgrade-${tier}`}
+                    disabled={loadingTier === tier}
                     onClick={() => {
-                      void upgrade(tier as 'pro' | 'business');
+                      setCheckoutError(null);
+                      setLoadingTier(tier);
+                      upgrade(tier as 'pro' | 'business').catch((err: unknown) => {
+                        setLoadingTier(null);
+                        setCheckoutError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
+                      });
                     }}
                   >
-                    {t('subscription.upgradeTo', { plan: planLabel })}
+                    {loadingTier === tier ? 'Redirecting…' : t('subscription.upgradeTo', { plan: planLabel })}
                   </button>
                 )}
               </div>
             );
           })}
         </div>
+
+        {checkoutError && (
+          <p style={{ marginTop: 16, color: 'var(--accent-danger)', fontSize: 13, textAlign: 'center' }}>
+            {checkoutError}
+          </p>
+        )}
 
         <div className="subscription-footer">
           <button

@@ -9328,7 +9328,8 @@ input[type='range']::-moz-range-track {
 .trial-gate-overlay {
   position: fixed;
   inset: 0;
-  background: var(--bg-canvas);
+  background: var(--bg-primary);
+  background-image: radial-gradient(ellipse at 60% 40%, var(--accent-primary-muted) 0%, transparent 65%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -9390,3 +9391,183 @@ input[type='range']::-moz-range-track {
 .btn-upgrade:active {
   transform: scale(0.98);
 }
+
+/* ── Subscription modal ───────────────────────────────────────────────────── */
+.subscription-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  font-family: 'Inter', sans-serif;
+  padding: 24px;
+}
+
+.subscription-modal {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  box-shadow: var(--shadow-lg);
+  padding: 36px 32px 28px;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  position: relative;
+}
+
+.modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  line-height: 1;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.modal-close:hover { background: var(--bg-hover); }
+
+.subscription-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+.subscription-subtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 28px;
+}
+
+.subscription-plans {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+.subscription-plan-card {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  background: var(--bg-primary);
+}
+
+.subscription-plan-card--current {
+  border-color: var(--accent-primary);
+  background: var(--accent-primary-muted);
+}
+
+.subscription-plan-badge {
+  position: absolute;
+  top: -11px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--accent-primary);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.subscription-plan-name {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.subscription-plan-price {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.subscription-plan-amount {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.subscription-plan-period {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.subscription-plan-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.subscription-plan-features li {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding-left: 16px;
+  position: relative;
+}
+
+.subscription-plan-features li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: var(--accent-success);
+  font-size: 12px;
+}
+
+.subscription-plan-cta {
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 7px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-top: auto;
+}
+
+.subscription-plan-cta--current {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.subscription-plan-cta--upgrade {
+  background: var(--accent-primary);
+  color: #fff;
+}
+.subscription-plan-cta--upgrade:hover { background: var(--accent-secondary); }
+.subscription-plan-cta--upgrade:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.subscription-footer {
+  margin-top: 24px;
+  text-align: center;
+}
+
+.subscription-manage-billing {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 4px;
+}
+.subscription-manage-billing:hover { color: var(--text-primary); }
