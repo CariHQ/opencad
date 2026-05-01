@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
 import type { PropertyValue, PropertySet, ParamValue } from '@opencad/document';
 import { getSharedSelectedCoords } from '../hooks/useThreeViewport';
 import { translateFieldLabel } from '../utils/humanize';
 import { resolveFamily } from '../plugins/familyRegistry';
-import type { FamilyDefinition, ParamSchema } from '../plugins/familyRegistry';
+import type { ParamSchema } from '../plugins/familyRegistry';
 
 interface PendingProp {
   name: string;

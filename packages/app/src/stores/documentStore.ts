@@ -8,7 +8,7 @@ import {
   evalGeometry,
   boundingBoxFromGeometry,
 } from '../plugins/familyRegistry';
-import type { ParamValue } from '@opencad/document';
+import type { ParamValue, GraphDefinition } from '@opencad/document';
 import {
   saveDocument as offlineSaveDocument,
   loadDocument as offlineLoadDocument,
@@ -171,6 +171,12 @@ interface DocumentState {
   placeFamilyInstance: (familyId: string, layerId: string, params?: Record<string, ParamValue>) => string;
   /** Update one parameter of a placed family instance and recompute geometry. */
   updateFamilyParam: (elementId: string, paramId: string, value: ParamValue) => void;
+
+  // T-EXT-02: Visual programming graphs
+  /** Persist (upsert) a graph definition in the document library. */
+  saveGraph: (graph: GraphDefinition) => void;
+  /** Remove a graph from the document library by id. */
+  deleteGraph: (graphId: string) => void;
 
   // T-VIS-01: Persistent element visibility — stored in the document, synced via CRDT
   hideElement: (id: string) => void;
@@ -671,6 +677,33 @@ export const useDocumentStore = create<DocumentState>()(
           changeHistory: [...changeHistory, record].slice(-MAX_CHANGE_HISTORY),
         });
         maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
+        persistDocument(doc);
+      },
+
+      // T-EXT-02: Visual programming graphs ─────────────────────────────────
+
+      saveGraph: (graph) => {
+        const { model } = get();
+        if (!model) return;
+        const lib = model.documentData.library;
+        const existing = lib.graphs ?? [];
+        const idx = existing.findIndex((g) => g.id === graph.id);
+        const next = idx >= 0
+          ? existing.map((g, i) => (i === idx ? graph : g))
+          : [...existing, graph];
+        model.documentData.library = { ...lib, graphs: next };
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
+      },
+
+      deleteGraph: (graphId) => {
+        const { model } = get();
+        if (!model) return;
+        const lib = model.documentData.library;
+        model.documentData.library = { ...lib, graphs: (lib.graphs ?? []).filter((g) => g.id !== graphId) };
+        const doc = { ...model.documentData };
+        set({ document: doc, lastSaved: Date.now() });
         persistDocument(doc);
       },
 

@@ -314,12 +314,47 @@ export interface Composite {
   layers: CompositeLayer[];
 }
 
+// ── Visual programming graph (T-EXT-02) ─────────────────────────────────────
+
+/** Socket type for typed edge connections. */
+export type SocketType = 'number' | 'point' | 'curve' | 'surface' | 'brep' | 'material' | 'element' | 'list' | 'any';
+
+/** A single node in a visual programming graph. */
+export interface GraphNodeData {
+  id: string;
+  type: string;
+  label?: string;
+  /** User-editable parameter values (sliders, text inputs, etc.). */
+  params: Record<string, unknown>;
+  /** Screen position for the canvas. */
+  position: { x: number; y: number };
+}
+
+/** A directed edge connecting an output socket to an input socket. */
+export interface GraphEdgeData {
+  id: string;
+  source: string;
+  sourceHandle: string;
+  target: string;
+  targetHandle: string;
+}
+
+/** A complete graph persisted in the document library. */
+export interface GraphDefinition {
+  id: string;
+  name: string;
+  nodes: GraphNodeData[];
+  edges: GraphEdgeData[];
+}
+
 export interface DocumentLibrary {
   materials: Record<string, MaterialSchema>;
   families?: Record<string, FamilySchema>;
   blocks?: Record<string, ElementSchema>;
   /** Composite structures referenced by element CompositeId property. */
   composites?: Record<string, Composite>;
+  /** Visual programming graphs (T-EXT-02). */
+  graphs?: GraphDefinition[];
 }
 
 export interface DocumentSchema {

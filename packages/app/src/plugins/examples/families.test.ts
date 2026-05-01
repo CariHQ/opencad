@@ -6,7 +6,7 @@
  *   - Output contains valid vertices (no NaN/Infinity)
  *   - Bounding box is non-degenerate (has positive extents)
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import '@testing-library/jest-dom/vitest';
 import {
   resolveFamily,
