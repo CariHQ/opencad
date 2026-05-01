@@ -8,6 +8,12 @@ import './styles/index.css';
 // for side effects is enough — no exports are used at this boot layer.
 import './i18n';
 
+// T-EXT-01: Boot-time registration of built-in parametric families.
+// Side-effect-only imports — each file calls defineFamily() once.
+import './plugins/examples/parametric-door';
+import './plugins/examples/parametric-column';
+import './plugins/examples/parametric-skylight';
+
 // Register service worker for PWA / offline support.
 // vite-plugin-pwa generates the SW and the virtual module at build time.
 // In dev mode the virtual module is a no-op so this is safe in all environments.

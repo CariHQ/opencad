@@ -1,6 +1,6 @@
 import * as jestDomMatchers from '@testing-library/jest-dom/matchers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ProjectDashboard } from './ProjectDashboard';
 import { useProjectStore } from '../stores/projectStore';
@@ -36,7 +36,7 @@ function makeStore(overrides = {}) {
     sortBy: 'lastEdited' as const,
     filterBy: 'all' as const,
     searchQuery: '',
-    createProject: vi.fn().mockReturnValue('new-id'),
+    createProject: vi.fn().mockResolvedValue('new-id'),
     openProject: vi.fn(),
     closeProject: vi.fn(),
     deleteProject: vi.fn(),
@@ -159,13 +159,13 @@ describe('T-SYNC-010: ProjectDashboard', () => {
     expect(store.starProject).toHaveBeenCalledWith('p1');
   });
 
-  it('calls createProject when New Project button clicked', () => {
+  it('calls createProject when New Project button clicked', async () => {
     const store = makeStore();
     vi.mocked(useProjectStore).mockReturnValue(store);
     render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: /new project/i }));
     expect(store.createProject).toHaveBeenCalled();
-    expect(store.openProject).toHaveBeenCalledWith('new-id');
+    await waitFor(() => expect(store.openProject).toHaveBeenCalledWith('new-id'));
   });
 
   it('shows empty state when no projects', () => {
@@ -270,13 +270,13 @@ describe('T-DOC-010: ProjectDashboard', () => {
     expect(store.starProject).toHaveBeenCalledWith('p1');
   });
 
-  it('new project button calls createProject', () => {
+  it('new project button calls createProject', async () => {
     const store = makeStore();
     vi.mocked(useProjectStore).mockReturnValue(store);
     render(<MemoryRouter><ProjectDashboard /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: /new project/i }));
     expect(store.createProject).toHaveBeenCalledWith('Untitled Project');
-    expect(store.openProject).toHaveBeenCalledWith('new-id');
+    await waitFor(() => expect(store.openProject).toHaveBeenCalledWith('new-id'));
   });
 
   it('delete button calls deleteProject after confirmation', () => {

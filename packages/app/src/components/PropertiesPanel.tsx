@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDocumentStore } from '../stores/documentStore';
-import type { PropertyValue, PropertySet } from '@opencad/document';
+import type { PropertyValue, PropertySet, ParamValue } from '@opencad/document';
 import { getSharedSelectedCoords } from '../hooks/useThreeViewport';
 import { translateFieldLabel } from '../utils/humanize';
+import { resolveFamily } from '../plugins/familyRegistry';
+import type { FamilyDefinition, ParamSchema } from '../plugins/familyRegistry';
 
 interface PendingProp {
   name: string;
@@ -66,7 +68,7 @@ function summarizeStructuredValue(key: string, prop: PropertyValue): string | nu
 
 export function PropertiesPanel() {
   const { t } = useTranslation('panels');
-  const { document: doc, selectedIds, updateElement, pushHistory } = useDocumentStore();
+  const { document: doc, selectedIds, updateElement, pushHistory, updateFamilyParam } = useDocumentStore();
   const [pendingProps, setPendingProps] = useState<PendingProp[]>([]);
   // Live-polled position from the 3D viewport so the Location X/Y/Z inputs
   // update while the user drags the TransformControls gizmo — otherwise we'd
@@ -238,6 +240,106 @@ export function PropertiesPanel() {
             </div>
           </div>
         </div>
+
+        {/* T-EXT-01: Family parameters section */}
+        {selectedElement.family && (() => {
+          const familyDef = resolveFamily(selectedElement.family.familyId);
+          if (!familyDef) return (
+            <div className="property-group">
+              <div className="property-group-title">Family</div>
+              <div className="property-row">
+                <span className="property-label">ID</span>
+                <div className="property-value">
+                  <input type="text" className="property-input" value={selectedElement.family.familyId} readOnly />
+                </div>
+              </div>
+              <div className="family-param-warning">
+                ⚠ Family definition not loaded
+              </div>
+            </div>
+          );
+
+          const orderedParams: ParamSchema[] = familyDef.ui?.order
+            ? familyDef.ui.order.map((id) => familyDef.parameters.find((p) => p.id === id)!).filter(Boolean)
+            : familyDef.parameters;
+
+          const renderParamInput = (schema: ParamSchema) => {
+            const currentVal = selectedElement.family!.params[schema.id] ?? schema.default;
+            if (schema.type === 'enum' && schema.options) {
+              return (
+                <select
+                  className="property-input"
+                  value={String(currentVal)}
+                  onChange={(e) => {
+                    pushHistory(`Edit ${schema.label}`);
+                    updateFamilyParam(selectedElement.id, schema.id, e.target.value);
+                  }}
+                >
+                  {schema.options.map((opt: { value: string; label: string }) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              );
+            }
+            if (schema.type === 'boolean') {
+              return (
+                <input
+                  type="checkbox"
+                  checked={Boolean(currentVal)}
+                  onChange={(e) => {
+                    pushHistory(`Edit ${schema.label}`);
+                    updateFamilyParam(selectedElement.id, schema.id, e.target.checked);
+                  }}
+                />
+              );
+            }
+            // number / dimension / string / material-ref
+            return (
+              <input
+                type={schema.type === 'string' || schema.type === 'material-ref' ? 'text' : 'number'}
+                className="property-input"
+                defaultValue={String(currentVal)}
+                min={schema.min}
+                max={schema.max}
+                step={schema.step}
+                onKeyDown={(e) => {
+                  if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+                    const step = schema.step ?? 1;
+                    const delta = e.key === 'ArrowUp' ? step : -step;
+                    const next = Number(currentVal) + delta;
+                    e.preventDefault();
+                    pushHistory(`Edit ${schema.label}`);
+                    updateFamilyParam(selectedElement.id, schema.id, next);
+                  }
+                }}
+                onBlur={(e) => {
+                  const raw = e.target.value;
+                  const v: ParamValue = (schema.type === 'string' || schema.type === 'material-ref')
+                    ? raw
+                    : parseFloat(raw);
+                  if (typeof v === 'number' && isNaN(v)) return;
+                  pushHistory(`Edit ${schema.label}`);
+                  updateFamilyParam(selectedElement.id, schema.id, v);
+                }}
+              />
+            );
+          };
+
+          return (
+            <div className="property-group">
+              <div className="property-group-title">
+                {familyDef.name}
+                <span className="family-version-badge">v{familyDef.version}</span>
+              </div>
+              {orderedParams.map((schema) => (
+                <div className="property-row" key={schema.id}>
+                  <span className="property-label">{schema.label}{schema.unit ? ` (${schema.unit})` : ''}</span>
+                  <div className="property-value">{renderParamInput(schema)}</div>
+                </div>
+              ))}
+            </div>
+          );
+        })()}
 
         <div className="property-group">
           <div className="property-group-title">{t('properties.group.location', { defaultValue: 'Location (mm)' })}</div>

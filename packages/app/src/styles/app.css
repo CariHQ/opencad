@@ -9661,6 +9661,23 @@ input[type='range']::-moz-range-track {
 }
 .subscription-manage-billing:hover { color: var(--text-primary); }
 
+/* T-EXT-01: Family params form chrome */
+.family-version-badge {
+  margin-left: 6px;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: 3px;
+  padding: 1px 4px;
+}
+.family-param-warning {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--accent-warning, #f59e0b);
+}
+
 /* T-A11Y-03: Global keyboard focus ring — overrides the many component-level
  * `outline: none` rules so keyboard navigation always has a visible indicator.
  * Mouse/touch focus is still outline-free (`:focus:not(:focus-visible)`). */

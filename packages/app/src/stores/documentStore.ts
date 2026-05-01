@@ -2,6 +2,14 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { DocumentModel, computeBoundingBox, type DocumentSchema, type ElementSchema, type PropertyValue, type PropertySet } from '@opencad/document';
 import {
+  resolveFamily,
+  defaultParams,
+  normalizeParams,
+  evalGeometry,
+  boundingBoxFromGeometry,
+} from '../plugins/familyRegistry';
+import type { ParamValue } from '@opencad/document';
+import {
   saveDocument as offlineSaveDocument,
   loadDocument as offlineLoadDocument,
   listPendingSync,
@@ -157,6 +165,12 @@ interface DocumentState {
   updateElement: (elementId: string, updates: Record<string, unknown>) => void;
   deleteElement: (elementId: string) => void;
   setElementMaterial: (elementId: string, materialId: string) => void;
+
+  // T-EXT-01: Parametric families
+  /** Place a new instance of a registered family. Returns the element id or ''. */
+  placeFamilyInstance: (familyId: string, layerId: string, params?: Record<string, ParamValue>) => string;
+  /** Update one parameter of a placed family instance and recompute geometry. */
+  updateFamilyParam: (elementId: string, paramId: string, value: ParamValue) => void;
 
   // T-VIS-01: Persistent element visibility — stored in the document, synced via CRDT
   hideElement: (id: string) => void;
@@ -535,6 +549,128 @@ export const useDocumentStore = create<DocumentState>()(
         model.documentData.content.elements[elementId] = nextElement;
         const doc = { ...model.documentData };
         set({ document: doc, lastSaved: Date.now() });
+        persistDocument(doc);
+      },
+
+      // T-EXT-01: Parametric family placement + param editing ────────────────
+
+      placeFamilyInstance: (familyId, layerId, overrideParams) => {
+        if (!assertWritable()) return '';
+        const def = resolveFamily(familyId);
+        if (!def) {
+          console.error(`[family] Unknown family: ${familyId}`);
+          return '';
+        }
+        const params = normalizeParams(def, { ...defaultParams(def), ...(overrideParams ?? {}) });
+        const geom = evalGeometry(def, params);
+
+        // Build element properties from current params
+        const properties: Record<string, PropertyValue> = {};
+        for (const schema of def.parameters) {
+          const v = params[schema.id];
+          properties[schema.id] = {
+            type: schema.type === 'dimension' ? 'number' : schema.type === 'material-ref' ? 'reference' : schema.type as PropertyValue['type'],
+            value: v,
+            unit: schema.unit,
+          };
+        }
+
+        // Build bounding box from geometry
+        const bb = geom ? boundingBoxFromGeometry(geom) : { minX: -0.5, minY: -0.5, minZ: 0, maxX: 0.5, maxY: 0.5, maxZ: 1 };
+        const elementGeom = geom
+          ? { type: 'mesh' as const, data: { vertices: geom.vertices, faces: geom.faces } }
+          : { type: 'mesh' as const, data: {} };
+
+        const { model, changeHistory } = get();
+        if (!model) return '';
+
+        const elementId = model.addElement({
+          type: def.category,
+          layerId,
+          geometry: elementGeom,
+          properties,
+        });
+
+        const el = model.documentData.content.elements[elementId];
+        if (el) {
+          el.family = { familyId: def.id, version: def.version, params };
+          el.boundingBox = {
+            min: { _type: 'Point3D', x: bb.minX, y: bb.minY, z: bb.minZ },
+            max: { _type: 'Point3D', x: bb.maxX, y: bb.maxY, z: bb.maxZ },
+          };
+          if (geom) el.geometry = elementGeom;
+        }
+
+        const newDoc = { ...model.documentData };
+        const record: ChangeRecord = {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          type: 'add',
+          elementId,
+          elementType: def.category,
+          userId: model.client,
+        };
+        set({
+          document: newDoc,
+          lastSaved: Date.now(),
+          changeHistory: [...changeHistory, record].slice(-MAX_CHANGE_HISTORY),
+        });
+        maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
+        persistDocument(newDoc);
+        return elementId;
+      },
+
+      updateFamilyParam: (elementId, paramId, value) => {
+        if (!assertWritable()) return;
+        const { model, changeHistory } = get();
+        if (!model) return;
+
+        const el = model.getElementById(elementId);
+        if (!el?.family) return;
+
+        const def = resolveFamily(el.family.familyId);
+        if (!def) return;
+
+        const nextParams = normalizeParams(def, { ...el.family.params, [paramId]: value });
+        const geom = evalGeometry(def, nextParams);
+
+        const nextProperties: Record<string, PropertyValue> = { ...el.properties };
+        for (const schema of def.parameters) {
+          nextProperties[schema.id] = {
+            type: schema.type === 'dimension' ? 'number' : schema.type === 'material-ref' ? 'reference' : schema.type as PropertyValue['type'],
+            value: nextParams[schema.id],
+            unit: schema.unit,
+          };
+        }
+
+        const bb = geom ? boundingBoxFromGeometry(geom) : undefined;
+        const nextElement: ElementSchema = {
+          ...el,
+          family: { ...el.family, params: nextParams },
+          properties: nextProperties,
+          ...(geom ? { geometry: { type: 'mesh', data: { vertices: geom.vertices, faces: geom.faces } } } : {}),
+          ...(bb ? { boundingBox: {
+            min: { _type: 'Point3D', x: bb.minX, y: bb.minY, z: bb.minZ },
+            max: { _type: 'Point3D', x: bb.maxX, y: bb.maxY, z: bb.maxZ },
+          } } : {}),
+        };
+
+        model.documentData.content.elements[elementId] = nextElement;
+        const doc = { ...model.documentData };
+        const record: ChangeRecord = {
+          id: crypto.randomUUID(),
+          timestamp: Date.now(),
+          type: 'update',
+          elementId,
+          elementType: el.type ?? 'unknown',
+          userId: model.client,
+        };
+        set({
+          document: doc,
+          lastSaved: Date.now(),
+          changeHistory: [...changeHistory, record].slice(-MAX_CHANGE_HISTORY),
+        });
+        maybeAutoVersion(model, changeHistory.length, changeHistory.length + 1);
         persistDocument(doc);
       },
 

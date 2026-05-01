@@ -16,7 +16,7 @@ describe('T-SYNC-010: projectStore', () => {
   it('createProject adds a project with name, timestamps, and starred=false', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject } = useProjectStore.getState();
-    const id = createProject('My House');
+    const id = await createProject('My House');
     const { projects } = useProjectStore.getState();
     expect(projects).toHaveLength(1);
     expect(projects[0].name).toBe('My House');
@@ -29,15 +29,15 @@ describe('T-SYNC-010: projectStore', () => {
   it('createProject returns unique ids', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject } = useProjectStore.getState();
-    const id1 = createProject('A');
-    const id2 = createProject('B');
+    const id1 = await createProject('A');
+    const id2 = await createProject('B');
     expect(id1).not.toBe(id2);
   });
 
   it('openProject sets activeProjectId', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject, openProject } = useProjectStore.getState();
-    const id = createProject('Test');
+    const id = await createProject('Test');
     openProject(id);
     expect(useProjectStore.getState().activeProjectId).toBe(id);
   });
@@ -45,7 +45,7 @@ describe('T-SYNC-010: projectStore', () => {
   it('closeProject clears activeProjectId', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject, openProject, closeProject } = useProjectStore.getState();
-    const id = createProject('Test');
+    const id = await createProject('Test');
     openProject(id);
     closeProject();
     expect(useProjectStore.getState().activeProjectId).toBeNull();
@@ -54,8 +54,8 @@ describe('T-SYNC-010: projectStore', () => {
   it('deleteProject removes the project by id', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject, deleteProject } = useProjectStore.getState();
-    const id = createProject('To delete');
-    createProject('Keep');
+    const id = await createProject('To delete');
+    await createProject('Keep');
     deleteProject(id);
     const { projects } = useProjectStore.getState();
     expect(projects).toHaveLength(1);
@@ -65,7 +65,7 @@ describe('T-SYNC-010: projectStore', () => {
   it('starProject toggles the starred flag', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject, starProject } = useProjectStore.getState();
-    const id = createProject('Fav');
+    const id = await createProject('Fav');
     starProject(id);
     expect(useProjectStore.getState().projects[0].starred).toBe(true);
     starProject(id);
@@ -75,7 +75,7 @@ describe('T-SYNC-010: projectStore', () => {
   it('renameProject updates the project name', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject, renameProject } = useProjectStore.getState();
-    const id = createProject('Old Name');
+    const id = await createProject('Old Name');
     renameProject(id, 'New Name');
     expect(useProjectStore.getState().projects[0].name).toBe('New Name');
   });
@@ -109,8 +109,8 @@ describe('T-SYNC-010: projectStore', () => {
   it('getFilteredProjects filters by search query (case-insensitive)', async () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject, setSearchQuery, getFilteredProjects } = useProjectStore.getState();
-    createProject('My House');
-    createProject('Office Building');
+    await createProject('My House');
+    await createProject('Office Building');
     setSearchQuery('house');
     expect(getFilteredProjects()).toHaveLength(1);
     expect(getFilteredProjects()[0].name).toBe('My House');
@@ -120,8 +120,8 @@ describe('T-SYNC-010: projectStore', () => {
     const { useProjectStore } = await import('./projectStore');
     const { createProject, starProject, setFilterBy, getFilteredProjects } =
       useProjectStore.getState();
-    const id1 = createProject('A');
-    createProject('B');
+    const id1 = await createProject('A');
+    await createProject('B');
     starProject(id1);
     setFilterBy('starred');
     expect(getFilteredProjects()).toHaveLength(1);

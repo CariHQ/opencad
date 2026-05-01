@@ -72,6 +72,8 @@ export interface ElementSchema {
   metadata: ElementMetadata;
   visible: boolean;
   locked: boolean;
+  /** Present when this element is a placed parametric family instance. */
+  family?: FamilyInstance;
 }
 
 export type ElementType =
@@ -218,6 +220,52 @@ export interface FamilySchema {
   name: string;
   category: string;
   properties: Record<string, PropertyValue>;
+}
+
+// ── Parametric Object Language (T-EXT-01) ────────────────────────────────────
+
+/** Supported parameter types for a family parameter. */
+export type ParamType = 'number' | 'boolean' | 'enum' | 'string' | 'material-ref' | 'dimension';
+
+/** A scalar value that a parameter can hold. */
+export type ParamValue = number | boolean | string;
+
+/** Metadata for one parameter of a family definition. */
+export interface ParamSchema {
+  /** Unique key within this family's parameter list. */
+  id: string;
+  /** Human-readable label shown in the properties form. */
+  label: string;
+  type: ParamType;
+  /** Default value — used when placing a new instance. */
+  default: ParamValue;
+  /** For type='number' or 'dimension' */
+  min?: number;
+  max?: number;
+  step?: number;
+  unit?: string;
+  /** For type='enum' */
+  options?: { value: string; label: string }[];
+}
+
+/** Simplified mesh output from a family geometry callback. */
+export interface FamilyGeometry {
+  /** Flat [x,y,z, x,y,z, …] vertex positions. */
+  vertices: number[];
+  /** Triangle index triples (CCW winding). */
+  faces: number[];
+  /** Pre-computed bounding box; computed from vertices if omitted. */
+  boundingBox?: { minX: number; minY: number; minZ: number; maxX: number; maxY: number; maxZ: number };
+}
+
+/** Per-instance state persisted in `ElementSchema.family`. */
+export interface FamilyInstance {
+  /** ID of the registered `FamilyDefinition`. */
+  familyId: string;
+  /** Family version at the time of placement — used for migration prompts. */
+  version: string;
+  /** Current parameter values for this instance. */
+  params: Record<string, ParamValue>;
 }
 
 export interface PhaseSchema {
