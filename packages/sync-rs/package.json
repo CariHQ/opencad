@@ -24,7 +24,7 @@
     "test:rust": "cargo test --manifest-path Cargo.toml"
   },
   "devDependencies": {
-    "typescript": "^5.0.0",
+    "typescript": "^6.0.3",
     "vitest": "^1.0.0",
     "@testing-library/jest-dom": "^6.0.0"
   }
