@@ -28,7 +28,7 @@
     "fflate": "^0.8.2"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.6.2",
     "fast-check": "^4.7.0",
     "typescript": "^6.0.2",
     "vitest": "^1.4.0"
