@@ -14,12 +14,12 @@
     "clean": "rm -rf dist coverage"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.54.0",
+    "@anthropic-ai/sdk": "^0.96.0",
     "@opencad/document": "workspace:*",
     "@opencad/shared": "workspace:*"
   },
   "devDependencies": {
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.8.0",
     "typescript": "^6.0.2",
     "vitest": "^1.4.0"
   }
