@@ -1,0 +1,150 @@
+{
+  "signIn": {
+    "title": "Přihlásit se",
+    "email": "E-mail",
+    "password": "Heslo",
+    "submit": "Přihlásit se",
+    "submitting": "Přihlašování…",
+    "noAccount": "Nemáte účet?",
+    "createAccount": "Vytvořit účet zdarma",
+    "or": "nebo",
+    "forgotPassword": "Zapomenuté heslo?",
+    "continueWithGoogle": "Pokračovat přes Google",
+    "continueWithMicrosoft": "Pokračovat přes Microsoft",
+    "invalidCredentials": "Nesprávný e-mail nebo heslo.",
+    "mfaTitle": "Ověření totožnosti",
+    "mfaHint": "Zadejte 6místný kód z ověřovací aplikace.",
+    "mfaCode": "Ověřovací kód",
+    "mfaVerify": "Ověřit"
+  },
+  "signUp": {
+    "title": "Vytvořit účet",
+    "name": "Celé jméno",
+    "email": "E-mail",
+    "password": "Heslo",
+    "submit": "Vytvořit účet zdarma",
+    "submitting": "Vytváření…",
+    "haveAccount": "Už máte účet?",
+    "signIn": "Přihlásit se",
+    "passwordHint": "Alespoň 8 znaků.",
+    "termsAgree": "Vytvořením účtu souhlasíte s našimi <a>Podmínkami</a> a <a2>Zásadami ochrany osobních údajů</a2>."
+  },
+  "forgotPassword": {
+    "title": "Obnovit heslo",
+    "hint": "Na váš e-mail zašleme odkaz pro obnovení hesla.",
+    "submit": "Odeslat odkaz pro obnovení",
+    "sent": "Odkaz pro obnovení najdete ve své e-mailové schránce.",
+    "backToSignIn": "Zpět na přihlášení"
+  },
+  "newProject": {
+    "title": "Nový projekt",
+    "name": "Název projektu",
+    "template": "Šablona",
+    "blank": "Prázdný",
+    "create": "Vytvořit projekt",
+    "creating": "Vytváření…"
+  },
+  "openProject": {
+    "title": "Otevřít projekt",
+    "placeholder": "Hledat projekty…",
+    "empty": "Zatím žádné projekty."
+  },
+  "confirmDelete": {
+    "title": "Smazat {{name}}?",
+    "body": "Tuto akci nelze vrátit zpět.",
+    "confirm": "Smazat",
+    "cancel": "Zrušit"
+  },
+  "importExport": {
+    "importTitle": "Importovat soubor",
+    "exportTitle": "Exportovat soubor",
+    "dropHint": "Přetáhněte sem soubor nebo klikněte pro výběr.",
+    "supportedFormats": "Podporováno: IFC, DWG, DXF, SKP, RVT, PDF",
+    "exporting": "Exportování…",
+    "export": "Exportovat",
+    "format": "Formát",
+    "cancel": "Zrušit"
+  },
+  "subscription": {
+    "title": "Vyberte si tarif",
+    "subtitle": "Přejděte na vyšší tarif kdykoli — bez dlouhodobého závazku.",
+    "currentPlan": "Aktuální tarif",
+    "upgradeTo": "Přejít na {{plan}}",
+    "manageBilling": "Spravovat fakturaci",
+    "perUserMonth": "za uživatele / měsíc",
+    "mostPopular": "Nejoblíbenější",
+    "plans": {
+      "free": {
+        "label": "Free",
+        "price": "$0",
+        "priceDetail": "navždy",
+        "features": {
+          "f1": "1 projekt",
+          "f2": "Základní nástroje pro 2D kreslení",
+          "f3": "Pouze místní úložiště",
+          "f4": "Komunitní podpora"
+        }
+      },
+      "pro": {
+        "label": "Pro",
+        "price": "$29",
+        "features": {
+          "f1": "Neomezený počet projektů",
+          "f2": "Spolupráce v reálném čase",
+          "f3": "AI asistent pro navrhování",
+          "f4": "Prioritní e-mailová podpora"
+        }
+      },
+      "business": {
+        "label": "Business",
+        "price": "$99",
+        "features": {
+          "f1": "Vše z tarifu Pro",
+          "f2": "Role a oprávnění správců",
+          "f3": "SSO / SAML",
+          "f4": "Prioritní telefonická podpora"
+        }
+      }
+    }
+  },
+  "commandPalette": {
+    "placeholder": "Hledat příkazy…",
+    "empty": "Nenalezeny žádné příkazy.",
+    "groups": {
+      "tools": "Nástroje",
+      "views": "Pohledy",
+      "panels": "Panely",
+      "file": "Soubor",
+      "edit": "Úpravy",
+      "help": "Nápověda"
+    }
+  },
+  "help": {
+    "title": "Nápověda",
+    "close": "Zavřít nápovědu",
+    "tabs": {
+      "shortcuts": "Zkratky",
+      "howTo": "Návody",
+      "tips": "Tipy"
+    },
+    "takeGuidedTour": "Spustit prohlídku s průvodcem",
+    "searchShortcuts": "Hledat zkratky…",
+    "noShortcutsMatch": "Žádné zkratky neodpovídají „{{query}}“.",
+    "needMore": "Potřebujete víc?",
+    "openIssue": "Nahlásit problém"
+  },
+  "feedback": {
+    "title": "Odeslat zpětnou vazbu",
+    "categoryLabel": "Typ",
+    "titleLabel": "Název",
+    "descriptionLabel": "Popis",
+    "submit": "Odeslat zpětnou vazbu",
+    "submitting": "Odesílání…",
+    "sent": "Děkujeme za zpětnou vazbu!",
+    "categories": {
+      "bug": "Chyba",
+      "feature": "Požadavek na funkci",
+      "question": "Dotaz"
+    }
+  }
+}

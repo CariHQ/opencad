@@ -50,6 +50,7 @@ export const SUPPORTED_LOCALES: { code: string; label: string; native: string }[
   { code: 'ru',    label: 'Russian',              native: 'Русский' },
   { code: 'de',    label: 'German',               native: 'Deutsch' },
   { code: 'ja',    label: 'Japanese',             native: '日本語' },
+  { code: 'cs',    label: 'Czech',                native: 'Čeština' },
 ];
 
 export const DEFAULT_LOCALE = 'en';

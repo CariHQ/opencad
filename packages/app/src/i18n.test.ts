@@ -14,7 +14,7 @@ import i18n, { SUPPORTED_LOCALES, setLocale } from './i18n';
 
 // Locales shipped in-tree. Any future addition to SUPPORTED_LOCALES that
 // doesn't also land a JSON bundle here will trip the key-shape check.
-const SHIPPED_LOCALES = ['en', 'es', 'de', 'fr', 'pt-BR', 'zh-CN', 'ar', 'hi', 'ja', 'ru'];
+const SHIPPED_LOCALES = ['en', 'es', 'de', 'fr', 'pt-BR', 'zh-CN', 'ar', 'hi', 'ja', 'ru', 'cs'];
 const NAMESPACES = ['common', 'toolbar', 'panels', 'dialogs', 'errors'] as const;
 
 /** Walk an object and return every dotted key path (leaf-only). Used to
@@ -84,6 +84,18 @@ describe('T-I18N-001..004: i18n infrastructure', () => {
     expect(fallbacks['zh-HK']).toContain('zh-CN');
     expect(fallbacks['pt-PT']).toContain('pt-BR');
     expect(fallbacks['es-MX']).toContain('es');
+  });
+
+  it('T-I18N-008: Czech is offered in the language picker and ships every namespace', async () => {
+    expect(SUPPORTED_LOCALES.find((l) => l.code === 'cs')).toMatchObject({
+      label: 'Czech',
+      native: 'Čeština',
+    });
+    await setLocale('cs');
+    for (const ns of NAMESPACES) {
+      expect(i18n.getResourceBundle('cs', ns), `Czech namespace '${ns}'`).toBeTruthy();
+    }
+    expect(i18n.t('common:status.elements', { count: 3 })).toMatch(/3/);
   });
 
   it('T-I18N-005: every shipped locale defines the same key shape as English', async () => {

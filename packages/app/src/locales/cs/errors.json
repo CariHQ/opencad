@@ -1,0 +1,8 @@
+{
+  "network": "Chyba sítě — zkontrolujte připojení.",
+  "server": "Chyba serveru — zkuste to prosím znovu.",
+  "unauthorized": "K této akci se musíte přihlásit.",
+  "forbidden": "K této akci nemáte oprávnění.",
+  "notFound": "Hledaný obsah jsme nenašli.",
+  "unknown": "Něco se pokazilo."
+}

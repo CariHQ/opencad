@@ -1,0 +1,217 @@
+{
+  "app": {
+    "name": "OpenCAD",
+    "tagline": "BIM přímo v prohlížeči"
+  },
+  "action": {
+    "save": "Uložit",
+    "cancel": "Zrušit",
+    "delete": "Smazat",
+    "rename": "Přejmenovat",
+    "close": "Zavřít",
+    "open": "Otevřít",
+    "back": "Zpět",
+    "next": "Další",
+    "create": "Vytvořit",
+    "upgrade": "Upgradovat",
+    "resubscribe": "Obnovit předplatné",
+    "loading": "Načítání…",
+    "retry": "Zkusit znovu",
+    "done": "Hotovo",
+    "import": "Importovat",
+    "export": "Exportovat",
+    "undo": "Zpět",
+    "redo": "Znovu"
+  },
+  "nav": {
+    "home": "Domů",
+    "projects": "Projekty",
+    "settings": "Nastavení",
+    "billing": "Fakturace",
+    "signOut": "Odhlásit se",
+    "help": "Nápověda",
+    "feedback": "Zpětná vazba",
+    "ai": "AI asistent",
+    "plugins": "Zásuvné moduly"
+  },
+  "status": {
+    "online": "Online",
+    "offline": "Offline",
+    "saving": "Ukládání…",
+    "saved": "Uloženo",
+    "syncing": "Synchronizace…",
+    "storageAlmostFull": "⚠ Úložiště je téměř plné",
+    "storageWarningTooltip": "Využití úložiště přesahuje 80 % — zvažte export svých projektů",
+    "selected_one": "{{count}} vybráno",
+    "selected_few": "{{count}} vybráno",
+    "selected_many": "{{count}} vybráno",
+    "selected_other": "{{count}} vybráno",
+    "elements_one": "{{count}} prvek",
+    "elements_few": "{{count}} prvky",
+    "elements_many": "{{count}} prvku",
+    "elements_other": "{{count}} prvků",
+    "fpsTooltip": "Klouzavý průměr snímkové frekvence",
+    "webgpuTooltip": "Three.js WebGPURenderer — compute shadery zapnuty",
+    "webglTooltip": "Záložní WebGL 2.0 — WebGPU není k dispozici nebo je vypnuto",
+    "currentRole": "Aktuální role: {{label}}"
+  },
+  "view": {
+    "floorPlan": "Půdorys",
+    "threeD": "3D pohled",
+    "section": "Řez",
+    "sectionAA": "Řez A-A",
+    "elevation": "Pohled",
+    "layout1": "Výkres 1"
+  },
+  "coord": {
+    "inputAria": "Zadání souřadnic"
+  },
+  "error": {
+    "somethingWentWrong": "Něco se pokazilo",
+    "panelFailed": "Panel se nepodařilo načíst",
+    "tryAgain": "Zkusit znovu"
+  },
+  "tour": {
+    "title": "Průvodce",
+    "close": "Zavřít průvodce",
+    "skip": "Přeskočit průvodce",
+    "next": "Další",
+    "back": "Zpět",
+    "finish": "Dokončit"
+  },
+  "language": {
+    "aria": "Jazyk",
+    "detected": "Zjištěno z vašeho systému"
+  },
+  "resizer": {
+    "aria": "Tažením změníte velikost panelu"
+  },
+  "contextMenu": {
+    "aria": "Kontextová nabídka"
+  },
+  "viewport": {
+    "zoomIn": "Přiblížit",
+    "zoomInShort": "Přiblížit",
+    "zoomInWithShortcut": "Přiblížit (+)",
+    "zoomOut": "Oddálit",
+    "zoomOutShort": "Oddálit",
+    "zoomOutWithShortcut": "Oddálit (-)",
+    "zoomToFit": "Přizpůsobit oknu",
+    "zoomToFitWithShortcut": "Přizpůsobit oknu (0)",
+    "fit": "Přizpůsobit",
+    "resetCamera": "Obnovit kameru",
+    "sectionBox": "Řezový kvádr",
+    "topView": "Pohled shora",
+    "topViewWithShortcut": "Pohled shora (1)",
+    "frontView": "Pohled zepředu",
+    "frontViewWithShortcut": "Pohled zepředu (2)",
+    "rightView": "Pohled zprava",
+    "rightViewWithShortcut": "Pohled zprava (3)",
+    "perspective": "Perspektiva",
+    "perspectiveWithShortcut": "Perspektiva (4)",
+    "presetView": "Pohled {{preset}}",
+    "cutAlongAxis": "Řez podél osy {{axis}}",
+    "cutAxis": "Osa řezu",
+    "cutPlanePosition": "Poloha roviny řezu",
+    "position": "Poloha",
+    "sectionCutControls": "Ovládání řezu",
+    "sectionCutHint": "Posuvník posouvá rovinu řezu · Tažením otáčíte · Shift+tažení posouvá · Kolečkem přibližujete",
+    "info2D": "Zoom: kolečko | Posun: tažení prostředním tlačítkem | Ctrl: bez přichytávání",
+    "info3D": "Otáčení: tažení | Posun: Shift+tažení | Zoom: kolečko | Přizpůsobit: 0",
+    "info3DLong": "Otáčení tažením · Posun dvěma prsty · Zoom sevřením/Ctrl+kolečko · Šipky otáčejí · Shift+šipky posouvají · Alt jemně · 0 přizpůsobit · 1/2/3/4 pohledy",
+    "info2DShort": "Kreslení: tažení · Posun: tažení prostředním tlačítkem · Zoom: kolečko",
+    "splitView": "Rozdělený pohled: půdorys + 3D",
+    "viewCubeAria": "Kostka orientace pohledu"
+  },
+  "settings": {
+    "title": "Nastavení",
+    "tabs": {
+      "language": "Jazyk",
+      "apiKeys": "API klíče",
+      "permissions": "Oprávnění",
+      "sso": "SSO",
+      "billing": "Fakturace"
+    }
+  },
+  "tooltip": {
+    "backToProjects": "Domů — zpět na projekty",
+    "toggleLeftPanel": "Zobrazit/skrýt navigátor",
+    "toggleRightPanel": "Zobrazit/skrýt vlastnosti",
+    "renameProject": "Kliknutím přejmenujete projekt",
+    "newProject": "Nový projekt",
+    "openProject": "Otevřít projekt",
+    "saveProject": "Uložit",
+    "importFile": "Importovat IFC",
+    "exportFile": "Exportovat IFC",
+    "toggleTheme": "Přepnout světlý/tmavý motiv"
+  },
+  "update": {
+    "available": "Je k dispozici verze {{version}}",
+    "install": "Nainstalovat aktualizaci",
+    "installing": "Instalace...",
+    "dismiss": "Zavřít",
+    "dismissAria": "Zavřít oznámení o aktualizaci"
+  },
+  "focusHint": {
+    "before": "Stiskněte",
+    "after": "pro ukončení režimu soustředění"
+  },
+  "home": {
+    "newProject": "Nový projekt",
+    "newBlankProject": "Nový prázdný projekt",
+    "signIn": "Přihlásit se",
+    "recentProjects": "Nedávné projekty",
+    "importIfcDwgPdf": "Importovat IFC / DWG / PDF",
+    "emptyText": "Založte nový projekt nebo importujte soubor",
+    "importFile": "Importovat soubor",
+    "open": "Otevřít",
+    "startFromTemplate": "Začít ze šablony",
+    "chooseTemplate": "Vybrat šablonu",
+    "projectTemplates": "Šablony projektů"
+  },
+  "browser": {
+    "searchProjects": "Hledat projekty…",
+    "recentFirst": "Nejnovější první",
+    "oldestFirst": "Nejstarší první",
+    "gridView": "Mřížka",
+    "listView": "Seznam",
+    "noProjects": "Nebyly nalezeny žádné projekty"
+  },
+  "dashboard": {
+    "title": "Projekty",
+    "fromTemplate": "Ze šablony",
+    "newProject": "Nový projekt",
+    "newBlankProject": "Nový prázdný projekt",
+    "filter": {
+      "all": "Vše",
+      "starred": "S hvězdičkou",
+      "mine": "Moje",
+      "shared": "Sdílené"
+    },
+    "searchPlaceholder": "Hledat projekty…",
+    "sortBy": "Seřadit podle",
+    "sort": {
+      "lastEdited": "Naposledy upraveno",
+      "created": "Vytvořeno",
+      "name": "Název",
+      "size": "Velikost"
+    },
+    "gridView": "Mřížka",
+    "listView": "Seznam",
+    "empty": {
+      "title": "Zatím žádné projekty",
+      "subtitle": "Začněte s prázdným plátnem nebo vyberte šablonu níže.",
+      "orTemplate": "Nebo začněte ze šablony"
+    },
+    "card": {
+      "clickToOpen": "Kliknutím otevřete · Dvojklikem přejmenujete",
+      "star": "Označit hvězdičkou",
+      "unstar": "Odebrat hvězdičku",
+      "delete": "Smazat projekt"
+    },
+    "closeTemplates": "Zavřít šablony",
+    "closeSettings": "Zavřít nastavení",
+    "signOut": "Odhlásit se",
+    "upgradeToPro": "Přejít na Pro"
+  }
+}
